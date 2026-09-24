@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+build/
+.vite/
+coverage/
+*.tsbuildinfo
+
+# Environment and secrets (never commit keys; the Supabase service role key must stay private)
+.env
+.env.*
+!.env.example
+
+# Supabase local state
+supabase/.branches/
+supabase/.temp/
+
+# Deploy tools
+.vercel/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Editors and OS
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# Local AI tooling (auto-generated, machine-specific paths)
+.atl/
