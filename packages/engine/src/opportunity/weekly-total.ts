@@ -17,6 +17,7 @@
 import { seasonDay } from "../calendar/season-calendar";
 import type { Target } from "../commitment/commitment";
 import type { Entry } from "../entry/entry";
+import type { GraceDeadlineFor } from "../entry/grace-period";
 import { graceDeadline, isOnTime } from "../entry/grace-period";
 import { isConsistent, progressOf } from "../progress/progress";
 import type { SessionResult } from "./per-session";
@@ -45,9 +46,10 @@ export function weeklyTotalResult(
   target: Target,
   week: number,
   weekEntries: readonly Entry[],
+  deadlineFor: GraceDeadlineFor = graceDeadline,
 ): SessionResult {
   const weekEnd = seasonDay(week * DAYS_PER_WEEK + (DAYS_PER_WEEK - 1));
-  const deadline = graceDeadline(weekEnd);
+  const deadline = deadlineFor(weekEnd);
   const onTime = weekEntries.filter((entry) => isOnTime(entry, deadline));
   const value = onTime.length === 0 ? null : sumEntryValues(onTime);
   return { value, progress: progressOf(target, value), consistent: isConsistent(target, value) };

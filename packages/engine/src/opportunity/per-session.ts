@@ -7,6 +7,7 @@ import type { Season, SeasonDay, Weekday } from "../calendar/season-calendar";
 import { seasonDay } from "../calendar/season-calendar";
 import type { Target } from "../commitment/commitment";
 import type { Entry } from "../entry/entry";
+import type { GraceDeadlineFor } from "../entry/grace-period";
 import { graceDeadline, isOnTime } from "../entry/grace-period";
 import type { Fraction } from "../fraction/fraction";
 import { compare, fromInt, sum } from "../fraction/fraction";
@@ -45,12 +46,17 @@ export function sumEntryValues(entries: readonly Entry[]): Fraction {
  * Groups entries by day, discarding any entry recorded after its own day's
  * grace deadline first (the design's data flow: `entries → isOnTime →
  * assign`) — a late entry never reaches D4's same-day sum or D5's
- * missed-day coverage.
+ * missed-day coverage. `deadlineFor` defaults to {@link graceDeadline};
+ * `pause/pause-aware-week.ts` overrides it to extend grace after a
+ * rejection, without ever rewriting an entry's own `recordedOn`.
  */
-function groupByDay(entries: readonly Entry[]): Map<number, Entry[]> {
+function groupByDay(
+  entries: readonly Entry[],
+  deadlineFor: GraceDeadlineFor = graceDeadline,
+): Map<number, Entry[]> {
   const byDay = new Map<number, Entry[]>();
   for (const entry of entries) {
-    if (!isOnTime(entry, graceDeadline(entry.day))) continue;
+    if (!isOnTime(entry, deadlineFor(entry.day))) continue;
     const existing = byDay.get(entry.day);
     if (existing) {
       existing.push(entry);
@@ -78,8 +84,9 @@ export function timesPerWeekSessions(
   target: Target,
   times: number,
   weekEntries: readonly Entry[],
+  deadlineFor: GraceDeadlineFor = graceDeadline,
 ): readonly SessionResult[] {
-  const sessionValues = [...groupByDay(weekEntries).values()].map(sumEntryValues);
+  const sessionValues = [...groupByDay(weekEntries, deadlineFor).values()].map(sumEntryValues);
   const scored = sessionValues
     .map((value) => toSessionResult(target, value))
     .sort((a, b) => compare(b.progress, a.progress));
@@ -107,8 +114,9 @@ export function specificDaysSessions(
   week: number,
   scheduledWeekdays: readonly Weekday[],
   weekEntries: readonly Entry[],
+  deadlineFor: GraceDeadlineFor = graceDeadline,
 ): readonly SessionResult[] {
-  const byDay = groupByDay(weekEntries);
+  const byDay = groupByDay(weekEntries, deadlineFor);
   const scheduledDays = scheduledWeekdays.map((weekday) => dayForWeekday(season, week, weekday));
   const scheduledSet = new Set<number>(scheduledDays);
   const slotValues = new Map<number, Fraction | null>(
