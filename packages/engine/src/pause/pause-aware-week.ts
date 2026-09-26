@@ -1,22 +1,25 @@
 /**
  * The pause-aware composition point: one commitment's one week, with pause
- * (`effectivePausedDays`/`pendingHoldDays`), D6/D7 proration, D8's
- * paused-day exclusion, and a rejection's grace extension all applied
- * BEFORE delegating to the existing, unchanged
- * `timesPerWeekSessions`/`weeklyTotalResult`. This is the single place that
- * composes pause with opportunity generation — callers (acceptance tests,
- * and eventually `scoring/member-score.ts`, slice 6a) must not re-implement
- * any of this themselves.
+ * (`effectivePausedDays`/`pendingHoldDays`), D6/D7 proration and D8's
+ * paused-day exclusion all applied before delegating to the existing,
+ * unchanged `timesPerWeekSessions`/`specificDaysSessions`/
+ * `weeklyTotalResult`. A rejection's grace extension is passed down as a
+ * `GraceDeadlineFor` override (see `entry/grace-period.ts`) — an entry's
+ * own `recordedOn` is never read or rewritten here. This is the single
+ * place that composes pause with opportunity generation — callers
+ * (acceptance tests, and eventually `scoring/member-score.ts`, slice 6a)
+ * must not re-implement any of this themselves.
  */
 
-import type { SeasonDay } from "../calendar/season-calendar";
+import type { Season, SeasonDay } from "../calendar/season-calendar";
 import { seasonDay } from "../calendar/season-calendar";
 import type { Commitment } from "../commitment/commitment";
 import { targetOf } from "../commitment/commitment";
 import type { Entry } from "../entry/entry";
+import type { GraceDeadlineFor } from "../entry/grace-period";
 import { graceDeadline } from "../entry/grace-period";
 import type { SessionResult } from "../opportunity/per-session";
-import { timesPerWeekSessions } from "../opportunity/per-session";
+import { specificDaysSessions, timesPerWeekSessions } from "../opportunity/per-session";
 import { weeklyTotalResult } from "../opportunity/weekly-total";
 import type { PauseRequest } from "./pause";
 import { effectivePausedDays, pendingHoldDays } from "./pause";
@@ -56,20 +59,6 @@ function rejectionExtendedDeadline(
   return extended;
 }
 
-/**
- * Clamps `entry.recordedOn` down to `normal` when it falls strictly between
- * `normal` and `extended` — this is what actually "extends" grace without
- * touching `isOnTime`/`weeklyTotalResult`/`timesPerWeekSessions`: those
- * functions still apply their own unchanged, un-extended deadline check,
- * and now see a `recordedOn` that already satisfies it.
- */
-function withExtendedGrace(entry: Entry, normal: SeasonDay, extended: SeasonDay): Entry {
-  if (extended > normal && entry.recordedOn > normal && entry.recordedOn <= extended) {
-    return { ...entry, recordedOn: normal };
-  }
-  return entry;
-}
-
 function excludedStatus(
   paused: ReadonlySet<SeasonDay>,
   weekStart: number,
@@ -84,8 +73,14 @@ function excludedStatus(
 /**
  * One commitment's one week, pause-aware. `pauses` and `entries` must
  * already be scoped to this commitment (same convention as `weekEntries`
- * elsewhere). `specificDays` + pause is out of scope for this slice (no
- * acceptance row needs it) and throws rather than silently ignoring pause.
+ * elsewhere). `season` is only needed for `specificDays` (to resolve its
+ * scheduled weekdays into days); `timesPerWeek`/`weeklyTotal` ignore it.
+ *
+ * `specificDays` + an active pause or on-hold request is a pending product
+ * decision (not yet answered) and throws rather than guessing; with no
+ * exclusion at all for the week, it delegates straight to the existing
+ * `specificDaysSessions` — so a plain, never-paused `specificDays`
+ * commitment (e.g. "Dibujar") never crashes here.
  */
 export function pauseAwareWeekSessions(
   commitment: Commitment,
@@ -93,6 +88,7 @@ export function pauseAwareWeekSessions(
   pauses: readonly PauseRequest[],
   entries: readonly Entry[],
   today: SeasonDay,
+  season?: Season,
 ): PauseAwareWeekResult {
   const weekStart = week * DAYS_PER_WEEK;
   const weekEnd = weekStart + DAYS_PER_WEEK - 1;
@@ -116,25 +112,34 @@ export function pauseAwareWeekSessions(
         ? prorateReachTarget(target, activeDays)
         : prorateLimitTarget(target, activeDays);
     if (prorated === null) return excludedStatus(paused, weekStart, weekEnd);
-    const normal = graceDeadline(seasonDay(weekEnd));
-    const extended = rejectionExtendedDeadline(pauses, weekStart, weekEnd, normal);
-    const graced = eligible.map((entry) => withExtendedGrace(entry, normal, extended));
-    return { status: "scored", sessions: [weeklyTotalResult(prorated, week, graced)] };
+    const deadlineFor: GraceDeadlineFor = (end) =>
+      rejectionExtendedDeadline(pauses, weekStart, end, graceDeadline(end));
+    return {
+      status: "scored",
+      sessions: [weeklyTotalResult(prorated, week, eligible, deadlineFor)],
+    };
   }
 
   const { frequency } = commitment.schedule;
   if (frequency.kind === "timesPerWeek") {
     const n = prorateSessionCount(frequency.times, activeDays);
     if (n === null) return excludedStatus(paused, weekStart, weekEnd);
-    const graced = eligible.map((entry) => {
-      const normal = graceDeadline(entry.day);
-      const extended = rejectionExtendedDeadline(pauses, entry.day, entry.day, normal);
-      return withExtendedGrace(entry, normal, extended);
-    });
-    return { status: "scored", sessions: timesPerWeekSessions(target, n, graced) };
+    const deadlineFor: GraceDeadlineFor = (day) =>
+      rejectionExtendedDeadline(pauses, day, day, graceDeadline(day));
+    return { status: "scored", sessions: timesPerWeekSessions(target, n, eligible, deadlineFor) };
   }
 
-  throw new RangeError(
-    "pauseAwareWeekSessions: specificDays + pause is not supported yet — no acceptance row needs it in slice 5a",
-  );
+  // frequency.kind === "specificDays"
+  if (activeDays < DAYS_PER_WEEK) {
+    throw new RangeError(
+      "pauseAwareWeekSessions: specificDays + an active pause/on-hold request is a pending product decision — not implemented yet",
+    );
+  }
+  if (!season) {
+    throw new RangeError("pauseAwareWeekSessions: specificDays requires a `season` argument");
+  }
+  return {
+    status: "scored",
+    sessions: specificDaysSessions(target, season, week, frequency.weekdays, eligible),
+  };
 }

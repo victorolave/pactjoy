@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import type { Season } from "../calendar/season-calendar";
 import { seasonDay } from "../calendar/season-calendar";
+import { graceDeadline, isOnTime } from "../entry/grace-period";
 import { fromInt } from "../fraction/fraction";
 import {
   buildDoneEntry,
@@ -250,20 +252,87 @@ describe("pauseAwareWeekSessions — a rejection extends grace for its affected 
     if (result.status !== "scored") throw new Error("unreachable");
     expect(result.sessions[0]?.progress).toEqual(fr("1"));
   });
-});
 
-describe("pauseAwareWeekSessions — specificDays + pause is out of scope for this slice", () => {
-  it("throws a clear RangeError rather than silently ignoring pause for specificDays (no acceptance row needs it yet)", () => {
-    const dibujar = buildQuantityCommitment(
-      "dibujar",
-      20,
+  it("never rewrites recordedOn to fake grace — the same entry still fails the plain, unextended check afterward", () => {
+    const gym = buildQuantityCommitment(
+      "gym",
+      30,
       "times",
       { direction: "reach", minimum: fromInt(1), ideal: fromInt(1) },
-      {
-        kind: "specificDays",
-        weekdays: [1, 3, 5],
-      },
+      { kind: "timesPerWeek", times: 3 },
     );
+    const rejected = [
+      buildPauseRequest(
+        "gym",
+        0,
+        { kind: "fixed", lastDay: seasonDay(0) },
+        { kind: "rejected", decidedOn: seasonDay(5) },
+      ),
+    ];
+    const lateEntry = buildDoneEntry("gym", 0, seasonDay(6)); // day 0, normal deadline is day 1
+    const entries = [lateEntry, buildDoneEntry("gym", 1), buildDoneEntry("gym", 2)];
+    const result = pauseAwareWeekSessions(gym, 0, rejected, entries, seasonDay(6));
+    expect(result.status).toBe("scored");
+    if (result.status !== "scored") throw new Error("unreachable");
+    expect(result.sessions.map((s) => s.progress)).toEqual([fr("1"), fr("1"), fr("1")]); // extension worked
+    // ...yet the SAME object, checked against the plain unextended deadline, is still genuinely late —
+    // proving the extension happened via a deadline override, not by rewriting the entry itself.
+    expect(lateEntry.recordedOn).toBe(seasonDay(6));
+    expect(isOnTime(lateEntry, graceDeadline(lateEntry.day))).toBe(false);
+  });
+});
+
+describe("pauseAwareWeekSessions — specificDays", () => {
+  const monday: Season = { lengthWeeks: 4, startWeekday: 0 };
+  const dibujar = buildQuantityCommitment(
+    "dibujar",
+    20,
+    "times",
+    { direction: "reach", minimum: fromInt(1), ideal: fromInt(1) },
+    { kind: "specificDays", weekdays: [1, 3, 5] },
+  );
+
+  it("delegates straight to specificDaysSessions when the week has no active pause or on-hold request (no crash — slice 6a needs this)", () => {
+    const entries = [
+      buildDoneEntry("dibujar", 1),
+      buildDoneEntry("dibujar", 3),
+      buildDoneEntry("dibujar", 5),
+    ];
+    const result = pauseAwareWeekSessions(dibujar, 0, [], entries, seasonDay(6), monday);
+    expect(result.status).toBe("scored");
+    if (result.status !== "scored") throw new Error("unreachable");
+    expect(result.sessions.map((s) => s.progress)).toEqual([fr("1"), fr("1"), fr("1")]);
+  });
+
+  it("still throws — as a pending product decision, not a silent guess — when the week touches an active pause", () => {
+    const pauses = [
+      buildPauseRequest(
+        "dibujar",
+        0,
+        { kind: "fixed", lastDay: seasonDay(1) },
+        { kind: "approved", decidedOn: seasonDay(0), resumedOn: null },
+      ),
+    ];
+    expect(() => pauseAwareWeekSessions(dibujar, 0, pauses, [], seasonDay(6), monday)).toThrow(
+      RangeError,
+    );
+  });
+
+  it("still throws when the week touches a still-pending (on-hold) request", () => {
+    const pauses = [
+      buildPauseRequest(
+        "dibujar",
+        5,
+        { kind: "fixed", lastDay: seasonDay(6) },
+        { kind: "pending" },
+      ),
+    ];
+    expect(() => pauseAwareWeekSessions(dibujar, 0, pauses, [], seasonDay(6), monday)).toThrow(
+      RangeError,
+    );
+  });
+
+  it("throws a distinct error when season is omitted but specificDays actually needs it", () => {
     expect(() => pauseAwareWeekSessions(dibujar, 0, [], [], seasonDay(6))).toThrow(RangeError);
   });
 });
