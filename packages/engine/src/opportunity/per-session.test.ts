@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
+import type { Season, Weekday } from "../calendar/season-calendar";
 import type { Target } from "../commitment/commitment";
-import { fromInt, parseDecimal } from "../fraction/fraction";
+import { fromInt, mean, parseDecimal } from "../fraction/fraction";
 import { buildDoneEntry, buildQuantityEntry } from "../test-support/builders";
-import { sumSameDayEntries, timesPerWeekSessions } from "./per-session";
+import { fr } from "../test-support/fraction-literal";
+import { specificDaysSessions, sumSameDayEntries, timesPerWeekSessions } from "./per-session";
 
 const booleanTarget: Target = { direction: "reach", minimum: fromInt(1), ideal: fromInt(1) };
 const minutesTarget: Target = { direction: "reach", minimum: fromInt(10), ideal: fromInt(30) };
@@ -96,5 +98,78 @@ describe("timesPerWeekSessions", () => {
     const sessions = timesPerWeekSessions(booleanTarget, 1, entries);
     expect(sessions[0]?.progress).toEqual(fromInt(1));
     expect(sessions[0]?.consistent).toBe(true);
+  });
+});
+
+describe("specificDaysSessions", () => {
+  const monday: Season = { lengthWeeks: 4, startWeekday: 0 };
+  const tueThuSat: readonly Weekday[] = [1, 3, 5];
+
+  it("N8: an entry on every scheduled day gives full progress on all of them", () => {
+    const entries = [
+      buildDoneEntry("draw", 1),
+      buildDoneEntry("draw", 3),
+      buildDoneEntry("draw", 5),
+    ];
+    const sessions = specificDaysSessions(booleanTarget, monday, 0, tueThuSat, entries);
+    expect(sessions.map((s) => s.progress)).toEqual([fromInt(1), fromInt(1), fromInt(1)]);
+  });
+
+  it("N9: a missing scheduled day closes at zero when nothing covers it", () => {
+    const entries = [buildDoneEntry("draw", 1), buildDoneEntry("draw", 3)];
+    const sessions = specificDaysSessions(booleanTarget, monday, 0, tueThuSat, entries);
+    expect(sessions.map((s) => s.progress)).toEqual([fromInt(1), fromInt(1), fromInt(0)]);
+    expect(sessions.filter((s) => s.consistent)).toHaveLength(2);
+  });
+
+  it("N10 (D5): an entry on a non-scheduled day covers a missed scheduled day, same week only", () => {
+    const entries = [
+      buildDoneEntry("draw", 2), // wednesday — not scheduled, covers the missing tuesday
+      buildDoneEntry("draw", 3),
+      buildDoneEntry("draw", 5),
+    ];
+    const sessions = specificDaysSessions(booleanTarget, monday, 0, tueThuSat, entries);
+    expect(sessions.map((s) => s.progress)).toEqual([fromInt(1), fromInt(1), fromInt(1)]);
+  });
+
+  it("N11 (D5): a non-scheduled entry adds nothing when nothing was missed, and never raises the count", () => {
+    const entries = [
+      buildDoneEntry("draw", 1),
+      buildDoneEntry("draw", 2), // wednesday — extra, nothing to cover
+      buildDoneEntry("draw", 3),
+      buildDoneEntry("draw", 5),
+    ];
+    const sessions = specificDaysSessions(booleanTarget, monday, 0, tueThuSat, entries);
+    expect(sessions).toHaveLength(3);
+    expect(sessions.map((s) => s.progress)).toEqual([fromInt(1), fromInt(1), fromInt(1)]);
+  });
+
+  it("discards a late covering entry before it can cover a missed scheduled day (D5 grace gate)", () => {
+    const entries = [
+      buildDoneEntry("draw", 3), // thursday, on time
+      buildDoneEntry("draw", 5), // saturday, on time
+      buildDoneEntry("draw", 2, 4), // wednesday, recorded day 4 — deadline was day 3, discarded
+    ];
+    const sessions = specificDaysSessions(booleanTarget, monday, 0, tueThuSat, entries);
+    // tuesday stays missing — the late wednesday entry never becomes available to cover it
+    expect(sessions.map((s) => s.progress)).toEqual([fromInt(0), fromInt(1), fromInt(1)]);
+  });
+
+  it("D5 with multiple misses and multiple extras: the week result is independent of entry order (engine-authored, not a Notion row)", () => {
+    const dibujarTarget: Target = { direction: "reach", minimum: fromInt(10), ideal: fromInt(30) };
+    const thu = buildQuantityEntry("draw", 3, parseDecimal("30")); // scheduled, present
+    const wed = buildQuantityEntry("draw", 2, parseDecimal("15")); // extra, covers a miss
+    const fri = buildQuantityEntry("draw", 4, parseDecimal("25")); // extra, covers the other miss
+    // tuesday and saturday both start missing; wed and fri are the two covering extras.
+
+    const orderA = specificDaysSessions(dibujarTarget, monday, 0, tueThuSat, [wed, fri, thu]);
+    const orderB = specificDaysSessions(dibujarTarget, monday, 0, tueThuSat, [fri, wed, thu]);
+    const orderC = specificDaysSessions(dibujarTarget, monday, 0, tueThuSat, [thu, fri, wed]);
+
+    expect(orderB).toEqual(orderA);
+    expect(orderC).toEqual(orderA);
+    // the two covering values (15 and 25) land in the two missing slots either way;
+    // the aggregate is the same 3-value mean regardless of which slot gets which.
+    expect(mean(orderA.map((s) => s.progress))).toEqual(fr("7/9"));
   });
 });

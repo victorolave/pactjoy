@@ -1,13 +1,18 @@
 /**
- * Per-session opportunity generation for `Schedule.period === "perSession"`.
- * `timesPerWeek` here; `specificDays` follows in the same module (D5).
+ * Per-session opportunity generation for `Schedule.period === "perSession"`:
+ * `timesPerWeek` (D4 same-day sum + best-N) and `specificDays` (D5 same-week
+ * missed-day coverage).
  */
+import type { Season, SeasonDay, Weekday } from "../calendar/season-calendar";
+import { seasonDay } from "../calendar/season-calendar";
 import type { Target } from "../commitment/commitment";
 import type { Entry } from "../entry/entry";
 import { graceDeadline, isOnTime } from "../entry/grace-period";
 import type { Fraction } from "../fraction/fraction";
 import { compare, fromInt, sum } from "../fraction/fraction";
 import { isConsistent, progressOf } from "../progress/progress";
+
+const DAYS_PER_WEEK = 7;
 
 const ONE = fromInt(1);
 const ZERO = fromInt(0);
@@ -79,4 +84,44 @@ export function timesPerWeekSessions(
   const best = scored.slice(0, times);
   const missing = times - best.length;
   return [...best, ...Array.from({ length: missing > 0 ? missing : 0 }, () => EMPTY_SESSION)];
+}
+
+/** The {@link SeasonDay} that `weekday` falls on in week `week` of `season`. */
+function dayForWeekday(season: Season, week: number, weekday: Weekday): SeasonDay {
+  const offset = (weekday - season.startWeekday + DAYS_PER_WEEK) % DAYS_PER_WEEK;
+  return seasonDay(week * DAYS_PER_WEEK + offset);
+}
+
+/**
+ * The week's `specificDays` opportunities: one per `scheduledWeekdays` entry.
+ * An entry on a non-scheduled day covers a still-missing scheduled day from
+ * the *same week only* (D5, in scheduled-day order), and never raises the
+ * opportunity count above `scheduledWeekdays.length`; if nothing is missing,
+ * it adds nothing.
+ */
+export function specificDaysSessions(
+  target: Target,
+  season: Season,
+  week: number,
+  scheduledWeekdays: readonly Weekday[],
+  weekEntries: readonly Entry[],
+): readonly SessionResult[] {
+  const byDay = groupByDay(weekEntries);
+  const scheduledDays = scheduledWeekdays.map((weekday) => dayForWeekday(season, week, weekday));
+  const scheduledSet = new Set<number>(scheduledDays);
+  const slotValues = new Map<number, Fraction | null>(
+    scheduledDays.map((day) => [
+      day,
+      byDay.has(day) ? sumSameDayEntries(byDay.get(day) ?? []) : null,
+    ]),
+  );
+
+  const extraDays = [...byDay.keys()].filter((day) => !scheduledSet.has(day)).sort((a, b) => a - b);
+  for (const extraDay of extraDays) {
+    const missingSlot = scheduledDays.find((day) => slotValues.get(day) === null);
+    if (missingSlot === undefined) continue; // nothing missed this week — the extra entry adds nothing
+    slotValues.set(missingSlot, sumSameDayEntries(byDay.get(extraDay) ?? []));
+  }
+
+  return scheduledDays.map((day) => toSessionResult(target, slotValues.get(day) ?? null));
 }
