@@ -4,6 +4,11 @@
 - **Date:** 2026-09-25
 - **Deciders:** Victor Olave
 
+**Note (2026-09-26):** the ESLint + Prettier tooling and the resulting
+`typescript` pin described below are superseded by
+[ADR-0003](0003-use-biome-for-linting-and-formatting.md). The pnpm
+workspaces + Turborepo decision itself is unaffected and still stands.
+
 ## Context
 
 `CLAUDE.md` already commits PactJoy to a TypeScript monorepo managed with

@@ -47,3 +47,4 @@ status to `Superseded by ADR-XXXX`, linking to the new one. Small fixes
 | ----------------------------------------------------------- | ------------------------------------------- | -------- | ---------- |
 | [0001](0001-record-architecture-decisions.md)               | Record architecture decisions               | Accepted | 2026-09-25 |
 | [0002](0002-monorepo-with-pnpm-workspaces-and-turborepo.md) | Monorepo with pnpm workspaces and Turborepo | Accepted | 2026-09-25 |
+| [0003](0003-use-biome-for-linting-and-formatting.md) | Use Biome for linting and formatting | Accepted | 2026-09-26 |
