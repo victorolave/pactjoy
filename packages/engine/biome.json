@@ -1,0 +1,23 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.14/schema.json",
+  "extends": "//",
+  "linter": {
+    "rules": {
+      "style": {
+        "noRestrictedGlobals": {
+          "level": "error",
+          "options": {
+            "deniedGlobals": {
+              "Date": "packages/engine is a pure domain package: use the injected SeasonDay/today argument instead (ADR-0004).",
+              "Intl": "packages/engine is a pure domain package: timezone/locale handling belongs to packages/app (ADR-0004).",
+              "Math": "packages/engine must use exact Fraction arithmetic, never float (ADR-0006).",
+              "Temporal": "packages/engine is a pure domain package: use the injected SeasonDay/today argument instead (ADR-0004).",
+              "parseFloat": "packages/engine must use parseDecimal (exact Fraction), never a float parser (ADR-0006).",
+              "performance": "packages/engine is a pure domain package: no wall-clock or timing APIs."
+            }
+          }
+        }
+      }
+    }
+  }
+}
