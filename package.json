@@ -1,0 +1,22 @@
+{
+  "name": "pactjoy",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.15.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "test:watch": "turbo run test:watch",
+    "format": "biome format --write .",
+    "format:check": "biome format ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.14",
+    "turbo": "^2.11.4",
+    "typescript": "~7.0.2"
+  }
+}
