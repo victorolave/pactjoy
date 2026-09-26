@@ -1,6 +1,8 @@
 import type { Target } from "../../commitment/commitment";
 import type { Fraction } from "../../fraction/fraction";
 import { fromInt, parseDecimal } from "../../fraction/fraction";
+import { sumSameDayEntries } from "../../opportunity/per-session";
+import { buildQuantityEntry } from "../../test-support/builders";
 import { fr } from "../../test-support/fraction-literal";
 
 export interface ProgressRow {
@@ -26,8 +28,8 @@ const booleanTarget: Target = { direction: "reach", minimum: fromInt(1), ideal: 
 const allOrNothingTarget: Target = { direction: "reach", minimum: fromInt(20), ideal: fromInt(20) };
 
 /**
- * Series A: `reach` direction, `perSession` period. A12 (same-day entry
- * summation, D4) is deferred to slice 3, which implements that summation.
+ * Series A: `reach` direction, `perSession` period. A12 exercises D4's
+ * same-day entry summation (`sumSameDayEntries`, slice 3).
  */
 export const aReachPerSessionRows: readonly ProgressRow[] = [
   {
@@ -116,6 +118,17 @@ export const aReachPerSessionRows: readonly ProgressRow[] = [
     target: allOrNothingTarget,
     value: parseDecimal("20"),
     expectedProgress: fr("1"),
+    expectedConsistent: true,
+  },
+  {
+    id: "A12",
+    summary: "entries on the same day sum into one session before evaluating progress (D4)",
+    target: withMinimumBelowIdeal,
+    value: sumSameDayEntries([
+      buildQuantityEntry("read", 0, parseDecimal("10")),
+      buildQuantityEntry("read", 0, parseDecimal("15")),
+    ]),
+    expectedProgress: fr("5/6"),
     expectedConsistent: true,
   },
 ];
