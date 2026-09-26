@@ -1,7 +1,7 @@
 import type { Target } from "../../commitment/commitment";
 import type { Fraction } from "../../fraction/fraction";
 import { fromInt, parseDecimal } from "../../fraction/fraction";
-import { sumSameDayEntries } from "../../opportunity/per-session";
+import { sumEntryValues } from "../../opportunity/per-session";
 import { buildQuantityEntry } from "../../test-support/builders";
 import { fr } from "../../test-support/fraction-literal";
 
@@ -29,7 +29,7 @@ const allOrNothingTarget: Target = { direction: "reach", minimum: fromInt(20), i
 
 /**
  * Series A: `reach` direction, `perSession` period. A12 exercises D4's
- * same-day entry summation (`sumSameDayEntries`, slice 3).
+ * same-day entry summation (`sumEntryValues`, slice 3).
  */
 export const aReachPerSessionRows: readonly ProgressRow[] = [
   {
@@ -124,7 +124,7 @@ export const aReachPerSessionRows: readonly ProgressRow[] = [
     id: "A12",
     summary: "entries on the same day sum into one session before evaluating progress (D4)",
     target: withMinimumBelowIdeal,
-    value: sumSameDayEntries([
+    value: sumEntryValues([
       buildQuantityEntry("read", 0, parseDecimal("10")),
       buildQuantityEntry("read", 0, parseDecimal("15")),
     ]),

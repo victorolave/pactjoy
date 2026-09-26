@@ -4,27 +4,27 @@ import type { Target } from "../commitment/commitment";
 import { fromInt, mean, parseDecimal } from "../fraction/fraction";
 import { buildDoneEntry, buildQuantityEntry } from "../test-support/builders";
 import { fr } from "../test-support/fraction-literal";
-import { specificDaysSessions, sumSameDayEntries, timesPerWeekSessions } from "./per-session";
+import { specificDaysSessions, sumEntryValues, timesPerWeekSessions } from "./per-session";
 
 const booleanTarget: Target = { direction: "reach", minimum: fromInt(1), ideal: fromInt(1) };
 const minutesTarget: Target = { direction: "reach", minimum: fromInt(10), ideal: fromInt(30) };
 
-describe("sumSameDayEntries", () => {
+describe("sumEntryValues", () => {
   it("sums two quantity entries into one value (D4)", () => {
     const entries = [
       buildQuantityEntry("read", 0, parseDecimal("10")),
       buildQuantityEntry("read", 0, parseDecimal("15")),
     ];
-    expect(sumSameDayEntries(entries)).toEqual(parseDecimal("25"));
+    expect(sumEntryValues(entries)).toEqual(parseDecimal("25"));
   });
 
   it("treats a done entry as a value of 1", () => {
-    expect(sumSameDayEntries([buildDoneEntry("gym", 0)])).toEqual(fromInt(1));
+    expect(sumEntryValues([buildDoneEntry("gym", 0)])).toEqual(fromInt(1));
   });
 
   it("treats a missed entry as a value of 0", () => {
     const entries = [buildQuantityEntry("read", 0, parseDecimal("10"))];
-    expect(sumSameDayEntries(entries)).toEqual(parseDecimal("10"));
+    expect(sumEntryValues(entries)).toEqual(parseDecimal("10"));
   });
 });
 

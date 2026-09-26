@@ -31,11 +31,13 @@ function entryValue(entry: Entry): Fraction {
 }
 
 /**
- * Sums entries that all fall on the same day into one session value (D4).
- * Callers are responsible for grouping entries by day first — this function
- * does not itself check that `entries` share a day.
+ * Sums a list of entries into one value (via {@link entryValue}: quantity's
+ * own value, `done` as 1, `missed` as 0). Used both for a single day's
+ * same-day sum (D4, via `groupByDay`) and for a whole week's total
+ * (`weekly-total.ts`'s `weeklyTotalResult`) — summation itself has no
+ * notion of "day" or "week", only the caller decides which entries to pass.
  */
-export function sumSameDayEntries(entries: readonly Entry[]): Fraction {
+export function sumEntryValues(entries: readonly Entry[]): Fraction {
   return sum(entries.map(entryValue));
 }
 
@@ -77,7 +79,7 @@ export function timesPerWeekSessions(
   times: number,
   weekEntries: readonly Entry[],
 ): readonly SessionResult[] {
-  const sessionValues = [...groupByDay(weekEntries).values()].map(sumSameDayEntries);
+  const sessionValues = [...groupByDay(weekEntries).values()].map(sumEntryValues);
   const scored = sessionValues
     .map((value) => toSessionResult(target, value))
     .sort((a, b) => compare(b.progress, a.progress));
@@ -110,17 +112,14 @@ export function specificDaysSessions(
   const scheduledDays = scheduledWeekdays.map((weekday) => dayForWeekday(season, week, weekday));
   const scheduledSet = new Set<number>(scheduledDays);
   const slotValues = new Map<number, Fraction | null>(
-    scheduledDays.map((day) => [
-      day,
-      byDay.has(day) ? sumSameDayEntries(byDay.get(day) ?? []) : null,
-    ]),
+    scheduledDays.map((day) => [day, byDay.has(day) ? sumEntryValues(byDay.get(day) ?? []) : null]),
   );
 
   const extraDays = [...byDay.keys()].filter((day) => !scheduledSet.has(day)).sort((a, b) => a - b);
   for (const extraDay of extraDays) {
     const missingSlot = scheduledDays.find((day) => slotValues.get(day) === null);
     if (missingSlot === undefined) continue; // nothing missed this week — the extra entry adds nothing
-    slotValues.set(missingSlot, sumSameDayEntries(byDay.get(extraDay) ?? []));
+    slotValues.set(missingSlot, sumEntryValues(byDay.get(extraDay) ?? []));
   }
 
   return scheduledDays.map((day) => toSessionResult(target, slotValues.get(day) ?? null));
