@@ -2,7 +2,26 @@ import { describe, expect, it } from "vitest";
 import { aReachPerSessionRows } from "./rows/a-reach-per-session.rows";
 import { bLimitRows } from "./rows/b-limit.rows";
 import { cWeeklyTotalRows } from "./rows/c-weekly-total.rows";
+import {
+  eAllCommitmentsPause,
+  eConsistencyRows,
+  eLifecycleRows,
+  eNeutralPointsRows,
+  ePausedDaySessionRows,
+  eSessionCountRows,
+  eWeeklyProrationRows,
+} from "./rows/e-pause.rows";
 import { nFrequencyRows } from "./rows/n-frequency.rows";
+
+const ePauseRowIds = [
+  ...eNeutralPointsRows,
+  ...eSessionCountRows,
+  ...eWeeklyProrationRows,
+  ...ePausedDaySessionRows,
+  ...eLifecycleRows,
+  { id: eAllCommitmentsPause.id },
+  ...eConsistencyRows,
+].map((row) => row.id);
 
 /**
  * Pins the full 96-row worked-example catalog (ADR-0005). Families not yet
@@ -12,12 +31,9 @@ import { nFrequencyRows } from "./rows/n-frequency.rows";
  */
 describe("acceptance catalog", () => {
   it("has unique row IDs across every implemented family", () => {
-    const ids = [
-      ...aReachPerSessionRows,
-      ...bLimitRows,
-      ...cWeeklyTotalRows,
-      ...nFrequencyRows,
-    ].map((row) => row.id);
+    const ids = [...aReachPerSessionRows, ...bLimitRows, ...cWeeklyTotalRows, ...nFrequencyRows]
+      .map((row) => row.id)
+      .concat(ePauseRowIds);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
@@ -38,7 +54,11 @@ describe("acceptance catalog", () => {
   });
 
   it.todo("series N: streak rows N12-N13 — slice 6b");
-  it.todo("series E: pause rows — slices 5a and 5b");
+
+  it("pins the row count for series E so far: 17 of 23 (E12-E16, E22 need canRequestPause, slice 5b)", () => {
+    expect(ePauseRowIds.length).toBe(17);
+  });
+
   it.todo("series F: full-season rows — slices 6a and 6b");
   it.todo("series G: consistency rows — slice 6a");
 });
