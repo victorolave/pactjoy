@@ -50,6 +50,21 @@ export function buildQuantityCommitment(
   };
 }
 
+export function buildWeeklyTotalCommitment(
+  id: string,
+  weightPercent: number,
+  unit: QuantityUnit,
+  target: Target,
+): QuantityCommitment {
+  return {
+    id: id as QuantityCommitment["id"],
+    weightPercent,
+    unit,
+    target,
+    schedule: { period: "weeklyTotal" },
+  };
+}
+
 function toSeasonDay(day: SeasonDay | number): SeasonDay {
   return typeof day === "number" ? seasonDay(day) : day;
 }
