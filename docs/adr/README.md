@@ -43,8 +43,11 @@ status to `Superseded by ADR-XXXX`, linking to the new one. Small fixes
 
 ## Index
 
-| #                                                           | Title                                       | Status   | Date       |
-| ----------------------------------------------------------- | ------------------------------------------- | -------- | ---------- |
-| [0001](0001-record-architecture-decisions.md)               | Record architecture decisions               | Accepted | 2026-09-25 |
-| [0002](0002-monorepo-with-pnpm-workspaces-and-turborepo.md) | Monorepo with pnpm workspaces and Turborepo | Accepted | 2026-09-25 |
-| [0003](0003-use-biome-for-linting-and-formatting.md) | Use Biome for linting and formatting | Accepted | 2026-09-26 |
+| #                                                           | Title                                                       | Status   | Date       |
+| ----------------------------------------------------------- | ----------------------------------------------------------- | -------- | ---------- |
+| [0001](0001-record-architecture-decisions.md)               | Record architecture decisions                               | Accepted | 2026-09-25 |
+| [0002](0002-monorepo-with-pnpm-workspaces-and-turborepo.md) | Monorepo with pnpm workspaces and Turborepo                 | Accepted | 2026-09-25 |
+| [0003](0003-use-biome-for-linting-and-formatting.md)        | Use Biome for linting and formatting                        | Accepted | 2026-09-26 |
+| [0004](0004-scoring-engine-resolved-calendar-days.md)       | Scoring engine works on resolved calendar days              | Accepted | 2026-09-26 |
+| [0005](0005-worked-examples-as-executable-spec.md)          | Worked examples are the engine's executable specification   | Accepted | 2026-09-26 |
+| [0006](0006-bigint-fraction-arithmetic.md)                  | Exact rational arithmetic with hand-rolled BigInt fractions | Accepted | 2026-09-26 |
