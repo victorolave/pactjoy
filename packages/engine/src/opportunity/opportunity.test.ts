@@ -1,8 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { Season } from "../calendar/season-calendar";
 import type { QuantityCommitment } from "../commitment/commitment";
-import { fromInt } from "../fraction/fraction";
-import { buildDoneCommitment, buildQuantityCommitment } from "../test-support/builders";
+import { fromInt, parseDecimal } from "../fraction/fraction";
+import {
+  buildDoneCommitment,
+  buildQuantityCommitment,
+  buildQuantityEntry,
+} from "../test-support/builders";
+import { fr } from "../test-support/fraction-literal";
 import { weekSessionsOf } from "./opportunity";
 
 const season: Season = { lengthWeeks: 4, startWeekday: 0 };
@@ -43,14 +48,18 @@ describe("weekSessionsOf", () => {
     expect(() => weekSessionsOf(commitment, season, 99, [])).toThrow(RangeError);
   });
 
-  it("throws RangeError for a weeklyTotal commitment — that dispatch arrives in slice 4", () => {
+  it("dispatches weeklyTotal commitments to weekly accumulation, returning a single result", () => {
     const commitment: QuantityCommitment = {
-      id: "inglés" as QuantityCommitment["id"],
+      id: "ingles" as QuantityCommitment["id"],
       weightPercent: 25,
       unit: "minutes",
       target: { direction: "reach", minimum: fromInt(60), ideal: fromInt(150) },
       schedule: { period: "weeklyTotal" },
     };
-    expect(() => weekSessionsOf(commitment, season, 0, [])).toThrow(RangeError);
+    const entries = [buildQuantityEntry("ingles", 0, parseDecimal("90"))];
+    const sessions = weekSessionsOf(commitment, season, 0, entries);
+    expect(sessions).toHaveLength(1);
+    expect(sessions[0]?.progress).toEqual(fr("3/5"));
+    expect(sessions[0]?.consistent).toBe(true);
   });
 });

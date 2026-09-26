@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { aReachPerSessionRows } from "./rows/a-reach-per-session.rows";
 import { bLimitRows } from "./rows/b-limit.rows";
+import { cWeeklyTotalRows } from "./rows/c-weekly-total.rows";
 import { nFrequencyRows } from "./rows/n-frequency.rows";
 
 /**
@@ -11,7 +12,12 @@ import { nFrequencyRows } from "./rows/n-frequency.rows";
  */
 describe("acceptance catalog", () => {
   it("has unique row IDs across every implemented family", () => {
-    const ids = [...aReachPerSessionRows, ...bLimitRows, ...nFrequencyRows].map((row) => row.id);
+    const ids = [
+      ...aReachPerSessionRows,
+      ...bLimitRows,
+      ...cWeeklyTotalRows,
+      ...nFrequencyRows,
+    ].map((row) => row.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
@@ -23,11 +29,14 @@ describe("acceptance catalog", () => {
     expect(bLimitRows.length).toBe(14);
   });
 
+  it("pins the final row count for series C: 15 of 15", () => {
+    expect(cWeeklyTotalRows.length).toBe(15);
+  });
+
   it("pins the row count for series N so far: 11 of 13 (N12-N13 need streak, slice 6b)", () => {
     expect(nFrequencyRows.length).toBe(11);
   });
 
-  it.todo("series C: weekly-total rows — slice 4");
   it.todo("series N: streak rows N12-N13 — slice 6b");
   it.todo("series E: pause rows — slices 5a and 5b");
   it.todo("series F: full-season rows — slices 6a and 6b");
