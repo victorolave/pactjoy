@@ -72,9 +72,9 @@ whatever formatting they already had.
 
 ### ESLint (type-aware) + Biome as formatter only
 
-- **Pros:** Keeps `typescript-eslint`'s type-aware lint rules (stronger than
-  Biome's non-type-aware linter) while getting Biome's faster formatter and
-  dropping Prettier.
+- **Pros:** Keeps `typescript-eslint`'s full type-aware lint rules (broader
+  than Biome's partial, inference-based type-aware rules) while getting
+  Biome's faster formatter and dropping Prettier.
 - **Cons:** Still two tools and two configs; still keeps the exact
   `typescript-eslint` → `typescript` peer-range coupling this ADR exists to
   remove. Runs both a JS-based and a Rust-based tool in every `lint`/`format`
@@ -112,9 +112,11 @@ whatever formatting they already had.
 
 ### Negative
 
-- Biome's linter is not type-aware the way `typescript-eslint`'s
-  `recommendedTypeChecked` was — it can't catch rules that need type
-  information (e.g. unsafe `any` assignments, floating promises). Mitigated
+- Biome's type-aware linting is partial compared to `typescript-eslint`'s
+  `recommendedTypeChecked`: Biome infers types itself instead of using the
+  TypeScript compiler, so it covers only some rules that need type
+  information (e.g. `noFloatingPromises`, `noMisusedPromises`) and misses
+  others (e.g. unsafe `any` assignments). Mitigated
   by keeping `tsc --noEmit` as its own strict, mandatory `typecheck` task
   (unchanged by this ADR) and by the acceptance-test discipline in
   `packages/engine` (every worked example in the Mechanics page becomes a
