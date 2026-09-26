@@ -1,10 +1,6 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalDependencies": [
-    "tsconfig.base.json",
-    "eslint.config.js",
-    ".prettierrc.json"
-  ],
+  "globalDependencies": ["tsconfig.base.json", "biome.json"],
   "tasks": {
     "lint": {
       "outputs": []

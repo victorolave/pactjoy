@@ -109,12 +109,15 @@ Requires Node (see `.nvmrc`) and [pnpm](https://pnpm.io/) (version pinned via `p
 
 ```bash
 pnpm install       # install workspace dependencies
-pnpm lint          # eslint, across packages (via turbo)
+pnpm lint          # biome lint, across packages (via turbo)
 pnpm typecheck     # tsc --noEmit, across packages (via turbo)
 pnpm test          # vitest, across packages (via turbo)
-pnpm format        # prettier --write
-pnpm format:check  # prettier --check (what CI runs)
+pnpm format        # biome format --write
+pnpm format:check  # biome format (check only)
 ```
+
+CI additionally runs `biome ci .` (format + lint + import order, read-only)
+before `turbo run lint typecheck test`.
 
 Architecture decisions are recorded as ADRs in [`docs/adr/`](docs/adr/README.md).
 

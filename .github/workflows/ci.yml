@@ -28,8 +28,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Check formatting
-        run: pnpm format:check
+      - name: Biome CI (format, lint, import order)
+        run: pnpm exec biome ci .
 
       - name: Lint, typecheck and test
         run: pnpm turbo run lint typecheck test
