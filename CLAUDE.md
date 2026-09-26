@@ -84,6 +84,17 @@ One term per concept, used the same way in the rules, the code and conversations
 - **API:** Supabase Edge Functions (Deno runtime), structured as if it were Nest: one module per use case, thin controllers, ports injected by hand. NestJS is ruled out for now: it needs an always-on server (~5 USD/month) or one that sleeps and breaks scheduled jobs. To verify when reaching that layer: how Edge Functions import monorepo packages (import map or relative paths).
 - **Language:** TypeScript everywhere. Monorepo with pnpm workspaces.
 
+### Guiding principle: high decoupling
+
+Every piece of the system is replaceable. Each component (database, auth, hosting, API runtime, UI framework, notifications, storage, and tooling such as the linter or test runner) sits behind a boundary that the rest of the system depends on, never behind its concrete implementation. Swapping a piece should mean writing a new adapter, not changing the domain or the use cases.
+
+In practice:
+
+- Depend on ports (interfaces) owned by the inner layer; vendors live only in adapters.
+- No vendor types, SDKs or conventions leak into `packages/engine` or `packages/app`.
+- When adding a dependency, ask "what would it take to replace this?" If the answer touches the domain, redesign the boundary first.
+- Replacing a significant piece is recorded as an ADR in `docs/adr/`.
+
 ### Architecture (hexagonal: Supabase is the facade, not the structure)
 
 - `packages/engine`: pure domain (scoring, pause, proration, streaks). No dependencies. Exact fractions with BigInt, never `float`. Injected clock.
