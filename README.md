@@ -42,17 +42,17 @@ The goal is not the longest streak. It is to build habits until they no longer n
 
 ## Why it's different
 
-- **Different goals, fair comparison.** Progress is measured against *your own commitment*, not against the type of activity. Running 5 km is not "worth more" than reading.
-- **Minimum + ideal.** Each commitment has a viable minimum for hard days and an ideal. The minimum is a *threshold*, not free points: it counts for consistency, while only the ideal earns 100%.
+- **Different goals, fair comparison.** Progress is measured against _your own commitment_, not against the type of activity. Running 5 km is not "worth more" than reading.
+- **Minimum + ideal.** Each commitment has a viable minimum for hard days and an ideal. The minimum is a _threshold_, not free points: it counts for consistency, while only the ideal earns 100%.
 - **A pact, not a punishment.** Members agree on each other's commitments before the season starts. Missing a day never subtracts points, and pausing (injury, travel) is neutral.
 - **Privacy with fairness.** A commitment can be private and still count toward the ranking.
 - **Graduation as the best outcome.** The app tracks self-reported automaticity (SRBAI) and lets you stop tracking a habit once it has become part of your routine.
 
 ## How scoring works (short version)
 
-| Direction | Rule |
-|---|---|
-| **Reach** (more is better) | Below the minimum → 0%. From the minimum on → `value / ideal`, capped at 100%. |
+| Direction                         | Rule                                                                                                |
+| --------------------------------- | --------------------------------------------------------------------------------------------------- |
+| **Reach** (more is better)        | Below the minimum → 0%. From the minimum on → `value / ideal`, capped at 100%.                      |
 | **Don't exceed** (less is better) | Up to the ideal → 100%. Linear down to 50% at the tolerance. Above the tolerance, or no entry → 0%. |
 
 A commitment's points = `weight × 1,000 × average progress of its active opportunities`. All values are stored **exactly** (rational numbers, never floats) and rounded **only for display**, so the 1,000-point ceiling always holds.
@@ -87,12 +87,12 @@ Design rules that keep the backend replaceable (e.g. by a NestJS API):
 
 ## Tech stack
 
-| Layer | Choice |
-|---|---|
-| Language | TypeScript everywhere (pnpm workspaces monorepo) |
-| Client | PWA: Vite + React + vite-plugin-pwa |
-| Backend | Supabase: Postgres, Auth, Storage, Edge Functions (Deno), pg_cron |
-| Tests | Vitest |
+| Layer    | Choice                                                            |
+| -------- | ----------------------------------------------------------------- |
+| Language | TypeScript everywhere (pnpm workspaces monorepo)                  |
+| Client   | PWA: Vite + React + vite-plugin-pwa                               |
+| Backend  | Supabase: Postgres, Auth, Storage, Edge Functions (Deno), pg_cron |
+| Tests    | Vitest                                                            |
 
 ## Roadmap
 
@@ -102,6 +102,21 @@ Design rules that keep the backend replaceable (e.g. by a NestJS API):
 - [ ] Database schema, use cases and API
 - [ ] PWA: Today & logging → Season → Pact → Pause, review & close → Onboarding & circle
 - [ ] Season 1: dogfooding with two people
+
+## Development
+
+Requires Node (see `.nvmrc`) and [pnpm](https://pnpm.io/) (version pinned via `packageManager` in `package.json`).
+
+```bash
+pnpm install       # install workspace dependencies
+pnpm lint          # eslint, across packages (via turbo)
+pnpm typecheck     # tsc --noEmit, across packages (via turbo)
+pnpm test          # vitest, across packages (via turbo)
+pnpm format        # prettier --write
+pnpm format:check  # prettier --check (what CI runs)
+```
+
+Architecture decisions are recorded as ADRs in [`docs/adr/`](docs/adr/README.md).
 
 ## Contributing
 

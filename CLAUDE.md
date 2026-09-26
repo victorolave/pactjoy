@@ -31,41 +31,41 @@ Before proposing rule changes, read the Mechanics page. Do not duplicate busines
 
 One term per concept, used the same way in the rules, the code and conversations. Notion and the UI use the Spanish term; code uses the English one. Do not introduce synonyms (e.g. never `CheckIn` or `Log` for an entry).
 
-| Spanish (Notion / UI) | English (code) | Meaning |
-|---|---|---|
-| Hábito | `Habit` | Long-term behavior; lives across seasons |
-| Compromiso | `Commitment` | How a habit is worked during one season (frequency, minimum, ideal, weight, privacy) |
-| Temporada | `Season` | 4, 6, 8 or 12 weeks; weeks count from its start day |
-| Círculo | `Circle` | 2–6 people sharing a season |
-| Miembro | `Member` | A person in a circle |
-| Pacto | `Pact` | The set of commitments everyone approves before the season (unanimous) |
-| Oportunidad | `Opportunity` | Unit of scoring: a session, a scheduled day or a week |
-| Registro | `Entry` | What a member logs for an opportunity |
-| "Hoy no salió" | `missed` entry | Explicit "not done" for a day-bound opportunity |
-| Unidad | `Unit` | done/not done, minutes, hours, times, pages, km, glasses, custom |
-| Hecho / no hecho | `done` | Boolean unit |
-| Dirección: alcanzar / no exceder | `Direction`: `reach` / `limit` | More is better / less is better |
-| Periodo: por sesión / semanal acumulado | `Period`: `perSession` / `weeklyTotal` | Opportunity is a session / the whole week |
-| Frecuencia: N veces por semana / días específicos | `Frequency`: `timesPerWeek` / `specificDays` | How per-session opportunities are scheduled |
-| Mínimo | `minimum` | Threshold for "reach"; counts for consistency |
-| Ideal | `ideal` | Target that gives 100% |
-| Tolerancia | `tolerance` | Upper bound for "limit" (worth 50%) |
-| Peso | `weight` | Share of the member's 1,000 points |
-| Progreso | `progress` | Exact fraction 0–1 for one opportunity |
-| Puntos | `points` | weight × 1,000 × average progress of active opportunities |
-| Consistencia | `consistency` | Share of opportunities that reached the minimum |
-| Cumplimiento ideal | `idealCompletion` | Average progress (= points / potential) |
-| Racha | `streak` | Consecutive opportunities (days or weeks) kept |
-| Pausa | `Pause` | Freezes opportunities; neutral for scoring |
-| Prorrateo | `proration` | Scaling N / minimum / ideal / tolerance by active days in a partial week |
-| Periodo de gracia | `gracePeriod` | Until the end of the next day |
-| Revisión periódica | `Review` | Private periodic review (≈60 s) |
-| Automaticidad (SRBAI) | `automaticity` | Self-reported automaticity index, 1–7 |
-| Graduación / graduar | `graduation` / `graduate` | User decision to stop tracking a habit |
-| Estados 🌱🌿🌳🎓 | `HabitStage`: `new` / `developing` / `integrated` / `graduated` | Habit maturity |
-| Clasificación | `standings` | Season ranking by points |
-| Sugerencia de ánimo | `encouragementNudge` | Voluntary suggestion to support a member |
-| Reacción | `Reaction` | ❤️ 🙌 🔥 👏 |
+| Spanish (Notion / UI)                             | English (code)                                                  | Meaning                                                                              |
+| ------------------------------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Hábito                                            | `Habit`                                                         | Long-term behavior; lives across seasons                                             |
+| Compromiso                                        | `Commitment`                                                    | How a habit is worked during one season (frequency, minimum, ideal, weight, privacy) |
+| Temporada                                         | `Season`                                                        | 4, 6, 8 or 12 weeks; weeks count from its start day                                  |
+| Círculo                                           | `Circle`                                                        | 2–6 people sharing a season                                                          |
+| Miembro                                           | `Member`                                                        | A person in a circle                                                                 |
+| Pacto                                             | `Pact`                                                          | The set of commitments everyone approves before the season (unanimous)               |
+| Oportunidad                                       | `Opportunity`                                                   | Unit of scoring: a session, a scheduled day or a week                                |
+| Registro                                          | `Entry`                                                         | What a member logs for an opportunity                                                |
+| "Hoy no salió"                                    | `missed` entry                                                  | Explicit "not done" for a day-bound opportunity                                      |
+| Unidad                                            | `Unit`                                                          | done/not done, minutes, hours, times, pages, km, glasses, custom                     |
+| Hecho / no hecho                                  | `done`                                                          | Boolean unit                                                                         |
+| Dirección: alcanzar / no exceder                  | `Direction`: `reach` / `limit`                                  | More is better / less is better                                                      |
+| Periodo: por sesión / semanal acumulado           | `Period`: `perSession` / `weeklyTotal`                          | Opportunity is a session / the whole week                                            |
+| Frecuencia: N veces por semana / días específicos | `Frequency`: `timesPerWeek` / `specificDays`                    | How per-session opportunities are scheduled                                          |
+| Mínimo                                            | `minimum`                                                       | Threshold for "reach"; counts for consistency                                        |
+| Ideal                                             | `ideal`                                                         | Target that gives 100%                                                               |
+| Tolerancia                                        | `tolerance`                                                     | Upper bound for "limit" (worth 50%)                                                  |
+| Peso                                              | `weight`                                                        | Share of the member's 1,000 points                                                   |
+| Progreso                                          | `progress`                                                      | Exact fraction 0–1 for one opportunity                                               |
+| Puntos                                            | `points`                                                        | weight × 1,000 × average progress of active opportunities                            |
+| Consistencia                                      | `consistency`                                                   | Share of opportunities that reached the minimum                                      |
+| Cumplimiento ideal                                | `idealCompletion`                                               | Average progress (= points / potential)                                              |
+| Racha                                             | `streak`                                                        | Consecutive opportunities (days or weeks) kept                                       |
+| Pausa                                             | `Pause`                                                         | Freezes opportunities; neutral for scoring                                           |
+| Prorrateo                                         | `proration`                                                     | Scaling N / minimum / ideal / tolerance by active days in a partial week             |
+| Periodo de gracia                                 | `gracePeriod`                                                   | Until the end of the next day                                                        |
+| Revisión periódica                                | `Review`                                                        | Private periodic review (≈60 s)                                                      |
+| Automaticidad (SRBAI)                             | `automaticity`                                                  | Self-reported automaticity index, 1–7                                                |
+| Graduación / graduar                              | `graduation` / `graduate`                                       | User decision to stop tracking a habit                                               |
+| Estados 🌱🌿🌳🎓                                  | `HabitStage`: `new` / `developing` / `integrated` / `graduated` | Habit maturity                                                                       |
+| Clasificación                                     | `standings`                                                     | Season ranking by points                                                             |
+| Sugerencia de ánimo                               | `encouragementNudge`                                            | Voluntary suggestion to support a member                                             |
+| Reacción                                          | `Reaction`                                                      | ❤️ 🙌 🔥 👏                                                                          |
 
 ## Repository (decided 2026-09-24)
 
@@ -93,6 +93,7 @@ One term per concept, used the same way in the rules, the code and conversations
 - `apps/web`: the PWA; talks to its own `api` interface and never writes to tables directly.
 
 Rules so that a future migration (e.g. to NestJS) only replaces adapters:
+
 - No business logic in Postgres (no triggers, no SQL functions, no RLS rules beyond "each member sees their own circle").
 - Shared packages use only standard TypeScript/ESM: nothing Deno- or Node-specific.
 - Every scheduled job is a use case; pg_cron only triggers it.
