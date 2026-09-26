@@ -40,3 +40,25 @@ export function weekdayOf(season: Season, day: SeasonDay): Weekday {
 
 /** All 7 weekdays, Monday (0) through Sunday (6). */
 export const daysOfWeek: readonly Weekday[] = [0, 1, 2, 3, 4, 5, 6];
+
+const DAYS_PER_WEEK = 7;
+
+/**
+ * Validates that a {@link SeasonDay} falls within `season`'s own length
+ * (`0 <= day < lengthWeeks * 7`). Meaningless without opportunity
+ * generation to bound against, so it's a separate assertion from
+ * {@link seasonDay}'s own construction-time check. Called once, at the
+ * entry point of `weekSessionsOf` (`opportunity/opportunity.ts`), before any
+ * day within the week is derived from it — not from every place a day is
+ * used, to keep it out of the per-opportunity hot path.
+ *
+ * @throws {RangeError} if `day >= season.lengthWeeks * 7`.
+ */
+export function assertValidSeasonDay(season: Season, day: SeasonDay): void {
+  const maxDay = season.lengthWeeks * DAYS_PER_WEEK;
+  if (day >= maxDay) {
+    throw new RangeError(
+      `assertValidSeasonDay: day ${day} is out of range for a ${season.lengthWeeks}-week season (max ${maxDay - 1})`,
+    );
+  }
+}

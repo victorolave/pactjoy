@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Season } from "./season-calendar";
-import { daysOfWeek, seasonDay, weekdayOf, weekOf } from "./season-calendar";
+import { assertValidSeasonDay, daysOfWeek, seasonDay, weekdayOf, weekOf } from "./season-calendar";
 
 describe("seasonDay", () => {
   it("accepts a non-negative safe integer as a SeasonDay", () => {
@@ -51,6 +51,26 @@ describe("weekdayOf", () => {
   it("advances by one weekday per day, wrapping past Sunday (6) back to Monday (0)", () => {
     expect(weekdayOf(wednesday, seasonDay(4))).toBe(6);
     expect(weekdayOf(wednesday, seasonDay(5))).toBe(0);
+  });
+});
+
+describe("assertValidSeasonDay", () => {
+  const fourWeeks: Season = { lengthWeeks: 4, startWeekday: 0 };
+
+  it("accepts the last valid day of the season (lengthWeeks * 7 - 1)", () => {
+    expect(() => assertValidSeasonDay(fourWeeks, seasonDay(27))).not.toThrow();
+  });
+
+  it("accepts day 0", () => {
+    expect(() => assertValidSeasonDay(fourWeeks, seasonDay(0))).not.toThrow();
+  });
+
+  it("throws RangeError for a day at the season's length boundary (lengthWeeks * 7)", () => {
+    expect(() => assertValidSeasonDay(fourWeeks, seasonDay(28))).toThrow(RangeError);
+  });
+
+  it("throws RangeError for a day well past the season's end", () => {
+    expect(() => assertValidSeasonDay(fourWeeks, seasonDay(100))).toThrow(RangeError);
   });
 });
 
