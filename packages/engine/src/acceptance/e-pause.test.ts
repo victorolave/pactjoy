@@ -1,14 +1,19 @@
 import { describe, expect, it } from "vitest";
-import type { Season } from "../calendar/season-calendar";
+import type { Season, Weekday } from "../calendar/season-calendar";
 import { seasonDay } from "../calendar/season-calendar";
+import type { Entry } from "../entry/entry";
 import type { Fraction } from "../fraction/fraction";
 import type { SessionResult } from "../opportunity/per-session";
 import { pauseAwareWeekSessions } from "../pause/pause-aware-week";
 import { canRequestPause } from "../pause/pause-cap";
 import { prorateSessionCount } from "../pause/proration";
-import { scorePerSessionCommitment } from "../scoring/commitment-score";
+import { scoreCommitmentSoFar } from "../scoring/commitment-score";
+import type { ScoreInput } from "../scoring/member-score";
+import { scoreMember } from "../scoring/member-score";
 import {
+  buildDoneCommitment,
   buildDoneEntry,
+  buildMissedEntry,
   buildPauseRequest,
   buildQuantityCommitment,
   buildQuantityEntry,
@@ -64,7 +69,7 @@ function pointsFor(row: NeutralPointsRow): Fraction {
     );
     if (result.status === "scored") sessions.push(...result.sessions);
   }
-  return scorePerSessionCommitment(row.weightPercent, sessions).points;
+  return scoreCommitmentSoFar(row.weightPercent, sessions, sessions).points;
 }
 
 describe("acceptance: series E — pause (neutral points)", () => {
@@ -241,8 +246,55 @@ describe("acceptance: series E — consistency excludes paused opportunities", (
       );
       if (result.status === "scored") sessions.push(...result.sessions);
     }
-    expect(scorePerSessionCommitment(row.weightPercent, sessions).consistency).toEqual(
+    expect(scoreCommitmentSoFar(row.weightPercent, sessions, sessions).consistency).toEqual(
       row.expectedConsistency,
     );
+  });
+
+  it(`${eConsistencyRows[0]?.id}: streak-freeze half (D11) — the paused weeks neither break nor extend the streak`, () => {
+    // Exercised through scoreMember ONLY (fresh-review BLOCKER fix) -- no direct composition of
+    // pauseAwareWeekSessions + weekStreakOutcome + computeStreak in this test body; that
+    // composition now lives in scoring/member-score.ts's own seasonSessions.
+    const row = eConsistencyRows[0];
+    if (row === undefined) throw new Error("unreachable");
+    const entries: Entry[] = [];
+    for (let week = 0; week < row.weeksCount; week++) {
+      if (row.fullWeeks.includes(week)) {
+        entries.push(...fullWeekEntries("leer", week, 5));
+      } else if (week === row.partialWeek) {
+        entries.push(buildDoneEntry("leer", week * 7), buildDoneEntry("leer", week * 7 + 1));
+      }
+    }
+    const input: ScoreInput = {
+      season: acceptanceSeason,
+      commitments: [row.commitment],
+      entries,
+      pauses: row.pauses,
+      today: seasonDay(row.today),
+    };
+    const score = scoreMember(input);
+    // Weeks 0,1 kept (best 2 so far) -> weeks 2,3 (paused) frozen, unchanged at 2 -> weeks 4,5,6
+    // kept, extending past the freeze to a new best of 5 -> week 7 (partial, 2 of 5) breaks it.
+    expect(score.commitments[0]?.streak).toEqual({ unit: "week", current: 0, best: 5 });
+  });
+
+  it("specificDays streak (D11, engine-authored): a day-bound commitment's streak, exercised through scoreMember, exercises dayStreakOutcome through production", () => {
+    const tuesday: Weekday = 1;
+    const dibujar = buildDoneCommitment("dibujar", 100, {
+      kind: "specificDays",
+      weekdays: [tuesday],
+    });
+    const input: ScoreInput = {
+      season: { lengthWeeks: 4, startWeekday: 0 },
+      commitments: [dibujar],
+      // Week 0's tuesday (day 1): done -- kept. Week 1's tuesday (day 8): explicit miss -- broken.
+      // Weeks 2-3's tuesdays: no entry, and (today = 15) still within their own grace -- frozen
+      // (not yet due), proving a not-yet-counted day freezes the streak just like a paused one.
+      entries: [buildDoneEntry("dibujar", 1), buildMissedEntry("dibujar", 8)],
+      pauses: [],
+      today: seasonDay(15), // past day 8's graceDeadline (9), short of day 15's/22's (16/23)
+    };
+    const score = scoreMember(input);
+    expect(score.commitments[0]?.streak).toEqual({ unit: "day", current: 0, best: 1 });
   });
 });

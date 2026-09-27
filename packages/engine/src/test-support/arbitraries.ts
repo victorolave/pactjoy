@@ -55,7 +55,7 @@ export function progressArbitrary(): Arbitrary<Fraction> {
 /**
  * A `SessionResult` honoring the real domain invariant `consistent =
  * !isZero(progress)` (`progress/progress.ts`'s `isConsistent`). `value`
- * itself never participates in `scorePerSessionCommitment`'s arithmetic, so
+ * itself never participates in `scoreCommitmentSoFar`'s arithmetic, so
  * it is always `null` here.
  */
 export function sessionResultArbitrary(): Arbitrary<SessionResult> {

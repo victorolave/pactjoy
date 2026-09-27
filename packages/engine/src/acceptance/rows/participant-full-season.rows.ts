@@ -138,13 +138,19 @@ const dibujarEntries: readonly Entry[] = DIBUJAR_WEEKLY_WEEKDAYS.flatMap((weekda
   weekdays.map((weekday) => buildDoneEntry("dibujar", week * 7 + weekday)),
 );
 
-/** The whole participant's full-season `ScoreInput` (`scoreMember`'s own parameter shape). `today` is set past the season's last day so every week is closed + graced. */
+/**
+ * The whole participant's full-season `ScoreInput` (`scoreMember`'s own
+ * parameter shape). `today` is day 56 (one past the season's last day, 55)
+ * so R1 (slice 6b) counts every week: the season's own last week ends on
+ * day 55, whose grace deadline is day 56 — `today` must be AT LEAST that
+ * for R1 to close it too, not merely at the season's own last day.
+ */
 export const participantFullSeasonInput: ScoreInput = {
   season: SEASON,
   commitments: [leer, ingles, gym, dibujar],
   entries: [...leerEntries, ...inglesEntries, ...gymEntries, ...dibujarEntries],
   pauses: [gymPause],
-  today: seasonDay(55),
+  today: seasonDay(56),
 };
 
 /** F5: 550/3 + 725/4 + 5100/19 + 150 exact -- Notion shows 783,0044... (rounded display 783). */

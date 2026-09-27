@@ -112,3 +112,17 @@ export function buildDoneEntry(
     kind: "done",
   };
 }
+
+/** The explicit "Hoy no salio" entry — like an absent entry it counts as zero progress, but (unlike an absent entry) it satisfies R1's "so far" counting rule via `value !== null` before the grace deadline passes. */
+export function buildMissedEntry(
+  commitmentId: string,
+  day: SeasonDay | number,
+  recordedOn: SeasonDay | number = day,
+): Entry {
+  return {
+    commitmentId: commitmentId as CommitmentId,
+    day: toSeasonDay(day),
+    recordedOn: toSeasonDay(recordedOn),
+    kind: "missed",
+  };
+}

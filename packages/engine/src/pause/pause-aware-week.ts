@@ -51,15 +51,61 @@ export type PauseAwareWeekResult =
   /** R4a/P-C: excluded because a pending request is involved — alone, or mixed with an approved pause (its result can still change). */
   | { readonly status: "onHold" };
 
+export interface ExclusionSets {
+  readonly paused: ReadonlySet<SeasonDay>;
+  readonly onHold: ReadonlySet<SeasonDay>;
+}
+
+/**
+ * The single, shared computation of one commitment's approved-paused
+ * (D9 cap-trimmed) and still-pending ("on hold") days, as of `today` — the
+ * ONLY place `effectivePausedDays`/`pendingHoldDays`/`capPausedDays` are
+ * combined. Both {@link pauseAwareWeekSessions} (which needs the two sets
+ * separately, for `excludedStatus`'s paused-vs-onHold distinction) and
+ * {@link excludedDays} (their union, for callers outside the pause
+ * composition itself) derive from this — so the two can never drift apart
+ * by one of them picking up a formula change the other doesn't.
+ */
+export function exclusionSetsFor(
+  pauses: readonly PauseRequest[],
+  today: SeasonDay,
+  options: { readonly season: Season; readonly pauseCap?: number },
+): ExclusionSets {
+  const cap = options.pauseCap ?? seasonPauseCap(options.season);
+  const paused = capPausedDays(effectivePausedDays(pauses, today), cap);
+  const onHold = pendingHoldDays(pauses, today);
+  return { paused, onHold };
+}
+
+/**
+ * The union of {@link exclusionSetsFor}'s two sets — exported so a caller
+ * outside the pause composition itself (R1's "so far" counting,
+ * `scoring/member-score.ts`, slice 6b) can tell which of a commitment's
+ * scheduled days are excluded, without needing the paused/onHold
+ * distinction itself. Options mirror {@link pauseAwareWeekSessions}'s own.
+ */
+export function excludedDays(
+  pauses: readonly PauseRequest[],
+  today: SeasonDay,
+  options: { readonly season: Season; readonly pauseCap?: number },
+): ReadonlySet<SeasonDay> {
+  const { paused, onHold } = exclusionSetsFor(pauses, today, options);
+  return new Set([...paused, ...onHold]);
+}
+
 /**
  * A rejection extends the grace deadline of the opportunities it affected —
  * every day from its `startDay` through its `decidedOn` (the days that were
  * "en espera" before the decision arrived) — to the end of the day after the
  * rejection. `rangeStart`/`rangeEnd` describe the opportunity being
- * evaluated: a single day for `timesPerWeek`, the whole week for
- * `weeklyTotal` (whose deadline is shared across every entry in it).
+ * evaluated: a single day for `timesPerWeek`/`specificDays`, the whole week
+ * for `weeklyTotal` (whose deadline is shared across every entry in it).
+ * Exported so a caller outside the pause composition itself (R1's "so far"
+ * counting, `scoring/member-score.ts`, slice 6b) can compute the SAME
+ * extended deadline this file itself uses for late-entry acceptance,
+ * without duplicating the formula.
  */
-function rejectionExtendedDeadline(
+export function rejectionExtendedDeadline(
   pauses: readonly PauseRequest[],
   rangeStart: number,
   rangeEnd: number,
@@ -122,10 +168,7 @@ export function pauseAwareWeekSessions(
     seasonDay(weekStart + i),
   );
 
-  const cap = options.pauseCap ?? seasonPauseCap(options.season);
-  const rawPaused = effectivePausedDays(pauses, today);
-  const paused = capPausedDays(rawPaused, cap);
-  const onHold = pendingHoldDays(pauses, today);
+  const { paused, onHold } = exclusionSetsFor(pauses, today, options);
   const excluded = (day: SeasonDay): boolean => paused.has(day) || onHold.has(day);
 
   let activeDays = 0;

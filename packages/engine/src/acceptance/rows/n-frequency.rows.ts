@@ -1,10 +1,19 @@
-import type { Season, Weekday } from "../../calendar/season-calendar";
-import type { Target } from "../../commitment/commitment";
+import type { Season, SeasonDay, Weekday } from "../../calendar/season-calendar";
+import { seasonDay } from "../../calendar/season-calendar";
+import type { Commitment, Target } from "../../commitment/commitment";
 import type { Entry } from "../../entry/entry";
 import type { Fraction } from "../../fraction/fraction";
 import { fromInt, parseDecimal } from "../../fraction/fraction";
-import { buildDoneEntry, buildQuantityEntry } from "../../test-support/builders";
+import {
+  buildDoneCommitment,
+  buildDoneEntry,
+  buildQuantityEntry,
+  buildWeeklyTotalCommitment,
+} from "../../test-support/builders";
 import { fr } from "../../test-support/fraction-literal";
+
+/** Inglés: weeklyTotal, minimum 60, ideal 150 (matches series C's own Inglés commitment). */
+const inglesTarget: Target = { direction: "reach", minimum: fromInt(60), ideal: fromInt(150) };
 
 /** Monday-start, 4-week season — the only calendar shape series N needs. */
 export const nFrequencySeason: Season = { lengthWeeks: 4, startWeekday: 0 };
@@ -160,5 +169,58 @@ export const nFrequencyRows: readonly FrequencyRow[] = [
     ],
     expectedWeekProgress: fr("1"),
     expectedConsistentCount: 3,
+  },
+];
+
+/**
+ * N12-N13 (D11 streak, fresh-review BLOCKER fix): exercised through
+ * `scoreMember` ONLY — real `Commitment`/`Entry`/`ScoreInput` fixtures, no
+ * hand-composed session lists. `scoreMember` itself walks each commitment's
+ * weeks (R1-aware), folds the per-week outcome through
+ * `scoring/streak.ts`'s `weekStreakOutcome`/`computeStreak`, and returns the
+ * result on `CommitmentScoreEntry.streak` — the production path this row
+ * family previously bypassed.
+ */
+export interface StreakRow {
+  readonly id: string;
+  readonly summary: string;
+  readonly season: Season;
+  readonly commitment: Commitment;
+  readonly entries: readonly Entry[];
+  /** Past both weeks' own grace deadlines, so both are counted (R1) — matches the original 2-week-only intent; weeks 2-3 have no entries and are simply not-yet-counted no-ops (frozen). */
+  readonly today: SeasonDay;
+  readonly expectedCurrent: number;
+  readonly expectedBest: number;
+}
+
+export const nStreakRows: readonly StreakRow[] = [
+  {
+    id: "N12",
+    summary: "Gym 3x/week streak: S1[1,1,1] maintains, S2[1,1,0] breaks -- best streak preserved",
+    season: nFrequencySeason,
+    commitment: buildDoneCommitment("gym", 100, { kind: "timesPerWeek", times: 3 }),
+    entries: [
+      buildDoneEntry("gym", 0),
+      buildDoneEntry("gym", 1),
+      buildDoneEntry("gym", 2), // S1: all 3
+      buildDoneEntry("gym", 7),
+      buildDoneEntry("gym", 8), // S2: only 2 of 3
+    ],
+    today: seasonDay(14), // graceDeadline(weekEnd 13) = 14 -- S2 fully closed
+    expectedCurrent: 0,
+    expectedBest: 1,
+  },
+  {
+    id: "N13",
+    summary: "Ingles (semanal acumulado) streak: S1 total 150 maintains, S2 total 55 breaks",
+    season: nFrequencySeason,
+    commitment: buildWeeklyTotalCommitment("ingles", 100, "minutes", inglesTarget),
+    entries: [
+      buildQuantityEntry("ingles", 0, parseDecimal("150")), // S1: 150 >= minimum 60
+      buildQuantityEntry("ingles", 7, parseDecimal("55")), // S2: 55 < minimum 60
+    ],
+    today: seasonDay(14),
+    expectedCurrent: 0,
+    expectedBest: 1,
   },
 ];
