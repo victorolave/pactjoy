@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Season } from "../calendar/season-calendar";
+import type { Season, Weekday } from "../calendar/season-calendar";
 import { seasonDay } from "../calendar/season-calendar";
 import { fromInt } from "../fraction/fraction";
 import { buildDoneCommitment, buildDoneEntry, buildPauseRequest } from "../test-support/builders";
@@ -8,6 +8,18 @@ import type { ScoreInput } from "./member-score";
 import { scoreMember } from "./member-score";
 
 const fourWeekSeason: Season = { lengthWeeks: 4, startWeekday: 0 };
+
+/**
+ * The tests below use `today: seasonDay(28)`, not `27` — day 27 is the
+ * season's LAST day, but R1 (D12's "so far" counting rule, slice 6b) only
+ * counts a week-bound opportunity once its OWN grace period has also
+ * passed: `today >= graceDeadline(weekEnd) = weekEnd + 1`. For this season's
+ * last week (weekEnd = 27), that deadline is day 28. Every entry in these
+ * fixtures is already recorded well before day 27, so bumping `today` from
+ * 27 to 28 changes nothing about which entries are visible — it only
+ * finishes closing the season's own last week under the new rule,
+ * preserving every one of these tests' original expected values exactly.
+ */
 
 function fullWeekEntries(
   commitmentId: string,
@@ -24,7 +36,7 @@ describe("scoreMember", () => {
       commitments: [],
       entries: [],
       pauses: [],
-      today: seasonDay(27),
+      today: seasonDay(28),
     };
     const score = scoreMember(input);
     expect(score.points).toEqual(fromInt(0));
@@ -68,7 +80,7 @@ describe("scoreMember", () => {
       commitments: [gym],
       entries: [],
       pauses,
-      today: seasonDay(27),
+      today: seasonDay(28),
     };
     const score = scoreMember(input);
     expect(score.commitments).toHaveLength(1); // R6 is about zero OPPORTUNITIES, not zero commitments
@@ -90,7 +102,7 @@ describe("scoreMember", () => {
       commitments: [leer],
       entries: [],
       pauses,
-      today: seasonDay(27),
+      today: seasonDay(28),
     };
     const score = scoreMember(input);
     expect(score.commitments).toHaveLength(1);
@@ -115,7 +127,7 @@ describe("scoreMember", () => {
       commitments: [gym],
       entries,
       pauses: [],
-      today: seasonDay(27),
+      today: seasonDay(28),
     };
     const score = scoreMember(input);
     // 11 of 12 sessions done -> mean progress = 11/12, points = 100 x 10 x 11/12 = 2750/3
@@ -142,7 +154,7 @@ describe("scoreMember", () => {
       commitments: [gym, leer],
       entries,
       pauses: [],
-      today: seasonDay(27),
+      today: seasonDay(28),
     };
     const score = scoreMember(input);
     expect(score.commitments[0]?.consistency).toEqual(fromInt(1)); // gym: 4/4
@@ -172,11 +184,71 @@ describe("scoreMember", () => {
       commitments: [gym],
       entries,
       pauses,
-      today: seasonDay(27),
+      today: seasonDay(28),
     };
     const score = scoreMember(input);
     // 3 active weeks x 2 sessions, all done -> 6/6 reached, full points at 100% weight
     expect(score.consistency).toEqual(fromInt(1));
     expect(score.commitments[0]?.points).toEqual(fromInt(1000));
+  });
+
+  it("R1 (week-bound): an in-progress week's partial entries do not prematurely count, even though the season-total denominator already expects that week's opportunities", () => {
+    const gym = buildDoneCommitment("gym", 100, { kind: "timesPerWeek", times: 3 });
+    const entries = [
+      ...fullWeekEntries("gym", 0, 3), // week 0: fully done and closed
+      buildDoneEntry("gym", 7), // week 1: only 1 of 3 sessions logged so far -- week still open
+      // weeks 2, 3: nothing logged yet
+    ];
+    const input: ScoreInput = {
+      season: fourWeekSeason,
+      commitments: [gym],
+      entries,
+      pauses: [],
+      today: seasonDay(10), // inside week 1 (days 7-13); its grace deadline is day 14 -- not yet
+    };
+    const score = scoreMember(input);
+    // Denominator (D12: active opportunities of the whole season) is unaffected by R1: 4 weeks x 3 = 12.
+    // Numerator counts ONLY week 0's 3 fully-resolved sessions -- week 1's early single entry is
+    // NOT yet counted (R1), so it must NOT inflate points/consistency beyond week 0's contribution.
+    // Without R1, week 1's 1 already-reached session would count too: reached 4/12, not 3/12.
+    expect(score.commitments[0]?.points).toEqual(fromInt(250)); // 100 x 10 x 3/12
+    expect(score.consistency).toEqual(fr("1/4")); // 3/12, NOT 4/12
+    expect(score.idealCompletion).toEqual(fr("1/4"));
+  });
+
+  it("R1 (day-bound, specificDays): with every scheduled day still within grace and unentered, nothing is counted yet -- points 0, consistency/idealCompletion null (R6), not a premature 0%", () => {
+    const tuesday: Weekday = 1;
+    const dibujar = buildDoneCommitment("dibujar", 100, { kind: "specificDays", weekdays: [tuesday] });
+    const input: ScoreInput = {
+      season: fourWeekSeason,
+      commitments: [dibujar],
+      entries: [], // nothing logged yet
+      pauses: [],
+      today: seasonDay(0), // week 0's tuesday (day 1) hasn't happened yet; its grace deadline is day 2
+    };
+    const score = scoreMember(input);
+    expect(score.commitments[0]?.points).toEqual(fromInt(0));
+    expect(score.commitments[0]?.consistency).toBeNull();
+    expect(score.commitments[0]?.idealCompletion).toBeNull();
+    expect(score.consistency).toBeNull();
+    expect(score.idealCompletion).toBeNull();
+  });
+
+  it("R1 (day-bound, specificDays): a scheduled day already has an explicit entry, so it counts immediately even though its own grace period hasn't passed yet", () => {
+    const tuesday: Weekday = 1;
+    const dibujar = buildDoneCommitment("dibujar", 100, { kind: "specificDays", weekdays: [tuesday] });
+    const input: ScoreInput = {
+      season: fourWeekSeason,
+      commitments: [dibujar],
+      entries: [buildDoneEntry("dibujar", 1)], // week 0's tuesday, logged same-day
+      pauses: [],
+      today: seasonDay(1), // day 1 itself -- grace deadline for day 1 is day 2, not reached yet
+    };
+    const score = scoreMember(input);
+    // Denominator: 4 scheduled tuesdays across the season = 4. Numerator: only day 1 is counted
+    // so far (via its entry, per R1's "OR has an entry" clause) -- weeks 1-3's tuesdays have no
+    // entry and their own grace hasn't passed, so they contribute nothing yet.
+    expect(score.commitments[0]?.points).toEqual(fromInt(250)); // 100 x 10 x 1/4
+    expect(score.commitments[0]?.consistency).toEqual(fr("1/4"));
   });
 });

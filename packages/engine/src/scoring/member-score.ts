@@ -1,40 +1,45 @@
 /**
  * Member-level scoring: aggregates every commitment's whole season into a
- * `MemberScore` (D1/D2). Wires `pause/pause-aware-week.ts`'s
- * `pauseAwareWeekSessions` into the live scoring pipeline for the first
- * time — every commitment, every week of the season, with
- * pause/proration/D8 (and, via `pauseAwareWeekSessions`'s own required
- * `options.season`, the D9 pause cap) already applied before
- * `scoring/commitment-score.ts` averages the result.
+ * `MemberScore` (D1/D2/D12). Wires `pause/pause-aware-week.ts`'s
+ * `pauseAwareWeekSessions` into the live scoring pipeline — every
+ * commitment, every week of the season, with pause/proration/D8 (and the D9
+ * pause cap) already applied — and, since slice 6b, gates which of those
+ * opportunities are already "counted so far" (R1) before handing both sets
+ * to `scoring/commitment-score.ts`'s `scoreCommitmentSoFar`.
  *
- * R1's "so far" mid-season filtering (which weeks are closed enough to
- * count yet) is NOT applied here: every week of the season is aggregated,
- * matching a full end-of-season computation. Mid-season recompute (D12,
- * `today` before the season's end) is slice 6b's own edit to this file —
- * `weekSessionsOf`/`weeklyTotalResult`/`pauseAwareWeekSessions` are all
- * already documented as calendar-agnostic for exactly this reason.
+ * **R1 (`sdd/scoring-engine/design-decisions`, round 2)**: a day-bound
+ * opportunity (`specificDays`) counts once it has an entry (done or missed)
+ * OR once its own grace deadline has passed. A week-bound opportunity
+ * (`weeklyTotal`, or any of a `timesPerWeek` week's best-N sessions) counts
+ * only once the WHOLE week closes plus its grace period — an in-progress
+ * week's partial entries never leak into the aggregate early (Mecanicas:
+ * "evitar que una semana en curso hunda los puntos visibles"). This file is
+ * the R1 gate's only home: `weekSessionsOf`/`weeklyTotalResult`/
+ * `pauseAwareWeekSessions` all stay calendar-agnostic on purpose, exactly as
+ * documented since slice 4.
  *
- * **WARNING (until slice 6b implements R1): `scoreMember` is an
- * end-of-season computation, NOT a "points so far" one.** Every week
- * `0..season.lengthWeeks-1` is always aggregated regardless of `input.today`
- * — a still-open or not-yet-graced week is scored exactly like a closed
- * one, using whatever entries happen to be in `input.entries` for it (zero
- * entries there today does not mean "not counted yet", it means "counted
- * as a miss"). Do not call this function to show a member their
- * mid-season/"so far" points until R1 gates the week loop in `seasonSessions`
- * below (slice 6b task 6b.2/6b.3) — doing so today would understate an
- * in-progress week as a full miss instead of excluding it.
+ * **D12 mid-season recompute** falls out of R1 plus
+ * `scoreCommitmentSoFar`'s own two-list design with NO separate formula:
+ * `allSessions` (this file's existing whole-season, pause-aware
+ * computation, unconditioned by R1) is the denominator ("oportunidades
+ * activas de la temporada"); the R1-gated `soFarSessions` subset drives the
+ * numerator. At season end (`today` at/after every week's own grace
+ * deadline) the two sets coincide, reproducing the exact prior end-of-season
+ * values.
  */
 import type { Season, SeasonDay } from "../calendar/season-calendar";
+import { seasonDay } from "../calendar/season-calendar";
 import type { Commitment, CommitmentId } from "../commitment/commitment";
 import type { Entry } from "../entry/entry";
+import { graceDeadline } from "../entry/grace-period";
 import type { Fraction } from "../fraction/fraction";
 import { div, fromInt, sum } from "../fraction/fraction";
+import { dayForWeekday } from "../opportunity/per-session";
 import type { SessionResult } from "../opportunity/per-session";
 import type { PauseRequest } from "../pause/pause";
-import { pauseAwareWeekSessions } from "../pause/pause-aware-week";
+import { excludedDays, pauseAwareWeekSessions } from "../pause/pause-aware-week";
 import type { CommitmentScore } from "./commitment-score";
-import { scorePerSessionCommitment } from "./commitment-score";
+import { scoreCommitmentSoFar } from "./commitment-score";
 
 const DAYS_PER_WEEK = 7;
 const TOTAL_POTENTIAL_POINTS = fromInt(1000);
@@ -45,11 +50,9 @@ export interface ScoreInput {
   readonly entries: readonly Entry[];
   readonly pauses: readonly PauseRequest[];
   /**
-   * The snapshot day for pause resolution (an open pause is treated as
-   * paused "as of today", D12) — NOT a "so far" cutoff for which weeks get
-   * aggregated. Until slice 6b implements R1, `scoreMember` aggregates every
-   * week of the season regardless of this value; see this file's own
-   * top-of-file warning.
+   * The snapshot day: both for pause resolution (an open pause is treated
+   * as paused "as of today", D12) AND, since slice 6b, as R1's "so far"
+   * cutoff — which of the season's opportunities are already counted.
    */
   readonly today: SeasonDay;
 }
@@ -81,14 +84,46 @@ function entriesForWeek(
   );
 }
 
+/** Whether `commitment`'s own opportunities are week-bound (R1): `weeklyTotal`, or a `timesPerWeek` week's best-N sessions. `specificDays` is the only day-bound kind. */
+function isWeekBound(commitment: Commitment): boolean {
+  if (commitment.schedule.period === "weeklyTotal") return true;
+  return commitment.schedule.frequency.kind === "timesPerWeek";
+}
+
+/** The `specificDays` scheduled days of `commitment`'s `week`, excluding any paused/on-hold day (P-A) — in the SAME order `pauseAwareWeekSessions` itself filters them, so it lines up 1:1 with that week's returned `sessions`. Empty for any other schedule kind. */
+function specificDaysActiveDays(
+  commitment: Commitment,
+  season: Season,
+  week: number,
+  excluded: ReadonlySet<SeasonDay>,
+): readonly SeasonDay[] {
+  if (commitment.schedule.period === "weeklyTotal") return [];
+  const { frequency } = commitment.schedule;
+  if (frequency.kind !== "specificDays") return [];
+  return frequency.weekdays
+    .map((weekday) => dayForWeekday(season, week, weekday))
+    .filter((day) => !excluded.has(day));
+}
+
+interface SeasonSessions {
+  /** Every "scored" session across the whole season (D12's denominator) — unconditioned by R1. */
+  readonly all: readonly SessionResult[];
+  /** The R1-gated subset of `all` already "counted so far" as of `input.today` (D12's numerator). */
+  readonly soFar: readonly SessionResult[];
+}
+
 /**
  * Every `"scored"` session across the whole season for one commitment —
  * `"paused"`/`"onHold"` weeks contribute nothing at all (pause's neutral
- * effect, D8/E1), never a zero-progress placeholder.
+ * effect, D8/E1), never a zero-progress placeholder — split into `all`
+ * (D12's denominator) and `soFar` (R1's "so far" subset, D12's numerator).
  */
-function seasonSessions(commitment: Commitment, input: ScoreInput): readonly SessionResult[] {
+function seasonSessions(commitment: Commitment, input: ScoreInput): SeasonSessions {
   const commitmentPauses = input.pauses.filter((pause) => pause.commitmentId === commitment.id);
-  const sessions: SessionResult[] = [];
+  const weekBound = isWeekBound(commitment);
+  const all: SessionResult[] = [];
+  const soFar: SessionResult[] = [];
+
   for (let week = 0; week < input.season.lengthWeeks; week++) {
     const weekEntries = entriesForWeek(input.entries, commitment.id, week);
     const result = pauseAwareWeekSessions(
@@ -99,37 +134,56 @@ function seasonSessions(commitment: Commitment, input: ScoreInput): readonly Ses
       input.today,
       { season: input.season },
     );
-    if (result.status === "scored") sessions.push(...result.sessions);
+    if (result.status !== "scored") continue;
+    all.push(...result.sessions);
+
+    if (weekBound) {
+      // R1: the whole week counts only once it closes plus its own grace period.
+      const weekEnd = seasonDay(week * DAYS_PER_WEEK + (DAYS_PER_WEEK - 1));
+      if (input.today >= graceDeadline(weekEnd)) soFar.push(...result.sessions);
+      continue;
+    }
+
+    // specificDays: R1 gates each scheduled day independently.
+    const excluded = excludedDays(commitmentPauses, input.today, { season: input.season });
+    const activeDays = specificDaysActiveDays(commitment, input.season, week, excluded);
+    for (let i = 0; i < result.sessions.length; i++) {
+      const session = result.sessions[i];
+      const day = activeDays[i];
+      if (session === undefined || day === undefined) continue;
+      // R1: counts once it has an entry (value !== null covers "done" and explicit "missed")
+      // OR once its own grace deadline has passed.
+      if (session.value !== null || input.today >= graceDeadline(day)) soFar.push(session);
+    }
   }
-  return sessions;
+  return { all, soFar };
 }
 
 /**
- * Aggregates every commitment's whole season into a `MemberScore` (D1/D2).
- * Points are never rounded here — only at display (`display/display.ts`,
- * slice 7).
- *
- * **Not yet R1-aware (see this file's top-of-file warning): until slice 6b,
- * this always computes over ALL weeks of the season and must NOT be used
- * to show "points so far" mid-season.**
+ * Aggregates every commitment's whole season into a `MemberScore`
+ * (D1/D2/D12), R1-aware since slice 6b. Points are never rounded here —
+ * only at display (`display/display.ts`, slice 7).
  */
 export function scoreMember(input: ScoreInput): MemberScore {
   let reachedTotal = 0;
-  let opportunitiesTotal = 0;
+  let opportunitiesTotal = 0; // Sigma(all) -- D12's denominator across every commitment.
+  let soFarTotal = 0; // Sigma(soFar) -- gates R6 (nothing counted anywhere yet).
 
   const commitments: readonly CommitmentScoreEntry[] = input.commitments.map((commitment) => {
-    const sessions = seasonSessions(commitment, input);
-    reachedTotal += sessions.filter((session) => session.consistent).length;
-    opportunitiesTotal += sessions.length;
-    const score = scorePerSessionCommitment(commitment.weightPercent, sessions);
+    const { all, soFar } = seasonSessions(commitment, input);
+    reachedTotal += soFar.filter((session) => session.consistent).length;
+    opportunitiesTotal += all.length;
+    soFarTotal += soFar.length;
+    const score = scoreCommitmentSoFar(commitment.weightPercent, all, soFar);
     return { commitmentId: commitment.id, ...score };
   });
 
   const points = sum(commitments.map((commitment) => commitment.points));
-  // R6: zero counted opportunities anywhere in the season -> null, not 0.
+  // R6: nothing counted so far anywhere (zero opportunities, or every one still paused/on-hold/
+  // within grace without an entry) -> null, not 0.
   const consistency =
-    opportunitiesTotal === 0 ? null : div(fromInt(reachedTotal), fromInt(opportunitiesTotal));
-  const idealCompletion = opportunitiesTotal === 0 ? null : div(points, TOTAL_POTENTIAL_POINTS);
+    soFarTotal === 0 ? null : div(fromInt(reachedTotal), fromInt(opportunitiesTotal));
+  const idealCompletion = soFarTotal === 0 ? null : div(points, TOTAL_POTENTIAL_POINTS);
 
   return { points, consistency, idealCompletion, commitments };
 }
