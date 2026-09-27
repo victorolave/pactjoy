@@ -14,6 +14,17 @@ export function graceDeadline(periodEnd: SeasonDay): SeasonDay {
   return seasonDay(periodEnd + GRACE_DAYS);
 }
 
+/**
+ * A pluggable grace-deadline policy: given the period's own end day (a
+ * single day for `timesPerWeek`/`specificDays`, the week's last day for
+ * `weeklyTotal`), returns its deadline. Every dispatch function defaults
+ * this to {@link graceDeadline} itself, so existing callers are unaffected.
+ * `pause/pause-aware-week.ts` is the only caller that overrides it, to
+ * extend grace after a rejection — without ever touching an entry's own
+ * `recordedOn`.
+ */
+export type GraceDeadlineFor = (periodEnd: SeasonDay) => SeasonDay;
+
 /** Whether `entry` was recorded on or before `deadline`. */
 export function isOnTime(entry: Entry, deadline: SeasonDay): boolean {
   return entry.recordedOn <= deadline;

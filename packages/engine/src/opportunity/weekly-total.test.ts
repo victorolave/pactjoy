@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { seasonDay } from "../calendar/season-calendar";
 import type { Target } from "../commitment/commitment";
 import { fromInt, parseDecimal } from "../fraction/fraction";
 import { buildQuantityEntry } from "../test-support/builders";
@@ -47,6 +48,20 @@ describe("weeklyTotalResult", () => {
     const result = weeklyTotalResult(inglesTarget, 0, entries);
     expect(result.value).toEqual(parseDecimal("150"));
     expect(result.progress).toEqual(fr("1"));
+  });
+
+  it("honors a custom deadlineFor policy instead of the default graceDeadline — without touching recordedOn", () => {
+    const entry = buildQuantityEntry("ingles", 6, parseDecimal("30"), 8); // normally late (deadline day 7)
+    const originalRecordedOn = entry.recordedOn;
+    const alwaysLate = () => seasonDay(8); // extend the week's deadline out to day 8
+    const result = weeklyTotalResult(
+      inglesTarget,
+      0,
+      [buildQuantityEntry("ingles", 0, parseDecimal("120")), entry],
+      alwaysLate,
+    );
+    expect(result.value).toEqual(parseDecimal("150")); // now counted, per the custom policy
+    expect(entry.recordedOn).toBe(originalRecordedOn); // the entry itself was never rewritten
   });
 
   it("evaluates each week independently — excess progress in one week never compensates another", () => {

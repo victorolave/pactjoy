@@ -17,6 +17,7 @@ import type {
 } from "../commitment/commitment";
 import type { Entry } from "../entry/entry";
 import type { Fraction } from "../fraction/fraction";
+import type { PauseDecision, PauseEnd, PauseRequest } from "../pause/pause";
 
 const DEFAULT_FREQUENCY: Frequency = { kind: "timesPerWeek", times: 3 };
 
@@ -49,6 +50,21 @@ export function buildQuantityCommitment(
   };
 }
 
+export function buildWeeklyTotalCommitment(
+  id: string,
+  weightPercent: number,
+  unit: QuantityUnit,
+  target: Target,
+): QuantityCommitment {
+  return {
+    id: id as QuantityCommitment["id"],
+    weightPercent,
+    unit,
+    target,
+    schedule: { period: "weeklyTotal" },
+  };
+}
+
 function toSeasonDay(day: SeasonDay | number): SeasonDay {
   return typeof day === "number" ? seasonDay(day) : day;
 }
@@ -65,6 +81,22 @@ export function buildQuantityEntry(
     recordedOn: toSeasonDay(recordedOn),
     kind: "quantity",
     value,
+  };
+}
+
+export function buildPauseRequest(
+  commitmentId: string,
+  startDay: SeasonDay | number,
+  end: PauseEnd,
+  decision: PauseDecision,
+  requestedOn: SeasonDay | number = startDay,
+): PauseRequest {
+  return {
+    commitmentId: commitmentId as CommitmentId,
+    requestedOn: toSeasonDay(requestedOn),
+    startDay: toSeasonDay(startDay),
+    end,
+    decision,
   };
 }
 

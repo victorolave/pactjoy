@@ -1,7 +1,8 @@
 /**
- * Minimal per-session commitment score: proves the per-session opportunity
- * generation (slice 3) wires into a scoring shape end-to-end. Member-level
- * aggregation (D2), pause and streak arrive in later slices.
+ * Per-commitment score: points, consistency and idealCompletion (D1) from a
+ * flat list of already-generated `SessionResult`s (pause-aware, across
+ * however many weeks — `scoring/member-score.ts` is the caller that
+ * generates that list for a whole season).
  */
 import type { Fraction } from "../fraction/fraction";
 import { div, fromInt, mean, mul } from "../fraction/fraction";
@@ -12,25 +13,32 @@ export interface CommitmentScore {
   readonly points: Fraction;
   /** reached/total. `null` with zero counted opportunities (R6) — not `0`. */
   readonly consistency: Fraction | null;
+  /**
+   * D1: mean(progress of every opportunity) = points / potential — a
+   * distinct metric from `consistency` (a session can be "consistent"
+   * without reaching full progress). `null` with zero counted opportunities
+   * (R6) — not `0`.
+   */
+  readonly idealCompletion: Fraction | null;
 }
 
 const WEIGHT_TO_POINTS = fromInt(10); // weightPercent (0-100) x 10 = weight x 1000
 
 /**
- * Aggregates one commitment's `perSession` week(s) into points and
- * consistency. `sessions` is the flat list of every opportunity generated
- * for this commitment so far (across however many weeks).
+ * Aggregates one commitment's `perSession` week(s) into points, consistency
+ * and idealCompletion. `sessions` is the flat list of every opportunity
+ * generated for this commitment so far (across however many weeks).
  */
 export function scorePerSessionCommitment(
   weightPercent: number,
   sessions: readonly SessionResult[],
 ): CommitmentScore {
   if (sessions.length === 0) {
-    return { points: fromInt(0), consistency: null };
+    return { points: fromInt(0), consistency: null, idealCompletion: null };
   }
   const meanProgress = mean(sessions.map((s) => s.progress));
   const points = mul(mul(fromInt(weightPercent), WEIGHT_TO_POINTS), meanProgress);
   const reached = sessions.filter((s) => s.consistent).length;
   const consistency = div(fromInt(reached), fromInt(sessions.length));
-  return { points, consistency };
+  return { points, consistency, idealCompletion: meanProgress };
 }

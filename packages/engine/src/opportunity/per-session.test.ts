@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { Season, Weekday } from "../calendar/season-calendar";
+import { seasonDay } from "../calendar/season-calendar";
 import type { Target } from "../commitment/commitment";
+import { graceDeadline } from "../entry/grace-period";
 import { fromInt, mean, parseDecimal } from "../fraction/fraction";
 import { buildDoneEntry, buildQuantityEntry } from "../test-support/builders";
 import { fr } from "../test-support/fraction-literal";
@@ -99,6 +101,23 @@ describe("timesPerWeekSessions", () => {
     expect(sessions[0]?.progress).toEqual(fromInt(1));
     expect(sessions[0]?.consistent).toBe(true);
   });
+
+  it("honors a custom deadlineFor policy instead of the default graceDeadline — without touching recordedOn", () => {
+    const entry = buildDoneEntry("gym", 0, 5); // day 0, recorded day 5 — normally long past deadline (day 1)
+    const originalRecordedOn = entry.recordedOn;
+    const alwaysLate: (day: ReturnType<typeof seasonDay>) => ReturnType<typeof seasonDay> = () =>
+      seasonDay(5); // extend day 0's deadline out to day 5
+    const sessions = timesPerWeekSessions(booleanTarget, 1, [entry], alwaysLate);
+    expect(sessions[0]?.progress).toEqual(fromInt(1)); // now on time, per the custom policy
+    expect(entry.recordedOn).toBe(originalRecordedOn); // the entry itself was never rewritten
+  });
+
+  it("defaults to graceDeadline when no policy is passed — same result either way", () => {
+    const entries = [buildDoneEntry("gym", 0, 2)];
+    const withDefault = timesPerWeekSessions(booleanTarget, 1, entries);
+    const explicit = timesPerWeekSessions(booleanTarget, 1, entries, graceDeadline);
+    expect(withDefault).toEqual(explicit);
+  });
 });
 
 describe("specificDaysSessions", () => {
@@ -141,6 +160,25 @@ describe("specificDaysSessions", () => {
     ];
     const sessions = specificDaysSessions(booleanTarget, monday, 0, tueThuSat, entries);
     expect(sessions).toHaveLength(3);
+    expect(sessions.map((s) => s.progress)).toEqual([fromInt(1), fromInt(1), fromInt(1)]);
+  });
+
+  it("honors a custom deadlineFor policy — a late covering entry now counts", () => {
+    const entries = [
+      buildDoneEntry("draw", 3),
+      buildDoneEntry("draw", 5),
+      buildDoneEntry("draw", 2, 4), // wednesday, recorded day 4 — normally past deadline (day 3)
+    ];
+    const extendWednesdayOnly = (day: number) =>
+      day === 2 ? seasonDay(4) : graceDeadline(seasonDay(day));
+    const sessions = specificDaysSessions(
+      booleanTarget,
+      monday,
+      0,
+      tueThuSat,
+      entries,
+      extendWednesdayOnly,
+    );
     expect(sessions.map((s) => s.progress)).toEqual([fromInt(1), fromInt(1), fromInt(1)]);
   });
 
