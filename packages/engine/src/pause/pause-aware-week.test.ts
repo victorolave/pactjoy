@@ -44,6 +44,50 @@ describe("pauseAwareWeekSessions — no pauses (baseline, delegates to the exist
   });
 });
 
+describe("pauseAwareWeekSessions — E15: an open pause auto-resumes once it reaches the cap", () => {
+  const gym = buildQuantityCommitment(
+    "gym",
+    30,
+    "times",
+    { direction: "reach", minimum: fromInt(1), ideal: fromInt(1) },
+    { kind: "timesPerWeek", times: 3 },
+  );
+  const openPauseFromDayZero = [
+    buildPauseRequest(
+      "gym",
+      0,
+      { kind: "open" },
+      { kind: "approved", decidedOn: seasonDay(0), resumedOn: null },
+    ),
+  ];
+
+  it("without a pauseCap, an open pause stays paused indefinitely (unchanged default behavior)", () => {
+    const result = pauseAwareWeekSessions(gym, 4, openPauseFromDayZero, [], seasonDay(40));
+    expect(result.status).toBe("paused");
+  });
+
+  it("with pauseCap=28, week 4 (days 28-34) is no longer paused — the pause auto-resumed at day 28", () => {
+    const entries = [buildDoneEntry("gym", 28), buildDoneEntry("gym", 29), buildDoneEntry("gym", 30)];
+    const result = pauseAwareWeekSessions(
+      gym,
+      4,
+      openPauseFromDayZero,
+      entries,
+      seasonDay(40),
+      undefined,
+      28,
+    );
+    expect(result.status).toBe("scored");
+    if (result.status !== "scored") throw new Error("unreachable");
+    expect(result.sessions.map((s) => s.progress)).toEqual([fr("1"), fr("1"), fr("1")]);
+  });
+
+  it("with pauseCap=28, a day still inside the cap (day 27, week 3) is still paused", () => {
+    const result = pauseAwareWeekSessions(gym, 3, openPauseFromDayZero, [], seasonDay(40), undefined, 28);
+    expect(result.status).toBe("paused");
+  });
+});
+
 describe("pauseAwareWeekSessions — D6/D7 proration closes the week", () => {
   it("timesPerWeek: 1 active day out of 7 prorates N to 0 -> status 'paused'", () => {
     const gym = buildQuantityCommitment(

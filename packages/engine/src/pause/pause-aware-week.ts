@@ -9,6 +9,14 @@
  * place that composes pause with opportunity generation — callers
  * (acceptance tests, and eventually `scoring/member-score.ts`, slice 6a)
  * must not re-implement any of this themselves.
+ *
+ * E15 (D9's auto-resume-at-cap): the optional `pauseCap` parameter, when
+ * given, trims the commitment's approved-paused days to the earliest `cap`
+ * days (`pause-cap.ts`'s `capPausedDays`) before anything else runs — a day
+ * beyond the cap is simply no longer paused, which is what "the pause
+ * auto-resumes" means for scoring, with no `resumedOn` ever synthesized.
+ * Omitting `pauseCap` keeps the previous (uncapped) behavior, so no
+ * existing caller changes.
  */
 
 import type { Season, SeasonDay } from "../calendar/season-calendar";
@@ -27,6 +35,7 @@ import {
 import { weeklyTotalResult } from "../opportunity/weekly-total";
 import type { PauseRequest } from "./pause";
 import { effectivePausedDays, pendingHoldDays } from "./pause";
+import { capPausedDays } from "./pause-cap";
 import { prorateLimitTarget, prorateReachTarget, prorateSessionCount } from "./proration";
 
 const DAYS_PER_WEEK = 7;
@@ -101,13 +110,15 @@ export function pauseAwareWeekSessions(
   entries: readonly Entry[],
   today: SeasonDay,
   season?: Season,
+  pauseCap?: number,
 ): PauseAwareWeekResult {
   const weekStart = week * DAYS_PER_WEEK;
   const weekDays: readonly SeasonDay[] = Array.from({ length: DAYS_PER_WEEK }, (_, i) =>
     seasonDay(weekStart + i),
   );
 
-  const paused = effectivePausedDays(pauses, today);
+  const rawPaused = effectivePausedDays(pauses, today);
+  const paused = pauseCap === undefined ? rawPaused : capPausedDays(rawPaused, pauseCap);
   const onHold = pendingHoldDays(pauses, today);
   const excluded = (day: SeasonDay): boolean => paused.has(day) || onHold.has(day);
 
