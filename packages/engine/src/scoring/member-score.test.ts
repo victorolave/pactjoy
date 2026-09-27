@@ -207,13 +207,15 @@ describe("scoreMember", () => {
       today: seasonDay(10), // inside week 1 (days 7-13); its grace deadline is day 14 -- not yet
     };
     const score = scoreMember(input);
-    // Denominator (D12: active opportunities of the whole season) is unaffected by R1: 4 weeks x 3 = 12.
+    // Points (D12): denominator is the whole season's 12 opportunities, unaffected by R1 or R7.
     // Numerator counts ONLY week 0's 3 fully-resolved sessions -- week 1's early single entry is
-    // NOT yet counted (R1), so it must NOT inflate points/consistency beyond week 0's contribution.
+    // NOT yet counted (R1), so it must NOT inflate points beyond week 0's contribution.
     // Without R1, week 1's 1 already-reached session would count too: reached 4/12, not 3/12.
     expect(score.commitments[0]?.points).toEqual(fromInt(250)); // 100 x 10 x 3/12
-    expect(score.consistency).toEqual(fr("1/4")); // 3/12, NOT 4/12
-    expect(score.idealCompletion).toEqual(fr("1/4"));
+    // Consistency/idealCompletion (R7): divide by what's counted SO FAR (3), not the season (12) --
+    // week 0 is perfect, so both are 1, not 1/4.
+    expect(score.consistency).toEqual(fromInt(1));
+    expect(score.idealCompletion).toEqual(fromInt(1));
   });
 
   it("R1 (day-bound, specificDays): with every scheduled day still within grace and unentered, nothing is counted yet -- points 0, consistency/idealCompletion null (R6), not a premature 0%", () => {
@@ -251,10 +253,86 @@ describe("scoreMember", () => {
       today: seasonDay(1), // day 1 itself -- grace deadline for day 1 is day 2, not reached yet
     };
     const score = scoreMember(input);
-    // Denominator: 4 scheduled tuesdays across the season = 4. Numerator: only day 1 is counted
-    // so far (via its entry, per R1's "OR has an entry" clause) -- weeks 1-3's tuesdays have no
-    // entry and their own grace hasn't passed, so they contribute nothing yet.
+    // Points (D12): denominator is the season's 4 scheduled tuesdays. Numerator: only day 1 is
+    // counted so far (via its entry, per R1's "OR has an entry" clause) -- weeks 1-3's tuesdays
+    // have no entry and their own grace hasn't passed, so they contribute nothing yet.
     expect(score.commitments[0]?.points).toEqual(fromInt(250)); // 100 x 10 x 1/4
-    expect(score.commitments[0]?.consistency).toEqual(fr("1/4"));
+    // Consistency (R7): divides by what's counted so far (1), not the season (4) -- day 1 is
+    // reached, so consistency is 1, not 1/4.
+    expect(score.commitments[0]?.consistency).toEqual(fromInt(1));
+  });
+
+  it("R1 (week-bound) SHOULD-FIX: a rejection's grace extension pushes the week's counting deadline past the plain weekEnd+1 (E18-style)", () => {
+    // Request day 5, rejection decided day 7, week 0 (days 0-6, plain graceDeadline(6) = 7). The
+    // rejection overlaps days 5-6 of week 0, extending THOSE days' deadline to decidedOn+1 = 8. The
+    // week-bound gate must wait for the MAX of every day's own (possibly extended) deadline, so at
+    // today = 7 the week must NOT count yet -- even though the plain graceDeadline(weekEnd) says it
+    // should. Without this fix, member-score.ts would count the week at today=7 (points 1000,
+    // consistency 1), exactly the bug the fresh review reproduced.
+    const gym = buildDoneCommitment("gym", 100, { kind: "timesPerWeek", times: 3 });
+    const input: ScoreInput = {
+      season: fourWeekSeason,
+      commitments: [gym],
+      entries: fullWeekEntries("gym", 0, 3),
+      pauses: [
+        buildPauseRequest(
+          "gym",
+          5,
+          { kind: "fixed", lastDay: seasonDay(10) }, // irrelevant for a rejected request
+          { kind: "rejected", decidedOn: seasonDay(7) },
+        ),
+      ],
+      today: seasonDay(7),
+    };
+    const score = scoreMember(input);
+    expect(score.commitments[0]?.points).toEqual(fromInt(0));
+    expect(score.consistency).toBeNull();
+  });
+
+  it("R1 (week-bound) SHOULD-FIX: once today reaches the rejection-extended deadline, the week counts", () => {
+    const gym = buildDoneCommitment("gym", 100, { kind: "timesPerWeek", times: 3 });
+    const input: ScoreInput = {
+      season: fourWeekSeason,
+      commitments: [gym],
+      entries: fullWeekEntries("gym", 0, 3),
+      pauses: [
+        buildPauseRequest(
+          "gym",
+          5,
+          { kind: "fixed", lastDay: seasonDay(10) },
+          { kind: "rejected", decidedOn: seasonDay(7) },
+        ),
+      ],
+      today: seasonDay(8), // decidedOn(7) + 1 -- the extended deadline itself
+    };
+    const score = scoreMember(input);
+    // Points: same denominator as the test above (12 -- all 4 weeks stay active, rejected).
+    // Week 0 now counts (3 reached) -> 100 x 10 x 3/12 = 250, not the 0 of the "not yet" case above.
+    expect(score.commitments[0]?.points).toEqual(fromInt(250));
+    // Consistency (R7): pooled over what's counted so far (3), not the season (12) -- week 0 is
+    // fully reached, so consistency is 1.
+    expect(score.consistency).toEqual(fromInt(1));
+  });
+
+  it("R7 (decision round 4, binding, exact given example): Leer 250pts/25%/5x-week/8-week season, a perfect week 1, today = end of week 1 + grace -> points 125/4, consistency 1, idealCompletion 1", () => {
+    const eightWeekSeason: Season = { lengthWeeks: 8, startWeekday: 0 };
+    const leer = buildDoneCommitment("leer", 25, { kind: "timesPerWeek", times: 5 });
+    const input: ScoreInput = {
+      season: eightWeekSeason,
+      commitments: [leer],
+      entries: fullWeekEntries("leer", 0, 5), // week 1 (week 0, 0-indexed): all 5 sessions done
+      pauses: [],
+      today: seasonDay(7), // end of week 1 (weekEnd 6) plus grace: graceDeadline(6) = 7
+    };
+    const score = scoreMember(input);
+    // Points (D12, unaffected by R7): potential 250 x (5 counted so far)/(40 in the whole season) = 1250/40 = 125/4.
+    expect(score.commitments[0]?.points).toEqual(fr("125/4"));
+    expect(score.points).toEqual(fr("125/4"));
+    // Consistency/idealCompletion (R7): divide by what's counted so far (5), not the season (40) --
+    // week 1 is perfect, so both are exactly 1, not 5/40.
+    expect(score.commitments[0]?.consistency).toEqual(fromInt(1));
+    expect(score.commitments[0]?.idealCompletion).toEqual(fromInt(1));
+    expect(score.consistency).toEqual(fromInt(1));
+    expect(score.idealCompletion).toEqual(fromInt(1));
   });
 });

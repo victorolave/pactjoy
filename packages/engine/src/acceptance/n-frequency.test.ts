@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { mean } from "../fraction/fraction";
 import { specificDaysSessions, timesPerWeekSessions } from "../opportunity/per-session";
-import { weeklyTotalResult } from "../opportunity/weekly-total";
-import { computeStreak, weekStreakOutcome } from "../scoring/streak";
+import type { ScoreInput } from "../scoring/member-score";
+import { scoreMember } from "../scoring/member-score";
 import {
   dibujarWeekdays,
   nFrequencyRows,
@@ -25,16 +25,24 @@ describe("acceptance: series N — timesPerWeek and specificDays frequency", () 
   });
 });
 
+/**
+ * D11 streak, exercised through `scoreMember` ONLY (fresh-review BLOCKER
+ * fix) — no direct composition of the dispatchers + `weekStreakOutcome` +
+ * `computeStreak` in this test body; that composition now lives in
+ * `scoring/member-score.ts`'s own `seasonSessions`, the single production
+ * path.
+ */
 describe("acceptance: series N — streak (D11)", () => {
   it.for(nStreakRows)("$id: $summary", (row) => {
-    const outcomes = row.weeksEntries.map((entries, week) => {
-      const sessions =
-        row.kind === "timesPerWeek"
-          ? timesPerWeekSessions(row.target, row.slots, entries)
-          : [weeklyTotalResult(row.target, week, entries)];
-      return weekStreakOutcome(false, sessions);
-    });
-    expect(computeStreak("week", outcomes)).toEqual({
+    const input: ScoreInput = {
+      season: row.season,
+      commitments: [row.commitment],
+      entries: row.entries,
+      pauses: [],
+      today: row.today,
+    };
+    const score = scoreMember(input);
+    expect(score.commitments[0]?.streak).toEqual({
       unit: "week",
       current: row.expectedCurrent,
       best: row.expectedBest,
