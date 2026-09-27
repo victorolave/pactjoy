@@ -420,7 +420,7 @@ export const eConsistencyRows: readonly ConsistencyRow[] = [
 ];
 
 /** E12-E14, E16, E22: canRequestPause's 50% cap (D9), retroactive guard, and early-resume
- * consumption (R4b's pending-counts-too is exercised in `canRequestPause.test.ts`, not here —
+ * consumption (R4b's pending-counts-too is exercised in `pause-cap.test.ts`, not here —
  * it is engine-authored, not a Notion row). */
 export interface PauseCapRow {
   readonly id: string;
