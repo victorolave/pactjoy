@@ -124,7 +124,8 @@ describe("scoring invariants (F9 full pipeline, property-based, slice 6b)", () =
               const lastDay = seasonDay(
                 uncappedLastDay < propertyTotalDays ? uncappedLastDay : propertyTotalDays - 1,
               );
-              const end: PauseEnd = p.endKind === "open" ? { kind: "open" } : { kind: "fixed", lastDay };
+              const end: PauseEnd =
+                p.endKind === "open" ? { kind: "open" } : { kind: "fixed", lastDay };
               const decision: PauseDecision =
                 p.decisionKind === "pending"
                   ? { kind: "pending" }

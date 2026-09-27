@@ -1,9 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { mean } from "../fraction/fraction";
-import { weeklyTotalResult } from "../opportunity/weekly-total";
 import { specificDaysSessions, timesPerWeekSessions } from "../opportunity/per-session";
+import { weeklyTotalResult } from "../opportunity/weekly-total";
 import { computeStreak, weekStreakOutcome } from "../scoring/streak";
-import { dibujarWeekdays, nFrequencyRows, nFrequencySeason, nStreakRows } from "./rows/n-frequency.rows";
+import {
+  dibujarWeekdays,
+  nFrequencyRows,
+  nFrequencySeason,
+  nStreakRows,
+} from "./rows/n-frequency.rows";
 
 describe("acceptance: series N — timesPerWeek and specificDays frequency", () => {
   it.for(nFrequencyRows)("$id: $summary", (row) => {

@@ -45,7 +45,11 @@ import type { Fraction } from "../../fraction/fraction";
 import { div, fromInt } from "../../fraction/fraction";
 import type { SessionResult } from "../../opportunity/per-session";
 import type { PauseRequest } from "../../pause/pause";
-import { buildDoneCommitment, buildDoneEntry, buildPauseRequest } from "../../test-support/builders";
+import {
+  buildDoneCommitment,
+  buildDoneEntry,
+  buildPauseRequest,
+} from "../../test-support/builders";
 import { fr } from "../../test-support/fraction-literal";
 
 function evenSplitSessions(

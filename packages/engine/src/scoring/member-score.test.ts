@@ -218,7 +218,10 @@ describe("scoreMember", () => {
 
   it("R1 (day-bound, specificDays): with every scheduled day still within grace and unentered, nothing is counted yet -- points 0, consistency/idealCompletion null (R6), not a premature 0%", () => {
     const tuesday: Weekday = 1;
-    const dibujar = buildDoneCommitment("dibujar", 100, { kind: "specificDays", weekdays: [tuesday] });
+    const dibujar = buildDoneCommitment("dibujar", 100, {
+      kind: "specificDays",
+      weekdays: [tuesday],
+    });
     const input: ScoreInput = {
       season: fourWeekSeason,
       commitments: [dibujar],
@@ -236,7 +239,10 @@ describe("scoreMember", () => {
 
   it("R1 (day-bound, specificDays): a scheduled day already has an explicit entry, so it counts immediately even though its own grace period hasn't passed yet", () => {
     const tuesday: Weekday = 1;
-    const dibujar = buildDoneCommitment("dibujar", 100, { kind: "specificDays", weekdays: [tuesday] });
+    const dibujar = buildDoneCommitment("dibujar", 100, {
+      kind: "specificDays",
+      weekdays: [tuesday],
+    });
     const input: ScoreInput = {
       season: fourWeekSeason,
       commitments: [dibujar],
