@@ -13,7 +13,10 @@ import {
   eSessionCountRows,
   eWeeklyProrationRows,
 } from "./rows/e-pause.rows";
+import { F9_ID, fCommitmentRows, fTotalRows } from "./rows/f-full-season.rows";
+import { gConsistencyRows } from "./rows/g-consistency.rows";
 import { nFrequencyRows } from "./rows/n-frequency.rows";
+import { F5_ID, G5_ID, G6_ID } from "./rows/participant-full-season.rows";
 
 const ePauseRowIds = [
   ...eNeutralPointsRows,
@@ -37,7 +40,12 @@ describe("acceptance catalog", () => {
   it("has unique row IDs across every implemented family", () => {
     const ids = [...aReachPerSessionRows, ...bLimitRows, ...cWeeklyTotalRows, ...nFrequencyRows]
       .map((row) => row.id)
-      .concat(ePauseRowIds);
+      .concat(ePauseRowIds)
+      .concat(fCommitmentRows.map((row) => row.id))
+      .concat(fTotalRows.map((row) => row.id))
+      .concat([F9_ID, F5_ID])
+      .concat(gConsistencyRows.map((row) => row.id))
+      .concat([G5_ID, G6_ID]);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
@@ -63,6 +71,13 @@ describe("acceptance catalog", () => {
     expect(ePauseRowIds.length).toBe(23);
   });
 
-  it.todo("series F: full-season rows — slices 6a and 6b");
-  it.todo("series G: consistency rows — slice 6a");
+  it("pins the row count for series F so far: 9 of 13 (F1-F9 done; F10-F13 need slice 6b's mid-season recompute)", () => {
+    expect(fCommitmentRows.length + fTotalRows.length + 1 + 1).toBe(9);
+  });
+
+  it.todo("series F: F10-F13 (mid-season recompute) — slice 6b");
+
+  it("pins the final row count for series G: 6 of 6", () => {
+    expect(gConsistencyRows.length + 2).toBe(6);
+  });
 });
