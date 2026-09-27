@@ -39,10 +39,7 @@ export function seasonPauseCap(season: Season): number {
  * those later days are simply no longer paused, with no `resumedOn` ever
  * written anywhere.
  */
-export function capPausedDays(
-  days: ReadonlySet<SeasonDay>,
-  cap: number,
-): ReadonlySet<SeasonDay> {
+export function capPausedDays(days: ReadonlySet<SeasonDay>, cap: number): ReadonlySet<SeasonDay> {
   const sorted = [...days].sort((a, b) => a - b);
   return new Set(sorted.slice(0, cap));
 }

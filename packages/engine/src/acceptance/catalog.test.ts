@@ -4,9 +4,11 @@ import { bLimitRows } from "./rows/b-limit.rows";
 import { cWeeklyTotalRows } from "./rows/c-weekly-total.rows";
 import {
   eAllCommitmentsPause,
+  eAutoResumeRows,
   eConsistencyRows,
   eLifecycleRows,
   eNeutralPointsRows,
+  ePauseCapRows,
   ePausedDaySessionRows,
   eSessionCountRows,
   eWeeklyProrationRows,
@@ -21,6 +23,8 @@ const ePauseRowIds = [
   ...eLifecycleRows,
   { id: eAllCommitmentsPause.id },
   ...eConsistencyRows,
+  ...ePauseCapRows,
+  ...eAutoResumeRows,
 ].map((row) => row.id);
 
 /**
@@ -55,8 +59,8 @@ describe("acceptance catalog", () => {
 
   it.todo("series N: streak rows N12-N13 — slice 6b");
 
-  it("pins the row count for series E so far: 17 of 23 (E12-E16, E22 need canRequestPause, slice 5b)", () => {
-    expect(ePauseRowIds.length).toBe(17);
+  it("pins the final row count for series E: 23 of 23", () => {
+    expect(ePauseRowIds.length).toBe(23);
   });
 
   it.todo("series F: full-season rows — slices 6a and 6b");

@@ -3,6 +3,7 @@ import { seasonDay } from "../calendar/season-calendar";
 import type { Fraction } from "../fraction/fraction";
 import type { SessionResult } from "../opportunity/per-session";
 import { pauseAwareWeekSessions } from "../pause/pause-aware-week";
+import { canRequestPause } from "../pause/pause-cap";
 import { prorateSessionCount } from "../pause/proration";
 import { scorePerSessionCommitment } from "../scoring/commitment-score";
 import {
@@ -14,9 +15,11 @@ import {
 import { fr } from "../test-support/fraction-literal";
 import {
   eAllCommitmentsPause,
+  eAutoResumeRows,
   eConsistencyRows,
   eLifecycleRows,
   eNeutralPointsRows,
+  ePauseCapRows,
   ePausedDaySessionRows,
   eSessionCountRows,
   eWeeklyProrationRows,
@@ -156,6 +159,46 @@ describe("acceptance: series E — pause request lifecycle timing", () => {
       );
       expect(result.status).toBe("paused");
     }
+  });
+});
+
+describe("acceptance: series E — canRequestPause 50% cap, retroactive guard, early-resume consumption (D9)", () => {
+  it.for(ePauseCapRows)("$id: $summary", (row) => {
+    const result = canRequestPause(
+      row.season,
+      row.history,
+      { startDay: seasonDay(row.request.startDay), end: row.request.end },
+      seasonDay(row.today),
+    );
+    expect(result).toEqual(row.expected);
+  });
+});
+
+describe("acceptance: series E — an open pause auto-resumes at the D9 cap (E15)", () => {
+  it.for(eAutoResumeRows)("$id: $summary", (row) => {
+    const stillPaused = pauseAwareWeekSessions(
+      row.commitment,
+      row.weekStillPaused,
+      row.pauses,
+      [],
+      seasonDay(row.today),
+      undefined,
+      row.pauseCap,
+    );
+    expect(stillPaused.status).toBe("paused");
+
+    const resumed = pauseAwareWeekSessions(
+      row.commitment,
+      row.weekAutoResumed,
+      row.pauses,
+      row.entriesForResumedWeek,
+      seasonDay(row.today),
+      undefined,
+      row.pauseCap,
+    );
+    expect(resumed.status).toBe("scored");
+    if (resumed.status !== "scored") throw new Error("unreachable");
+    expect(resumed.sessions.map((s) => s.progress)).toEqual(row.expectedProgresses);
   });
 });
 

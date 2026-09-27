@@ -67,7 +67,11 @@ describe("pauseAwareWeekSessions — E15: an open pause auto-resumes once it rea
   });
 
   it("with pauseCap=28, week 4 (days 28-34) is no longer paused — the pause auto-resumed at day 28", () => {
-    const entries = [buildDoneEntry("gym", 28), buildDoneEntry("gym", 29), buildDoneEntry("gym", 30)];
+    const entries = [
+      buildDoneEntry("gym", 28),
+      buildDoneEntry("gym", 29),
+      buildDoneEntry("gym", 30),
+    ];
     const result = pauseAwareWeekSessions(
       gym,
       4,
@@ -83,7 +87,15 @@ describe("pauseAwareWeekSessions — E15: an open pause auto-resumes once it rea
   });
 
   it("with pauseCap=28, a day still inside the cap (day 27, week 3) is still paused", () => {
-    const result = pauseAwareWeekSessions(gym, 3, openPauseFromDayZero, [], seasonDay(40), undefined, 28);
+    const result = pauseAwareWeekSessions(
+      gym,
+      3,
+      openPauseFromDayZero,
+      [],
+      seasonDay(40),
+      undefined,
+      28,
+    );
     expect(result.status).toBe("paused");
   });
 });
