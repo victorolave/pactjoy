@@ -1,12 +1,18 @@
 import { array, assert, constantFrom, integer, property, record, tuple } from "fast-check";
 import { describe, expect, it } from "vitest";
-import type { Season } from "../calendar/season-calendar";
+import type { Season, Weekday } from "../calendar/season-calendar";
 import { seasonDay } from "../calendar/season-calendar";
+import type { Commitment, Direction, Frequency, Target } from "../commitment/commitment";
 import { fromInt, gte, lte, sum } from "../fraction/fraction";
 import type { PauseDecision, PauseEnd } from "../pause/pause";
 import { sessionResultsArbitrary, weightPercentPartition } from "../test-support/arbitraries";
-import { buildDoneCommitment, buildDoneEntry, buildPauseRequest } from "../test-support/builders";
-import { scorePerSessionCommitment } from "./commitment-score";
+import {
+  buildPauseRequest,
+  buildQuantityCommitment,
+  buildQuantityEntry,
+  buildWeeklyTotalCommitment,
+} from "../test-support/builders";
+import { scoreCommitmentSoFar } from "./commitment-score";
 import type { ScoreInput } from "./member-score";
 import { scoreMember } from "./member-score";
 
@@ -27,7 +33,7 @@ describe("scoring invariants (F9, property-based)", () => {
         integer({ min: 1, max: 20 }).map((steps) => steps * 5),
         sessionResultsArbitrary(),
         (weightPercent, sessions) => {
-          const { points } = scorePerSessionCommitment(weightPercent, sessions);
+          const { points } = scoreCommitmentSoFar(weightPercent, sessions, sessions);
           const potential = fromInt(weightPercent * 10);
           expect(gte(points, ZERO)).toBe(true);
           expect(lte(points, potential)).toBe(true);
@@ -48,7 +54,11 @@ describe("scoring invariants (F9, property-based)", () => {
         ([weights, sessionsPerCommitment]) => {
           const points = weights.map(
             (weightPercent, i) =>
-              scorePerSessionCommitment(weightPercent, sessionsPerCommitment[i] ?? []).points,
+              scoreCommitmentSoFar(
+                weightPercent,
+                sessionsPerCommitment[i] ?? [],
+                sessionsPerCommitment[i] ?? [],
+              ).points,
           );
           const total = sum(points);
           expect(gte(total, ZERO)).toBe(true);
@@ -62,14 +72,41 @@ describe("scoring invariants (F9, property-based)", () => {
 const propertySeason: Season = { lengthWeeks: 4, startWeekday: 0 };
 const propertyTotalDays = propertySeason.lengthWeeks * 7;
 
-/** Arbitrary per-commitment fuzz: a `timesPerWeek` cadence, some scattered `done` entries, and 0-2 pause requests (any shape -- `pause.ts`'s day-range helpers already tolerate an empty/inverted range without throwing). */
+type ScheduleKind = "timesPerWeek" | "specificDays" | "weeklyTotal";
+
+/** Smaller-first, larger-second (never `Math.min`/`Math.max` -- banned per ADR-0006). */
+function sortedPair(a: number, b: number): readonly [number, number] {
+  return a <= b ? [a, b] : [b, a];
+}
+
+/**
+ * Arbitrary per-commitment fuzz (SHOULD-FIX, item 3): every schedule kind
+ * (`timesPerWeek`, `specificDays`, `weeklyTotal`), both directions (`reach`,
+ * `limit`), scattered quantity entries, and 0-2 pause requests whose
+ * `decidedOn` can land AFTER `startDay` (exercising the rejection-extension
+ * path, `pause-aware-week.ts`'s `rejectionExtendedDeadline`) — any shape,
+ * including retroactive-looking or degenerate ones; `pause.ts`'s day-range
+ * helpers already tolerate an empty/inverted range without throwing.
+ */
 function commitmentFuzzArbitrary() {
   return record({
+    scheduleKind: constantFrom<ScheduleKind>("timesPerWeek", "specificDays", "weeklyTotal"),
+    direction: constantFrom<Direction>("reach", "limit"),
     times: integer({ min: 1, max: 5 }),
-    entryDays: array(integer({ min: 0, max: propertyTotalDays - 1 }), { maxLength: 10 }),
+    weekdays: array(integer({ min: 0, max: 6 }), { minLength: 1, maxLength: 7 }),
+    thresholdA: integer({ min: 0, max: 20 }),
+    thresholdB: integer({ min: 0, max: 20 }),
+    entries: array(
+      record({
+        day: integer({ min: 0, max: propertyTotalDays - 1 }),
+        value: integer({ min: 0, max: 30 }),
+      }),
+      { maxLength: 10 },
+    ),
     pauses: array(
       record({
         startDay: integer({ min: 0, max: propertyTotalDays - 1 }),
+        decidedOffset: integer({ min: 0, max: 10 }), // decidedOn = startDay + decidedOffset -- can land AFTER startDay
         length: integer({ min: 0, max: propertyTotalDays }),
         endKind: constantFrom<"open" | "fixed">("open", "fixed"),
         decisionKind: constantFrom<"pending" | "approved" | "rejected">(
@@ -83,22 +120,50 @@ function commitmentFuzzArbitrary() {
   });
 }
 
+function targetFor(direction: Direction, thresholdA: number, thresholdB: number): Target {
+  const [low, high] = sortedPair(thresholdA, thresholdB);
+  if (direction === "reach") {
+    // reach requires 0 < minimum <= ideal.
+    return {
+      direction,
+      minimum: fromInt(low === 0 ? 1 : low),
+      ideal: fromInt(high === 0 ? 1 : high),
+    };
+  }
+  // limit requires 0 <= ideal <= tolerance.
+  return { direction, ideal: fromInt(low), tolerance: fromInt(high) };
+}
+
+function frequencyFor(
+  scheduleKind: ScheduleKind,
+  times: number,
+  weekdays: readonly number[],
+): Frequency {
+  if (scheduleKind === "specificDays") {
+    const uniqueWeekdays = [...new Set(weekdays)] as readonly Weekday[];
+    return { kind: "specificDays", weekdays: uniqueWeekdays.length > 0 ? uniqueWeekdays : [0] };
+  }
+  return { kind: "timesPerWeek", times };
+}
+
 /**
  * F9's full-pipeline equivalent (requested by the fresh review after slice
- * 6a, task 6b.9): `0 <= scoreMember(input).points <= 1000` for arbitrary
- * `ScoreInput`s -- arbitrary commitments (via `weightPercentPartition`),
- * arbitrary entries, arbitrary pauses (any shape, including retroactive-
- * looking or degenerate ones -- `scoreMember` never throws on those, it
- * just scores whatever `pauseAwareWeekSessions` resolves) and an arbitrary
- * `today` anywhere from the season's start through a few days past its end.
- * This exercises the WHOLE composition -- R1's so-far gating, D9's pause
- * cap, D12's mid-season redistribution -- catching a regression in how
- * `scoreMember` sums/gates commitment points that slice 6a's per-commitment-
- * only property test (F9, above) cannot see, now that R1 makes a mid-season
- * `today` a normal input rather than an unsafe one.
+ * 6a, task 6b.9; extended per a second fresh-review round, item 3): for
+ * EVERY commitment (`0 <= commitmentPoints <= weight x 1000`) AND for the
+ * total (`0 <= scoreMember(input).points <= 1000`), across arbitrary
+ * commitments (every schedule kind, every direction, via
+ * `weightPercentPartition`), arbitrary entries, arbitrary pauses (any shape,
+ * including retroactive-looking/degenerate ones, and rejections whose
+ * `decidedOn` lands after `startDay` -- `scoreMember` never throws on those,
+ * it just scores whatever `pauseAwareWeekSessions` resolves) and an
+ * arbitrary `today` anywhere from the season's start through a few days
+ * past its end. This exercises the WHOLE composition -- R1's so-far gating,
+ * D9's pause cap, D12's mid-season redistribution, R7's counted-so-far
+ * consistency/idealCompletion, and D11's streak -- catching a regression
+ * that slice 6a's per-commitment-only property test (F9, above) cannot see.
  */
 describe("scoring invariants (F9 full pipeline, property-based, slice 6b)", () => {
-  it("0 <= scoreMember(input).points <= 1000, for arbitrary commitments/entries/pauses/today", () => {
+  it("0 <= points <= potential for every commitment, and 0 <= total <= 1000, for arbitrary commitments/entries/pauses/today", () => {
     assert(
       property(
         integer({ min: 1, max: 5 }).chain((count) =>
@@ -109,14 +174,22 @@ describe("scoring invariants (F9 full pipeline, property-based, slice 6b)", () =
           ),
         ),
         ([weights, fuzzes, today]) => {
-          const commitments = weights.map((weightPercent, i) =>
-            buildDoneCommitment(`c${i}`, weightPercent, {
-              kind: "timesPerWeek",
-              times: fuzzes[i]?.times ?? 1,
-            }),
-          );
+          const commitments = weights.map((weightPercent, i): Commitment => {
+            const fuzz = fuzzes[i];
+            const scheduleKind: ScheduleKind = fuzz?.scheduleKind ?? "timesPerWeek";
+            const direction: Direction = fuzz?.direction ?? "reach";
+            const target = targetFor(direction, fuzz?.thresholdA ?? 1, fuzz?.thresholdB ?? 1);
+            const id = `c${i}`;
+            if (scheduleKind === "weeklyTotal") {
+              return buildWeeklyTotalCommitment(id, weightPercent, "minutes", target);
+            }
+            const frequency = frequencyFor(scheduleKind, fuzz?.times ?? 1, fuzz?.weekdays ?? [0]);
+            return buildQuantityCommitment(id, weightPercent, "minutes", target, frequency);
+          });
           const entries = weights.flatMap((_, i) =>
-            (fuzzes[i]?.entryDays ?? []).map((day) => buildDoneEntry(`c${i}`, day)),
+            (fuzzes[i]?.entries ?? []).map((e) =>
+              buildQuantityEntry(`c${i}`, e.day, fromInt(e.value)),
+            ),
           );
           const pauses = weights.flatMap((_, i) =>
             (fuzzes[i]?.pauses ?? []).map((p) => {
@@ -126,12 +199,15 @@ describe("scoring invariants (F9 full pipeline, property-based, slice 6b)", () =
               );
               const end: PauseEnd =
                 p.endKind === "open" ? { kind: "open" } : { kind: "fixed", lastDay };
+              // decidedOn = startDay + decidedOffset -- lands AFTER startDay whenever offset > 0,
+              // exercising rejectionExtendedDeadline's overlap check for approved/rejected alike.
+              const decidedOn = seasonDay(p.startDay + p.decidedOffset);
               const decision: PauseDecision =
                 p.decisionKind === "pending"
                   ? { kind: "pending" }
                   : p.decisionKind === "approved"
-                    ? { kind: "approved", decidedOn: seasonDay(p.startDay), resumedOn: null }
-                    : { kind: "rejected", decidedOn: seasonDay(p.startDay) };
+                    ? { kind: "approved", decidedOn, resumedOn: null }
+                    : { kind: "rejected", decidedOn };
               return buildPauseRequest(`c${i}`, p.startDay, end, decision);
             }),
           );
@@ -143,6 +219,14 @@ describe("scoring invariants (F9 full pipeline, property-based, slice 6b)", () =
             today: seasonDay(today),
           };
           const score = scoreMember(input);
+          for (let i = 0; i < score.commitments.length; i++) {
+            const commitmentScore = score.commitments[i];
+            const weightPercent = weights[i];
+            if (commitmentScore === undefined || weightPercent === undefined) continue;
+            const potential = fromInt(weightPercent * 10);
+            expect(gte(commitmentScore.points, ZERO)).toBe(true);
+            expect(lte(commitmentScore.points, potential)).toBe(true);
+          }
           expect(gte(score.points, ZERO)).toBe(true);
           expect(lte(score.points, TOTAL_POTENTIAL_POINTS)).toBe(true);
         },
