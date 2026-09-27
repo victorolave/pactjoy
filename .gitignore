@@ -9,6 +9,9 @@ build/
 coverage/
 *.tsbuildinfo
 
+# Turborepo cache
+.turbo/
+
 # Environment and secrets (never commit keys; the Supabase service role key must stay private)
 .env
 .env.*

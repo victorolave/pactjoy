@@ -4,7 +4,7 @@
 
 **PactJoy**: a social habits app. Personal (hobby) project; if it works it could become a product, but that decision is not being made yet.
 
-Status: MVP specification and design are complete; stack chosen (2026-09-24); no code yet.
+Status: MVP specification and design are complete; stack chosen (2026-09-24). Phase 1 done (2026-09-27): `packages/engine` implements the full scoring engine and passes all 96 worked-example rows. No database, API or UI yet.
 
 The author works in Spanish: reply in Spanish. Code, commits and repository docs are in English.
 
@@ -31,41 +31,41 @@ Before proposing rule changes, read the Mechanics page. Do not duplicate busines
 
 One term per concept, used the same way in the rules, the code and conversations. Notion and the UI use the Spanish term; code uses the English one. Do not introduce synonyms (e.g. never `CheckIn` or `Log` for an entry).
 
-| Spanish (Notion / UI) | English (code) | Meaning |
-|---|---|---|
-| Hábito | `Habit` | Long-term behavior; lives across seasons |
-| Compromiso | `Commitment` | How a habit is worked during one season (frequency, minimum, ideal, weight, privacy) |
-| Temporada | `Season` | 4, 6, 8 or 12 weeks; weeks count from its start day |
-| Círculo | `Circle` | 2–6 people sharing a season |
-| Miembro | `Member` | A person in a circle |
-| Pacto | `Pact` | The set of commitments everyone approves before the season (unanimous) |
-| Oportunidad | `Opportunity` | Unit of scoring: a session, a scheduled day or a week |
-| Registro | `Entry` | What a member logs for an opportunity |
-| "Hoy no salió" | `missed` entry | Explicit "not done" for a day-bound opportunity |
-| Unidad | `Unit` | done/not done, minutes, hours, times, pages, km, glasses, custom |
-| Hecho / no hecho | `done` | Boolean unit |
-| Dirección: alcanzar / no exceder | `Direction`: `reach` / `limit` | More is better / less is better |
-| Periodo: por sesión / semanal acumulado | `Period`: `perSession` / `weeklyTotal` | Opportunity is a session / the whole week |
-| Frecuencia: N veces por semana / días específicos | `Frequency`: `timesPerWeek` / `specificDays` | How per-session opportunities are scheduled |
-| Mínimo | `minimum` | Threshold for "reach"; counts for consistency |
-| Ideal | `ideal` | Target that gives 100% |
-| Tolerancia | `tolerance` | Upper bound for "limit" (worth 50%) |
-| Peso | `weight` | Share of the member's 1,000 points |
-| Progreso | `progress` | Exact fraction 0–1 for one opportunity |
-| Puntos | `points` | weight × 1,000 × average progress of active opportunities |
-| Consistencia | `consistency` | Share of opportunities that reached the minimum |
-| Cumplimiento ideal | `idealCompletion` | Average progress (= points / potential) |
-| Racha | `streak` | Consecutive opportunities (days or weeks) kept |
-| Pausa | `Pause` | Freezes opportunities; neutral for scoring |
-| Prorrateo | `proration` | Scaling N / minimum / ideal / tolerance by active days in a partial week |
-| Periodo de gracia | `gracePeriod` | Until the end of the next day |
-| Revisión periódica | `Review` | Private periodic review (≈60 s) |
-| Automaticidad (SRBAI) | `automaticity` | Self-reported automaticity index, 1–7 |
-| Graduación / graduar | `graduation` / `graduate` | User decision to stop tracking a habit |
-| Estados 🌱🌿🌳🎓 | `HabitStage`: `new` / `developing` / `integrated` / `graduated` | Habit maturity |
-| Clasificación | `standings` | Season ranking by points |
-| Sugerencia de ánimo | `encouragementNudge` | Voluntary suggestion to support a member |
-| Reacción | `Reaction` | ❤️ 🙌 🔥 👏 |
+| Spanish (Notion / UI)                             | English (code)                                                  | Meaning                                                                              |
+| ------------------------------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Hábito                                            | `Habit`                                                         | Long-term behavior; lives across seasons                                             |
+| Compromiso                                        | `Commitment`                                                    | How a habit is worked during one season (frequency, minimum, ideal, weight, privacy) |
+| Temporada                                         | `Season`                                                        | 4, 6, 8 or 12 weeks; weeks count from its start day                                  |
+| Círculo                                           | `Circle`                                                        | 2–6 people sharing a season                                                          |
+| Miembro                                           | `Member`                                                        | A person in a circle                                                                 |
+| Pacto                                             | `Pact`                                                          | The set of commitments everyone approves before the season (unanimous)               |
+| Oportunidad                                       | `Opportunity`                                                   | Unit of scoring: a session, a scheduled day or a week                                |
+| Registro                                          | `Entry`                                                         | What a member logs for an opportunity                                                |
+| "Hoy no salió"                                    | `missed` entry                                                  | Explicit "not done" for a day-bound opportunity                                      |
+| Unidad                                            | `Unit`                                                          | done/not done, minutes, hours, times, pages, km, glasses, custom                     |
+| Hecho / no hecho                                  | `done`                                                          | Boolean unit                                                                         |
+| Dirección: alcanzar / no exceder                  | `Direction`: `reach` / `limit`                                  | More is better / less is better                                                      |
+| Periodo: por sesión / semanal acumulado           | `Period`: `perSession` / `weeklyTotal`                          | Opportunity is a session / the whole week                                            |
+| Frecuencia: N veces por semana / días específicos | `Frequency`: `timesPerWeek` / `specificDays`                    | How per-session opportunities are scheduled                                          |
+| Mínimo                                            | `minimum`                                                       | Threshold for "reach"; counts for consistency                                        |
+| Ideal                                             | `ideal`                                                         | Target that gives 100%                                                               |
+| Tolerancia                                        | `tolerance`                                                     | Upper bound for "limit" (worth 50%)                                                  |
+| Peso                                              | `weight`                                                        | Share of the member's 1,000 points                                                   |
+| Progreso                                          | `progress`                                                      | Exact fraction 0–1 for one opportunity                                               |
+| Puntos                                            | `points`                                                        | weight × 1,000 × average progress of active opportunities                            |
+| Consistencia                                      | `consistency`                                                   | Share of opportunities that reached the minimum                                      |
+| Cumplimiento ideal                                | `idealCompletion`                                               | Average progress (= points / potential)                                              |
+| Racha                                             | `streak`                                                        | Consecutive opportunities (days or weeks) kept                                       |
+| Pausa                                             | `Pause`                                                         | Freezes opportunities; neutral for scoring                                           |
+| Prorrateo                                         | `proration`                                                     | Scaling N / minimum / ideal / tolerance by active days in a partial week             |
+| Periodo de gracia                                 | `gracePeriod`                                                   | Until the end of the next day                                                        |
+| Revisión periódica                                | `Review`                                                        | Private periodic review (≈60 s)                                                      |
+| Automaticidad (SRBAI)                             | `automaticity`                                                  | Self-reported automaticity index, 1–7                                                |
+| Graduación / graduar                              | `graduation` / `graduate`                                       | User decision to stop tracking a habit                                               |
+| Estados 🌱🌿🌳🎓                                  | `HabitStage`: `new` / `developing` / `integrated` / `graduated` | Habit maturity                                                                       |
+| Clasificación                                     | `standings`                                                     | Season ranking by points                                                             |
+| Sugerencia de ánimo                               | `encouragementNudge`                                            | Voluntary suggestion to support a member                                             |
+| Reacción                                          | `Reaction`                                                      | ❤️ 🙌 🔥 👏                                                                          |
 
 ## Repository (decided 2026-09-24)
 
@@ -84,6 +84,17 @@ One term per concept, used the same way in the rules, the code and conversations
 - **API:** Supabase Edge Functions (Deno runtime), structured as if it were Nest: one module per use case, thin controllers, ports injected by hand. NestJS is ruled out for now: it needs an always-on server (~5 USD/month) or one that sleeps and breaks scheduled jobs. To verify when reaching that layer: how Edge Functions import monorepo packages (import map or relative paths).
 - **Language:** TypeScript everywhere. Monorepo with pnpm workspaces.
 
+### Guiding principle: high decoupling
+
+Every piece of the system is replaceable. Each component (database, auth, hosting, API runtime, UI framework, notifications, storage, and tooling such as the linter or test runner) sits behind a boundary that the rest of the system depends on, never behind its concrete implementation. Swapping a piece should mean writing a new adapter, not changing the domain or the use cases.
+
+In practice:
+
+- Depend on ports (interfaces) owned by the inner layer; vendors live only in adapters.
+- No vendor types, SDKs or conventions leak into `packages/engine` or `packages/app`.
+- When adding a dependency, ask "what would it take to replace this?" If the answer touches the domain, redesign the boundary first.
+- Replacing a significant piece is recorded as an ADR in `docs/adr/`.
+
 ### Architecture (hexagonal: Supabase is the facade, not the structure)
 
 - `packages/engine`: pure domain (scoring, pause, proration, streaks). No dependencies. Exact fractions with BigInt, never `float`. Injected clock.
@@ -93,6 +104,7 @@ One term per concept, used the same way in the rules, the code and conversations
 - `apps/web`: the PWA; talks to its own `api` interface and never writes to tables directly.
 
 Rules so that a future migration (e.g. to NestJS) only replaces adapters:
+
 - No business logic in Postgres (no triggers, no SQL functions, no RLS rules beyond "each member sees their own circle").
 - Shared packages use only standard TypeScript/ESM: nothing Deno- or Node-specific.
 - Every scheduled job is a use case; pg_cron only triggers it.
@@ -110,6 +122,6 @@ Full detail in the Mechanics page in Notion.
 
 ## Next steps
 
-1. `packages/engine` + tests: every row of the worked-examples page becomes a test (Vitest), plus the invariant 0 ≤ total ≤ 1,000. No UI.
-2. Postgres schema + use cases + the `api` function.
+1. ~~`packages/engine` + tests~~: done. Public API in `packages/engine/src/index.ts`; decisions in ADR-0004 to ADR-0006.
+2. Postgres schema + use cases (`packages/app`) + the `api` function. `packages/app` owns converting real time into `SeasonDay` (ADR-0004), the 48 h pause auto-approval and notifications.
 3. PWA following the design batches (Today and Entry first).
