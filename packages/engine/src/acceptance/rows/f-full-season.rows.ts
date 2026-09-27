@@ -19,15 +19,14 @@
  * F6-F8 (`exact-arithmetic` spec): fully specified by Notion's own GIVEN
  * text (e.g. "all active opportunities at 100%") — no invented numbers.
  *
- * NOT implemented in this slice (reported as an open question, not
- * guessed): F5 (participant season total) and F9's own fixed-row form are
- * out of scope here — F9 is exercised by `scoring/invariants.property.test.ts`
- * (property-based, no fixed row) and only referenced here by id for the
- * catalog. F5 needs `scoreMember`'s full `ScoreInput` (real week-by-week
- * entries for all four commitments), which this apply batch could not
- * fetch from Notion (no Notion tool available to this executor). F10-F13
- * are slice 6b's own rows (need `today`/mid-season machinery that doesn't
- * exist yet).
+ * F5 (participant season total) is a different kind of row — it needs
+ * `scoreMember`'s full `ScoreInput` (real week-by-week entries for all four
+ * commitments), not just this file's per-commitment aggregate — and lives in
+ * `participant-full-season.rows.ts`/`.test.ts` instead. F9's own fixed-row
+ * form is out of scope here too: it's exercised by
+ * `scoring/invariants.property.test.ts` (property-based, no fixed row) and
+ * only referenced here by id for the catalog. F10-F13 are slice 6b's own
+ * rows (need `today`/mid-season machinery that doesn't exist yet).
  */
 
 import type { Fraction } from "../../fraction/fraction";

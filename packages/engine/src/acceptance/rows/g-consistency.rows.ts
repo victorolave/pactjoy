@@ -4,11 +4,11 @@
  * their `sessions` here (rather than re-deriving equivalent fixtures)
  * guarantees the two families can never silently drift apart.
  *
- * G5-G6 (participant-level D2 aggregation) are NOT implemented in this
- * slice, for the same reason `f-full-season.rows.ts` defers F5: they need
- * `scoreMember`'s full `ScoreInput` (real week-by-week entries for all four
- * commitments), not available without Notion access. See that file's own
- * comment for the full open question.
+ * G5-G6 (participant-level D2 aggregation) live in
+ * `participant-full-season.rows.ts`/`.test.ts` instead, for the same reason
+ * F5 does (`f-full-season.rows.ts`'s own comment): they need `scoreMember`'s
+ * full `ScoreInput` (real week-by-week entries for all four commitments),
+ * not just this file's per-commitment aggregate.
  */
 import type { Fraction } from "../../fraction/fraction";
 import type { SessionResult } from "../../opportunity/per-session";

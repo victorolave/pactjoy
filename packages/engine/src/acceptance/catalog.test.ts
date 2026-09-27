@@ -16,6 +16,7 @@ import {
 import { F9_ID, fCommitmentRows, fTotalRows } from "./rows/f-full-season.rows";
 import { gConsistencyRows } from "./rows/g-consistency.rows";
 import { nFrequencyRows } from "./rows/n-frequency.rows";
+import { F5_ID, G5_ID, G6_ID } from "./rows/participant-full-season.rows";
 
 const ePauseRowIds = [
   ...eNeutralPointsRows,
@@ -42,8 +43,9 @@ describe("acceptance catalog", () => {
       .concat(ePauseRowIds)
       .concat(fCommitmentRows.map((row) => row.id))
       .concat(fTotalRows.map((row) => row.id))
-      .concat([F9_ID])
-      .concat(gConsistencyRows.map((row) => row.id));
+      .concat([F9_ID, F5_ID])
+      .concat(gConsistencyRows.map((row) => row.id))
+      .concat([G5_ID, G6_ID]);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
@@ -69,20 +71,13 @@ describe("acceptance catalog", () => {
     expect(ePauseRowIds.length).toBe(23);
   });
 
-  it("pins the row count for series F so far: 8 of 13 (F1-F4, F6-F9 done; F5 and F10-F13 need Notion week-by-week entries / slice 6b)", () => {
-    expect(fCommitmentRows.length + fTotalRows.length + 1).toBe(8);
+  it("pins the row count for series F so far: 9 of 13 (F1-F9 done; F10-F13 need slice 6b's mid-season recompute)", () => {
+    expect(fCommitmentRows.length + fTotalRows.length + 1 + 1).toBe(9);
   });
 
-  it.todo(
-    "series F: F5 (participant total) — needs Notion week-by-week entries (not available to this apply batch)",
-  );
   it.todo("series F: F10-F13 (mid-season recompute) — slice 6b");
 
-  it("pins the row count for series G so far: 4 of 6 (G1-G4 done; G5-G6 need Notion week-by-week entries)", () => {
-    expect(gConsistencyRows.length).toBe(4);
+  it("pins the final row count for series G: 6 of 6", () => {
+    expect(gConsistencyRows.length + 2).toBe(6);
   });
-
-  it.todo(
-    "series G: G5-G6 (participant consistency/idealCompletion) — needs Notion week-by-week entries (not available to this apply batch)",
-  );
 });

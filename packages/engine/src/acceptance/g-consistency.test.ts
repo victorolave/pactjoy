@@ -9,7 +9,6 @@ describe("acceptance: series G — consistency and idealCompletion per commitmen
     expect(score.idealCompletion).toEqual(row.expectedIdealCompletion);
   });
 
-  it.todo(
-    "G5-G6: participant consistency/idealCompletion (D2) — needs Notion week-by-week entries for scoreMember's ScoreInput (not available to this apply batch)",
-  );
+  // G5-G6 (participant consistency/idealCompletion, D2) are exercised in
+  // `participant-full-season.test.ts`, via `scoreMember`'s full `ScoreInput`.
 });

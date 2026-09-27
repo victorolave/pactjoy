@@ -18,8 +18,7 @@ describe("acceptance: series F — season totals (D1) and exact-arithmetic round
     expect(sum(points)).toEqual(row.expectedTotal);
   });
 
-  it.todo(
-    "F5: participant season total — needs Notion week-by-week entries for scoreMember's ScoreInput (not available to this apply batch)",
-  );
+  // F5 (participant season total) is exercised in
+  // `participant-full-season.test.ts`, via `scoreMember`'s full `ScoreInput`.
   it.todo("F10-F13: mid-season recompute (D12) — slice 6b, needs streak.ts and today-gating");
 });
