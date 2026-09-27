@@ -15,6 +15,11 @@ import { pauseAwareWeekSessions } from "./pause-aware-week";
 
 const inglesTarget = { direction: "reach" as const, minimum: fromInt(60), ideal: fromInt(150) };
 
+/** Every test in this file that isn't specifically about D9's cap uses this season only to
+ * satisfy the now-required `options.season` — its 12-week/84-day length is far above every
+ * pause span used below (at most 7 days), so the default cap never engages. */
+const defaultSeason: Season = { lengthWeeks: 12, startWeekday: 0 };
+
 describe("pauseAwareWeekSessions — no pauses (baseline, delegates to the existing dispatcher unchanged)", () => {
   it("timesPerWeek: scores exactly like the plain dispatcher when nothing is paused", () => {
     const gym = buildQuantityCommitment(
@@ -28,7 +33,9 @@ describe("pauseAwareWeekSessions — no pauses (baseline, delegates to the exist
       },
     );
     const entries = [buildDoneEntry("gym", 0), buildDoneEntry("gym", 1), buildDoneEntry("gym", 2)];
-    const result = pauseAwareWeekSessions(gym, 0, [], entries, seasonDay(6));
+    const result = pauseAwareWeekSessions(gym, 0, [], entries, seasonDay(6), {
+      season: defaultSeason,
+    });
     expect(result.status).toBe("scored");
     if (result.status !== "scored") throw new Error("unreachable");
     expect(result.sessions.map((s) => s.progress)).toEqual([fr("1"), fr("1"), fr("1")]);
@@ -37,14 +44,16 @@ describe("pauseAwareWeekSessions — no pauses (baseline, delegates to the exist
   it("weeklyTotal: scores exactly like the plain dispatcher when nothing is paused", () => {
     const ingles = buildWeeklyTotalCommitment("ingles", 25, "minutes", inglesTarget);
     const entries = [buildQuantityEntry("ingles", 0, fromInt(150))];
-    const result = pauseAwareWeekSessions(ingles, 0, [], entries, seasonDay(6));
+    const result = pauseAwareWeekSessions(ingles, 0, [], entries, seasonDay(6), {
+      season: defaultSeason,
+    });
     expect(result.status).toBe("scored");
     if (result.status !== "scored") throw new Error("unreachable");
     expect(result.sessions[0]?.progress).toEqual(fr("1"));
   });
 });
 
-describe("pauseAwareWeekSessions — E15: an open pause auto-resumes once it reaches the cap", () => {
+describe("pauseAwareWeekSessions — E15: an open pause auto-resumes at the cap (default = seasonPauseCap(season))", () => {
   const gym = buildQuantityCommitment(
     "gym",
     30,
@@ -52,6 +61,7 @@ describe("pauseAwareWeekSessions — E15: an open pause auto-resumes once it rea
     { direction: "reach", minimum: fromInt(1), ideal: fromInt(1) },
     { kind: "timesPerWeek", times: 3 },
   );
+  const eightWeekSeason: Season = { lengthWeeks: 8, startWeekday: 0 }; // 56 days, default cap = 28
   const openPauseFromDayZero = [
     buildPauseRequest(
       "gym",
@@ -61,42 +71,35 @@ describe("pauseAwareWeekSessions — E15: an open pause auto-resumes once it rea
     ),
   ];
 
-  it("without a pauseCap, an open pause stays paused indefinitely (unchanged default behavior)", () => {
-    const result = pauseAwareWeekSessions(gym, 4, openPauseFromDayZero, [], seasonDay(40));
-    expect(result.status).toBe("paused");
-  });
-
-  it("with pauseCap=28, week 4 (days 28-34) is no longer paused — the pause auto-resumed at day 28", () => {
+  it("WITHOUT an explicit pauseCap, an open pause auto-resumes at the season's own default cap (28) — week 4 (days 28-34) is no longer paused", () => {
     const entries = [
       buildDoneEntry("gym", 28),
       buildDoneEntry("gym", 29),
       buildDoneEntry("gym", 30),
     ];
-    const result = pauseAwareWeekSessions(
-      gym,
-      4,
-      openPauseFromDayZero,
-      entries,
-      seasonDay(40),
-      undefined,
-      28,
-    );
+    const result = pauseAwareWeekSessions(gym, 4, openPauseFromDayZero, entries, seasonDay(40), {
+      season: eightWeekSeason,
+    });
     expect(result.status).toBe("scored");
     if (result.status !== "scored") throw new Error("unreachable");
     expect(result.sessions.map((s) => s.progress)).toEqual([fr("1"), fr("1"), fr("1")]);
   });
 
-  it("with pauseCap=28, a day still inside the cap (day 27, week 3) is still paused", () => {
-    const result = pauseAwareWeekSessions(
-      gym,
-      3,
-      openPauseFromDayZero,
-      [],
-      seasonDay(40),
-      undefined,
-      28,
-    );
+  it("WITHOUT an explicit pauseCap, a day still inside the default cap (day 27, week 3) is still paused", () => {
+    const result = pauseAwareWeekSessions(gym, 3, openPauseFromDayZero, [], seasonDay(40), {
+      season: eightWeekSeason,
+    });
     expect(result.status).toBe("paused");
+  });
+
+  it("an explicit pauseCap overrides the season's default — cap=14 auto-resumes earlier than the season default (28)", () => {
+    // week 2 (days 14-20) sits entirely BEFORE the season's own default cap (28), so it would
+    // still be "paused" without the override — the override is what changes the outcome here.
+    const result = pauseAwareWeekSessions(gym, 2, openPauseFromDayZero, [], seasonDay(40), {
+      season: eightWeekSeason,
+      pauseCap: 14,
+    });
+    expect(result.status).toBe("scored");
   });
 });
 
@@ -124,7 +127,9 @@ describe("pauseAwareWeekSessions — D6/D7 proration closes the week", () => {
         },
       ),
     ];
-    const result = pauseAwareWeekSessions(gym, 0, pauses, [], seasonDay(10));
+    const result = pauseAwareWeekSessions(gym, 0, pauses, [], seasonDay(10), {
+      season: defaultSeason,
+    });
     expect(result.status).toBe("paused");
   });
 
@@ -143,7 +148,9 @@ describe("pauseAwareWeekSessions — D6/D7 proration closes the week", () => {
         },
       ),
     ];
-    const result = pauseAwareWeekSessions(ingles, 0, pauses, [], seasonDay(10));
+    const result = pauseAwareWeekSessions(ingles, 0, pauses, [], seasonDay(10), {
+      season: defaultSeason,
+    });
     expect(result.status).toBe("paused");
   });
 });
@@ -174,7 +181,9 @@ describe("pauseAwareWeekSessions — D8: a session on a paused day is discarded,
       ),
     ];
     const entries = [buildDoneEntry("gym", 0), buildDoneEntry("gym", 4)]; // day 4 is paused
-    const result = pauseAwareWeekSessions(gym, 0, pauses, entries, seasonDay(6));
+    const result = pauseAwareWeekSessions(gym, 0, pauses, entries, seasonDay(6), {
+      season: defaultSeason,
+    });
     expect(result.status).toBe("scored");
     if (result.status !== "scored") throw new Error("unreachable");
     expect(result.sessions.map((s) => s.progress)).toEqual([fr("1"), fr("0")]);
@@ -196,7 +205,9 @@ describe("pauseAwareWeekSessions — R4a: pending excludes, decision recomputes 
     const pauses = [
       buildPauseRequest("gym", 0, { kind: "fixed", lastDay: seasonDay(6) }, { kind: "pending" }),
     ];
-    const result = pauseAwareWeekSessions(gym, 0, pauses, [], seasonDay(6));
+    const result = pauseAwareWeekSessions(gym, 0, pauses, [], seasonDay(6), {
+      season: defaultSeason,
+    });
     expect(result.status).toBe("onHold");
   });
 
@@ -223,7 +234,9 @@ describe("pauseAwareWeekSessions — R4a: pending excludes, decision recomputes 
       ),
     ];
     const entries = [buildDoneEntry("gym", 0), buildDoneEntry("gym", 1), buildDoneEntry("gym", 2)];
-    const result = pauseAwareWeekSessions(gym, 0, rejected, entries, seasonDay(6));
+    const result = pauseAwareWeekSessions(gym, 0, rejected, entries, seasonDay(6), {
+      season: defaultSeason,
+    });
     expect(result.status).toBe("scored");
     if (result.status !== "scored") throw new Error("unreachable");
     expect(result.sessions.map((s) => s.progress)).toEqual([fr("1"), fr("1"), fr("1")]);
@@ -259,7 +272,9 @@ describe("pauseAwareWeekSessions — a rejection extends grace for its affected 
       buildDoneEntry("gym", 1),
       buildDoneEntry("gym", 2),
     ];
-    const result = pauseAwareWeekSessions(gym, 0, rejected, entries, seasonDay(6));
+    const result = pauseAwareWeekSessions(gym, 0, rejected, entries, seasonDay(6), {
+      season: defaultSeason,
+    });
     expect(result.status).toBe("scored");
     if (result.status !== "scored") throw new Error("unreachable");
     expect(result.sessions.map((s) => s.progress)).toEqual([fr("1"), fr("1"), fr("1")]);
@@ -281,7 +296,9 @@ describe("pauseAwareWeekSessions — a rejection extends grace for its affected 
       buildDoneEntry("gym", 1),
       buildDoneEntry("gym", 2),
     ];
-    const result = pauseAwareWeekSessions(gym, 0, [], entries, seasonDay(6));
+    const result = pauseAwareWeekSessions(gym, 0, [], entries, seasonDay(6), {
+      season: defaultSeason,
+    });
     expect(result.status).toBe("scored");
     if (result.status !== "scored") throw new Error("unreachable");
     // day 0's entry is discarded (late) -> only 2 real sessions + 1 empty slot, best-2 sort puts the empty last
@@ -303,7 +320,9 @@ describe("pauseAwareWeekSessions — a rejection extends grace for its affected 
       ),
     ];
     const entries = [buildQuantityEntry("ingles", 0, fromInt(150), seasonDay(15))]; // normally late (deadline 7), now within 21
-    const result = pauseAwareWeekSessions(ingles, 0, rejected, entries, seasonDay(20));
+    const result = pauseAwareWeekSessions(ingles, 0, rejected, entries, seasonDay(20), {
+      season: defaultSeason,
+    });
     expect(result.status).toBe("scored");
     if (result.status !== "scored") throw new Error("unreachable");
     expect(result.sessions[0]?.progress).toEqual(fr("1"));
@@ -327,7 +346,9 @@ describe("pauseAwareWeekSessions — a rejection extends grace for its affected 
     ];
     const lateEntry = buildDoneEntry("gym", 0, seasonDay(6)); // day 0, normal deadline is day 1
     const entries = [lateEntry, buildDoneEntry("gym", 1), buildDoneEntry("gym", 2)];
-    const result = pauseAwareWeekSessions(gym, 0, rejected, entries, seasonDay(6));
+    const result = pauseAwareWeekSessions(gym, 0, rejected, entries, seasonDay(6), {
+      season: defaultSeason,
+    });
     expect(result.status).toBe("scored");
     if (result.status !== "scored") throw new Error("unreachable");
     expect(result.sessions.map((s) => s.progress)).toEqual([fr("1"), fr("1"), fr("1")]); // extension worked
@@ -354,14 +375,12 @@ describe("pauseAwareWeekSessions — specificDays", () => {
       buildDoneEntry("dibujar", 3),
       buildDoneEntry("dibujar", 5),
     ];
-    const result = pauseAwareWeekSessions(dibujar, 0, [], entries, seasonDay(6), monday);
+    const result = pauseAwareWeekSessions(dibujar, 0, [], entries, seasonDay(6), {
+      season: monday,
+    });
     expect(result.status).toBe("scored");
     if (result.status !== "scored") throw new Error("unreachable");
     expect(result.sessions.map((s) => s.progress)).toEqual([fr("1"), fr("1"), fr("1")]);
-  });
-
-  it("throws a distinct error when season is omitted but specificDays actually needs it", () => {
-    expect(() => pauseAwareWeekSessions(dibujar, 0, [], [], seasonDay(6))).toThrow(RangeError);
   });
 
   // Monday (0) and Thursday (3) — decision round 3 (P-A, engine-authored, no Notion row).
@@ -388,7 +407,9 @@ describe("pauseAwareWeekSessions — specificDays", () => {
       ),
     ];
     const entries = [buildDoneEntry("gym", 0)]; // Monday, done
-    const result = pauseAwareWeekSessions(gymMonThu, 0, pauses, entries, seasonDay(6), monday);
+    const result = pauseAwareWeekSessions(gymMonThu, 0, pauses, entries, seasonDay(6), {
+      season: monday,
+    });
     expect(result.status).toBe("scored");
     if (result.status !== "scored") throw new Error("unreachable");
     expect(result.sessions).toHaveLength(1); // Thursday is GONE, not a zero-filled slot
@@ -409,7 +430,9 @@ describe("pauseAwareWeekSessions — specificDays", () => {
         },
       ),
     ];
-    const result = pauseAwareWeekSessions(gymMonThu, 0, pauses, [], seasonDay(6), monday);
+    const result = pauseAwareWeekSessions(gymMonThu, 0, pauses, [], seasonDay(6), {
+      season: monday,
+    });
     expect(result.status).toBe("paused");
   });
 
@@ -429,7 +452,9 @@ describe("pauseAwareWeekSessions — specificDays", () => {
     // Monday is already covered directly; Wednesday (day 2, non-scheduled) would normally try to
     // cover a missing scheduled day (D5) — but Thursday isn't a slot anymore, so it covers nothing.
     const entries = [buildDoneEntry("gym", 0), buildDoneEntry("gym", 2)];
-    const result = pauseAwareWeekSessions(gymMonThu, 0, pauses, entries, seasonDay(6), monday);
+    const result = pauseAwareWeekSessions(gymMonThu, 0, pauses, entries, seasonDay(6), {
+      season: monday,
+    });
     expect(result.status).toBe("scored");
     if (result.status !== "scored") throw new Error("unreachable");
     expect(result.sessions).toHaveLength(1); // still just Monday — the extra covered nothing
@@ -462,8 +487,12 @@ describe("pauseAwareWeekSessions — P-B (engine-authored, decision round 3): pe
       buildPauseRequest("gym", 3, { kind: "fixed", lastDay: seasonDay(5) }, { kind: "pending" }),
     ];
     const entries = [buildDoneEntry("gym", 0), buildDoneEntry("gym", 1)];
-    const viaApproved = pauseAwareWeekSessions(gym, 0, approvedPause, entries, seasonDay(6));
-    const viaPending = pauseAwareWeekSessions(gym, 0, pendingRequest, entries, seasonDay(6));
+    const viaApproved = pauseAwareWeekSessions(gym, 0, approvedPause, entries, seasonDay(6), {
+      season: defaultSeason,
+    });
+    const viaPending = pauseAwareWeekSessions(gym, 0, pendingRequest, entries, seasonDay(6), {
+      season: defaultSeason,
+    });
     expect(viaApproved.status).toBe("scored");
     expect(viaPending.status).toBe("scored");
     if (viaApproved.status !== "scored" || viaPending.status !== "scored") {
@@ -497,7 +526,9 @@ describe("pauseAwareWeekSessions — P-C (engine-authored, decision round 3): a 
       ),
       buildPauseRequest("gym", 4, { kind: "fixed", lastDay: seasonDay(6) }, { kind: "pending" }),
     ];
-    const result = pauseAwareWeekSessions(gym, 0, mixed, [], seasonDay(6));
+    const result = pauseAwareWeekSessions(gym, 0, mixed, [], seasonDay(6), {
+      season: defaultSeason,
+    });
     expect(result.status).toBe("onHold"); // mixed cause -> its result can still change once the pending part decides
   });
 });

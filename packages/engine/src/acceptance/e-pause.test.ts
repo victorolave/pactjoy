@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { Season } from "../calendar/season-calendar";
 import { seasonDay } from "../calendar/season-calendar";
 import type { Fraction } from "../fraction/fraction";
 import type { SessionResult } from "../opportunity/per-session";
@@ -30,6 +31,13 @@ import {
  * function) or `prorateSessionCount` (a pure production unit) — no pause/proration/grace/dispatch
  * logic is written here. This file builds fixtures and compares the function's own output. */
 
+/** None of the E-series rows below are about D9's cap itself (that's `ePauseCapRows`, exercised
+ * via `canRequestPause` directly) — this season only satisfies the now-required
+ * `options.season`. Its 12-week/84-day length is far above the longest pause span used by any
+ * row here (14 days, E1/E23), so the default cap never engages and every row's expected value
+ * is unaffected. */
+const acceptanceSeason: Season = { lengthWeeks: 12, startWeekday: 0 };
+
 function fullWeekEntries(
   commitmentId: string,
   week: number,
@@ -50,6 +58,9 @@ function pointsFor(row: NeutralPointsRow): Fraction {
       row.pauses,
       entries,
       seasonDay(row.today),
+      {
+        season: acceptanceSeason,
+      },
     );
     if (result.status === "scored") sessions.push(...result.sessions);
   }
@@ -77,6 +88,9 @@ describe("acceptance: series E — weeklyTotal proration (D6/D7), through the co
         row.pauses,
         [],
         seasonDay(row.today),
+        {
+          season: acceptanceSeason,
+        },
       );
       expect(result.status).toBe("paused");
       return;
@@ -89,6 +103,7 @@ describe("acceptance: series E — weeklyTotal proration (D6/D7), through the co
         row.pauses,
         entries,
         seasonDay(row.today),
+        { season: acceptanceSeason },
       );
       expect(result.status).toBe("scored");
       if (result.status !== "scored") throw new Error("unreachable");
@@ -106,6 +121,7 @@ describe("acceptance: series E — a session on a paused day does not count (D8)
       row.pauses,
       row.entries,
       seasonDay(row.today),
+      { season: acceptanceSeason },
     );
     expect(result.status).toBe("scored");
     if (result.status !== "scored") throw new Error("unreachable");
@@ -121,6 +137,7 @@ describe("acceptance: series E — pause request lifecycle timing", () => {
       row.pauses,
       row.entries,
       seasonDay(row.today),
+      { season: acceptanceSeason },
     );
     expect(result.status).toBe(row.expectedStatus);
     if (result.status === "scored" && row.expectedProgresses) {
@@ -156,6 +173,7 @@ describe("acceptance: series E — pause request lifecycle timing", () => {
         pauses,
         [],
         seasonDay(eAllCommitmentsPause.today),
+        { season: acceptanceSeason },
       );
       expect(result.status).toBe("paused");
     }
@@ -176,14 +194,16 @@ describe("acceptance: series E — canRequestPause 50% cap, retroactive guard, e
 
 describe("acceptance: series E — an open pause auto-resumes at the D9 cap (E15)", () => {
   it.for(eAutoResumeRows)("$id: $summary", (row) => {
+    // `pauseCap` is explicit here (Notion states the rule qualitatively, not the exact day
+    // numbers — see the row's own doc comment), so `acceptanceSeason` only satisfies the
+    // now-required `options.season` and never contributes to the outcome.
     const stillPaused = pauseAwareWeekSessions(
       row.commitment,
       row.weekStillPaused,
       row.pauses,
       [],
       seasonDay(row.today),
-      undefined,
-      row.pauseCap,
+      { season: acceptanceSeason, pauseCap: row.pauseCap },
     );
     expect(stillPaused.status).toBe("paused");
 
@@ -193,8 +213,7 @@ describe("acceptance: series E — an open pause auto-resumes at the D9 cap (E15
       row.pauses,
       row.entriesForResumedWeek,
       seasonDay(row.today),
-      undefined,
-      row.pauseCap,
+      { season: acceptanceSeason, pauseCap: row.pauseCap },
     );
     expect(resumed.status).toBe("scored");
     if (resumed.status !== "scored") throw new Error("unreachable");
@@ -218,6 +237,7 @@ describe("acceptance: series E — consistency excludes paused opportunities", (
         row.pauses,
         entries,
         seasonDay(row.today),
+        { season: acceptanceSeason },
       );
       if (result.status === "scored") sessions.push(...result.sessions);
     }

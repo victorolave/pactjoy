@@ -10,13 +10,17 @@
  * (acceptance tests, and eventually `scoring/member-score.ts`, slice 6a)
  * must not re-implement any of this themselves.
  *
- * E15 (D9's auto-resume-at-cap): the optional `pauseCap` parameter, when
- * given, trims the commitment's approved-paused days to the earliest `cap`
- * days (`pause-cap.ts`'s `capPausedDays`) before anything else runs — a day
- * beyond the cap is simply no longer paused, which is what "the pause
- * auto-resumes" means for scoring, with no `resumedOn` ever synthesized.
- * Omitting `pauseCap` keeps the previous (uncapped) behavior, so no
- * existing caller changes.
+ * E15 (D9's auto-resume-at-cap): the commitment's approved-paused days are
+ * always trimmed to the earliest `cap` days (`pause-cap.ts`'s
+ * `capPausedDays`) before anything else runs — a day beyond the cap is
+ * simply no longer paused, which is what "the pause auto-resumes" means for
+ * scoring, with no `resumedOn` ever synthesized. `cap` defaults to
+ * `seasonPauseCap(options.season)` — scoring always happens inside a
+ * season, so the cap is never optional; `options.pauseCap` exists only to
+ * override that default (tests, or an explicit product exception), never to
+ * skip the rule. `options.season` is REQUIRED (not just for `specificDays`
+ * weekday resolution) precisely so a caller cannot forget it and silently
+ * get an uncapped pause — the compiler enforces D9, not a caller's memory.
  */
 
 import type { Season, SeasonDay } from "../calendar/season-calendar";
@@ -35,7 +39,7 @@ import {
 import { weeklyTotalResult } from "../opportunity/weekly-total";
 import type { PauseRequest } from "./pause";
 import { effectivePausedDays, pendingHoldDays } from "./pause";
-import { capPausedDays } from "./pause-cap";
+import { capPausedDays, seasonPauseCap } from "./pause-cap";
 import { prorateLimitTarget, prorateReachTarget, prorateSessionCount } from "./proration";
 
 const DAYS_PER_WEEK = 7;
@@ -92,8 +96,10 @@ function excludedStatus(
 /**
  * One commitment's one week, pause-aware. `pauses` and `entries` must
  * already be scoped to this commitment (same convention as `weekEntries`
- * elsewhere). `season` is only needed for `specificDays` (to resolve its
- * scheduled weekdays into days); `timesPerWeek`/`weeklyTotal` ignore it.
+ * elsewhere). `options.season` is REQUIRED for every schedule kind — it
+ * resolves `specificDays`' scheduled weekdays into days, AND it's the
+ * default source of the D9 pause cap (`seasonPauseCap`) for every kind,
+ * including `timesPerWeek`/`weeklyTotal`, which otherwise ignore it.
  *
  * P-A (decision round 3, engine-authored): a `specificDays` scheduled day
  * that falls on a paused or on-hold day drops out of the week's
@@ -109,16 +115,16 @@ export function pauseAwareWeekSessions(
   pauses: readonly PauseRequest[],
   entries: readonly Entry[],
   today: SeasonDay,
-  season?: Season,
-  pauseCap?: number,
+  options: { readonly season: Season; readonly pauseCap?: number },
 ): PauseAwareWeekResult {
   const weekStart = week * DAYS_PER_WEEK;
   const weekDays: readonly SeasonDay[] = Array.from({ length: DAYS_PER_WEEK }, (_, i) =>
     seasonDay(weekStart + i),
   );
 
+  const cap = options.pauseCap ?? seasonPauseCap(options.season);
   const rawPaused = effectivePausedDays(pauses, today);
-  const paused = pauseCap === undefined ? rawPaused : capPausedDays(rawPaused, pauseCap);
+  const paused = capPausedDays(rawPaused, cap);
   const onHold = pendingHoldDays(pauses, today);
   const excluded = (day: SeasonDay): boolean => paused.has(day) || onHold.has(day);
 
@@ -155,17 +161,16 @@ export function pauseAwareWeekSessions(
   }
 
   // frequency.kind === "specificDays"
-  if (!season) {
-    throw new RangeError("pauseAwareWeekSessions: specificDays requires a `season` argument");
-  }
-  const scheduledDays = frequency.weekdays.map((weekday) => dayForWeekday(season, week, weekday));
+  const scheduledDays = frequency.weekdays.map((weekday) =>
+    dayForWeekday(options.season, week, weekday),
+  );
   const activeWeekdays = frequency.weekdays.filter((weekday) => {
-    const day = dayForWeekday(season, week, weekday);
+    const day = dayForWeekday(options.season, week, weekday);
     return !excluded(day);
   });
   if (activeWeekdays.length === 0) return excludedStatus(paused, onHold, scheduledDays);
   return {
     status: "scored",
-    sessions: specificDaysSessions(target, season, week, activeWeekdays, eligible),
+    sessions: specificDaysSessions(target, options.season, week, activeWeekdays, eligible),
   };
 }
