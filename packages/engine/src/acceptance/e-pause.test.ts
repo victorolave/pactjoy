@@ -7,6 +7,7 @@ import { pauseAwareWeekSessions } from "../pause/pause-aware-week";
 import { canRequestPause } from "../pause/pause-cap";
 import { prorateSessionCount } from "../pause/proration";
 import { scorePerSessionCommitment } from "../scoring/commitment-score";
+import { computeStreak, weekStreakOutcome } from "../scoring/streak";
 import {
   buildDoneEntry,
   buildPauseRequest,
@@ -244,5 +245,31 @@ describe("acceptance: series E — consistency excludes paused opportunities", (
     expect(scorePerSessionCommitment(row.weightPercent, sessions).consistency).toEqual(
       row.expectedConsistency,
     );
+  });
+
+  it(`${eConsistencyRows[0]?.id}: streak-freeze half (D11) — the paused weeks neither break nor extend the streak`, () => {
+    const row = eConsistencyRows[0];
+    if (row === undefined) throw new Error("unreachable");
+    const outcomes = Array.from({ length: row.weeksCount }, (_, week) => {
+      let entries: readonly ReturnType<typeof buildDoneEntry>[] = [];
+      if (row.fullWeeks.includes(week)) {
+        entries = fullWeekEntries("leer", week, 5);
+      } else if (week === row.partialWeek) {
+        entries = [buildDoneEntry("leer", week * 7), buildDoneEntry("leer", week * 7 + 1)];
+      }
+      const result = pauseAwareWeekSessions(
+        row.commitment,
+        week,
+        row.pauses,
+        entries,
+        seasonDay(row.today),
+        { season: acceptanceSeason },
+      );
+      if (result.status !== "scored") return weekStreakOutcome(true, []);
+      return weekStreakOutcome(false, result.sessions);
+    });
+    // Weeks 0,1 kept (best 2 so far) -> weeks 2,3 (paused) frozen, unchanged at 2 -> weeks 4,5,6
+    // kept, extending past the freeze to a new best of 5 -> week 7 (partial, 2 of 5) breaks it.
+    expect(computeStreak("week", outcomes)).toEqual({ unit: "week", current: 0, best: 5 });
   });
 });
