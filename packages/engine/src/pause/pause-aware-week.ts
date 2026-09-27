@@ -52,6 +52,26 @@ export type PauseAwareWeekResult =
   | { readonly status: "onHold" };
 
 /**
+ * The union of approved-paused (D9 cap-trimmed) and still-pending ("on
+ * hold") days for one commitment, as of `today` — exactly the `excluded`
+ * predicate's day set this file already computes internally, exported so a
+ * caller outside the pause composition itself (R1's "so far" counting,
+ * `scoring/member-score.ts`, slice 6b) can tell which of a commitment's
+ * scheduled days are excluded without duplicating the D9-cap-then-union
+ * logic. Options mirror {@link pauseAwareWeekSessions}'s own.
+ */
+export function excludedDays(
+  pauses: readonly PauseRequest[],
+  today: SeasonDay,
+  options: { readonly season: Season; readonly pauseCap?: number },
+): ReadonlySet<SeasonDay> {
+  const cap = options.pauseCap ?? seasonPauseCap(options.season);
+  const paused = capPausedDays(effectivePausedDays(pauses, today), cap);
+  const onHold = pendingHoldDays(pauses, today);
+  return new Set([...paused, ...onHold]);
+}
+
+/**
  * A rejection extends the grace deadline of the opportunities it affected —
  * every day from its `startDay` through its `decidedOn` (the days that were
  * "en espera" before the decision arrived) — to the end of the day after the
@@ -123,8 +143,7 @@ export function pauseAwareWeekSessions(
   );
 
   const cap = options.pauseCap ?? seasonPauseCap(options.season);
-  const rawPaused = effectivePausedDays(pauses, today);
-  const paused = capPausedDays(rawPaused, cap);
+  const paused = capPausedDays(effectivePausedDays(pauses, today), cap);
   const onHold = pendingHoldDays(pauses, today);
   const excluded = (day: SeasonDay): boolean => paused.has(day) || onHold.has(day);
 
