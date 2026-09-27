@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { scorePerSessionCommitment } from "../scoring/commitment-score";
+import { scoreCommitmentSoFar } from "../scoring/commitment-score";
 import { gConsistencyRows } from "./rows/g-consistency.rows";
 
 describe("acceptance: series G — consistency and idealCompletion per commitment (D1)", () => {
   it.for(gConsistencyRows)("$id: $summary", (row) => {
-    const score = scorePerSessionCommitment(row.weightPercent, row.sessions);
+    const score = scoreCommitmentSoFar(row.weightPercent, row.sessions, row.sessions);
     expect(score.consistency).toEqual(row.expectedConsistency);
     expect(score.idealCompletion).toEqual(row.expectedIdealCompletion);
   });

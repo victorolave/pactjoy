@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { sum } from "../fraction/fraction";
-import { scorePerSessionCommitment } from "../scoring/commitment-score";
+import { scoreCommitmentSoFar } from "../scoring/commitment-score";
 import type { ScoreInput } from "../scoring/member-score";
 import { scoreMember } from "../scoring/member-score";
 import { fCommitmentRows, fMidSeasonRows, fTotalRows } from "./rows/f-full-season.rows";
 
 describe("acceptance: series F — season totals (D1) and exact-arithmetic rounding-only-at-display", () => {
   it.for(fCommitmentRows)("$id: $summary", (row) => {
-    expect(scorePerSessionCommitment(row.weightPercent, row.sessions).points).toEqual(
+    expect(scoreCommitmentSoFar(row.weightPercent, row.sessions, row.sessions).points).toEqual(
       row.expectedPoints,
     );
   });
@@ -15,7 +15,8 @@ describe("acceptance: series F — season totals (D1) and exact-arithmetic round
   it.for(fTotalRows)("$id: $summary", (row) => {
     const points = row.commitments.map(
       (commitment) =>
-        scorePerSessionCommitment(commitment.weightPercent, commitment.sessions).points,
+        scoreCommitmentSoFar(commitment.weightPercent, commitment.sessions, commitment.sessions)
+          .points,
     );
     expect(sum(points)).toEqual(row.expectedTotal);
   });

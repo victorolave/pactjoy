@@ -7,7 +7,7 @@
  * exact points, consistency) — not a week-by-week entry breakdown.
  * `evenSplitSessions` below builds an engine-constructed `SessionResult[]`
  * whose sum-of-progress, count and reached-count are EXACTLY the
- * Notion-published aggregate numbers; `scorePerSessionCommitment` (the
+ * Notion-published aggregate numbers; `scoreCommitmentSoFar` (the
  * production function under test) only ever consumes sum/count/
  * reached-count (via `mean` and `reached/total`), so any per-session split
  * honoring those three numbers produces an identical, correct result — the
