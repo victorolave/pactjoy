@@ -95,8 +95,13 @@ export function timesPerWeekSessions(
   return [...best, ...Array.from({ length: missing > 0 ? missing : 0 }, () => EMPTY_SESSION)];
 }
 
-/** The {@link SeasonDay} that `weekday` falls on in week `week` of `season`. */
-function dayForWeekday(season: Season, week: number, weekday: Weekday): SeasonDay {
+/**
+ * The {@link SeasonDay} that `weekday` falls on in week `week` of `season`.
+ * Exported so `pause/pause-aware-week.ts` can resolve which of a
+ * `specificDays` commitment's scheduled weekdays fall on a paused or
+ * on-hold day (P-A), without duplicating this formula.
+ */
+export function dayForWeekday(season: Season, week: number, weekday: Weekday): SeasonDay {
   const offset = (weekday - season.startWeekday + DAYS_PER_WEEK) % DAYS_PER_WEEK;
   return seasonDay(week * DAYS_PER_WEEK + offset);
 }

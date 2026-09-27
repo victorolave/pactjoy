@@ -304,35 +304,144 @@ describe("pauseAwareWeekSessions — specificDays", () => {
     expect(result.sessions.map((s) => s.progress)).toEqual([fr("1"), fr("1"), fr("1")]);
   });
 
-  it("still throws — as a pending product decision, not a silent guess — when the week touches an active pause", () => {
-    const pauses = [
-      buildPauseRequest(
-        "dibujar",
-        0,
-        { kind: "fixed", lastDay: seasonDay(1) },
-        { kind: "approved", decidedOn: seasonDay(0), resumedOn: null },
-      ),
-    ];
-    expect(() => pauseAwareWeekSessions(dibujar, 0, pauses, [], seasonDay(6), monday)).toThrow(
-      RangeError,
-    );
-  });
-
-  it("still throws when the week touches a still-pending (on-hold) request", () => {
-    const pauses = [
-      buildPauseRequest(
-        "dibujar",
-        5,
-        { kind: "fixed", lastDay: seasonDay(6) },
-        { kind: "pending" },
-      ),
-    ];
-    expect(() => pauseAwareWeekSessions(dibujar, 0, pauses, [], seasonDay(6), monday)).toThrow(
-      RangeError,
-    );
-  });
-
   it("throws a distinct error when season is omitted but specificDays actually needs it", () => {
     expect(() => pauseAwareWeekSessions(dibujar, 0, [], [], seasonDay(6))).toThrow(RangeError);
+  });
+
+  // Monday (0) and Thursday (3) — decision round 3 (P-A, engine-authored, no Notion row).
+  const gymMonThu = buildQuantityCommitment(
+    "gym",
+    30,
+    "times",
+    { direction: "reach", minimum: fromInt(1), ideal: fromInt(1) },
+    { kind: "specificDays", weekdays: [0, 3] },
+  );
+
+  it("P-A: a scheduled day that falls on a paused day drops out entirely — no proration, 1 opportunity remains", () => {
+    // Thursday (day 3) paused -> only Monday (day 0) remains a scheduled opportunity.
+    const pauses = [
+      buildPauseRequest(
+        "gym",
+        3,
+        { kind: "fixed", lastDay: seasonDay(3) },
+        {
+          kind: "approved",
+          decidedOn: seasonDay(3),
+          resumedOn: null,
+        },
+      ),
+    ];
+    const entries = [buildDoneEntry("gym", 0)]; // Monday, done
+    const result = pauseAwareWeekSessions(gymMonThu, 0, pauses, entries, seasonDay(6), monday);
+    expect(result.status).toBe("scored");
+    if (result.status !== "scored") throw new Error("unreachable");
+    expect(result.sessions).toHaveLength(1); // Thursday is GONE, not a zero-filled slot
+    expect(result.sessions[0]?.progress).toEqual(fr("1"));
+  });
+
+  it("P-A: both scheduled days paused -> the whole week is 'paused', not scored with zero opportunities", () => {
+    const pauses = [
+      // covers days 0-3, including both Monday (0) and Thursday (3)
+      buildPauseRequest(
+        "gym",
+        0,
+        { kind: "fixed", lastDay: seasonDay(3) },
+        {
+          kind: "approved",
+          decidedOn: seasonDay(0),
+          resumedOn: null,
+        },
+      ),
+    ];
+    const result = pauseAwareWeekSessions(gymMonThu, 0, pauses, [], seasonDay(6), monday);
+    expect(result.status).toBe("paused");
+  });
+
+  it("P-A: an extra session on another day can never cover a paused scheduled day (D5 covers only ACTIVE scheduled days)", () => {
+    const pauses = [
+      buildPauseRequest(
+        "gym",
+        3,
+        { kind: "fixed", lastDay: seasonDay(3) },
+        {
+          kind: "approved",
+          decidedOn: seasonDay(3),
+          resumedOn: null,
+        },
+      ),
+    ];
+    // Monday is already covered directly; Wednesday (day 2, non-scheduled) would normally try to
+    // cover a missing scheduled day (D5) — but Thursday isn't a slot anymore, so it covers nothing.
+    const entries = [buildDoneEntry("gym", 0), buildDoneEntry("gym", 2)];
+    const result = pauseAwareWeekSessions(gymMonThu, 0, pauses, entries, seasonDay(6), monday);
+    expect(result.status).toBe("scored");
+    if (result.status !== "scored") throw new Error("unreachable");
+    expect(result.sessions).toHaveLength(1); // still just Monday — the extra covered nothing
+    expect(result.sessions[0]?.progress).toEqual(fr("1"));
+  });
+});
+
+describe("pauseAwareWeekSessions — P-B (engine-authored, decision round 3): pending days are excluded from proration exactly like paused days", () => {
+  it("pinning test: a pending request reduces activeDays/prorates N identically to an equivalent approved pause", () => {
+    const gym = buildQuantityCommitment(
+      "gym",
+      30,
+      "times",
+      { direction: "reach", minimum: fromInt(1), ideal: fromInt(1) },
+      { kind: "timesPerWeek", times: 3 },
+    );
+    const approvedPause = [
+      buildPauseRequest(
+        "gym",
+        3,
+        { kind: "fixed", lastDay: seasonDay(5) },
+        {
+          kind: "approved",
+          decidedOn: seasonDay(3),
+          resumedOn: null,
+        },
+      ),
+    ];
+    const pendingRequest = [
+      buildPauseRequest("gym", 3, { kind: "fixed", lastDay: seasonDay(5) }, { kind: "pending" }),
+    ];
+    const entries = [buildDoneEntry("gym", 0), buildDoneEntry("gym", 1)];
+    const viaApproved = pauseAwareWeekSessions(gym, 0, approvedPause, entries, seasonDay(6));
+    const viaPending = pauseAwareWeekSessions(gym, 0, pendingRequest, entries, seasonDay(6));
+    expect(viaApproved.status).toBe("scored");
+    expect(viaPending.status).toBe("scored");
+    if (viaApproved.status !== "scored" || viaPending.status !== "scored") {
+      throw new Error("unreachable");
+    }
+    // same 4 active days -> same prorated N (2) -> identical sessions; only the exclusion CAUSE differs.
+    expect(viaPending.sessions).toEqual(viaApproved.sessions);
+  });
+});
+
+describe("pauseAwareWeekSessions — P-C (engine-authored, decision round 3): a mixed paused+pending week is 'onHold'", () => {
+  it("timesPerWeek: some days paused, some pending, whole week excluded -> status is 'onHold', not 'paused'", () => {
+    const gym = buildQuantityCommitment(
+      "gym",
+      30,
+      "times",
+      { direction: "reach", minimum: fromInt(1), ideal: fromInt(1) },
+      { kind: "timesPerWeek", times: 3 },
+    );
+    const mixed = [
+      // days 0-3 approved-paused, days 4-6 pending -> every day of the week excluded, N prorates to 0
+      buildPauseRequest(
+        "gym",
+        0,
+        { kind: "fixed", lastDay: seasonDay(3) },
+        {
+          kind: "approved",
+          decidedOn: seasonDay(0),
+          resumedOn: null,
+        },
+      ),
+      buildPauseRequest("gym", 4, { kind: "fixed", lastDay: seasonDay(6) }, { kind: "pending" }),
+    ];
+    const result = pauseAwareWeekSessions(gym, 0, mixed, [], seasonDay(6));
+    expect(result.status).toBe("onHold"); // mixed cause -> its result can still change once the pending part decides
   });
 });

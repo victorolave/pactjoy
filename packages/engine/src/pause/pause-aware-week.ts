@@ -19,7 +19,11 @@ import type { Entry } from "../entry/entry";
 import type { GraceDeadlineFor } from "../entry/grace-period";
 import { graceDeadline } from "../entry/grace-period";
 import type { SessionResult } from "../opportunity/per-session";
-import { specificDaysSessions, timesPerWeekSessions } from "../opportunity/per-session";
+import {
+  dayForWeekday,
+  specificDaysSessions,
+  timesPerWeekSessions,
+} from "../opportunity/per-session";
 import { weeklyTotalResult } from "../opportunity/weekly-total";
 import type { PauseRequest } from "./pause";
 import { effectivePausedDays, pendingHoldDays } from "./pause";
@@ -29,9 +33,9 @@ const DAYS_PER_WEEK = 7;
 
 export type PauseAwareWeekResult =
   | { readonly status: "scored"; readonly sessions: readonly SessionResult[] }
-  /** D7: the governing figure (N, ideal, or tolerance) prorated to 0 — driven by at least one approved pause. */
+  /** D7/P-A: the governing figure (N, ideal, tolerance, or every scheduled day) is excluded, driven ONLY by approved pauses. */
   | { readonly status: "paused" }
-  /** R4a: excluded because a pending request covers it, with no approved pause involved. */
+  /** R4a/P-C: excluded because a pending request is involved — alone, or mixed with an approved pause (its result can still change). */
   | { readonly status: "onHold" };
 
 /**
@@ -59,15 +63,21 @@ function rejectionExtendedDeadline(
   return extended;
 }
 
+/**
+ * P-C (decision round 3, engine-authored): the days that drove the
+ * exclusion decide the status — a mix of paused AND on-hold days reports
+ * `"onHold"`, since a still-pending request means the result can still
+ * change once it's decided; only an exclusion driven entirely by approved
+ * pauses (no pending request involved at all) reports `"paused"`.
+ */
 function excludedStatus(
   paused: ReadonlySet<SeasonDay>,
-  weekStart: number,
-  weekEnd: number,
+  onHold: ReadonlySet<SeasonDay>,
+  days: readonly SeasonDay[],
 ): PauseAwareWeekResult {
-  for (let d = weekStart; d <= weekEnd; d++) {
-    if (paused.has(seasonDay(d))) return { status: "paused" };
-  }
-  return { status: "onHold" };
+  const anyPaused = days.some((d) => paused.has(d));
+  const anyOnHold = days.some((d) => onHold.has(d));
+  return anyPaused && !anyOnHold ? { status: "paused" } : { status: "onHold" };
 }
 
 /**
@@ -76,11 +86,13 @@ function excludedStatus(
  * elsewhere). `season` is only needed for `specificDays` (to resolve its
  * scheduled weekdays into days); `timesPerWeek`/`weeklyTotal` ignore it.
  *
- * `specificDays` + an active pause or on-hold request is a pending product
- * decision (not yet answered) and throws rather than guessing; with no
- * exclusion at all for the week, it delegates straight to the existing
- * `specificDaysSessions` — so a plain, never-paused `specificDays`
- * commitment (e.g. "Dibujar") never crashes here.
+ * P-A (decision round 3, engine-authored): a `specificDays` scheduled day
+ * that falls on a paused or on-hold day drops out of the week's
+ * opportunities entirely (no proration, unlike `timesPerWeek`/`weeklyTotal`)
+ * — so an extra entry on another day can never "cover" it (D5 only ever
+ * looks at the remaining, still-scheduled days). If every scheduled day is
+ * excluded, the whole week reports `excludedStatus` (P-C decides paused vs
+ * onHold) instead of scoring zero opportunities.
  */
 export function pauseAwareWeekSessions(
   commitment: Commitment,
@@ -91,15 +103,17 @@ export function pauseAwareWeekSessions(
   season?: Season,
 ): PauseAwareWeekResult {
   const weekStart = week * DAYS_PER_WEEK;
-  const weekEnd = weekStart + DAYS_PER_WEEK - 1;
+  const weekDays: readonly SeasonDay[] = Array.from({ length: DAYS_PER_WEEK }, (_, i) =>
+    seasonDay(weekStart + i),
+  );
 
   const paused = effectivePausedDays(pauses, today);
   const onHold = pendingHoldDays(pauses, today);
   const excluded = (day: SeasonDay): boolean => paused.has(day) || onHold.has(day);
 
   let activeDays = 0;
-  for (let d = weekStart; d <= weekEnd; d++) {
-    if (!excluded(seasonDay(d))) activeDays++;
+  for (const day of weekDays) {
+    if (!excluded(day)) activeDays++;
   }
 
   // D8: an entry recorded on a paused OR on-hold day never reaches the underlying dispatcher.
@@ -111,7 +125,7 @@ export function pauseAwareWeekSessions(
       target.direction === "reach"
         ? prorateReachTarget(target, activeDays)
         : prorateLimitTarget(target, activeDays);
-    if (prorated === null) return excludedStatus(paused, weekStart, weekEnd);
+    if (prorated === null) return excludedStatus(paused, onHold, weekDays);
     const deadlineFor: GraceDeadlineFor = (end) =>
       rejectionExtendedDeadline(pauses, weekStart, end, graceDeadline(end));
     return {
@@ -123,23 +137,24 @@ export function pauseAwareWeekSessions(
   const { frequency } = commitment.schedule;
   if (frequency.kind === "timesPerWeek") {
     const n = prorateSessionCount(frequency.times, activeDays);
-    if (n === null) return excludedStatus(paused, weekStart, weekEnd);
+    if (n === null) return excludedStatus(paused, onHold, weekDays);
     const deadlineFor: GraceDeadlineFor = (day) =>
       rejectionExtendedDeadline(pauses, day, day, graceDeadline(day));
     return { status: "scored", sessions: timesPerWeekSessions(target, n, eligible, deadlineFor) };
   }
 
   // frequency.kind === "specificDays"
-  if (activeDays < DAYS_PER_WEEK) {
-    throw new RangeError(
-      "pauseAwareWeekSessions: specificDays + an active pause/on-hold request is a pending product decision — not implemented yet",
-    );
-  }
   if (!season) {
     throw new RangeError("pauseAwareWeekSessions: specificDays requires a `season` argument");
   }
+  const scheduledDays = frequency.weekdays.map((weekday) => dayForWeekday(season, week, weekday));
+  const activeWeekdays = frequency.weekdays.filter((weekday) => {
+    const day = dayForWeekday(season, week, weekday);
+    return !excluded(day);
+  });
+  if (activeWeekdays.length === 0) return excludedStatus(paused, onHold, scheduledDays);
   return {
     status: "scored",
-    sessions: specificDaysSessions(target, season, week, frequency.weekdays, eligible),
+    sessions: specificDaysSessions(target, season, week, activeWeekdays, eligible),
   };
 }
