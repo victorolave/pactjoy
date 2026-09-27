@@ -33,6 +33,75 @@ describe("scoreMember", () => {
     expect(score.commitments).toEqual([]);
   });
 
+  it("R6 with a real (non-empty) commitment: a whole-season exclusion (approved pause up to the D9 cap + a pending request for the remainder) leaves every week excluded -- points 0, consistency/idealCompletion null", () => {
+    // A SINGLE approved pause cannot span the whole season: D9's 50% cap
+    // (`seasonPauseCap`, enforced INSIDE `pauseAwareWeekSessions` itself, not
+    // just at request time) auto-trims `effectivePausedDays` to the earliest
+    // `cap` days (`capPausedDays`), so an approved pause over the full 28
+    // days of this 4-week season would leave weeks 2-3 NOT paused -- they'd
+    // score real (zero-progress, but COUNTED) opportunities, and consistency
+    // would be `0`, not `null`. This was confirmed by first writing exactly
+    // that (single full-season approved pause) and observing `consistency`
+    // come back as `0/1`, not `null` -- not a bug, D9 working as designed
+    // (slice 5b's SHOULD-FIX). To genuinely exclude every week while
+    // respecting D9, this combines an approved pause for the cap-allowed
+    // first 14 days with a still-PENDING request for the remaining 14 days
+    // (`pendingHoldDays` is never capped -- only the approved `paused` set
+    // is, per `pause-aware-week.ts`) -- both are real production code paths.
+    const gym = buildDoneCommitment("gym", 100, { kind: "timesPerWeek", times: 3 });
+    const pauses = [
+      buildPauseRequest(
+        "gym",
+        0,
+        { kind: "fixed", lastDay: seasonDay(13) }, // days 0-13: exactly the D9 cap (14 days) for a 4-week season
+        { kind: "approved", decidedOn: seasonDay(0), resumedOn: null },
+      ),
+      buildPauseRequest(
+        "gym",
+        14,
+        { kind: "fixed", lastDay: seasonDay(27) }, // days 14-27: the remaining half, still pending
+        { kind: "pending" },
+      ),
+    ];
+    const input: ScoreInput = {
+      season: fourWeekSeason,
+      commitments: [gym],
+      entries: [],
+      pauses,
+      today: seasonDay(27),
+    };
+    const score = scoreMember(input);
+    expect(score.commitments).toHaveLength(1); // R6 is about zero OPPORTUNITIES, not zero commitments
+    expect(score.commitments[0]?.points).toEqual(fromInt(0));
+    expect(score.commitments[0]?.consistency).toBeNull();
+    expect(score.commitments[0]?.idealCompletion).toBeNull();
+    expect(score.points).toEqual(fromInt(0));
+    expect(score.consistency).toBeNull();
+    expect(score.idealCompletion).toBeNull();
+  });
+
+  it("R6 with a real (non-empty) commitment: a whole-season PENDING pause (onHold, not yet decided) also excludes every week -- points 0, consistency/idealCompletion null", () => {
+    const leer = buildDoneCommitment("leer", 100, { kind: "timesPerWeek", times: 5 });
+    const pauses = [
+      buildPauseRequest("leer", 0, { kind: "fixed", lastDay: seasonDay(27) }, { kind: "pending" }),
+    ];
+    const input: ScoreInput = {
+      season: fourWeekSeason,
+      commitments: [leer],
+      entries: [],
+      pauses,
+      today: seasonDay(27),
+    };
+    const score = scoreMember(input);
+    expect(score.commitments).toHaveLength(1);
+    expect(score.commitments[0]?.points).toEqual(fromInt(0));
+    expect(score.commitments[0]?.consistency).toBeNull();
+    expect(score.commitments[0]?.idealCompletion).toBeNull();
+    expect(score.points).toEqual(fromInt(0));
+    expect(score.consistency).toBeNull();
+    expect(score.idealCompletion).toBeNull();
+  });
+
   it("aggregates one commitment's whole season into points/consistency/idealCompletion (D1)", () => {
     const gym = buildDoneCommitment("gym", 100, { kind: "timesPerWeek", times: 3 });
     const entries = [

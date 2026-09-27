@@ -13,6 +13,17 @@
  * `today` before the season's end) is slice 6b's own edit to this file —
  * `weekSessionsOf`/`weeklyTotalResult`/`pauseAwareWeekSessions` are all
  * already documented as calendar-agnostic for exactly this reason.
+ *
+ * **WARNING (until slice 6b implements R1): `scoreMember` is an
+ * end-of-season computation, NOT a "points so far" one.** Every week
+ * `0..season.lengthWeeks-1` is always aggregated regardless of `input.today`
+ * — a still-open or not-yet-graced week is scored exactly like a closed
+ * one, using whatever entries happen to be in `input.entries` for it (zero
+ * entries there today does not mean "not counted yet", it means "counted
+ * as a miss"). Do not call this function to show a member their
+ * mid-season/"so far" points until R1 gates the week loop in `seasonSessions`
+ * below (slice 6b task 6b.2/6b.3) — doing so today would understate an
+ * in-progress week as a full miss instead of excluding it.
  */
 import type { Season, SeasonDay } from "../calendar/season-calendar";
 import type { Commitment, CommitmentId } from "../commitment/commitment";
@@ -33,6 +44,13 @@ export interface ScoreInput {
   readonly commitments: readonly Commitment[];
   readonly entries: readonly Entry[];
   readonly pauses: readonly PauseRequest[];
+  /**
+   * The snapshot day for pause resolution (an open pause is treated as
+   * paused "as of today", D12) — NOT a "so far" cutoff for which weeks get
+   * aggregated. Until slice 6b implements R1, `scoreMember` aggregates every
+   * week of the season regardless of this value; see this file's own
+   * top-of-file warning.
+   */
   readonly today: SeasonDay;
 }
 
@@ -90,6 +108,10 @@ function seasonSessions(commitment: Commitment, input: ScoreInput): readonly Ses
  * Aggregates every commitment's whole season into a `MemberScore` (D1/D2).
  * Points are never rounded here — only at display (`display/display.ts`,
  * slice 7).
+ *
+ * **Not yet R1-aware (see this file's top-of-file warning): until slice 6b,
+ * this always computes over ALL weeks of the season and must NOT be used
+ * to show "points so far" mid-season.**
  */
 export function scoreMember(input: ScoreInput): MemberScore {
   let reachedTotal = 0;
