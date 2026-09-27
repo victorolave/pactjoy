@@ -4,7 +4,7 @@
 
 **PactJoy**: a social habits app. Personal (hobby) project; if it works it could become a product, but that decision is not being made yet.
 
-Status: MVP specification and design are complete; stack chosen (2026-09-24); no code yet.
+Status: MVP specification and design are complete; stack chosen (2026-09-24). Phase 1 done (2026-09-27): `packages/engine` implements the full scoring engine and passes all 96 worked-example rows. No database, API or UI yet.
 
 The author works in Spanish: reply in Spanish. Code, commits and repository docs are in English.
 
@@ -122,6 +122,6 @@ Full detail in the Mechanics page in Notion.
 
 ## Next steps
 
-1. `packages/engine` + tests: every row of the worked-examples page becomes a test (Vitest), plus the invariant 0 ≤ total ≤ 1,000. No UI.
-2. Postgres schema + use cases + the `api` function.
+1. ~~`packages/engine` + tests~~: done. Public API in `packages/engine/src/index.ts`; decisions in ADR-0004 to ADR-0006.
+2. Postgres schema + use cases (`packages/app`) + the `api` function. `packages/app` owns converting real time into `SeasonDay` (ADR-0004), the 48 h pause auto-approval and notifications.
 3. PWA following the design batches (Today and Entry first).
