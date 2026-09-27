@@ -78,7 +78,7 @@ export interface MemberScore {
   readonly points: Fraction;
   /** D2/R7: Sigma(reached)/Sigma(counted-so-far) across every commitment — not an average of per-commitment ratios, and NOT divided by the season's total opportunity count mid-season. `null` with zero counted opportunities anywhere (R6). */
   readonly consistency: Fraction | null;
-  /** D2/R7: the weight-weighted average of each commitment's own (counted-so-far) idealCompletion — see `scoreMember`'s own doc comment. Equals `points / 1000` only at season end. `null` with zero counted opportunities anywhere (R6) — not `0`. */
+  /** D2/R8: `null` while ANY commitment still has zero counted opportunities (not just when nothing at all has been counted, per R6) — see `scoreMember`'s own doc comment. Once every commitment has something counted, the weight-weighted average of each commitment's own idealCompletion, no renormalization. Equals `points / 1000` only at season end. */
   readonly idealCompletion: Fraction | null;
   readonly commitments: readonly CommitmentScoreEntry[];
 }
@@ -241,12 +241,19 @@ function seasonSessions(commitment: Commitment, input: ScoreInput): SeasonSessio
  * whole-season redistribution unchanged. Member `consistency` pools
  * `reached`/`counted-so-far` across every commitment (D2's own
  * "sobre el total de oportunidades" pattern, now over what's been counted,
- * not the whole season). Member `idealCompletion` is the weight-weighted
- * AVERAGE of each commitment's own (R7) `idealCompletion`, renormalized over
- * only the commitments that have something counted so far — a commitment
- * with nothing counted yet must NOT contribute a `0` to this average (that
- * would silently reintroduce the R6 bug this whole slice fixes, just one
- * level up). At season end this is provably identical to the pre-R7
+ * not the whole season).
+ *
+ * **R8 (decision round 5, binding — supersedes R7's original renormalized
+ * idealCompletion)**: member `idealCompletion` is `null` while ANY
+ * commitment still has zero counted opportunities (its own `idealCompletion`
+ * is `null`), even if every OTHER commitment already has a real value —
+ * the user explicitly rejected renormalizing over only the
+ * already-counted commitments. Only once EVERY commitment has at least one
+ * counted opportunity does it become the weight-weighted AVERAGE of each
+ * commitment's own `idealCompletion` — and since every commitment is
+ * included at that point, the weights already sum to 100 and no
+ * renormalization is needed. At season end (every commitment always has
+ * something counted) this is provably identical to the pre-R7
  * `points / 1000` formula: `idealCompletion_i = points_i / potential_i`
  * there, so `Sigma(weight_i x idealCompletion_i) / 100 = Sigma(points_i) /
  * 1000 = totalPoints / 1000` exactly.
@@ -254,15 +261,18 @@ function seasonSessions(commitment: Commitment, input: ScoreInput): SeasonSessio
 export function scoreMember(input: ScoreInput): MemberScore {
   let reachedTotal = 0;
   let soFarTotal = 0; // Sigma(soFar) -- R7's pooled consistency denominator, and the R6 gate.
-  let idealCompletionWeightSum = 0; // Sigma(weight_i) over commitments with something counted so far.
-  let idealCompletionNumerator = fromInt(0); // Sigma(weight_i x idealCompletion_i) over the same commitments.
+  let anyCommitmentUncounted = false; // R8: true if any commitment's own idealCompletion is null.
+  let idealCompletionWeightSum = 0; // Sigma(weight_i) -- once nothing is uncounted, this is every commitment's weight.
+  let idealCompletionNumerator = fromInt(0); // Sigma(weight_i x idealCompletion_i).
 
   const commitments: readonly CommitmentScoreEntry[] = input.commitments.map((commitment) => {
     const { all, soFar, streak } = seasonSessions(commitment, input);
     reachedTotal += soFar.filter((session) => session.consistent).length;
     soFarTotal += soFar.length;
     const score = scoreCommitmentSoFar(commitment.weightPercent, all, soFar);
-    if (score.idealCompletion !== null) {
+    if (score.idealCompletion === null) {
+      anyCommitmentUncounted = true;
+    } else {
       idealCompletionWeightSum += commitment.weightPercent;
       idealCompletionNumerator = add(
         idealCompletionNumerator,
@@ -276,8 +286,12 @@ export function scoreMember(input: ScoreInput): MemberScore {
   // R6: nothing counted so far anywhere (zero opportunities, or every one still paused/on-hold/
   // within grace without an entry) -> null, not 0.
   const consistency = soFarTotal === 0 ? null : div(fromInt(reachedTotal), fromInt(soFarTotal));
+  // R8: null while ANY commitment is uncounted (not just when nothing at all is counted) --
+  // NEVER renormalize over only the counted subset. Once nothing is uncounted, divide by the
+  // actual weight sum present (100 for a real pact, whose weights always sum to 100) -- the exact
+  // same division the pre-R8 formula already did in this "everything counted" branch.
   const idealCompletion =
-    idealCompletionWeightSum === 0
+    input.commitments.length === 0 || anyCommitmentUncounted
       ? null
       : div(idealCompletionNumerator, fromInt(idealCompletionWeightSum));
 

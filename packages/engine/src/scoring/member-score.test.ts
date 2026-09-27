@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { Season, Weekday } from "../calendar/season-calendar";
 import { seasonDay } from "../calendar/season-calendar";
-import { fromInt } from "../fraction/fraction";
-import { buildDoneCommitment, buildDoneEntry, buildPauseRequest } from "../test-support/builders";
+import { fromInt, parseDecimal } from "../fraction/fraction";
+import {
+  buildDoneCommitment,
+  buildDoneEntry,
+  buildPauseRequest,
+  buildQuantityEntry,
+  buildWeeklyTotalCommitment,
+} from "../test-support/builders";
 import { fr } from "../test-support/fraction-literal";
 import type { ScoreInput } from "./member-score";
 import { scoreMember } from "./member-score";
@@ -334,5 +340,117 @@ describe("scoreMember", () => {
     expect(score.commitments[0]?.idealCompletion).toEqual(fromInt(1));
     expect(score.consistency).toEqual(fromInt(1));
     expect(score.idealCompletion).toEqual(fromInt(1));
+  });
+});
+
+describe("scoreMember — R8 (decision round 5, binding): member idealCompletion is null while ANY commitment has zero counted opportunities (no renormalization)", () => {
+  const tuesday: Weekday = 1;
+  const leer = buildDoneCommitment("leer", 60, { kind: "specificDays", weekdays: [0, tuesday] }); // Monday + Tuesday
+  const ingles = buildWeeklyTotalCommitment("ingles", 40, "minutes", {
+    direction: "reach",
+    minimum: fromInt(60),
+    ideal: fromInt(150),
+  });
+  const baseEntries = [
+    buildDoneEntry("leer", 0), // Monday of week 1, already counted (day-bound, has an entry)
+    buildDoneEntry("leer", 1), // Tuesday of week 1, already counted
+    buildQuantityEntry("ingles", 0, parseDecimal("100")), // logged so far, but week 1 hasn't closed
+  ];
+
+  it("Wednesday of week 1 (today=2): Ingles's week hasn't closed yet -> member idealCompletion is null even though Leer's own idealCompletion is a real 1", () => {
+    const input: ScoreInput = {
+      season: fourWeekSeason,
+      commitments: [leer, ingles],
+      entries: baseEntries,
+      pauses: [],
+      today: seasonDay(2), // Wednesday of week 1 -- Ingles's week (days 0-6) closes at graceDeadline(6)=7
+    };
+    const score = scoreMember(input);
+    const leerScore = score.commitments[0];
+    const inglesScore = score.commitments[1];
+    // Leer (specificDays, day-bound): 2 of 8 season opportunities counted so far, both reached.
+    expect(leerScore?.consistency).toEqual(fromInt(1));
+    expect(leerScore?.idealCompletion).toEqual(fromInt(1));
+    expect(leerScore?.points).toEqual(fromInt(150)); // 60 x 10 x 2/8
+    // Ingles (weeklyTotal, week-bound): nothing counted yet (R6) -- its week hasn't closed.
+    expect(inglesScore?.points).toEqual(fromInt(0));
+    expect(inglesScore?.consistency).toBeNull();
+    expect(inglesScore?.idealCompletion).toBeNull();
+    // Member points: Leer's alone (150 + 0) -- "the accumulated points" per the given example.
+    expect(score.points).toEqual(fromInt(150));
+    // Member consistency (unchanged rule): pooled reached/counted -- Ingles contributes nothing to
+    // either side, so it's exactly Leer's own value.
+    expect(score.consistency).toEqual(fromInt(1));
+    // R8: idealCompletion is null while ANY commitment (Ingles) has zero counted opportunities,
+    // even though Leer's own idealCompletion is a real, fully-reached 1.
+    expect(score.idealCompletion).toBeNull();
+  });
+
+  it("once Ingles's week 1 closes (today=7): idealCompletion becomes the weight-weighted average, no renormalization", () => {
+    const input: ScoreInput = {
+      season: fourWeekSeason,
+      commitments: [leer, ingles],
+      entries: baseEntries,
+      pauses: [],
+      today: seasonDay(7), // graceDeadline(weekEnd 6) = 7 -- Ingles's week 1 is now closed
+    };
+    const score = scoreMember(input);
+    const inglesScore = score.commitments[1];
+    // Ingles: week 1 now counted -- 1 of 4 season opportunities, total 100 (reach, minimum 60,
+    // ideal 150) -> progress 100/150 = 2/3, reached the minimum.
+    expect(inglesScore?.consistency).toEqual(fromInt(1));
+    expect(inglesScore?.idealCompletion).toEqual(fr("2/3"));
+    expect(inglesScore?.points).toEqual(fr("200/3")); // 40 x 10 x (2/3)/4
+    // R8: both commitments now have something counted -> weight-weighted average of their own
+    // idealCompletion. No renormalization needed since weights already sum to 100:
+    // (60 x 1 + 40 x 2/3) / 100 = (180/3 + 80/3) / 100 = (260/3)/100 = 13/15.
+    expect(score.idealCompletion).toEqual(fr("13/15"));
+    // Consistency (unchanged rule): pooled reached/counted = (2+1)/(2+1) = 1.
+    expect(score.consistency).toEqual(fromInt(1));
+    // Points: Leer unchanged (150) + Ingles's new contribution (200/3) = 650/3.
+    expect(score.points).toEqual(fr("650/3"));
+  });
+});
+
+describe("scoreMember — R1 SHOULD-FIX nit: rejection-extended grace boundary for a day-bound (specificDays) opportunity", () => {
+  const tuesday: Weekday = 1;
+  const rejectedPause = buildPauseRequest(
+    "dibujar",
+    1, // Tuesday of week 0 -- the day whose grace this rejection will extend
+    { kind: "fixed", lastDay: seasonDay(5) }, // irrelevant for a rejected request
+    { kind: "rejected", decidedOn: seasonDay(3) },
+  );
+
+  it("does not count the day yet at its plain graceDeadline when a rejection extends it further (today=2, plain deadline=2, extended=4)", () => {
+    const dibujar = buildDoneCommitment("dibujar", 100, {
+      kind: "specificDays",
+      weekdays: [tuesday],
+    });
+    const input: ScoreInput = {
+      season: fourWeekSeason,
+      commitments: [dibujar],
+      entries: [], // no entry -- proves the day is only a "miss" once its (extended) deadline passes
+      pauses: [rejectedPause],
+      today: seasonDay(2),
+    };
+    const score = scoreMember(input);
+    expect(score.commitments[0]?.consistency).toBeNull(); // not yet counted -- R6, not a premature 0
+  });
+
+  it("counts the day as a miss once the rejection-extended deadline is reached (today=4)", () => {
+    const dibujar = buildDoneCommitment("dibujar", 100, {
+      kind: "specificDays",
+      weekdays: [tuesday],
+    });
+    const input: ScoreInput = {
+      season: fourWeekSeason,
+      commitments: [dibujar],
+      entries: [],
+      pauses: [rejectedPause],
+      today: seasonDay(4), // decidedOn(3) + 1 -- the extended deadline itself
+    };
+    const score = scoreMember(input);
+    // Now counted (as a miss, no entry) -- consistency is 0/1, not null.
+    expect(score.commitments[0]?.consistency).toEqual(fromInt(0));
   });
 });
