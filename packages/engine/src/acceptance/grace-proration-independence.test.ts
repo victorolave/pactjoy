@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { Season } from "../calendar/season-calendar";
 import { seasonDay } from "../calendar/season-calendar";
 import { graceDeadline, isOnTime } from "../entry/grace-period";
 import { fromInt } from "../fraction/fraction";
@@ -20,6 +21,11 @@ import { fr } from "../test-support/fraction-literal";
  * *timing*, proving the combination produces the right number without
  * this file computing proration or grace itself.
  */
+
+/** Not a D9 test — this season only satisfies the now-required `options.season`. Its 12-week
+ * length is far above the 3-day pause used below, so the default cap never engages. */
+const season: Season = { lengthWeeks: 12, startWeekday: 0 };
+
 describe("acceptance: grace and proration are independent (Q5)", () => {
   const weeklyIngles = buildWeeklyTotalCommitment("ingles", 25, "minutes", {
     direction: "reach",
@@ -51,6 +57,7 @@ describe("acceptance: grace and proration are independent (Q5)", () => {
         buildQuantityEntry("ingles", 6, fromInt(36), seasonDay(7)),
       ],
       seasonDay(10),
+      { season },
     );
     expect(result.status).toBe("scored");
     if (result.status !== "scored") throw new Error("unreachable");
@@ -69,6 +76,7 @@ describe("acceptance: grace and proration are independent (Q5)", () => {
         buildQuantityEntry("ingles", 6, fromInt(36), seasonDay(8)),
       ],
       seasonDay(10),
+      { season },
     );
     expect(result.status).toBe("scored");
     if (result.status !== "scored") throw new Error("unreachable");

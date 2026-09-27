@@ -1,9 +1,11 @@
+import type { Season } from "../../calendar/season-calendar";
 import { seasonDay } from "../../calendar/season-calendar";
 import type { Commitment } from "../../commitment/commitment";
 import type { Entry } from "../../entry/entry";
 import type { Fraction } from "../../fraction/fraction";
 import { fromInt } from "../../fraction/fraction";
 import type { PauseRequest } from "../../pause/pause";
+import type { PauseCheck } from "../../pause/pause-cap";
 import {
   buildDoneEntry,
   buildPauseRequest,
@@ -414,5 +416,139 @@ export const eConsistencyRows: readonly ConsistencyRow[] = [
     fullWeeks: [0, 1, 4, 5, 6],
     partialWeek: 7,
     expectedConsistency: fr("9/10"),
+  },
+];
+
+/** E12-E14, E16, E22: canRequestPause's 50% cap (D9), retroactive guard, and early-resume
+ * consumption (R4b's pending-counts-too is exercised in `pause-cap.test.ts`, not here —
+ * it is engine-authored, not a Notion row). */
+export interface PauseCapRow {
+  readonly id: string;
+  readonly summary: string;
+  readonly season: Season;
+  readonly history: readonly PauseRequest[];
+  readonly request: { readonly startDay: number; readonly end: PauseRequest["end"] };
+  readonly today: number;
+  readonly expected: PauseCheck;
+}
+
+const eightWeekSeason: Season = { lengthWeeks: 8, startWeekday: 0 }; // 56 days, cap = 28
+
+export const ePauseCapRows: readonly PauseCapRow[] = [
+  {
+    id: "E12",
+    summary: "a fresh 56-day season allows a 28-day request (max = 28 days)",
+    season: eightWeekSeason,
+    history: [],
+    request: { startDay: 0, end: { kind: "fixed", lastDay: seasonDay(27) } },
+    today: 0,
+    expected: { allowed: true, remainingDays: 0 },
+  },
+  {
+    id: "E13",
+    summary: "already 28 days paused — one more day is not allowed (cap exhausted)",
+    season: eightWeekSeason,
+    history: [
+      buildPauseRequest(
+        "row",
+        0,
+        { kind: "fixed", lastDay: seasonDay(27) },
+        { kind: "approved", decidedOn: seasonDay(0), resumedOn: null },
+      ),
+    ],
+    request: { startDay: 30, end: { kind: "fixed", lastDay: seasonDay(30) } },
+    today: 30,
+    expected: { allowed: false, reason: "capExhausted" },
+  },
+  {
+    id: "E14",
+    summary: "20 days already paused — a fixed 10-day request is disallowed (only 8 remain)",
+    season: eightWeekSeason,
+    history: [
+      buildPauseRequest(
+        "row",
+        0,
+        { kind: "fixed", lastDay: seasonDay(19) },
+        { kind: "approved", decidedOn: seasonDay(0), resumedOn: null },
+      ),
+    ],
+    request: { startDay: 30, end: { kind: "fixed", lastDay: seasonDay(39) } },
+    today: 30,
+    expected: { allowed: false, reason: "exceedsRemainingCap" },
+  },
+  {
+    id: "E16",
+    summary: "day 10 requesting a pause starting day 9 is rejected as retroactive",
+    season: eightWeekSeason,
+    history: [],
+    request: { startDay: 9, end: { kind: "open" } },
+    today: 10,
+    expected: { allowed: false, reason: "retroactive" },
+  },
+  {
+    id: "E22",
+    summary: "pause days 20-33 resumed day 25 consumes only 5 days of allowance, not 14",
+    season: eightWeekSeason,
+    history: [
+      buildPauseRequest(
+        "row",
+        20,
+        { kind: "fixed", lastDay: seasonDay(33) },
+        { kind: "approved", decidedOn: seasonDay(20), resumedOn: seasonDay(25) },
+      ),
+    ],
+    // remaining = 28 - 5 = 23: a fixed 23-day request exactly exhausts it.
+    request: { startDay: 40, end: { kind: "fixed", lastDay: seasonDay(62) } },
+    today: 40,
+    expected: { allowed: true, remainingDays: 0 },
+  },
+];
+
+/** E15: an open pause auto-resumes once its own paused days reach the D9 cap — through the
+ * pause-aware composition function, with the cap passed explicitly (see `pause-aware-week.ts`'s
+ * `pauseCap` parameter). Engine-authored fixture (Notion states the rule qualitatively; the
+ * exact day numbers below are ours). */
+export interface AutoResumeRow {
+  readonly id: string;
+  readonly summary: string;
+  readonly commitment: Commitment;
+  readonly pauses: readonly PauseRequest[];
+  readonly today: number;
+  readonly pauseCap: number;
+  readonly weekStillPaused: number;
+  readonly weekAutoResumed: number;
+  readonly entriesForResumedWeek: readonly Entry[];
+  readonly expectedProgresses: readonly Fraction[];
+}
+
+export const eAutoResumeRows: readonly AutoResumeRow[] = [
+  {
+    id: "E15",
+    summary: "an open pause from day 0 auto-resumes at day 28 (56-day season, cap 28)",
+    commitment: buildQuantityCommitment(
+      "gym",
+      30,
+      "times",
+      { direction: "reach", minimum: fromInt(1), ideal: fromInt(1) },
+      { kind: "timesPerWeek", times: 3 },
+    ),
+    pauses: [
+      buildPauseRequest(
+        "gym",
+        0,
+        { kind: "open" },
+        { kind: "approved", decidedOn: seasonDay(0), resumedOn: null },
+      ),
+    ],
+    today: 40,
+    pauseCap: 28,
+    weekStillPaused: 3, // days 21-27, entirely before the cap
+    weekAutoResumed: 4, // days 28-34, entirely after the cap
+    entriesForResumedWeek: [
+      buildDoneEntry("gym", 28),
+      buildDoneEntry("gym", 29),
+      buildDoneEntry("gym", 30),
+    ],
+    expectedProgresses: [fr("1"), fr("1"), fr("1")],
   },
 ];
