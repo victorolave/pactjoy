@@ -1,5 +1,6 @@
 import type { MemberId } from "@pactjoy/engine";
 import type { Circle, Invite, Member } from "../circle/circle.ts";
+import type { CommitmentRecord } from "../commitment/commitment.ts";
 import type { Habit } from "../habit/habit.ts";
 import type {
   ReviewCadenceWeeks,
@@ -91,6 +92,7 @@ export interface SeasonFixtureOptions {
   readonly lengthWeeks?: SeasonLengthWeeks;
   readonly reviewCadenceWeeks?: ReviewCadenceWeeks;
   readonly status?: SeasonStatus;
+  readonly commitments?: readonly CommitmentRecord[];
   readonly createdAt?: Instant;
   readonly version?: number;
 }
@@ -110,6 +112,7 @@ export function seasonFixture(options: SeasonFixtureOptions): Season {
     lengthWeeks: options.lengthWeeks ?? 8,
     reviewCadenceWeeks: options.reviewCadenceWeeks ?? 2,
     status: options.status ?? "pactOpen",
+    commitments: options.commitments ?? [],
     createdAt: options.createdAt ?? DEFAULT_INSTANT,
     version: options.version ?? 0,
   };

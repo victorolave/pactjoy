@@ -1,3 +1,4 @@
+import type { CommitmentRecord } from "../commitment/commitment.ts";
 import type { CircleId, SeasonId } from "../shared/ids.ts";
 import type { Instant } from "../time/instant.ts";
 import { epochDay, type LocalDate } from "../time/local-date.ts";
@@ -16,9 +17,11 @@ export type ReviewCadenceWeeks = 1 | 2 | 3;
 
 /**
  * 4, 6 or 8 weeks worth a season, tracked across a {@link CircleId} (ADR-0008,
- * D6). `commitments`/`approvals`/`pactClosedAt` (design's full interface)
- * are NOT part of this slice's shape yet -- they land with the commitment
- * (S5) and pact (S6) modules, which extend this interface then.
+ * D6). `commitments` lands with this slice (S5, design D6/D12: commitments
+ * live inside `Season`, not their own aggregate/repository).
+ * `approvals`/`pactClosedAt` (design's full interface) are STILL NOT part
+ * of this shape -- they land with the pact module (S6), which extends this
+ * interface then.
  */
 export interface Season {
   readonly id: SeasonId;
@@ -29,6 +32,7 @@ export interface Season {
   readonly lengthWeeks: SeasonLengthWeeks;
   readonly reviewCadenceWeeks: ReviewCadenceWeeks;
   readonly status: SeasonStatus;
+  readonly commitments: readonly CommitmentRecord[];
   readonly createdAt: Instant;
   readonly version: number;
 }
@@ -119,6 +123,7 @@ export function buildSeason(input: BuildSeasonInput): Season {
     lengthWeeks: input.lengthWeeks,
     reviewCadenceWeeks: input.reviewCadenceWeeks,
     status: "pactOpen",
+    commitments: [],
     createdAt: input.now,
     version: 0,
   };

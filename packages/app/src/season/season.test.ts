@@ -31,6 +31,20 @@ describe("buildSeason", () => {
     expect(season.version).toBe(0);
     expect(season.nominalStart).toBe("2026-10-01");
   });
+
+  it("S5: a brand-new season has no commitments yet", () => {
+    const season = buildSeason({
+      id: seasonId("season-1"),
+      circleId: circleId("circle-1"),
+      timeZone: timeZoneId("America/Santiago"),
+      nominalStart: localDate("2026-10-01"),
+      lengthWeeks: 8,
+      reviewCadenceWeeks: 2,
+      now: NOW,
+    });
+
+    expect(season.commitments).toEqual([]);
+  });
 });
 
 describe("reviewCadenceForLength", () => {

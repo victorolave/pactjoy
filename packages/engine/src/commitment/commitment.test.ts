@@ -2,7 +2,15 @@ import { describe, expect, it } from "vitest";
 import { fromInt } from "../fraction/fraction.ts";
 import { buildDoneCommitment, buildQuantityCommitment } from "../test-support/builders.ts";
 import type { Commitment, Target } from "./commitment.ts";
-import { assertValidCommitments, assertValidTarget, targetOf } from "./commitment.ts";
+import {
+  assertValidCommitments,
+  assertValidTarget,
+  isLimitIdealWithinTolerance,
+  isPositiveReachMinimum,
+  isReachMinimumWithinIdeal,
+  isValidWeightPercent,
+  targetOf,
+} from "./commitment.ts";
 
 const minutesTarget = { direction: "reach", minimum: fromInt(10), ideal: fromInt(30) } as const;
 
@@ -82,5 +90,57 @@ describe("assertValidTarget", () => {
   it("throws RangeError for a limit target with an inverted tolerance (tolerance < ideal)", () => {
     const target: Target = { direction: "limit", ideal: fromInt(4), tolerance: fromInt(2) };
     expect(() => assertValidTarget(target)).toThrow(RangeError);
+  });
+});
+
+describe("isValidWeightPercent", () => {
+  it("accepts every multiple of 5 between 5 and 100", () => {
+    expect(isValidWeightPercent(5)).toBe(true);
+    expect(isValidWeightPercent(50)).toBe(true);
+    expect(isValidWeightPercent(100)).toBe(true);
+  });
+
+  it("rejects a value not a multiple of 5, or out of [5, 100]", () => {
+    expect(isValidWeightPercent(7)).toBe(false);
+    expect(isValidWeightPercent(0)).toBe(false);
+    expect(isValidWeightPercent(105)).toBe(false);
+  });
+});
+
+describe("isPositiveReachMinimum", () => {
+  it("accepts a minimum greater than zero", () => {
+    expect(isPositiveReachMinimum(fromInt(1))).toBe(true);
+  });
+
+  it("rejects a minimum of exactly zero", () => {
+    expect(isPositiveReachMinimum(fromInt(0))).toBe(false);
+  });
+});
+
+describe("isReachMinimumWithinIdeal", () => {
+  it("accepts minimum equal to ideal", () => {
+    expect(isReachMinimumWithinIdeal(fromInt(30), fromInt(30))).toBe(true);
+  });
+
+  it("accepts minimum less than ideal", () => {
+    expect(isReachMinimumWithinIdeal(fromInt(10), fromInt(30))).toBe(true);
+  });
+
+  it("rejects minimum greater than ideal", () => {
+    expect(isReachMinimumWithinIdeal(fromInt(30), fromInt(10))).toBe(false);
+  });
+});
+
+describe("isLimitIdealWithinTolerance", () => {
+  it("accepts ideal equal to tolerance", () => {
+    expect(isLimitIdealWithinTolerance(fromInt(2), fromInt(2))).toBe(true);
+  });
+
+  it("accepts ideal less than tolerance", () => {
+    expect(isLimitIdealWithinTolerance(fromInt(2), fromInt(4))).toBe(true);
+  });
+
+  it("rejects ideal greater than tolerance", () => {
+    expect(isLimitIdealWithinTolerance(fromInt(4), fromInt(2))).toBe(false);
   });
 });

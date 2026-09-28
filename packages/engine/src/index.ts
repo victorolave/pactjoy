@@ -40,6 +40,14 @@
  * - `graceDeadline`: the single source of the "end of the next day" grace
  *   boundary (`sdd/app-foundation/spec/season-clock` SC-5/SC-7) -- the app
  *   must reuse this instead of duplicating `GRACE_DAYS`.
+ * - `isValidWeightPercent`/`isPositiveReachMinimum`/
+ *   `isReachMinimumWithinIdeal`/`isLimitIdealWithinTolerance`: the
+ *   non-throwing per-field predicates behind `assertValidTarget`/
+ *   `assertValidCommitments` (fresh-review fix, single source of truth) --
+ *   the app's `commitment/validate-commitment.ts` needs the same numeric
+ *   invariants to build its own granular, per-field `Result` errors
+ *   instead of a single thrown `RangeError`. The throwing asserts
+ *   themselves stay internal (see below).
  *
  * Deliberately NOT exported (see `sdd/scoring-engine/apply-progress`,
  * slice 7b, for the full rationale): `progressOf` (single-opportunity
@@ -63,6 +71,12 @@ export type {
   Schedule,
   Target,
   Unit,
+} from "./commitment/commitment.ts";
+export {
+  isLimitIdealWithinTolerance,
+  isPositiveReachMinimum,
+  isReachMinimumWithinIdeal,
+  isValidWeightPercent,
 } from "./commitment/commitment.ts";
 
 export { displayPercent, displayPoints } from "./display/display.ts";
