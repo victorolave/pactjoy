@@ -6,11 +6,13 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "createFixedClock",
   "createFixedOffsetTimeZone",
   "createInMemoryCircleRepository",
+  "createInMemoryHabitRepository",
   "createInMemorySeasonGateReader",
   "createInMemoryUnitOfWork",
   "createSeededRandomSource",
   "createSequentialIdGenerator",
   "createTestApp",
+  "habitFixture",
   "memberFixture",
 ].sort();
 
