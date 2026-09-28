@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { ConcurrencyConflict } from "../shared/errors.ts";
-import { userId } from "../shared/ids.ts";
+import type { CircleId } from "../shared/ids.ts";
+import { seasonId, userId } from "../shared/ids.ts";
 import { ok } from "../shared/result.ts";
+import type { TestApp } from "../testing/app-harness.ts";
 import { createTestApp } from "../testing/app-harness.ts";
-import { memberFixture } from "../testing/builders.ts";
+import { memberFixture, seasonFixture } from "../testing/builders.ts";
 import { instant } from "../time/instant.ts";
 import { memberId } from "./circle.ts";
 import { createCircle } from "./create-circle.ts";
@@ -13,6 +15,25 @@ import { joinCircle } from "./join-circle.ts";
 
 function actorFor(id: string) {
   return { userId: userId(id) };
+}
+
+/**
+ * GIVEN-state helper: saves a `Season` row directly so `seasonGate` (now
+ * backed by the real `seasons` repository, S4/B11) answers a specific
+ * status for `circleId` -- replaces S3's removed `app.seasonGate.setStatus`.
+ */
+async function givenSeasonStatus(
+  app: TestApp,
+  circle: CircleId,
+  status: "pactOpen" | "active" | "closed",
+): Promise<void> {
+  await app.uow.transaction(async (repos) => {
+    await repos.seasons.save(
+      seasonFixture({ id: seasonId(`season-for-${circle}`), circleId: circle, status }),
+      null,
+    );
+    return ok(undefined);
+  });
 }
 
 describe("joinCircle", () => {
@@ -38,7 +59,7 @@ describe("joinCircle", () => {
     const app = createTestApp();
     const created = await createCircle(app, actorFor("user-andrea"), { name: "Río Runners" });
     if (!created.ok) throw new Error("fixture setup failed");
-    app.seasonGate.setStatus(created.value.id, "pactOpen");
+    await givenSeasonStatus(app, created.value.id, "pactOpen");
     const invite = await generateInvite(app, actorFor("user-andrea"), {
       circleId: created.value.id,
     });
@@ -59,7 +80,7 @@ describe("joinCircle", () => {
       circleId: created.value.id,
     });
     if (!invite.ok) throw new Error("fixture setup failed");
-    app.seasonGate.setStatus(created.value.id, "active");
+    await givenSeasonStatus(app, created.value.id, "active");
 
     const result = await joinCircle(app, actorFor("user-victor"), {
       inviteCode: invite.value.code,
@@ -76,7 +97,7 @@ describe("joinCircle", () => {
       circleId: created.value.id,
     });
     if (!invite.ok) throw new Error("fixture setup failed");
-    app.seasonGate.setStatus(created.value.id, "closed");
+    await givenSeasonStatus(app, created.value.id, "closed");
 
     const result = await joinCircle(app, actorFor("user-victor"), {
       inviteCode: invite.value.code,

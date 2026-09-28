@@ -1,8 +1,10 @@
 import { createIntlTimeZone } from "../adapters/intl-time-zone.ts";
+import type { SeasonGateReader } from "../circle/season-gate.port.ts";
 import type { IdGenerator } from "../ports/id-generator.ts";
 import type { RandomSource } from "../ports/random-source.ts";
 import type { Repositories } from "../ports/repositories.ts";
 import type { UnitOfWork } from "../ports/unit-of-work.ts";
+import { createSeasonGateReader } from "../season/season-gate-reader.ts";
 import type { Clock } from "../time/clock.port.ts";
 import { type Instant, instant } from "../time/instant.ts";
 import type { TimeZone } from "../time/time-zone.port.ts";
@@ -16,10 +18,6 @@ import {
   type InMemoryHabitRepository,
 } from "./in-memory-habit-repository.ts";
 import {
-  createInMemorySeasonGateReader,
-  type InMemorySeasonGateReader,
-} from "./in-memory-season-gate-reader.ts";
-import {
   createInMemorySeasonRepository,
   type InMemorySeasonRepository,
 } from "./in-memory-season-repository.ts";
@@ -30,10 +28,13 @@ import { createSequentialIdGenerator } from "./sequential-ids.ts";
 /**
  * The ports every use-case test wires up, composed from deterministic
  * in-memory adapters. `uow` carries the concrete `Repositories` bag
- * (ADR-0008) -- `circles`/`habits`/`seasons`/`seasonGate` are the same
- * concrete instances backing `uow` (not copies), exposed directly so tests
- * can set up GIVEN state (e.g. `app.seasonGate.setStatus(...)`) without
- * going through a use case.
+ * (ADR-0008) -- `circles`/`habits`/`seasons` are the same concrete
+ * instances backing `uow` (not copies), exposed directly so tests can set
+ * up GIVEN state without going through a use case (e.g. saving a `Season`
+ * fixture directly via `app.uow.transaction` to control `seasonGate`'s
+ * answer, S4/B11 -- there is no more `setStatus` override: `seasonGate` is
+ * now a real `createSeasonGateReader(seasons)` reading through the same
+ * live `seasons` store, not a standalone settable double).
  */
 export interface TestApp {
   readonly clock: Clock;
@@ -44,7 +45,7 @@ export interface TestApp {
   readonly circles: InMemoryCircleRepository;
   readonly habits: InMemoryHabitRepository;
   readonly seasons: InMemorySeasonRepository;
-  readonly seasonGate: InMemorySeasonGateReader;
+  readonly seasonGate: SeasonGateReader;
 }
 
 export interface CreateTestAppOptions {
@@ -63,7 +64,7 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
   const circles = createInMemoryCircleRepository();
   const habits = createInMemoryHabitRepository();
   const seasons = createInMemorySeasonRepository();
-  const seasonGate = createInMemorySeasonGateReader();
+  const seasonGate = createSeasonGateReader(seasons);
   const repositories: Repositories = { circles, habits, seasons, seasonGate };
 
   return {
@@ -77,10 +78,11 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
     seasonGate,
     uow: createInMemoryUnitOfWork({
       repositories,
-      // `seasonGate` is purely read-only (no `save`-like port method), so
-      // the scope reuses the same live instance directly -- `circles`,
-      // `habits` and `seasons` each need their own isolated, staged-write
-      // scope (ADR-0008, D4/D5).
+      // `seasonGate` is purely read-only (no `save`-like port method) and
+      // itself only reads through `seasons`, so it needs no isolation of
+      // its own: it already sees `seasons`' scoped, staged view whenever
+      // it's constructed fresh per-scope below (read-your-own-writes,
+      // ADR-0008, D4/D5).
       //
       // Atomic across repositories (D5): validate EVERY scope's staged
       // writes first -- if any throws ConcurrencyConflict, nothing has
@@ -97,7 +99,7 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
             circles: circleScope.repository,
             habits: habitScope.repository,
             seasons: seasonScope.repository,
-            seasonGate,
+            seasonGate: createSeasonGateReader(seasonScope.repository),
           },
           commit(): void {
             circleScope.validate();

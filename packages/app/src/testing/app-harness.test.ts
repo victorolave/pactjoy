@@ -57,11 +57,14 @@ describe("createTestApp", () => {
     expect((await app.uow.read((repos) => repos.circles.get(id)))?.name).toBe("Río Runners");
   });
 
-  it("exposes the concrete circles/seasonGate in-memory adapters directly, for GIVEN-state test setup", async () => {
+  it("exposes the concrete circles/habits/seasons in-memory adapters directly, for GIVEN-state test setup", async () => {
     const app = createTestApp();
     const id = circleId("circle-1");
 
-    app.seasonGate.setStatus(id, "active");
+    await app.seasons.save(
+      seasonFixture({ id: seasonId("season-1"), circleId: id, status: "active" }),
+      null,
+    );
     await app.circles.save(
       {
         id,
@@ -74,6 +77,8 @@ describe("createTestApp", () => {
       null,
     );
 
+    // seasonGate reads live through the same `seasons` store (S4/B11) --
+    // no more standalone settable double.
     expect(await app.seasonGate.statusForCircle(id)).toBe("active");
     expect((await app.circles.get(id))?.name).toBe("Río Runners");
     // The same in-memory instances back uow.transaction()/uow.read() (same store, not a copy).
