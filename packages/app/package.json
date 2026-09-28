@@ -1,0 +1,23 @@
+{
+  "name": "@pactjoy/app",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Use cases and ports for PactJoy. Depends only on @pactjoy/engine via its public index.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./testing": "./src/testing/index.ts"
+  },
+  "scripts": {
+    "lint": "biome lint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@pactjoy/engine": "workspace:*"
+  },
+  "devDependencies": {
+    "vitest": "^5.0.1"
+  }
+}
