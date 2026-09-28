@@ -35,10 +35,39 @@ export type {
 } from "./circle/rename-circle.ts";
 export { renameCircle } from "./circle/rename-circle.ts";
 export type { SeasonGateReader, SeasonGateStatus } from "./circle/season-gate.port.ts";
+export type {
+  CreateHabitDeps,
+  CreateHabitError,
+  CreateHabitInput,
+} from "./habit/create-habit.ts";
+export { createHabit } from "./habit/create-habit.ts";
+export type { HabitRepository } from "./habit/habit.repository.ts";
+export type { Habit } from "./habit/habit.ts";
 export type { IdGenerator } from "./ports/id-generator.ts";
 export type { RandomSource } from "./ports/random-source.ts";
 export type { Repositories } from "./ports/repositories.ts";
 export type { UnitOfWork } from "./ports/unit-of-work.ts";
+export type {
+  CreateSeasonDeps,
+  CreateSeasonError,
+  CreateSeasonInput,
+} from "./season/create-season.ts";
+export { createSeason } from "./season/create-season.ts";
+export type {
+  EditSeasonParamsDeps,
+  EditSeasonParamsError,
+  EditSeasonParamsInput,
+} from "./season/edit-season-params.ts";
+export { editSeasonParams } from "./season/edit-season-params.ts";
+export type { SeasonRepository } from "./season/season.repository.ts";
+export type {
+  ReviewCadenceWeeks,
+  Season,
+  SeasonLengthWeeks,
+  SeasonStatus,
+} from "./season/season.ts";
+export { reviewCadenceForLength } from "./season/season.ts";
+export { createSeasonGateReader } from "./season/season-gate-reader.ts";
 export type { Actor } from "./shared/actor.ts";
 export { ConcurrencyConflict, InviteCodeGenerationFailed } from "./shared/errors.ts";
 export type { CircleId, EntryId, HabitId, SeasonId, UserId } from "./shared/ids.ts";
