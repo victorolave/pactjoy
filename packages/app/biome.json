@@ -1,0 +1,62 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.14/schema.json",
+  "extends": "//",
+  "linter": {
+    "rules": {
+      "correctness": {
+        "noNodejsModules": "error",
+        "useImportExtensions": {
+          "level": "error",
+          "options": {
+            "forceJsExtensions": false
+          }
+        }
+      },
+      "style": {
+        "noRestrictedGlobals": {
+          "level": "error",
+          "options": {
+            "deniedGlobals": {
+              "Date": "packages/app confines wall-clock/Intl/random APIs to src/adapters/ (ADR-0008, D8): use the injected Clock/TimeZone port instead.",
+              "Intl": "packages/app confines Intl to src/adapters/ (ADR-0008, D8): use the injected TimeZone port instead.",
+              "Math": "packages/app must not use Math.random or float math outside adapters: use the injected RandomSource port, and @pactjoy/engine's exact Fraction arithmetic for anything scored.",
+              "Temporal": "packages/app confines time APIs to src/adapters/ (ADR-0008, D8): use the injected Clock/TimeZone port instead.",
+              "crypto": "packages/app confines crypto to src/adapters/ (ADR-0008, D9): use the injected IdGenerator/RandomSource port instead."
+            }
+          }
+        },
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "patterns": [
+              {
+                "group": ["@pactjoy/engine/**"],
+                "message": "Import only the '@pactjoy/engine' package root (its public index.ts) -- deep imports leak internal engine modules and break the high-decoupling boundary (CLAUDE.md, ADR-0008)."
+              },
+              {
+                "group": ["npm:*"],
+                "message": "packages/app is standard TypeScript/ESM: 'npm:' specifiers are Deno-specific and not portable across runtimes (ADR-0007/ADR-0008)."
+              },
+              {
+                "group": ["jsr:*"],
+                "message": "packages/app is standard TypeScript/ESM: 'jsr:' specifiers are Deno-specific and not portable across runtimes (ADR-0007/ADR-0008)."
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["src/adapters/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedGlobals": "off"
+          }
+        }
+      }
+    }
+  ]
+}

@@ -36,7 +36,7 @@ One term per concept, used the same way in the rules, the code and conversations
 | Hábito                                            | `Habit`                                                         | Long-term behavior; lives across seasons                                             |
 | Compromiso                                        | `Commitment`                                                    | How a habit is worked during one season (frequency, minimum, ideal, weight, privacy) |
 | Temporada                                         | `Season`                                                        | 4, 6, 8 or 12 weeks; weeks count from its start day                                  |
-| Círculo                                           | `Circle`                                                        | 2–6 people sharing a season                                                          |
+| Círculo                                           | `Circle`                                                        | 1–6 people sharing a season                                                          |
 | Miembro                                           | `Member`                                                        | A person in a circle                                                                 |
 | Pacto                                             | `Pact`                                                          | The set of commitments everyone approves before the season (unanimous)               |
 | Oportunidad                                       | `Opportunity`                                                   | Unit of scoring: a session, a scheduled day or a week                                |
@@ -123,5 +123,5 @@ Full detail in the Mechanics page in Notion.
 ## Next steps
 
 1. ~~`packages/engine` + tests~~: done. Public API in `packages/engine/src/index.ts`; decisions in ADR-0004 to ADR-0006.
-2. Postgres schema + use cases (`packages/app`) + the `api` function. `packages/app` owns converting real time into `SeasonDay` (ADR-0004), the 48 h pause auto-approval and notifications.
+2. `packages/app` (use cases) + Postgres schema + the `api` function, in progress. Skeleton in place (shared kernel, ports, ADR-0008 conventions); use cases land slice by slice. `packages/app` owns converting real time into `SeasonDay` (ADR-0004), the 48 h pause auto-approval and notifications.
 3. PWA following the design batches (Today and Entry first).
