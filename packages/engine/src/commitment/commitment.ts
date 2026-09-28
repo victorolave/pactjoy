@@ -65,6 +65,40 @@ export function targetOf(_done: DoneCommitment): Target {
 const ZERO = fromInt(0);
 
 /**
+ * Non-throwing per-field predicates behind {@link assertValidTarget}/
+ * {@link assertValidCommitments} (single source of truth, fresh-review
+ * fix): `packages/app`'s `validate-commitment.ts` needs the same
+ * invariants to build its own granular, per-field `Result` errors instead
+ * of a single thrown `RangeError` -- duplicating the numeric conditions
+ * there caused the rules to drift apart. These predicates are that shared
+ * boundary; the throwing asserts below are rewritten on top of them with
+ * no behavior change (see `assertValidTarget`/`assertValidCommitments`'s
+ * own tests, unchanged). Deliberately NOT covering the `limit` target's
+ * `ideal >= 0` check: nothing outside this module ever duplicated it (the
+ * app's decimal strings can never parse negative in the first place), so
+ * it stays inline in `assertValidTarget` only.
+ */
+export function isValidWeightPercent(weightPercent: number): boolean {
+  return (
+    weightPercent >= MIN_WEIGHT_PERCENT &&
+    weightPercent <= MAX_WEIGHT_PERCENT &&
+    weightPercent % WEIGHT_STEP_PERCENT === 0
+  );
+}
+
+export function isPositiveReachMinimum(minimum: Fraction): boolean {
+  return gt(minimum, ZERO);
+}
+
+export function isReachMinimumWithinIdeal(minimum: Fraction, ideal: Fraction): boolean {
+  return lte(minimum, ideal);
+}
+
+export function isLimitIdealWithinTolerance(ideal: Fraction, tolerance: Fraction): boolean {
+  return lte(ideal, tolerance);
+}
+
+/**
  * Validates a {@link Target}'s numeric invariant: `reach` requires
  * `0 < minimum ≤ ideal`; `limit` requires `0 ≤ ideal ≤ tolerance`. This is
  * the single validation point for `Target` — `progressOf`/`isConsistent`
@@ -74,12 +108,12 @@ const ZERO = fromInt(0);
  */
 export function assertValidTarget(target: Target): void {
   if (target.direction === "reach") {
-    if (!gt(target.minimum, ZERO)) {
+    if (!isPositiveReachMinimum(target.minimum)) {
       throw new RangeError(
         `assertValidTarget: reach minimum must be > 0, got ${formatFraction(target.minimum)}`,
       );
     }
-    if (!lte(target.minimum, target.ideal)) {
+    if (!isReachMinimumWithinIdeal(target.minimum, target.ideal)) {
       throw new RangeError(
         `assertValidTarget: reach minimum (${formatFraction(target.minimum)}) must be <= ideal (${formatFraction(target.ideal)})`,
       );
@@ -92,7 +126,7 @@ export function assertValidTarget(target: Target): void {
       `assertValidTarget: limit ideal must be >= 0, got ${formatFraction(target.ideal)}`,
     );
   }
-  if (!lte(target.ideal, target.tolerance)) {
+  if (!isLimitIdealWithinTolerance(target.ideal, target.tolerance)) {
     throw new RangeError(
       `assertValidTarget: limit ideal (${formatFraction(target.ideal)}) must be <= tolerance (${formatFraction(target.tolerance)})`,
     );
@@ -123,11 +157,7 @@ export function assertValidCommitments(commitments: readonly Commitment[]): void
   let total = 0;
   for (const commitment of commitments) {
     const { weightPercent } = commitment;
-    if (
-      weightPercent < MIN_WEIGHT_PERCENT ||
-      weightPercent > MAX_WEIGHT_PERCENT ||
-      weightPercent % WEIGHT_STEP_PERCENT !== 0
-    ) {
+    if (!isValidWeightPercent(weightPercent)) {
       throw new RangeError(
         `assertValidCommitments: weightPercent ${weightPercent} must be a multiple of ${WEIGHT_STEP_PERCENT} between ${MIN_WEIGHT_PERCENT} and ${MAX_WEIGHT_PERCENT}`,
       );
