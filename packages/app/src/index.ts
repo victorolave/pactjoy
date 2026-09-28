@@ -8,6 +8,8 @@
  * subpath (`src/testing/index.ts`), never here.
  */
 
+export { createIntlTimeZone } from "./adapters/intl-time-zone.ts";
+export { createSystemClock } from "./adapters/system-clock.ts";
 export type { IdGenerator } from "./ports/id-generator.ts";
 export type { RandomSource } from "./ports/random-source.ts";
 export type { UnitOfWork } from "./ports/unit-of-work.ts";
@@ -20,3 +22,9 @@ export { err, ok } from "./shared/result.ts";
 export type { Clock } from "./time/clock.port.ts";
 export type { Instant } from "./time/instant.ts";
 export { instant } from "./time/instant.ts";
+export type { LocalDate } from "./time/local-date.ts";
+export { localDate } from "./time/local-date.ts";
+export type { SeasonDayResult } from "./time/season-calendar.ts";
+export { localDateOfSeasonDay, toSeasonDay } from "./time/season-calendar.ts";
+export type { TimeZone, TimeZoneId } from "./time/time-zone.port.ts";
+export { timeZoneId } from "./time/time-zone.port.ts";

@@ -8,6 +8,8 @@
 export type { CreateTestAppOptions, TestApp } from "./app-harness.ts";
 export { createTestApp } from "./app-harness.ts";
 export { createFixedClock } from "./fixed-clock.ts";
+export type { FixedOffsetTimeZoneOptions } from "./fixed-time-zone.ts";
+export { createFixedOffsetTimeZone } from "./fixed-time-zone.ts";
 export type { InMemoryUnitOfWorkOptions } from "./in-memory-unit-of-work.ts";
 export { createInMemoryUnitOfWork } from "./in-memory-unit-of-work.ts";
 export { createSeededRandomSource } from "./seeded-random.ts";

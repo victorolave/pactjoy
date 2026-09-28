@@ -37,6 +37,9 @@
  *   `PauseDecision`), `Season`/`Weekday`, `SeasonDay` + its `seasonDay`
  *   constructor, and `MemberId`: what the app needs to build a `ScoreInput`
  *   and a `StandingsParticipant` in the first place.
+ * - `graceDeadline`: the single source of the "end of the next day" grace
+ *   boundary (`sdd/app-foundation/spec/season-clock` SC-5/SC-7) -- the app
+ *   must reuse this instead of duplicating `GRACE_DAYS`.
  *
  * Deliberately NOT exported (see `sdd/scoring-engine/apply-progress`,
  * slice 7b, for the full rationale): `progressOf` (single-opportunity
@@ -64,6 +67,7 @@ export type {
 
 export { displayPercent, displayPoints } from "./display/display.ts";
 export type { Entry } from "./entry/entry.ts";
+export { graceDeadline } from "./entry/grace-period.ts";
 export type { Fraction } from "./fraction/fraction.ts";
 export {
   compare,
