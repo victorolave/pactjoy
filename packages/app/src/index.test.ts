@@ -8,12 +8,18 @@ import { describe, expect, it } from "vitest";
 const EXPECTED_RUNTIME_EXPORTS = [
   "circleId",
   "ConcurrencyConflict",
+  "createIntlTimeZone",
+  "createSystemClock",
   "entryId",
   "err",
   "habitId",
   "instant",
+  "localDate",
+  "localDateOfSeasonDay",
   "ok",
   "seasonId",
+  "timeZoneId",
+  "toSeasonDay",
   "userId",
 ].sort();
 
