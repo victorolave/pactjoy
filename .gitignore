@@ -38,6 +38,7 @@ pnpm-debug.log*
 
 # Claude Code local settings
 .claude/settings.local.json
+.claude/worktrees/
 
 # Local AI tooling (auto-generated, machine-specific paths)
 .atl/
