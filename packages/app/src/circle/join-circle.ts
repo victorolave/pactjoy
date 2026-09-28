@@ -1,0 +1,82 @@
+import type { IdGenerator } from "../ports/id-generator.ts";
+import type { Repositories } from "../ports/repositories.ts";
+import type { UnitOfWork } from "../ports/unit-of-work.ts";
+import type { Actor } from "../shared/actor.ts";
+import { err, ok, type Result } from "../shared/result.ts";
+import type { Clock } from "../time/clock.port.ts";
+import { activeMembers, type Circle, MAX_MEMBERS, type Member, memberId } from "./circle.ts";
+import { normalizeInviteCode } from "./invite-code.ts";
+import { canJoinCircle } from "./season-gate.port.ts";
+
+export interface JoinCircleDeps {
+  readonly uow: UnitOfWork<Repositories>;
+  readonly ids: IdGenerator;
+  readonly clock: Clock;
+}
+
+export interface JoinCircleInput {
+  readonly inviteCode: string;
+}
+
+export type JoinCircleError =
+  | { readonly kind: "InviteNotFound" }
+  | { readonly kind: "InviteExpired" }
+  | { readonly kind: "AlreadyInActiveCircle" }
+  | { readonly kind: "SeasonNotJoinable" }
+  | { readonly kind: "CircleFull" };
+
+/**
+ * Joins a circle via a valid, unexpired invite code (CM-3..CM-5, CM-9..
+ * CM-11). Joining while the pact is open resets all pact approvals (CM-8,
+ * PA-5) -- that reset is NOT implemented here: it depends on the pact
+ * module, which doesn't exist until S6. This use case only adds the
+ * member; whichever slice wires `pact/approve-pact.ts` must also call the
+ * approval-reset here.
+ */
+export async function joinCircle(
+  deps: JoinCircleDeps,
+  actor: Actor,
+  input: JoinCircleInput,
+): Promise<Result<Circle, JoinCircleError>> {
+  return deps.uow.transaction(async (repos): Promise<Result<Circle, JoinCircleError>> => {
+    const normalizedCode = normalizeInviteCode(input.inviteCode);
+    const circle = await repos.circles.findByInviteCode(normalizedCode);
+    if (!circle?.invite) {
+      return err({ kind: "InviteNotFound" });
+    }
+
+    const now = deps.clock.now();
+    if (circle.invite.expiresAt <= now) {
+      return err({ kind: "InviteExpired" });
+    }
+
+    const existingActive = await repos.circles.findActiveByUser(actor.userId);
+    if (existingActive) {
+      return err({ kind: "AlreadyInActiveCircle" });
+    }
+
+    const gateStatus = await repos.seasonGate.statusForCircle(circle.id);
+    if (!canJoinCircle(gateStatus)) {
+      return err({ kind: "SeasonNotJoinable" });
+    }
+
+    if (activeMembers(circle).length >= MAX_MEMBERS) {
+      return err({ kind: "CircleFull" });
+    }
+
+    const newMember: Member = {
+      id: memberId(deps.ids.next()),
+      userId: actor.userId,
+      status: "active",
+      joinedAt: now,
+      leftAt: null,
+    };
+    const updated: Circle = {
+      ...circle,
+      members: [...circle.members, newMember],
+      version: circle.version + 1,
+    };
+    await repos.circles.save(updated, circle.version);
+    return ok(updated);
+  });
+}

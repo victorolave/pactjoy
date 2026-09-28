@@ -1,20 +1,46 @@
 /**
  * Public API of `@pactjoy/app` (`exports: "."` in `package.json`). Use
  * cases, queries and the domain/port types they need are added here as
- * each slice lands (ADR-0008). This skeleton slice (S1) exports only the
- * shared kernel: `Result`, branded ids, `Actor`, the infra error, ports,
- * and the time primitives every later slice builds on. Deterministic
- * in-memory adapters for tests live under the separate `./testing`
- * subpath (`src/testing/index.ts`), never here.
+ * each slice lands (ADR-0008). S1 exported only the shared kernel; S3
+ * (circle-membership) adds the first concrete aggregate/repository and its
+ * five use cases. Deterministic in-memory adapters for tests live under
+ * the separate `./testing` subpath (`src/testing/index.ts`), never here.
  */
 
 export { createIntlTimeZone } from "./adapters/intl-time-zone.ts";
 export { createSystemClock } from "./adapters/system-clock.ts";
+export type { CircleRepository } from "./circle/circle.repository.ts";
+export type { Circle, Invite, Member } from "./circle/circle.ts";
+export type {
+  CreateCircleDeps,
+  CreateCircleError,
+  CreateCircleInput,
+} from "./circle/create-circle.ts";
+export { createCircle } from "./circle/create-circle.ts";
+export type {
+  GenerateInviteDeps,
+  GenerateInviteError,
+  GenerateInviteInput,
+} from "./circle/generate-invite.ts";
+export { generateInvite } from "./circle/generate-invite.ts";
+export type { InviteCode } from "./circle/invite-code.ts";
+export type { JoinCircleDeps, JoinCircleError, JoinCircleInput } from "./circle/join-circle.ts";
+export { joinCircle } from "./circle/join-circle.ts";
+export type { LeaveCircleDeps, LeaveCircleError, LeaveCircleInput } from "./circle/leave-circle.ts";
+export { leaveCircle } from "./circle/leave-circle.ts";
+export type {
+  RenameCircleDeps,
+  RenameCircleError,
+  RenameCircleInput,
+} from "./circle/rename-circle.ts";
+export { renameCircle } from "./circle/rename-circle.ts";
+export type { SeasonGateReader, SeasonGateStatus } from "./circle/season-gate.port.ts";
 export type { IdGenerator } from "./ports/id-generator.ts";
 export type { RandomSource } from "./ports/random-source.ts";
+export type { Repositories } from "./ports/repositories.ts";
 export type { UnitOfWork } from "./ports/unit-of-work.ts";
 export type { Actor } from "./shared/actor.ts";
-export { ConcurrencyConflict } from "./shared/errors.ts";
+export { ConcurrencyConflict, InviteCodeGenerationFailed } from "./shared/errors.ts";
 export type { CircleId, EntryId, HabitId, SeasonId, UserId } from "./shared/ids.ts";
 export { circleId, entryId, habitId, seasonId, userId } from "./shared/ids.ts";
 export type { Result } from "./shared/result.ts";
