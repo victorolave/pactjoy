@@ -6,7 +6,11 @@ import { describe, expect, it } from "vitest";
  * runtime and can't appear here.
  */
 const EXPECTED_RUNTIME_EXPORTS = [
+  "addCommitment",
+  "buildCommitment",
   "circleId",
+  "commitmentId",
+  "commitmentToEngine",
   "ConcurrencyConflict",
   "createCircle",
   "createHabit",
@@ -14,6 +18,7 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "createSeason",
   "createSeasonGateReader",
   "createSystemClock",
+  "editCommitment",
   "editSeasonParams",
   "entryId",
   "err",
@@ -26,12 +31,14 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "localDate",
   "localDateOfSeasonDay",
   "ok",
+  "removeCommitment",
   "renameCircle",
   "reviewCadenceForLength",
   "seasonId",
   "timeZoneId",
   "toSeasonDay",
   "userId",
+  "validateCommitment",
 ].sort();
 
 describe("@pactjoy/app public API", () => {
