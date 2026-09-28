@@ -10,6 +10,10 @@ import {
   type InMemoryCircleRepository,
 } from "./in-memory-circle-repository.ts";
 import {
+  createInMemoryHabitRepository,
+  type InMemoryHabitRepository,
+} from "./in-memory-habit-repository.ts";
+import {
   createInMemorySeasonGateReader,
   type InMemorySeasonGateReader,
 } from "./in-memory-season-gate-reader.ts";
@@ -20,12 +24,10 @@ import { createSequentialIdGenerator } from "./sequential-ids.ts";
 /**
  * The ports every use-case test wires up, composed from deterministic
  * in-memory adapters. `uow` carries the concrete `Repositories` bag
- * (ADR-0008) -- `circles` is the first repository wired here (S3); later
- * slices extend `Repositories` (`ports/repositories.ts`) and this harness
- * together as their aggregates land. `circles`/`seasonGate` are the same
- * concrete instances backing `uow` (not copies), exposed directly so tests
- * can set up GIVEN state (e.g. `app.seasonGate.setStatus(...)`) without
- * going through a use case.
+ * (ADR-0008) -- `circles`/`habits`/`seasonGate` are the same concrete
+ * instances backing `uow` (not copies), exposed directly so tests can set
+ * up GIVEN state (e.g. `app.seasonGate.setStatus(...)`) without going
+ * through a use case.
  */
 export interface TestApp {
   readonly clock: Clock;
@@ -33,6 +35,7 @@ export interface TestApp {
   readonly random: RandomSource;
   readonly uow: UnitOfWork<Repositories>;
   readonly circles: InMemoryCircleRepository;
+  readonly habits: InMemoryHabitRepository;
   readonly seasonGate: InMemorySeasonGateReader;
 }
 
@@ -48,25 +51,36 @@ const DEFAULT_RANDOM_SEED = 42;
 /** Builds a fully deterministic {@link TestApp} for use-case tests. */
 export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
   const circles = createInMemoryCircleRepository();
+  const habits = createInMemoryHabitRepository();
   const seasonGate = createInMemorySeasonGateReader();
-  const repositories: Repositories = { circles, seasonGate };
+  const repositories: Repositories = { circles, habits, seasonGate };
 
   return {
     clock: createFixedClock(options.now ?? DEFAULT_NOW),
     ids: createSequentialIdGenerator(options.idPrefix),
     random: createSeededRandomSource(options.randomSeed ?? DEFAULT_RANDOM_SEED),
     circles,
+    habits,
     seasonGate,
     uow: createInMemoryUnitOfWork({
       repositories,
       // `seasonGate` is purely read-only (no `save`-like port method), so
-      // the scope reuses the same live instance directly -- only `circles`
-      // needs its own isolated, staged-write scope (ADR-0008, D4/D5).
+      // the scope reuses the same live instance directly -- `circles` and
+      // `habits` each need their own isolated, staged-write scope
+      // (ADR-0008, D4/D5).
       beginTransaction: () => {
-        const scope = circles.beginTransaction();
+        const circleScope = circles.beginTransaction();
+        const habitScope = habits.beginTransaction();
         return {
-          repositories: { circles: scope.repository, seasonGate },
-          commit: scope.commit,
+          repositories: {
+            circles: circleScope.repository,
+            habits: habitScope.repository,
+            seasonGate,
+          },
+          commit(): void {
+            circleScope.commit();
+            habitScope.commit();
+          },
         };
       },
     }),
