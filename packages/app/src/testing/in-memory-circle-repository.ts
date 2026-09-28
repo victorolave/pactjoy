@@ -8,23 +8,30 @@ interface StagedWrite {
   readonly expectedVersion: number | null;
 }
 
-/** One isolated transaction's view of the repository, plus its atomic commit (ADR-0008, D4/D5). */
+/**
+ * One isolated transaction's view of the repository, plus its two-phase
+ * commit (ADR-0008, D4/D5). Split into `validate()`/`apply()` -- instead of
+ * one combined `commit()` -- so a UnitOfWork spanning MULTIPLE repositories
+ * can validate every touched repository first and only apply any of them
+ * once none has thrown: `validate()` on scope A, then scope B, THEN
+ * `apply()` on scope A, then scope B. Calling `validate()` alone (without
+ * `apply()`) never mutates the live store, which is exactly what makes
+ * that combined "check everything, then apply everything" possible without
+ * a partial commit across repositories (see `testing/app-harness.ts`'s
+ * `beginTransaction`).
+ */
 export interface CircleTransactionScope {
   /**
    * Reads see this scope's own staged writes layered over the live store
    * (read-your-own-writes); `save()` only stages a write -- it never
    * mutates the live store and never throws on a version mismatch (that
-   * check is deferred to `commit()`, atomically, across every staged
-   * write).
+   * check is `validate()`'s job).
    */
   readonly repository: CircleRepository;
-  /**
-   * Checks every staged write's `expectedVersion` against the CURRENT live
-   * store, all together. If every one still matches, applies all of them;
-   * if even one does not, applies NONE of them (no partial commit) and
-   * throws {@link ConcurrencyConflict}.
-   */
-  commit(): void;
+  /** @throws {ConcurrencyConflict} if any staged write's `expectedVersion` no longer matches the live store. Does not mutate. */
+  validate(): void;
+  /** Applies every staged write to the live store. Callers MUST call `validate()` first (see docstring above). */
+  apply(): void;
 }
 
 export interface InMemoryCircleRepository extends CircleRepository {
@@ -110,7 +117,7 @@ export function createInMemoryCircleRepository(): InMemoryCircleRepository {
 
       return {
         repository,
-        commit(): void {
+        validate(): void {
           for (const [id, { expectedVersion }] of staged) {
             const existing = store.get(id);
             const currentVersion = existing ? existing.version : null;
@@ -118,6 +125,8 @@ export function createInMemoryCircleRepository(): InMemoryCircleRepository {
               throw new ConcurrencyConflict();
             }
           }
+        },
+        apply(): void {
           for (const [id, { circle }] of staged) {
             store.set(id, circle);
           }
