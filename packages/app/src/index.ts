@@ -36,6 +36,29 @@ export type {
 export { renameCircle } from "./circle/rename-circle.ts";
 export type { SeasonGateReader, SeasonGateStatus } from "./circle/season-gate.port.ts";
 export type {
+  AddCommitmentDeps,
+  AddCommitmentError,
+  AddCommitmentInput,
+} from "./commitment/add-commitment.ts";
+export { addCommitment } from "./commitment/add-commitment.ts";
+export type { CommitmentRecord, Measure } from "./commitment/commitment.ts";
+export { buildCommitment, commitmentId } from "./commitment/commitment.ts";
+export type {
+  EditCommitmentDeps,
+  EditCommitmentError,
+  EditCommitmentInput,
+} from "./commitment/edit-commitment.ts";
+export { editCommitment } from "./commitment/edit-commitment.ts";
+export type {
+  RemoveCommitmentDeps,
+  RemoveCommitmentError,
+  RemoveCommitmentInput,
+} from "./commitment/remove-commitment.ts";
+export { removeCommitment } from "./commitment/remove-commitment.ts";
+export { commitmentToEngine } from "./commitment/to-engine.ts";
+export type { MeasureInput, ValidateCommitmentError } from "./commitment/validate-commitment.ts";
+export { validateCommitment } from "./commitment/validate-commitment.ts";
+export type {
   CreateHabitDeps,
   CreateHabitError,
   CreateHabitInput,
