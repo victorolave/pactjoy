@@ -16,6 +16,7 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "eq",
   "frac",
   "fromInt",
+  "graceDeadline",
   "gt",
   "gte",
   "lt",
