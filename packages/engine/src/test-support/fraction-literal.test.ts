@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fr } from "./fraction-literal";
+import { fr } from "./fraction-literal.ts";
 
 describe("fr", () => {
   it('parses "25/12" to the exact Fraction 25/12', () => {

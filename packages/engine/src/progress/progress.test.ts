@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import type { Target } from "../commitment/commitment";
-import { fromInt } from "../fraction/fraction";
-import { isConsistent, progressOf } from "./progress";
+import type { Target } from "../commitment/commitment.ts";
+import { fromInt } from "../fraction/fraction.ts";
+import { isConsistent, progressOf } from "./progress.ts";
 
 const reading: Target = { direction: "reach", minimum: fromInt(10), ideal: fromInt(30) };
 const coffees: Target = { direction: "limit", ideal: fromInt(2), tolerance: fromInt(4) };

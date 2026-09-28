@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { fromInt, parseDecimal } from "../fraction/fraction";
-import { fr } from "../test-support/fraction-literal";
-import { prorateLimitTarget, prorateReachTarget, prorateSessionCount } from "./proration";
+import { fromInt, parseDecimal } from "../fraction/fraction.ts";
+import { fr } from "../test-support/fraction-literal.ts";
+import { prorateLimitTarget, prorateReachTarget, prorateSessionCount } from "./proration.ts";
 
 describe("prorateSessionCount (D6, timesPerWeek)", () => {
   it("rounds half-up (E3: 3x/week, 4 active days -> 2)", () => {

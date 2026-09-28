@@ -32,25 +32,25 @@
  * and this file's own `scoreMember` doc comments for the exact formulas.
  * `idealCompletion = points / potential` only holds at season end.
  */
-import type { Season, SeasonDay } from "../calendar/season-calendar";
-import { seasonDay } from "../calendar/season-calendar";
-import type { Commitment, CommitmentId } from "../commitment/commitment";
-import type { Entry } from "../entry/entry";
-import { graceDeadline } from "../entry/grace-period";
-import type { Fraction } from "../fraction/fraction";
-import { add, div, fromInt, mul, sum } from "../fraction/fraction";
-import type { SessionResult } from "../opportunity/per-session";
-import { dayForWeekday } from "../opportunity/per-session";
-import type { PauseRequest } from "../pause/pause";
+import type { Season, SeasonDay } from "../calendar/season-calendar.ts";
+import { seasonDay } from "../calendar/season-calendar.ts";
+import type { Commitment, CommitmentId } from "../commitment/commitment.ts";
+import type { Entry } from "../entry/entry.ts";
+import { graceDeadline } from "../entry/grace-period.ts";
+import type { Fraction } from "../fraction/fraction.ts";
+import { add, div, fromInt, mul, sum } from "../fraction/fraction.ts";
+import type { SessionResult } from "../opportunity/per-session.ts";
+import { dayForWeekday } from "../opportunity/per-session.ts";
+import type { PauseRequest } from "../pause/pause.ts";
 import {
   excludedDays,
   pauseAwareWeekSessions,
   rejectionExtendedDeadline,
-} from "../pause/pause-aware-week";
-import type { CommitmentScore } from "./commitment-score";
-import { scoreCommitmentSoFar } from "./commitment-score";
-import type { Streak, StreakOutcome, StreakUnit } from "./streak";
-import { computeStreak, dayStreakOutcome, weekStreakOutcome } from "./streak";
+} from "../pause/pause-aware-week.ts";
+import type { CommitmentScore } from "./commitment-score.ts";
+import { scoreCommitmentSoFar } from "./commitment-score.ts";
+import type { Streak, StreakOutcome, StreakUnit } from "./streak.ts";
+import { computeStreak, dayStreakOutcome, weekStreakOutcome } from "./streak.ts";
 
 const DAYS_PER_WEEK = 7;
 

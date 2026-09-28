@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { fromInt } from "../fraction/fraction";
-import { buildDoneCommitment, buildQuantityCommitment } from "../test-support/builders";
-import type { Commitment, Target } from "./commitment";
-import { assertValidCommitments, assertValidTarget, targetOf } from "./commitment";
+import { fromInt } from "../fraction/fraction.ts";
+import { buildDoneCommitment, buildQuantityCommitment } from "../test-support/builders.ts";
+import type { Commitment, Target } from "./commitment.ts";
+import { assertValidCommitments, assertValidTarget, targetOf } from "./commitment.ts";
 
 const minutesTarget = { direction: "reach", minimum: fromInt(10), ideal: fromInt(30) } as const;
 

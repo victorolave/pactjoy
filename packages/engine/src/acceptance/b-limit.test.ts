@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { isConsistent, progressOf } from "../progress/progress";
-import { bLimitRows } from "./rows/b-limit.rows";
+import { isConsistent, progressOf } from "../progress/progress.ts";
+import { bLimitRows } from "./rows/b-limit.rows.ts";
 
 describe("acceptance: series B — limit", () => {
   it.for(bLimitRows)("$id: $summary", (row) => {

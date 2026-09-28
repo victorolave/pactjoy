@@ -51,3 +51,4 @@ status to `Superseded by ADR-XXXX`, linking to the new one. Small fixes
 | [0004](0004-scoring-engine-resolved-calendar-days.md)       | Scoring engine works on resolved calendar days              | Accepted | 2026-09-26 |
 | [0005](0005-worked-examples-as-executable-spec.md)          | Worked examples are the engine's executable specification   | Accepted | 2026-09-26 |
 | [0006](0006-bigint-fraction-arithmetic.md)                  | Exact rational arithmetic with hand-rolled BigInt fractions | Accepted | 2026-09-26 |
+| [0007](0007-explicit-ts-import-extensions.md)                | Explicit `.ts` extensions on relative imports                | Accepted | 2026-09-28 |

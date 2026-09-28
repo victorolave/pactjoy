@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { frac, fromInt } from "../fraction/fraction";
-import { displayPercent, displayPoints } from "./display";
+import { frac, fromInt } from "../fraction/fraction.ts";
+import { displayPercent, displayPoints } from "./display.ts";
 
 describe("displayPoints", () => {
   it("rounds an exact fraction half-up to a whole point", () => {

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { sum } from "../fraction/fraction";
-import { scoreCommitmentSoFar } from "../scoring/commitment-score";
-import type { ScoreInput } from "../scoring/member-score";
-import { scoreMember } from "../scoring/member-score";
-import { fCommitmentRows, fMidSeasonRows, fTotalRows } from "./rows/f-full-season.rows";
+import { sum } from "../fraction/fraction.ts";
+import { scoreCommitmentSoFar } from "../scoring/commitment-score.ts";
+import type { ScoreInput } from "../scoring/member-score.ts";
+import { scoreMember } from "../scoring/member-score.ts";
+import { fCommitmentRows, fMidSeasonRows, fTotalRows } from "./rows/f-full-season.rows.ts";
 
 describe("acceptance: series F — season totals (D1) and exact-arithmetic rounding-only-at-display", () => {
   it.for(fCommitmentRows)("$id: $summary", (row) => {

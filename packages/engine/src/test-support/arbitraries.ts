@@ -5,9 +5,9 @@
  * packages/engine only).
  */
 import { type Arbitrary, array, constant, integer, uniqueArray } from "fast-check";
-import type { Fraction } from "../fraction/fraction";
-import { frac, isZero } from "../fraction/fraction";
-import type { SessionResult } from "../opportunity/per-session";
+import type { Fraction } from "../fraction/fraction.ts";
+import { frac, isZero } from "../fraction/fraction.ts";
+import type { SessionResult } from "../opportunity/per-session.ts";
 
 const WEIGHT_STEP_PERCENT = 5;
 const TOTAL_WEIGHT_PERCENT = 100;

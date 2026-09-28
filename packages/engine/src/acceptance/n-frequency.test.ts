@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { mean } from "../fraction/fraction";
-import { specificDaysSessions, timesPerWeekSessions } from "../opportunity/per-session";
-import type { ScoreInput } from "../scoring/member-score";
-import { scoreMember } from "../scoring/member-score";
+import { mean } from "../fraction/fraction.ts";
+import { specificDaysSessions, timesPerWeekSessions } from "../opportunity/per-session.ts";
+import type { ScoreInput } from "../scoring/member-score.ts";
+import { scoreMember } from "../scoring/member-score.ts";
 import {
   dibujarWeekdays,
   nFrequencyRows,
   nFrequencySeason,
   nStreakRows,
-} from "./rows/n-frequency.rows";
+} from "./rows/n-frequency.rows.ts";
 
 describe("acceptance: series N — timesPerWeek and specificDays frequency", () => {
   it.for(nFrequencyRows)("$id: $summary", (row) => {

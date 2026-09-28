@@ -3,15 +3,15 @@
  * `timesPerWeek` (D4 same-day sum + best-N) and `specificDays` (D5 same-week
  * missed-day coverage).
  */
-import type { Season, SeasonDay, Weekday } from "../calendar/season-calendar";
-import { seasonDay } from "../calendar/season-calendar";
-import type { Target } from "../commitment/commitment";
-import type { Entry } from "../entry/entry";
-import type { GraceDeadlineFor } from "../entry/grace-period";
-import { graceDeadline, isOnTime } from "../entry/grace-period";
-import type { Fraction } from "../fraction/fraction";
-import { compare, fromInt, sum } from "../fraction/fraction";
-import { isConsistent, progressOf } from "../progress/progress";
+import type { Season, SeasonDay, Weekday } from "../calendar/season-calendar.ts";
+import { seasonDay } from "../calendar/season-calendar.ts";
+import type { Target } from "../commitment/commitment.ts";
+import type { Entry } from "../entry/entry.ts";
+import type { GraceDeadlineFor } from "../entry/grace-period.ts";
+import { graceDeadline, isOnTime } from "../entry/grace-period.ts";
+import type { Fraction } from "../fraction/fraction.ts";
+import { compare, fromInt, sum } from "../fraction/fraction.ts";
+import { isConsistent, progressOf } from "../progress/progress.ts";
 
 const DAYS_PER_WEEK = 7;
 

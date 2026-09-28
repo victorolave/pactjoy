@@ -1,6 +1,6 @@
-import type { SeasonDay } from "../calendar/season-calendar";
-import type { CommitmentId } from "../commitment/commitment";
-import type { Fraction } from "../fraction/fraction";
+import type { SeasonDay } from "../calendar/season-calendar.ts";
+import type { CommitmentId } from "../commitment/commitment.ts";
+import type { Fraction } from "../fraction/fraction.ts";
 
 interface EntryBase {
   readonly commitmentId: CommitmentId;

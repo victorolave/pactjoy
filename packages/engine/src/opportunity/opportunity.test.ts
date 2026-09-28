@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
-import type { Season } from "../calendar/season-calendar";
-import type { QuantityCommitment } from "../commitment/commitment";
-import { fromInt, parseDecimal } from "../fraction/fraction";
+import type { Season } from "../calendar/season-calendar.ts";
+import type { QuantityCommitment } from "../commitment/commitment.ts";
+import { fromInt, parseDecimal } from "../fraction/fraction.ts";
 import {
   buildDoneCommitment,
   buildQuantityCommitment,
   buildQuantityEntry,
-} from "../test-support/builders";
-import { fr } from "../test-support/fraction-literal";
-import { weekSessionsOf } from "./opportunity";
+} from "../test-support/builders.ts";
+import { fr } from "../test-support/fraction-literal.ts";
+import { weekSessionsOf } from "./opportunity.ts";
 
 const season: Season = { lengthWeeks: 4, startWeekday: 0 };
 

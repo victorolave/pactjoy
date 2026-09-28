@@ -20,7 +20,7 @@ import {
   roundHalfUp,
   sub,
   sum,
-} from "./fraction";
+} from "./fraction.ts";
 
 describe("frac", () => {
   it("reduces a fraction to lowest terms", () => {

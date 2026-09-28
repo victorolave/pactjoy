@@ -1,19 +1,19 @@
-import type { Season } from "../../calendar/season-calendar";
-import { seasonDay } from "../../calendar/season-calendar";
-import type { Commitment } from "../../commitment/commitment";
-import type { Entry } from "../../entry/entry";
-import type { Fraction } from "../../fraction/fraction";
-import { fromInt } from "../../fraction/fraction";
-import type { PauseRequest } from "../../pause/pause";
-import type { PauseCheck } from "../../pause/pause-cap";
+import type { Season } from "../../calendar/season-calendar.ts";
+import { seasonDay } from "../../calendar/season-calendar.ts";
+import type { Commitment } from "../../commitment/commitment.ts";
+import type { Entry } from "../../entry/entry.ts";
+import type { Fraction } from "../../fraction/fraction.ts";
+import { fromInt } from "../../fraction/fraction.ts";
+import type { PauseRequest } from "../../pause/pause.ts";
+import type { PauseCheck } from "../../pause/pause-cap.ts";
 import {
   buildDoneEntry,
   buildPauseRequest,
   buildQuantityCommitment,
   buildQuantityEntry,
   buildWeeklyTotalCommitment,
-} from "../../test-support/builders";
-import { fr } from "../../test-support/fraction-literal";
+} from "../../test-support/builders.ts";
+import { fr } from "../../test-support/fraction-literal.ts";
 
 /** E1, E2: pause effect is neutral — full-week pauses redistribute potential across active weeks. */
 export interface NeutralPointsRow {

@@ -3,14 +3,14 @@
  * `period: "perSession"` (`per-session.ts`, `timesPerWeek`/`specificDays`)
  * or `period: "weeklyTotal"` (`weekly-total.ts`, one accumulated result).
  */
-import type { Season } from "../calendar/season-calendar";
-import { assertValidSeasonDay, seasonDay } from "../calendar/season-calendar";
-import type { Commitment, Target } from "../commitment/commitment";
-import { targetOf } from "../commitment/commitment";
-import type { Entry } from "../entry/entry";
-import type { SessionResult } from "./per-session";
-import { specificDaysSessions, timesPerWeekSessions } from "./per-session";
-import { weeklyTotalResult } from "./weekly-total";
+import type { Season } from "../calendar/season-calendar.ts";
+import { assertValidSeasonDay, seasonDay } from "../calendar/season-calendar.ts";
+import type { Commitment, Target } from "../commitment/commitment.ts";
+import { targetOf } from "../commitment/commitment.ts";
+import type { Entry } from "../entry/entry.ts";
+import type { SessionResult } from "./per-session.ts";
+import { specificDaysSessions, timesPerWeekSessions } from "./per-session.ts";
+import { weeklyTotalResult } from "./weekly-total.ts";
 
 const DAYS_PER_WEEK = 7;
 

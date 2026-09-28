@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { scoreCommitmentSoFar } from "../scoring/commitment-score";
-import { gConsistencyRows } from "./rows/g-consistency.rows";
+import { scoreCommitmentSoFar } from "../scoring/commitment-score.ts";
+import { gConsistencyRows } from "./rows/g-consistency.rows.ts";
 
 describe("acceptance: series G — consistency and idealCompletion per commitment (D1)", () => {
   it.for(gConsistencyRows)("$id: $summary", (row) => {

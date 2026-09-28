@@ -1,17 +1,17 @@
 import { describe, expect, it } from "vitest";
-import type { Season } from "../calendar/season-calendar";
-import { seasonDay } from "../calendar/season-calendar";
-import { graceDeadline, isOnTime } from "../entry/grace-period";
-import { fromInt } from "../fraction/fraction";
+import type { Season } from "../calendar/season-calendar.ts";
+import { seasonDay } from "../calendar/season-calendar.ts";
+import { graceDeadline, isOnTime } from "../entry/grace-period.ts";
+import { fromInt } from "../fraction/fraction.ts";
 import {
   buildDoneEntry,
   buildPauseRequest,
   buildQuantityCommitment,
   buildQuantityEntry,
   buildWeeklyTotalCommitment,
-} from "../test-support/builders";
-import { fr } from "../test-support/fraction-literal";
-import { pauseAwareWeekSessions } from "./pause-aware-week";
+} from "../test-support/builders.ts";
+import { fr } from "../test-support/fraction-literal.ts";
+import { pauseAwareWeekSessions } from "./pause-aware-week.ts";
 
 const inglesTarget = { direction: "reach" as const, minimum: fromInt(60), ideal: fromInt(150) };
 

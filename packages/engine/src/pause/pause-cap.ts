@@ -16,9 +16,9 @@
  * established for `GraceDeadlineFor`: a pluggable parameter that defaults
  * to the existing (uncapped) behavior, so no existing caller changes.
  */
-import type { Season, SeasonDay } from "../calendar/season-calendar";
-import type { PauseEnd, PauseRequest } from "./pause";
-import { effectivePausedDays, pendingHoldDays } from "./pause";
+import type { Season, SeasonDay } from "../calendar/season-calendar.ts";
+import type { PauseEnd, PauseRequest } from "./pause.ts";
+import { effectivePausedDays, pendingHoldDays } from "./pause.ts";
 
 const DAYS_PER_WEEK = 7;
 const CAP_SHARE_DENOMINATOR = 2; // 50%

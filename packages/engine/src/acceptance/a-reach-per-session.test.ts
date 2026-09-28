@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { isConsistent, progressOf } from "../progress/progress";
-import { aReachPerSessionRows } from "./rows/a-reach-per-session.rows";
+import { isConsistent, progressOf } from "../progress/progress.ts";
+import { aReachPerSessionRows } from "./rows/a-reach-per-session.rows.ts";
 
 describe("acceptance: series A — reach, perSession", () => {
   it.for(aReachPerSessionRows)("$id: $summary", (row) => {

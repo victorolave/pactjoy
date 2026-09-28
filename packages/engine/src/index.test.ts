@@ -28,7 +28,7 @@ const EXPECTED_RUNTIME_EXPORTS = [
 
 describe("@pactjoy/engine public API", () => {
   it("exposes exactly the expected runtime exports", async () => {
-    const engine = await import("./index");
+    const engine = await import("./index.ts");
     expect(Object.keys(engine).sort()).toEqual(EXPECTED_RUNTIME_EXPORTS);
   });
 });

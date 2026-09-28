@@ -6,9 +6,9 @@
  * packages/app (Q4); the engine only ever sees an already-decided or
  * still-pending request.
  */
-import type { SeasonDay } from "../calendar/season-calendar";
-import { seasonDay } from "../calendar/season-calendar";
-import type { CommitmentId } from "../commitment/commitment";
+import type { SeasonDay } from "../calendar/season-calendar.ts";
+import { seasonDay } from "../calendar/season-calendar.ts";
+import type { CommitmentId } from "../commitment/commitment.ts";
 
 export type PauseEnd =
   | { readonly kind: "fixed"; readonly lastDay: SeasonDay }

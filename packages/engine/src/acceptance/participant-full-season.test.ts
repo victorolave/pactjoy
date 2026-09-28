@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { scoreMember } from "../scoring/member-score";
-import { fCommitmentRows } from "./rows/f-full-season.rows";
-import { gConsistencyRows } from "./rows/g-consistency.rows";
+import { scoreMember } from "../scoring/member-score.ts";
+import { fCommitmentRows } from "./rows/f-full-season.rows.ts";
+import { gConsistencyRows } from "./rows/g-consistency.rows.ts";
 import {
   expectedParticipantConsistency,
   expectedParticipantIdealCompletion,
   expectedParticipantTotalPoints,
   participantFullSeasonInput,
-} from "./rows/participant-full-season.rows";
+} from "./rows/participant-full-season.rows.ts";
 
 /** Maps each commitment id in the fixture to its already-verified F/G row id, so the per-commitment breakdown below is checked against F1-F4/G1-G4 rather than new magic numbers. */
 const COMMITMENT_TO_ROW_ID: Record<string, string> = {

@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
-import type { Season } from "./season-calendar";
-import { assertValidSeasonDay, daysOfWeek, seasonDay, weekdayOf, weekOf } from "./season-calendar";
+import type { Season } from "./season-calendar.ts";
+import {
+  assertValidSeasonDay,
+  daysOfWeek,
+  seasonDay,
+  weekdayOf,
+  weekOf,
+} from "./season-calendar.ts";
 
 describe("seasonDay", () => {
   it("accepts a non-negative safe integer as a SeasonDay", () => {

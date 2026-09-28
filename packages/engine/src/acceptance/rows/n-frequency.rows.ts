@@ -1,16 +1,16 @@
-import type { Season, SeasonDay, Weekday } from "../../calendar/season-calendar";
-import { seasonDay } from "../../calendar/season-calendar";
-import type { Commitment, Target } from "../../commitment/commitment";
-import type { Entry } from "../../entry/entry";
-import type { Fraction } from "../../fraction/fraction";
-import { fromInt, parseDecimal } from "../../fraction/fraction";
+import type { Season, SeasonDay, Weekday } from "../../calendar/season-calendar.ts";
+import { seasonDay } from "../../calendar/season-calendar.ts";
+import type { Commitment, Target } from "../../commitment/commitment.ts";
+import type { Entry } from "../../entry/entry.ts";
+import type { Fraction } from "../../fraction/fraction.ts";
+import { fromInt, parseDecimal } from "../../fraction/fraction.ts";
 import {
   buildDoneCommitment,
   buildDoneEntry,
   buildQuantityEntry,
   buildWeeklyTotalCommitment,
-} from "../../test-support/builders";
-import { fr } from "../../test-support/fraction-literal";
+} from "../../test-support/builders.ts";
+import { fr } from "../../test-support/fraction-literal.ts";
 
 /** Inglés: weeklyTotal, minimum 60, ideal 150 (matches series C's own Inglés commitment). */
 const inglesTarget: Target = { direction: "reach", minimum: fromInt(60), ideal: fromInt(150) };

@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
-import type { Season, Weekday } from "../calendar/season-calendar";
-import { seasonDay } from "../calendar/season-calendar";
-import type { Entry } from "../entry/entry";
-import type { Fraction } from "../fraction/fraction";
-import type { SessionResult } from "../opportunity/per-session";
-import { pauseAwareWeekSessions } from "../pause/pause-aware-week";
-import { canRequestPause } from "../pause/pause-cap";
-import { prorateSessionCount } from "../pause/proration";
-import { scoreCommitmentSoFar } from "../scoring/commitment-score";
-import type { ScoreInput } from "../scoring/member-score";
-import { scoreMember } from "../scoring/member-score";
+import type { Season, Weekday } from "../calendar/season-calendar.ts";
+import { seasonDay } from "../calendar/season-calendar.ts";
+import type { Entry } from "../entry/entry.ts";
+import type { Fraction } from "../fraction/fraction.ts";
+import type { SessionResult } from "../opportunity/per-session.ts";
+import { pauseAwareWeekSessions } from "../pause/pause-aware-week.ts";
+import { canRequestPause } from "../pause/pause-cap.ts";
+import { prorateSessionCount } from "../pause/proration.ts";
+import { scoreCommitmentSoFar } from "../scoring/commitment-score.ts";
+import type { ScoreInput } from "../scoring/member-score.ts";
+import { scoreMember } from "../scoring/member-score.ts";
 import {
   buildDoneCommitment,
   buildDoneEntry,
@@ -17,8 +17,8 @@ import {
   buildPauseRequest,
   buildQuantityCommitment,
   buildQuantityEntry,
-} from "../test-support/builders";
-import { fr } from "../test-support/fraction-literal";
+} from "../test-support/builders.ts";
+import { fr } from "../test-support/fraction-literal.ts";
 import {
   eAllCommitmentsPause,
   eAutoResumeRows,
@@ -30,7 +30,7 @@ import {
   eSessionCountRows,
   eWeeklyProrationRows,
   type NeutralPointsRow,
-} from "./rows/e-pause.rows";
+} from "./rows/e-pause.rows.ts";
 
 /** Every row family below calls ONLY `pauseAwareWeekSessions` (the production composition
  * function) or `prorateSessionCount` (a pure production unit) — no pause/proration/grace/dispatch

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type { Season } from "../calendar/season-calendar";
-import { seasonDay } from "../calendar/season-calendar";
-import { buildPauseRequest } from "../test-support/builders";
-import { canRequestPause, seasonPauseCap } from "./pause-cap";
+import type { Season } from "../calendar/season-calendar.ts";
+import { seasonDay } from "../calendar/season-calendar.ts";
+import { buildPauseRequest } from "../test-support/builders.ts";
+import { canRequestPause, seasonPauseCap } from "./pause-cap.ts";
 
 const eightWeekSeason: Season = { lengthWeeks: 8, startWeekday: 0 }; // 56 days, cap = 28
 

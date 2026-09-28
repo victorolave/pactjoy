@@ -3,9 +3,9 @@
  * week) still accepts entries until the end of the day following its close.
  * Entries logged after that deadline are rejected for the closed period.
  */
-import type { SeasonDay } from "../calendar/season-calendar";
-import { seasonDay } from "../calendar/season-calendar";
-import type { Entry } from "./entry";
+import type { SeasonDay } from "../calendar/season-calendar.ts";
+import { seasonDay } from "../calendar/season-calendar.ts";
+import type { Entry } from "./entry.ts";
 
 const GRACE_DAYS = 1;
 

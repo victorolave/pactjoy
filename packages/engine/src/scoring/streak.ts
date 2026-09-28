@@ -6,7 +6,7 @@
  * nor extends it ("la pausa congela la racha: ni la rompe ni la alarga").
  * Best is a running maximum, preserved independently of a later reset.
  */
-import type { SessionResult } from "../opportunity/per-session";
+import type { SessionResult } from "../opportunity/per-session.ts";
 
 export type StreakUnit = "day" | "week";
 
