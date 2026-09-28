@@ -1,9 +1,9 @@
-import type { Target } from "../../commitment/commitment";
-import type { Fraction } from "../../fraction/fraction";
-import { fromInt, parseDecimal } from "../../fraction/fraction";
-import { sumEntryValues } from "../../opportunity/per-session";
-import { buildQuantityEntry } from "../../test-support/builders";
-import { fr } from "../../test-support/fraction-literal";
+import type { Target } from "../../commitment/commitment.ts";
+import type { Fraction } from "../../fraction/fraction.ts";
+import { fromInt, parseDecimal } from "../../fraction/fraction.ts";
+import { sumEntryValues } from "../../opportunity/per-session.ts";
+import { buildQuantityEntry } from "../../test-support/builders.ts";
+import { fr } from "../../test-support/fraction-literal.ts";
 
 export interface ProgressRow {
   readonly id: string;

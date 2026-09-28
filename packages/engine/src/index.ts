@@ -48,8 +48,8 @@
  * already inlined into the exported `CommitmentScoreEntry`).
  */
 
-export type { Season, SeasonDay, Weekday } from "./calendar/season-calendar";
-export { seasonDay } from "./calendar/season-calendar";
+export type { Season, SeasonDay, Weekday } from "./calendar/season-calendar.ts";
+export { seasonDay } from "./calendar/season-calendar.ts";
 export type {
   Commitment,
   CommitmentId,
@@ -60,11 +60,11 @@ export type {
   Schedule,
   Target,
   Unit,
-} from "./commitment/commitment";
+} from "./commitment/commitment.ts";
 
-export { displayPercent, displayPoints } from "./display/display";
-export type { Entry } from "./entry/entry";
-export type { Fraction } from "./fraction/fraction";
+export { displayPercent, displayPoints } from "./display/display.ts";
+export type { Entry } from "./entry/entry.ts";
+export type { Fraction } from "./fraction/fraction.ts";
 export {
   compare,
   eq,
@@ -75,12 +75,12 @@ export {
   lt,
   lte,
   parseDecimal,
-} from "./fraction/fraction";
-export type { PauseDecision, PauseEnd, PauseRequest } from "./pause/pause";
-export type { PauseCheck } from "./pause/pause-cap";
-export { canRequestPause } from "./pause/pause-cap";
-export type { CommitmentScoreEntry, MemberScore, ScoreInput } from "./scoring/member-score";
-export { scoreMember } from "./scoring/member-score";
-export type { Streak } from "./scoring/streak";
-export type { MemberId, StandingsParticipant, StandingsRow } from "./standings/standings";
-export { rankStandings } from "./standings/standings";
+} from "./fraction/fraction.ts";
+export type { PauseDecision, PauseEnd, PauseRequest } from "./pause/pause.ts";
+export type { PauseCheck } from "./pause/pause-cap.ts";
+export { canRequestPause } from "./pause/pause-cap.ts";
+export type { CommitmentScoreEntry, MemberScore, ScoreInput } from "./scoring/member-score.ts";
+export { scoreMember } from "./scoring/member-score.ts";
+export type { Streak } from "./scoring/streak.ts";
+export type { MemberId, StandingsParticipant, StandingsRow } from "./standings/standings.ts";
+export { rankStandings } from "./standings/standings.ts";

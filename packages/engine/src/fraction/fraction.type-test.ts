@@ -7,7 +7,7 @@
  * stops an invalid, unnormalized value like `{ num: 5n, den: 0n }` from
  * type-checking as a valid `Fraction`.
  */
-import type { Fraction } from "./fraction";
+import type { Fraction } from "./fraction.ts";
 
 // @ts-expect-error — Fraction is a branded type; only frac/fromInt/parseDecimal can produce one.
 const invalidFraction: Fraction = { num: 5n, den: 0n };

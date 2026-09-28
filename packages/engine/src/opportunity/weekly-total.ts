@@ -14,14 +14,14 @@
  * offsets another) falls out of that statelessness — there is no separate
  * rule to implement.
  */
-import { seasonDay } from "../calendar/season-calendar";
-import type { Target } from "../commitment/commitment";
-import type { Entry } from "../entry/entry";
-import type { GraceDeadlineFor } from "../entry/grace-period";
-import { graceDeadline, isOnTime } from "../entry/grace-period";
-import { isConsistent, progressOf } from "../progress/progress";
-import type { SessionResult } from "./per-session";
-import { sumEntryValues } from "./per-session";
+import { seasonDay } from "../calendar/season-calendar.ts";
+import type { Target } from "../commitment/commitment.ts";
+import type { Entry } from "../entry/entry.ts";
+import type { GraceDeadlineFor } from "../entry/grace-period.ts";
+import { graceDeadline, isOnTime } from "../entry/grace-period.ts";
+import { isConsistent, progressOf } from "../progress/progress.ts";
+import type { SessionResult } from "./per-session.ts";
+import { sumEntryValues } from "./per-session.ts";
 
 const DAYS_PER_WEEK = 7;
 

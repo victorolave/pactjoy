@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { aReachPerSessionRows } from "./rows/a-reach-per-session.rows";
-import { bLimitRows } from "./rows/b-limit.rows";
-import { cWeeklyTotalRows } from "./rows/c-weekly-total.rows";
+import { aReachPerSessionRows } from "./rows/a-reach-per-session.rows.ts";
+import { bLimitRows } from "./rows/b-limit.rows.ts";
+import { cWeeklyTotalRows } from "./rows/c-weekly-total.rows.ts";
 import {
   eAllCommitmentsPause,
   eAutoResumeRows,
@@ -12,11 +12,11 @@ import {
   ePausedDaySessionRows,
   eSessionCountRows,
   eWeeklyProrationRows,
-} from "./rows/e-pause.rows";
-import { F9_ID, fCommitmentRows, fMidSeasonRows, fTotalRows } from "./rows/f-full-season.rows";
-import { gConsistencyRows } from "./rows/g-consistency.rows";
-import { nFrequencyRows, nStreakRows } from "./rows/n-frequency.rows";
-import { F5_ID, G5_ID, G6_ID } from "./rows/participant-full-season.rows";
+} from "./rows/e-pause.rows.ts";
+import { F9_ID, fCommitmentRows, fMidSeasonRows, fTotalRows } from "./rows/f-full-season.rows.ts";
+import { gConsistencyRows } from "./rows/g-consistency.rows.ts";
+import { nFrequencyRows, nStreakRows } from "./rows/n-frequency.rows.ts";
+import { F5_ID, G5_ID, G6_ID } from "./rows/participant-full-season.rows.ts";
 
 const ePauseRowIds = [
   ...eNeutralPointsRows,

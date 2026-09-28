@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { seasonDay } from "../calendar/season-calendar";
-import type { Target } from "../commitment/commitment";
-import { fromInt, parseDecimal } from "../fraction/fraction";
-import { buildQuantityEntry } from "../test-support/builders";
-import { fr } from "../test-support/fraction-literal";
-import { weeklyTotalResult } from "./weekly-total";
+import { seasonDay } from "../calendar/season-calendar.ts";
+import type { Target } from "../commitment/commitment.ts";
+import { fromInt, parseDecimal } from "../fraction/fraction.ts";
+import { buildQuantityEntry } from "../test-support/builders.ts";
+import { fr } from "../test-support/fraction-literal.ts";
+import { weeklyTotalResult } from "./weekly-total.ts";
 
 const inglesTarget: Target = { direction: "reach", minimum: fromInt(60), ideal: fromInt(150) };
 

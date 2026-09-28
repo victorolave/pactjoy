@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { seasonDay } from "../calendar/season-calendar";
-import { buildPauseRequest } from "../test-support/builders";
-import { effectivePausedDays, pendingHoldDays } from "./pause";
+import { seasonDay } from "../calendar/season-calendar.ts";
+import { buildPauseRequest } from "../test-support/builders.ts";
+import { effectivePausedDays, pendingHoldDays } from "./pause.ts";
 
 describe("effectivePausedDays", () => {
   it("covers a fixed-end approved pause, start through lastDay inclusive", () => {

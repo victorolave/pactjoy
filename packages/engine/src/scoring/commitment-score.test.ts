@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { fromInt } from "../fraction/fraction";
-import { fr } from "../test-support/fraction-literal";
-import { scoreCommitmentSoFar } from "./commitment-score";
+import { fromInt } from "../fraction/fraction.ts";
+import { fr } from "../test-support/fraction-literal.ts";
+import { scoreCommitmentSoFar } from "./commitment-score.ts";
 
 describe("scoreCommitmentSoFar — end of season (soFarSessions === allSessions)", () => {
   it("computes points as weight x 1000 x mean(progress), and consistency as reached/total", () => {

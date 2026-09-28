@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { fr } from "../test-support/fraction-literal";
-import type { MemberId, StandingsParticipant } from "./standings";
-import { rankStandings } from "./standings";
+import { fr } from "../test-support/fraction-literal.ts";
+import type { MemberId, StandingsParticipant } from "./standings.ts";
+import { rankStandings } from "./standings.ts";
 
 function participant(
   memberId: string,

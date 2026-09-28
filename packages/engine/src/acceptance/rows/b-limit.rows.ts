@@ -1,7 +1,7 @@
-import type { Target } from "../../commitment/commitment";
-import { fromInt, parseDecimal } from "../../fraction/fraction";
-import { fr } from "../../test-support/fraction-literal";
-import type { ProgressRow } from "./a-reach-per-session.rows";
+import type { Target } from "../../commitment/commitment.ts";
+import { fromInt, parseDecimal } from "../../fraction/fraction.ts";
+import { fr } from "../../test-support/fraction-literal.ts";
+import type { ProgressRow } from "./a-reach-per-session.rows.ts";
 
 /** limit/perSession, ideal 2, tolerance 4 (e.g. cups of coffee). */
 const withGapBetweenIdealAndTolerance: Target = {

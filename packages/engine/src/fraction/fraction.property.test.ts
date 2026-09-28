@@ -1,7 +1,7 @@
 import { assert, bigInt, property, tuple } from "fast-check";
 import { describe, expect, it } from "vitest";
-import type { Fraction } from "./fraction";
-import { add, compare, div, frac, mul, sub } from "./fraction";
+import type { Fraction } from "./fraction.ts";
+import { add, compare, div, frac, mul, sub } from "./fraction.ts";
 
 /** Test-only gcd, independent of the production `gcd` in fraction.ts, used to verify normalization. */
 function referenceGcd(a: bigint, b: bigint): bigint {

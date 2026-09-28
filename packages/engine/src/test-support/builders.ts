@@ -5,8 +5,8 @@
  * slice that needs them). `Season` builders are still deferred to whichever
  * slice first needs one.
  */
-import type { SeasonDay } from "../calendar/season-calendar";
-import { seasonDay } from "../calendar/season-calendar";
+import type { SeasonDay } from "../calendar/season-calendar.ts";
+import { seasonDay } from "../calendar/season-calendar.ts";
 import type {
   CommitmentId,
   DoneCommitment,
@@ -14,10 +14,10 @@ import type {
   QuantityCommitment,
   QuantityUnit,
   Target,
-} from "../commitment/commitment";
-import type { Entry } from "../entry/entry";
-import type { Fraction } from "../fraction/fraction";
-import type { PauseDecision, PauseEnd, PauseRequest } from "../pause/pause";
+} from "../commitment/commitment.ts";
+import type { Entry } from "../entry/entry.ts";
+import type { Fraction } from "../fraction/fraction.ts";
+import type { PauseDecision, PauseEnd, PauseRequest } from "../pause/pause.ts";
 
 const DEFAULT_FREQUENCY: Frequency = { kind: "timesPerWeek", times: 3 };
 

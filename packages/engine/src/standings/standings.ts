@@ -9,8 +9,8 @@
  * standings (slice 7a) is currently its only consumer; a future slice may
  * relocate it if a `Member` module is introduced.
  */
-import { displayPoints } from "../display/display";
-import type { Fraction } from "../fraction/fraction";
+import { displayPoints } from "../display/display.ts";
+import type { Fraction } from "../fraction/fraction.ts";
 
 export type MemberId = string & { readonly __brand: "MemberId" };
 

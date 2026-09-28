@@ -1,9 +1,9 @@
-import type { Target } from "../../commitment/commitment";
-import type { Entry } from "../../entry/entry";
-import type { Fraction } from "../../fraction/fraction";
-import { fromInt, parseDecimal } from "../../fraction/fraction";
-import { buildQuantityEntry } from "../../test-support/builders";
-import { fr } from "../../test-support/fraction-literal";
+import type { Target } from "../../commitment/commitment.ts";
+import type { Entry } from "../../entry/entry.ts";
+import type { Fraction } from "../../fraction/fraction.ts";
+import { fromInt, parseDecimal } from "../../fraction/fraction.ts";
+import { buildQuantityEntry } from "../../test-support/builders.ts";
+import { fr } from "../../test-support/fraction-literal.ts";
 
 export interface WeekCase {
   readonly week: number;

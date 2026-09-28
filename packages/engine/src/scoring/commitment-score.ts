@@ -4,9 +4,9 @@
  * across however many weeks — `scoring/member-score.ts` is the caller that
  * generates both lists for a whole season).
  */
-import type { Fraction } from "../fraction/fraction";
-import { div, fromInt, mul, sum } from "../fraction/fraction";
-import type { SessionResult } from "../opportunity/per-session";
+import type { Fraction } from "../fraction/fraction.ts";
+import { div, fromInt, mul, sum } from "../fraction/fraction.ts";
+import type { SessionResult } from "../opportunity/per-session.ts";
 
 export interface CommitmentScore {
   /**

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { fromInt } from "../fraction/fraction";
-import type { SessionResult } from "../opportunity/per-session";
-import { computeStreak, dayStreakOutcome, weekStreakOutcome } from "./streak";
+import { fromInt } from "../fraction/fraction.ts";
+import type { SessionResult } from "../opportunity/per-session.ts";
+import { computeStreak, dayStreakOutcome, weekStreakOutcome } from "./streak.ts";
 
 const kept: SessionResult = { value: null, progress: fromInt(1), consistent: true };
 const missed: SessionResult = { value: null, progress: fromInt(0), consistent: false };

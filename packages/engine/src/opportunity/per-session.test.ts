@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import type { Season, Weekday } from "../calendar/season-calendar";
-import { seasonDay } from "../calendar/season-calendar";
-import type { Target } from "../commitment/commitment";
-import { graceDeadline } from "../entry/grace-period";
-import { fromInt, mean, parseDecimal } from "../fraction/fraction";
-import { buildDoneEntry, buildQuantityEntry } from "../test-support/builders";
-import { fr } from "../test-support/fraction-literal";
-import { specificDaysSessions, sumEntryValues, timesPerWeekSessions } from "./per-session";
+import type { Season, Weekday } from "../calendar/season-calendar.ts";
+import { seasonDay } from "../calendar/season-calendar.ts";
+import type { Target } from "../commitment/commitment.ts";
+import { graceDeadline } from "../entry/grace-period.ts";
+import { fromInt, mean, parseDecimal } from "../fraction/fraction.ts";
+import { buildDoneEntry, buildQuantityEntry } from "../test-support/builders.ts";
+import { fr } from "../test-support/fraction-literal.ts";
+import { specificDaysSessions, sumEntryValues, timesPerWeekSessions } from "./per-session.ts";
 
 const booleanTarget: Target = { direction: "reach", minimum: fromInt(1), ideal: fromInt(1) };
 const minutesTarget: Target = { direction: "reach", minimum: fromInt(10), ideal: fromInt(30) };

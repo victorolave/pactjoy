@@ -10,10 +10,10 @@
  * full `ScoreInput` (real week-by-week entries for all four commitments),
  * not just this file's per-commitment aggregate.
  */
-import type { Fraction } from "../../fraction/fraction";
-import type { SessionResult } from "../../opportunity/per-session";
-import { fr } from "../../test-support/fraction-literal";
-import { fCommitmentRows } from "./f-full-season.rows";
+import type { Fraction } from "../../fraction/fraction.ts";
+import type { SessionResult } from "../../opportunity/per-session.ts";
+import { fr } from "../../test-support/fraction-literal.ts";
+import { fCommitmentRows } from "./f-full-season.rows.ts";
 
 export interface ConsistencyRow {
   readonly id: string;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { weeklyTotalResult } from "../opportunity/weekly-total";
-import { cWeeklyTotalRows } from "./rows/c-weekly-total.rows";
+import { weeklyTotalResult } from "../opportunity/weekly-total.ts";
+import { cWeeklyTotalRows } from "./rows/c-weekly-total.rows.ts";
 
 describe("acceptance: series C — weeklyTotal", () => {
   it.for(cWeeklyTotalRows)("$id: $summary", (row) => {

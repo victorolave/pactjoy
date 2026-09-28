@@ -6,7 +6,7 @@
  * enforces this structurally (its `schedule` field is `PerSessionSchedule`
  * specifically), so this literal must NOT type-check as `Commitment`.
  */
-import type { Commitment, CommitmentId } from "../commitment/commitment";
+import type { Commitment, CommitmentId } from "../commitment/commitment.ts";
 
 // @ts-expect-error — R3: a done commitment cannot have a weeklyTotal schedule.
 const invalidDoneCommitment: Commitment = {

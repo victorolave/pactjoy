@@ -37,20 +37,20 @@
  * `sdd/scoring-engine/apply-progress` for the full derivation).
  */
 
-import type { Season, SeasonDay } from "../../calendar/season-calendar";
-import { seasonDay } from "../../calendar/season-calendar";
-import type { Commitment } from "../../commitment/commitment";
-import type { Entry } from "../../entry/entry";
-import type { Fraction } from "../../fraction/fraction";
-import { div, fromInt } from "../../fraction/fraction";
-import type { SessionResult } from "../../opportunity/per-session";
-import type { PauseRequest } from "../../pause/pause";
+import type { Season, SeasonDay } from "../../calendar/season-calendar.ts";
+import { seasonDay } from "../../calendar/season-calendar.ts";
+import type { Commitment } from "../../commitment/commitment.ts";
+import type { Entry } from "../../entry/entry.ts";
+import type { Fraction } from "../../fraction/fraction.ts";
+import { div, fromInt } from "../../fraction/fraction.ts";
+import type { SessionResult } from "../../opportunity/per-session.ts";
+import type { PauseRequest } from "../../pause/pause.ts";
 import {
   buildDoneCommitment,
   buildDoneEntry,
   buildPauseRequest,
-} from "../../test-support/builders";
-import { fr } from "../../test-support/fraction-literal";
+} from "../../test-support/builders.ts";
+import { fr } from "../../test-support/fraction-literal.ts";
 
 function evenSplitSessions(
   progressSum: Fraction,

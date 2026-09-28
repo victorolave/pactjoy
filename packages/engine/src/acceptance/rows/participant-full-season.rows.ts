@@ -14,12 +14,12 @@
  * match: the aggregate each commitment produces is cross-checked against
  * F1-F4/G1-G4 in `participant-full-season.test.ts`.
  */
-import type { Season } from "../../calendar/season-calendar";
-import { seasonDay } from "../../calendar/season-calendar";
-import type { Entry } from "../../entry/entry";
-import { fromInt } from "../../fraction/fraction";
-import type { PauseRequest } from "../../pause/pause";
-import type { ScoreInput } from "../../scoring/member-score";
+import type { Season } from "../../calendar/season-calendar.ts";
+import { seasonDay } from "../../calendar/season-calendar.ts";
+import type { Entry } from "../../entry/entry.ts";
+import { fromInt } from "../../fraction/fraction.ts";
+import type { PauseRequest } from "../../pause/pause.ts";
+import type { ScoreInput } from "../../scoring/member-score.ts";
 import {
   buildDoneCommitment,
   buildDoneEntry,
@@ -27,8 +27,8 @@ import {
   buildQuantityCommitment,
   buildQuantityEntry,
   buildWeeklyTotalCommitment,
-} from "../../test-support/builders";
-import { fr } from "../../test-support/fraction-literal";
+} from "../../test-support/builders.ts";
+import { fr } from "../../test-support/fraction-literal.ts";
 
 const SEASON: Season = { lengthWeeks: 8, startWeekday: 0 };
 

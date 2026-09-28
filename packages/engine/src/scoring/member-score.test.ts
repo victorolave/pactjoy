@@ -1,17 +1,17 @@
 import { describe, expect, it } from "vitest";
-import type { Season, Weekday } from "../calendar/season-calendar";
-import { seasonDay } from "../calendar/season-calendar";
-import { fromInt, parseDecimal } from "../fraction/fraction";
+import type { Season, Weekday } from "../calendar/season-calendar.ts";
+import { seasonDay } from "../calendar/season-calendar.ts";
+import { fromInt, parseDecimal } from "../fraction/fraction.ts";
 import {
   buildDoneCommitment,
   buildDoneEntry,
   buildPauseRequest,
   buildQuantityEntry,
   buildWeeklyTotalCommitment,
-} from "../test-support/builders";
-import { fr } from "../test-support/fraction-literal";
-import type { ScoreInput } from "./member-score";
-import { scoreMember } from "./member-score";
+} from "../test-support/builders.ts";
+import { fr } from "../test-support/fraction-literal.ts";
+import type { ScoreInput } from "./member-score.ts";
+import { scoreMember } from "./member-score.ts";
 
 const fourWeekSeason: Season = { lengthWeeks: 4, startWeekday: 0 };
 

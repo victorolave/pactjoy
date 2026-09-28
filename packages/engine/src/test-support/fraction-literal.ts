@@ -1,5 +1,5 @@
-import type { Fraction } from "../fraction/fraction";
-import { frac } from "../fraction/fraction";
+import type { Fraction } from "../fraction/fraction.ts";
+import { frac } from "../fraction/fraction.ts";
 
 /**
  * Parses an exact fraction string like `"25/12"` or a whole number like

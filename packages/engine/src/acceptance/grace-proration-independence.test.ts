@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
-import type { Season } from "../calendar/season-calendar";
-import { seasonDay } from "../calendar/season-calendar";
-import { graceDeadline, isOnTime } from "../entry/grace-period";
-import { fromInt } from "../fraction/fraction";
-import { pauseAwareWeekSessions } from "../pause/pause-aware-week";
+import type { Season } from "../calendar/season-calendar.ts";
+import { seasonDay } from "../calendar/season-calendar.ts";
+import { graceDeadline, isOnTime } from "../entry/grace-period.ts";
+import { fromInt } from "../fraction/fraction.ts";
+import { pauseAwareWeekSessions } from "../pause/pause-aware-week.ts";
 import {
   buildPauseRequest,
   buildQuantityEntry,
   buildWeeklyTotalCommitment,
-} from "../test-support/builders";
-import { fr } from "../test-support/fraction-literal";
+} from "../test-support/builders.ts";
+import { fr } from "../test-support/fraction-literal.ts";
 
 /**
  * Decision Q5 (engine-authored — Notion has no exact-value row combining

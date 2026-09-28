@@ -1,6 +1,6 @@
-import type { Weekday } from "../calendar/season-calendar";
-import type { Fraction } from "../fraction/fraction";
-import { fromInt, gt, gte, lte } from "../fraction/fraction";
+import type { Weekday } from "../calendar/season-calendar.ts";
+import type { Fraction } from "../fraction/fraction.ts";
+import { fromInt, gt, gte, lte } from "../fraction/fraction.ts";
 
 export type Direction = "reach" | "limit";
 

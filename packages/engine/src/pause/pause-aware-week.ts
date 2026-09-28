@@ -23,24 +23,24 @@
  * get an uncapped pause — the compiler enforces D9, not a caller's memory.
  */
 
-import type { Season, SeasonDay } from "../calendar/season-calendar";
-import { seasonDay } from "../calendar/season-calendar";
-import type { Commitment } from "../commitment/commitment";
-import { targetOf } from "../commitment/commitment";
-import type { Entry } from "../entry/entry";
-import type { GraceDeadlineFor } from "../entry/grace-period";
-import { graceDeadline } from "../entry/grace-period";
-import type { SessionResult } from "../opportunity/per-session";
+import type { Season, SeasonDay } from "../calendar/season-calendar.ts";
+import { seasonDay } from "../calendar/season-calendar.ts";
+import type { Commitment } from "../commitment/commitment.ts";
+import { targetOf } from "../commitment/commitment.ts";
+import type { Entry } from "../entry/entry.ts";
+import type { GraceDeadlineFor } from "../entry/grace-period.ts";
+import { graceDeadline } from "../entry/grace-period.ts";
+import type { SessionResult } from "../opportunity/per-session.ts";
 import {
   dayForWeekday,
   specificDaysSessions,
   timesPerWeekSessions,
-} from "../opportunity/per-session";
-import { weeklyTotalResult } from "../opportunity/weekly-total";
-import type { PauseRequest } from "./pause";
-import { effectivePausedDays, pendingHoldDays } from "./pause";
-import { capPausedDays, seasonPauseCap } from "./pause-cap";
-import { prorateLimitTarget, prorateReachTarget, prorateSessionCount } from "./proration";
+} from "../opportunity/per-session.ts";
+import { weeklyTotalResult } from "../opportunity/weekly-total.ts";
+import type { PauseRequest } from "./pause.ts";
+import { effectivePausedDays, pendingHoldDays } from "./pause.ts";
+import { capPausedDays, seasonPauseCap } from "./pause-cap.ts";
+import { prorateLimitTarget, prorateReachTarget, prorateSessionCount } from "./proration.ts";
 
 const DAYS_PER_WEEK = 7;
 

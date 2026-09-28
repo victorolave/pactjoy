@@ -6,8 +6,8 @@
  * progress and averages stay exact `Fraction`s everywhere else; a UI only
  * ever sees the rounded `number` these two functions produce.
  */
-import type { Fraction } from "../fraction/fraction";
-import { fromInt, mul, roundHalfUp } from "../fraction/fraction";
+import type { Fraction } from "../fraction/fraction.ts";
+import { fromInt, mul, roundHalfUp } from "../fraction/fraction.ts";
 
 const HUNDRED = fromInt(100);
 

@@ -1,6 +1,6 @@
-import type { Target } from "../commitment/commitment";
-import type { Fraction } from "../fraction/fraction";
-import { div, eq, fromInt, isZero, lt, lte, min, sub } from "../fraction/fraction";
+import type { Target } from "../commitment/commitment.ts";
+import type { Fraction } from "../fraction/fraction.ts";
+import { div, eq, fromInt, isZero, lt, lte, min, sub } from "../fraction/fraction.ts";
 
 const ZERO = fromInt(0);
 const ONE = fromInt(1);

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { seasonDay } from "../calendar/season-calendar";
-import { buildDoneEntry } from "../test-support/builders";
-import { graceDeadline, isOnTime } from "./grace-period";
+import { seasonDay } from "../calendar/season-calendar.ts";
+import { buildDoneEntry } from "../test-support/builders.ts";
+import { graceDeadline, isOnTime } from "./grace-period.ts";
 
 describe("graceDeadline", () => {
   it("is the day after the period ends", () => {

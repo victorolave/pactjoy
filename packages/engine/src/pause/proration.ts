@@ -7,9 +7,9 @@
  * `weeklyTotal` reach; tolerance for `weeklyTotal` limit — the whole week
  * is fully paused (D7), signaled by returning `null`.
  */
-import type { Target } from "../commitment/commitment";
-import type { Fraction } from "../fraction/fraction";
-import { div, fromInt, isZero, mul, roundHalfUp } from "../fraction/fraction";
+import type { Target } from "../commitment/commitment.ts";
+import type { Fraction } from "../fraction/fraction.ts";
+import { div, fromInt, isZero, mul, roundHalfUp } from "../fraction/fraction.ts";
 
 const DAYS_PER_WEEK = fromInt(7);
 

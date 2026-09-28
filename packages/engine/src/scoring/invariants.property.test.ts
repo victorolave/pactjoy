@@ -1,20 +1,20 @@
 import { array, assert, constantFrom, integer, property, record, tuple } from "fast-check";
 import { describe, expect, it } from "vitest";
-import type { Season, Weekday } from "../calendar/season-calendar";
-import { seasonDay } from "../calendar/season-calendar";
-import type { Commitment, Direction, Frequency, Target } from "../commitment/commitment";
-import { fromInt, gte, lte, sum } from "../fraction/fraction";
-import type { PauseDecision, PauseEnd } from "../pause/pause";
-import { sessionResultsArbitrary, weightPercentPartition } from "../test-support/arbitraries";
+import type { Season, Weekday } from "../calendar/season-calendar.ts";
+import { seasonDay } from "../calendar/season-calendar.ts";
+import type { Commitment, Direction, Frequency, Target } from "../commitment/commitment.ts";
+import { fromInt, gte, lte, sum } from "../fraction/fraction.ts";
+import type { PauseDecision, PauseEnd } from "../pause/pause.ts";
+import { sessionResultsArbitrary, weightPercentPartition } from "../test-support/arbitraries.ts";
 import {
   buildPauseRequest,
   buildQuantityCommitment,
   buildQuantityEntry,
   buildWeeklyTotalCommitment,
-} from "../test-support/builders";
-import { scoreCommitmentSoFar } from "./commitment-score";
-import type { ScoreInput } from "./member-score";
-import { scoreMember } from "./member-score";
+} from "../test-support/builders.ts";
+import { scoreCommitmentSoFar } from "./commitment-score.ts";
+import type { ScoreInput } from "./member-score.ts";
+import { scoreMember } from "./member-score.ts";
 
 const ZERO = fromInt(0);
 const TOTAL_POTENTIAL_POINTS = fromInt(1000);
