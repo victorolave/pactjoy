@@ -31,6 +31,16 @@ export interface InMemorySeasonRepository extends SeasonRepository {
   beginTransaction(): SeasonTransactionScope;
 }
 
+/**
+ * The "latest" season for a circle is the most recently CREATED one, not
+ * the most recently touched one -- `Map` preserves insertion order for new
+ * keys and leaves an updated existing key's position untouched (MDN), so
+ * the last matching entry in iteration order is always the one created
+ * last, deterministically. Deliberately NOT compared by `createdAt`: two
+ * seasons of the same circle can share an identical `createdAt` (a
+ * `FixedClock` in tests, or a coarse production clock), which would make a
+ * `>` comparison silently keep the wrong (earlier) season as "latest".
+ */
 function findLatestByCircle(
   store: ReadonlyMap<SeasonId, Season>,
   circleId: CircleId,
@@ -38,9 +48,7 @@ function findLatestByCircle(
   let latest: Season | null = null;
   for (const season of store.values()) {
     if (season.circleId !== circleId) continue;
-    if (!latest || season.createdAt > latest.createdAt) {
-      latest = season;
-    }
+    latest = season;
   }
   return latest;
 }
