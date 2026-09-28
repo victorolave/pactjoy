@@ -14,3 +14,16 @@ export class ConcurrencyConflict extends Error {
     this.name = "ConcurrencyConflict";
   }
 }
+
+/**
+ * Raised by `generate-invite.ts` when every attempt to draw a fresh
+ * {@link InviteCode} (see `circle/invite-code.ts`) collided with another
+ * circle's active invite code (extremely unlikely with a 31^6 code space,
+ * but not impossible).
+ */
+export class InviteCodeGenerationFailed extends Error {
+  constructor(message = "Could not generate a unique invite code after several attempts") {
+    super(message);
+    this.name = "InviteCodeGenerationFailed";
+  }
+}
