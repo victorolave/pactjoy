@@ -2,12 +2,16 @@ import { describe, expect, it } from "vitest";
 
 /** Pins the `./testing` subpath's runtime API surface, same convention as `../index.test.ts`. */
 const EXPECTED_RUNTIME_EXPORTS = [
+  "circleFixture",
   "createFixedClock",
   "createFixedOffsetTimeZone",
+  "createInMemoryCircleRepository",
+  "createInMemorySeasonGateReader",
   "createInMemoryUnitOfWork",
   "createSeededRandomSource",
   "createSequentialIdGenerator",
   "createTestApp",
+  "memberFixture",
 ].sort();
 
 describe("@pactjoy/app testing subpath", () => {
