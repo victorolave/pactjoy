@@ -1,0 +1,21 @@
+import type { CircleId, SeasonId } from "../shared/ids.ts";
+import type { Season } from "./season.ts";
+
+/**
+ * Storage port for {@link Season} (ADR-0008, D6). Tested through its
+ * in-memory adapter (`testing/in-memory-season-repository.ts`), same
+ * convention as `circle/circle.repository.ts`.
+ */
+export interface SeasonRepository {
+  get(id: SeasonId): Promise<Season | null>;
+  /**
+   * The most recently created season for a circle, of any status, or
+   * `null` if the circle has never had one. Used both for CM-12 (one
+   * pact-open-or-active season per circle) and the season-gate reader
+   * (B11): only the latest season can ever be `"pactOpen"` or `"active"`,
+   * since creating a new one is rejected while one of those exists.
+   */
+  findLatestByCircle(circleId: CircleId): Promise<Season | null>;
+  /** @throws {ConcurrencyConflict} if the stored version no longer matches `expectedVersion` (D5). */
+  save(season: Season, expectedVersion: number | null): Promise<void>;
+}

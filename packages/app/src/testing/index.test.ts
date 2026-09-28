@@ -7,13 +7,14 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "createFixedOffsetTimeZone",
   "createInMemoryCircleRepository",
   "createInMemoryHabitRepository",
-  "createInMemorySeasonGateReader",
+  "createInMemorySeasonRepository",
   "createInMemoryUnitOfWork",
   "createSeededRandomSource",
   "createSequentialIdGenerator",
   "createTestApp",
   "habitFixture",
   "memberFixture",
+  "seasonFixture",
 ].sort();
 
 describe("@pactjoy/app testing subpath", () => {

@@ -1,8 +1,18 @@
 import type { MemberId } from "@pactjoy/engine";
 import type { Circle, Invite, Member } from "../circle/circle.ts";
 import type { Habit } from "../habit/habit.ts";
-import type { CircleId, HabitId, UserId } from "../shared/ids.ts";
+import type {
+  ReviewCadenceWeeks,
+  Season,
+  SeasonLengthWeeks,
+  SeasonStatus,
+} from "../season/season.ts";
+import type { CircleId, HabitId, SeasonId, UserId } from "../shared/ids.ts";
 import { type Instant, instant } from "../time/instant.ts";
+import type { LocalDate } from "../time/local-date.ts";
+import { localDate } from "../time/local-date.ts";
+import type { TimeZoneId } from "../time/time-zone.port.ts";
+import { timeZoneId } from "../time/time-zone.port.ts";
 
 const DEFAULT_INSTANT: Instant = instant(1_700_000_000_000);
 
@@ -64,6 +74,42 @@ export function habitFixture(options: HabitFixtureOptions): Habit {
     name: options.name ?? "Test Habit",
     why: options.why ?? null,
     category: options.category ?? null,
+    createdAt: options.createdAt ?? DEFAULT_INSTANT,
+    version: options.version ?? 0,
+  };
+}
+
+const DEFAULT_TIME_ZONE: TimeZoneId = timeZoneId("America/Santiago");
+const DEFAULT_NOMINAL_START: LocalDate = localDate("2026-10-01");
+
+export interface SeasonFixtureOptions {
+  readonly id: SeasonId;
+  readonly circleId: CircleId;
+  readonly timeZone?: TimeZoneId;
+  readonly nominalStart?: LocalDate;
+  readonly actualStart?: LocalDate | null;
+  readonly lengthWeeks?: SeasonLengthWeeks;
+  readonly reviewCadenceWeeks?: ReviewCadenceWeeks;
+  readonly status?: SeasonStatus;
+  readonly createdAt?: Instant;
+  readonly version?: number;
+}
+
+/**
+ * Builds a {@link Season} directly for GIVEN-state test setup (e.g.
+ * `join-circle.test.ts` controlling `seasonGate`'s answer via a real
+ * `Season` row instead of S3's removed `setStatus` double, B11).
+ */
+export function seasonFixture(options: SeasonFixtureOptions): Season {
+  return {
+    id: options.id,
+    circleId: options.circleId,
+    timeZone: options.timeZone ?? DEFAULT_TIME_ZONE,
+    nominalStart: options.nominalStart ?? DEFAULT_NOMINAL_START,
+    actualStart: options.actualStart ?? null,
+    lengthWeeks: options.lengthWeeks ?? 8,
+    reviewCadenceWeeks: options.reviewCadenceWeeks ?? 2,
+    status: options.status ?? "pactOpen",
     createdAt: options.createdAt ?? DEFAULT_INSTANT,
     version: options.version ?? 0,
   };

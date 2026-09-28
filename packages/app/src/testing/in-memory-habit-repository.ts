@@ -8,18 +8,24 @@ interface StagedWrite {
   readonly expectedVersion: number | null;
 }
 
-/** One isolated transaction's view of the repository, plus its atomic commit (ADR-0008, D4/D5). */
+/**
+ * One isolated transaction's view of the repository, plus its two-phase
+ * commit (ADR-0008, D4/D5), same `validate()`/`apply()` split as
+ * `in-memory-circle-repository.ts` -- see its docstring for why a UnitOfWork
+ * spanning multiple repositories needs the two calls separated.
+ */
 export interface HabitTransactionScope {
   /**
    * Reads see this scope's own staged writes layered over the live store
    * (read-your-own-writes); `save()` only stages a write -- it never
    * mutates the live store and never throws on a version mismatch (that
-   * check is deferred to `commit()`), same pattern as
-   * `in-memory-circle-repository.ts`.
+   * check is `validate()`'s job).
    */
   readonly repository: HabitRepository;
-  /** @throws {ConcurrencyConflict} if any staged write's `expectedVersion` no longer matches the live store. */
-  commit(): void;
+  /** @throws {ConcurrencyConflict} if any staged write's `expectedVersion` no longer matches the live store. Does not mutate. */
+  validate(): void;
+  /** Applies every staged write to the live store. Callers MUST call `validate()` first (see docstring above). */
+  apply(): void;
 }
 
 export interface InMemoryHabitRepository extends HabitRepository {
@@ -63,7 +69,7 @@ export function createInMemoryHabitRepository(): InMemoryHabitRepository {
 
       return {
         repository,
-        commit(): void {
+        validate(): void {
           for (const [id, { expectedVersion }] of staged) {
             const existing = store.get(id);
             const currentVersion = existing ? existing.version : null;
@@ -71,6 +77,8 @@ export function createInMemoryHabitRepository(): InMemoryHabitRepository {
               throw new ConcurrencyConflict();
             }
           }
+        },
+        apply(): void {
           for (const [id, { habit }] of staged) {
             store.set(id, habit);
           }

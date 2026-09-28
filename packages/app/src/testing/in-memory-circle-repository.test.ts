@@ -69,17 +69,18 @@ describe("createInMemoryCircleRepository", () => {
   });
 
   describe("beginTransaction() -- per-transaction isolation (ADR-0008, D4/D5)", () => {
-    it("save() through the scope buffers the write: the live repo sees nothing until commit()", async () => {
+    it("save() through the scope buffers the write: the live repo sees nothing until validate()+apply()", async () => {
       const repo = createInMemoryCircleRepository();
       const circle = buildFixtureCircle();
       await repo.save(circle, null);
 
-      const { repository: scoped, commit } = repo.beginTransaction();
+      const { repository: scoped, validate, apply } = repo.beginTransaction();
       await scoped.save({ ...circle, version: 1, name: "Renamed" }, 0);
 
       expect((await repo.get(circle.id))?.name).toBe("Río Runners");
 
-      commit();
+      validate();
+      apply();
       expect((await repo.get(circle.id))?.name).toBe("Renamed");
     });
 
@@ -94,30 +95,31 @@ describe("createInMemoryCircleRepository", () => {
       expect((await scoped.get(circle.id))?.name).toBe("Renamed");
     });
 
-    it("commit() applies every staged write together when all versions still match", async () => {
+    it("validate()+apply() applies every staged write together when all versions still match", async () => {
       const repo = createInMemoryCircleRepository();
       const x = buildFixtureCircle("circle-x");
       const y = buildFixtureCircle("circle-y");
       await repo.save(x, null);
       await repo.save(y, null);
 
-      const { repository: scoped, commit } = repo.beginTransaction();
+      const { repository: scoped, validate, apply } = repo.beginTransaction();
       await scoped.save({ ...x, version: 1, name: "X renamed" }, 0);
       await scoped.save({ ...y, version: 1, name: "Y renamed" }, 0);
-      commit();
+      validate();
+      apply();
 
       expect((await repo.get(x.id))?.name).toBe("X renamed");
       expect((await repo.get(y.id))?.name).toBe("Y renamed");
     });
 
-    it("D5/atomicity: if ANY staged aggregate's version has moved on, commit() throws and applies NEITHER write -- no partial commit", async () => {
+    it("D5/atomicity: if ANY staged aggregate's version has moved on, validate() throws and apply() is never reached -- no partial commit", async () => {
       const repo = createInMemoryCircleRepository();
       const x = buildFixtureCircle("circle-x");
       const y = buildFixtureCircle("circle-y");
       await repo.save(x, null);
       await repo.save(y, null);
 
-      const { repository: scoped, commit } = repo.beginTransaction();
+      const { repository: scoped, validate } = repo.beginTransaction();
       // Stage a valid write to X (expectedVersion still matches).
       await scoped.save({ ...x, version: 1, name: "X renamed" }, 0);
       // Stage a write to Y with a stale expectedVersion, simulating a
@@ -126,12 +128,12 @@ describe("createInMemoryCircleRepository", () => {
       await repo.save({ ...y, version: 1, name: "Y changed by someone else" }, 0);
       await scoped.save({ ...y, version: 2, name: "Y renamed by us" }, 0);
 
-      expect(() => commit()).toThrow(ConcurrencyConflict);
+      expect(() => validate()).toThrow(ConcurrencyConflict);
       expect((await repo.get(x.id))?.name).toBe("Río Runners");
       expect((await repo.get(y.id))?.name).toBe("Y changed by someone else");
     });
 
-    it("D5: the race at the 6-member cap -- the loser's scope never touches the live store, so the winner's commit is never clobbered", async () => {
+    it("D5: the race at the 6-member cap -- the loser's scope never touches the live store, so the winner's write is never clobbered", async () => {
       const repo = createInMemoryCircleRepository();
       const circle = buildFixtureCircle();
       await repo.save(circle, null);
@@ -141,8 +143,9 @@ describe("createInMemoryCircleRepository", () => {
       await a.repository.save({ ...circle, version: 1, name: "A wins" }, 0);
       await b.repository.save({ ...circle, version: 1, name: "B loses" }, 0);
 
-      a.commit();
-      expect(() => b.commit()).toThrow(ConcurrencyConflict);
+      a.validate();
+      a.apply();
+      expect(() => b.validate()).toThrow(ConcurrencyConflict);
       expect((await repo.get(circle.id))?.name).toBe("A wins");
     });
   });
