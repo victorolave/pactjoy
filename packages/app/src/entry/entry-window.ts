@@ -1,4 +1,4 @@
-import { graceDeadline, type Schedule, type SeasonDay, seasonDay } from "@pactjoy/engine";
+import { graceDeadline, type Schedule, type SeasonDay, seasonDay, weekOf } from "@pactjoy/engine";
 
 export type EntryWindowError =
   | { readonly kind: "FutureDay" }
@@ -32,7 +32,7 @@ function periodEnd(schedule: Schedule, day: SeasonDay): SeasonDay {
   if (schedule.period === "perSession" && schedule.frequency.kind === "specificDays") {
     return day;
   }
-  return seasonDay(day - (day % DAYS_PER_WEEK) + (DAYS_PER_WEEK - 1));
+  return seasonDay(weekOf(day) * DAYS_PER_WEEK + (DAYS_PER_WEEK - 1));
 }
 
 /**
