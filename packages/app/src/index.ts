@@ -107,7 +107,7 @@ export type { IdGenerator } from "./ports/id-generator.ts";
 export type { RandomSource } from "./ports/random-source.ts";
 export type { Repositories } from "./ports/repositories.ts";
 export type { UnitOfWork } from "./ports/unit-of-work.ts";
-export type { CommitmentScoreView } from "./score/commitment-projection.ts";
+export type { CommitmentScoreView, MeasureView } from "./score/commitment-projection.ts";
 export type {
   MemberScoreDeps,
   MemberScoreError,
