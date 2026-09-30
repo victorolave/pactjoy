@@ -58,6 +58,17 @@ export { removeCommitment } from "./commitment/remove-commitment.ts";
 export { commitmentToEngine } from "./commitment/to-engine.ts";
 export type { MeasureInput, ValidateCommitmentError } from "./commitment/validate-commitment.ts";
 export { validateCommitment } from "./commitment/validate-commitment.ts";
+export type { EntryRepository } from "./entry/entry.repository.ts";
+export type { EntryRecord, EntryValue, EntryValueInput } from "./entry/entry.ts";
+export type { EntryValueError } from "./entry/entry-value.ts";
+export type { EntryWindowError } from "./entry/entry-window.ts";
+export type {
+  RecordEntryDeps,
+  RecordEntryError,
+  RecordEntryInput,
+  RecordEntryResult,
+} from "./entry/record-entry.ts";
+export { recordEntry } from "./entry/record-entry.ts";
 export type {
   CreateHabitDeps,
   CreateHabitError,

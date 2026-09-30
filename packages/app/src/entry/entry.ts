@@ -22,6 +22,9 @@ export type EntryValueInput =
   | { readonly kind: "quantity"; readonly value: string }
   | { readonly kind: "missed" };
 
+/** B6: the evidence note is at most this many characters. */
+export const MAX_NOTE_LENGTH = 280;
+
 /**
  * One recorded Entry. `day` is the opportunity it counts toward; `recordedOn`
  * is the season day it was actually logged (they differ inside the grace

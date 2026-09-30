@@ -31,6 +31,7 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "localDate",
   "localDateOfSeasonDay",
   "ok",
+  "recordEntry",
   "removeCommitment",
   "renameCircle",
   "reviewCadenceForLength",

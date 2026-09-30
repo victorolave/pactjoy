@@ -18,11 +18,16 @@ import type { TestApp } from "./app-harness.ts";
  *
  * A transaction that settles without reading a season still counts as
  * arrived, so the other one is never left waiting.
+ *
+ * `pauseOn: "entries"` moves the pause point to the first idempotency
+ * lookup (`entries.findByClientRequest`) instead, so two duplicate
+ * `recordEntry` calls both miss before either commits (T1).
  */
 export async function raceTransactions<W, L>(
   app: TestApp,
   winner: (app: TestApp) => Promise<W>,
   loser: (app: TestApp) => Promise<L>,
+  pauseOn: "seasons" | "entries" = "seasons",
 ): Promise<{ readonly winner: PromiseSettledResult<W>; readonly loser: PromiseSettledResult<L> }> {
   let arrived = 0;
   let releaseBoth!: () => void;
@@ -56,6 +61,22 @@ export async function raceTransactions<W, L>(
             await bothRead;
             if (!isWinner) await winnerDone;
             return value;
+          }
+          if (pauseOn === "entries") {
+            return work({
+              ...repos,
+              entries: {
+                ...repos.entries,
+                findByClientRequest: async (memberId, commitmentId, clientRequestId) =>
+                  pauseAfterFirstSeasonRead(
+                    await repos.entries.findByClientRequest(
+                      memberId,
+                      commitmentId,
+                      clientRequestId,
+                    ),
+                  ),
+              },
+            });
           }
           return work({
             ...repos,
