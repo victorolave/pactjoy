@@ -18,11 +18,10 @@ export interface Habit {
 }
 
 /**
- * P2-4 leaves category free text with no numeric bound in the spec; 60
- * characters is a reasonable UI-label length, not a spec'd value -- flagged
- * as a product ambiguity, not silently invented as a final rule.
+ * P2-4 leaves category free text; the 40-character maximum is a user
+ * decision (2026-09-30), not a spec default.
  */
-export const MAX_CATEGORY_LENGTH = 60;
+export const MAX_CATEGORY_LENGTH = 40;
 
 export type BuildHabitError =
   | { readonly kind: "InvalidName" }
