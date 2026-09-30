@@ -1,3 +1,9 @@
 packages:
   - "packages/*"
   - "apps/*"
+# Transitive build scripts pulled in by testcontainers. All are optional
+# native accelerators or post-install notices, so they stay disabled.
+allowBuilds:
+  cpu-features: false
+  protobufjs: false
+  ssh2: false

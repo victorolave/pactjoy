@@ -1,0 +1,50 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.14/schema.json",
+  "extends": "//",
+  "linter": {
+    "rules": {
+      "correctness": {
+        "noNodejsModules": "error",
+        "useImportExtensions": {
+          "level": "error",
+          "options": {
+            "forceJsExtensions": false
+          }
+        }
+      },
+      "style": {
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "patterns": [
+              {
+                "group": ["@pactjoy/*/**"],
+                "message": "Import only package roots (their public index.ts) or the documented subpaths: deep imports leak internals and break the high-decoupling boundary (CLAUDE.md, ADR-0008)."
+              },
+              {
+                "group": ["npm:*"],
+                "message": "packages/db is standard TypeScript/ESM: 'npm:' specifiers are Deno-specific and not portable across runtimes (ADR-0007/ADR-0008)."
+              },
+              {
+                "group": ["jsr:*"],
+                "message": "packages/db is standard TypeScript/ESM: 'jsr:' specifiers are Deno-specific and not portable across runtimes (ADR-0007/ADR-0008)."
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["test/**"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noNodejsModules": "off"
+          }
+        }
+      }
+    }
+  ]
+}
