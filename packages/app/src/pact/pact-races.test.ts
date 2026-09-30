@@ -212,4 +212,22 @@ describe("pact approval races (deterministic, D5)", () => {
     const retry = await approvePact(app, victor, { seasonId: approvedSeason.id });
     expect(retry.ok && retry.value.status).toBe("active");
   });
+
+  it("solo leave (season discarded) commits first: the approval is rejected as NotAMember and the season stays gone", async () => {
+    const app = createTestApp({ now: NOW });
+    const { circle, season, andrea } = await givenSoloOpenPact(app);
+
+    const { winner, loser } = await raceTransactions(
+      app,
+      (a) => leaveCircle(a, andrea, { circleId: circle.id }),
+      (a) => approvePact(a, andrea, { seasonId: season.id }),
+    );
+
+    expect(winner).toMatchObject({ status: "fulfilled", value: { ok: true } });
+    expect(loser).toMatchObject({
+      status: "fulfilled",
+      value: { ok: false, error: { kind: "NotAMember" } },
+    });
+    expect(await app.uow.read((repos) => repos.seasons.get(season.id))).toBeNull();
+  });
 });
