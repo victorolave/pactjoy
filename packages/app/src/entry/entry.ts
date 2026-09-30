@@ -88,5 +88,10 @@ export type StoredEntry = EntryRecord | EntryTombstone;
  */
 export function requestFingerprint(value: EntryValue, note: string | null): string {
   const quantity = value.kind === "quantity" ? `${value.value.num}/${value.value.den}` : null;
-  return JSON.stringify([value.kind, quantity, note]);
+  return JSON.stringify([value.kind, quantity, normalizeNote(note)]);
+}
+
+/** An empty note is no note: stored, fingerprinted and compared as `null`. Any other text is kept as typed. */
+export function normalizeNote(note: string | null | undefined): string | null {
+  return note === undefined || note === "" ? null : note;
 }

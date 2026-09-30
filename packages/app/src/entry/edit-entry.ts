@@ -9,6 +9,7 @@ import {
   type EntryRecord,
   type EntryValueInput,
   exceedsNoteLimit,
+  normalizeNote,
   requestFingerprint,
 } from "./entry.ts";
 import { type EntryValueError, validateEntryValue } from "./entry-value.ts";
@@ -39,11 +40,12 @@ export interface EditEntryResult {
 
 /**
  * Edits `actor`'s own Entry while its window is open (ER-10..ER-13, A9,
- * B8), validating the new value and note exactly like `recordEntry`. Keeps
- * the id, day, `recordedOn`, `recordedAt` and idempotency key; stamps
- * `editedAt`; an edit that changes nothing is a no-op. Fails with `ConcurrencyConflict` if the entry was edited
- * meanwhile (compare-and-swap) or the membership or season read here
- * changed before commit (D5).
+ * B8), validating the new value and note exactly like `recordEntry` (an
+ * empty note is stored as null). Keeps the id, day, `recordedOn`,
+ * `recordedAt` and idempotency key and stamps `editedAt`. An edit that
+ * changes nothing is a no-op. Fails with `ConcurrencyConflict` if the
+ * entry was edited meanwhile (version check) or the membership or season
+ * read here changed before commit (D5).
  */
 export async function editEntry(
   deps: EditEntryDeps,
@@ -61,15 +63,14 @@ export async function editEntry(
     if (!value.ok) {
       return value;
     }
-    if (exceedsNoteLimit(input.note)) {
+    const note = normalizeNote(input.note);
+    if (exceedsNoteLimit(note)) {
       return err({ kind: "NoteTooLong" });
     }
 
     // Nothing changes: no write, no version bump, no editedAt. Like a pure
     // replay it is not guarded either, unrelated bumps must not conflict.
-    if (
-      requestFingerprint(value.value, input.note) === requestFingerprint(entry.value, entry.note)
-    ) {
+    if (requestFingerprint(value.value, note) === requestFingerprint(entry.value, entry.note)) {
       return ok({ entry });
     }
 
@@ -79,7 +80,7 @@ export async function editEntry(
     const edited: EntryRecord = {
       ...entry,
       value: value.value,
-      note: input.note,
+      note,
       editedAt: deps.clock.now(),
       version: entry.version + 1,
     };
