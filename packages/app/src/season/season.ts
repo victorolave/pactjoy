@@ -1,3 +1,4 @@
+import type { MemberId } from "@pactjoy/engine";
 import type { CommitmentRecord } from "../commitment/commitment.ts";
 import type { CircleId, SeasonId } from "../shared/ids.ts";
 import type { Instant } from "../time/instant.ts";
@@ -16,12 +17,24 @@ export type SeasonLengthWeeks = 4 | 6 | 8 | 12;
 export type ReviewCadenceWeeks = 1 | 2 | 3;
 
 /**
+ * One member's unanimous approval of the pact (Pacto, S6, design's
+ * `PactApproval`). Recorded per {@link MemberId}, at most one live entry
+ * per member -- `approve-pact.ts` upserts by `memberId` instead of
+ * appending duplicates, so re-approving just refreshes `approvedAt`.
+ */
+export interface PactApproval {
+  readonly memberId: MemberId;
+  readonly approvedAt: Instant;
+}
+
+/**
  * 4, 6 or 8 weeks worth a season, tracked across a {@link CircleId} (ADR-0008,
- * D6). `commitments` lands with this slice (S5, design D6/D12: commitments
- * live inside `Season`, not their own aggregate/repository).
- * `approvals`/`pactClosedAt` (design's full interface) are STILL NOT part
- * of this shape -- they land with the pact module (S6), which extends this
- * interface then.
+ * D6). `commitments` lands with S5 (design D6/D12: commitments live inside
+ * `Season`, not their own aggregate/repository). `approvals`/`pactClosedAt`
+ * land with S6 (the pact module): `approvals` holds every member's current
+ * approval and is reset to `[]` at every documented seam (edit-season-params,
+ * add/edit/remove-commitment, join-circle, leave-circle before close);
+ * `pactClosedAt` is `null` until `approve-pact.ts` closes the pact.
  */
 export interface Season {
   readonly id: SeasonId;
@@ -33,6 +46,8 @@ export interface Season {
   readonly reviewCadenceWeeks: ReviewCadenceWeeks;
   readonly status: SeasonStatus;
   readonly commitments: readonly CommitmentRecord[];
+  readonly approvals: readonly PactApproval[];
+  readonly pactClosedAt: Instant | null;
   readonly createdAt: Instant;
   readonly version: number;
 }
@@ -124,6 +139,8 @@ export function buildSeason(input: BuildSeasonInput): Season {
     reviewCadenceWeeks: input.reviewCadenceWeeks,
     status: "pactOpen",
     commitments: [],
+    approvals: [],
+    pactClosedAt: null,
     createdAt: input.now,
     version: 0,
   };

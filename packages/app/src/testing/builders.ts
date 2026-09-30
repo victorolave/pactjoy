@@ -3,6 +3,7 @@ import type { Circle, Invite, Member } from "../circle/circle.ts";
 import type { CommitmentRecord } from "../commitment/commitment.ts";
 import type { Habit } from "../habit/habit.ts";
 import type {
+  PactApproval,
   ReviewCadenceWeeks,
   Season,
   SeasonLengthWeeks,
@@ -93,6 +94,8 @@ export interface SeasonFixtureOptions {
   readonly reviewCadenceWeeks?: ReviewCadenceWeeks;
   readonly status?: SeasonStatus;
   readonly commitments?: readonly CommitmentRecord[];
+  readonly approvals?: readonly PactApproval[];
+  readonly pactClosedAt?: Instant | null;
   readonly createdAt?: Instant;
   readonly version?: number;
 }
@@ -113,6 +116,8 @@ export function seasonFixture(options: SeasonFixtureOptions): Season {
     reviewCadenceWeeks: options.reviewCadenceWeeks ?? 2,
     status: options.status ?? "pactOpen",
     commitments: options.commitments ?? [],
+    approvals: options.approvals ?? [],
+    pactClosedAt: options.pactClosedAt ?? null,
     createdAt: options.createdAt ?? DEFAULT_INSTANT,
     version: options.version ?? 0,
   };

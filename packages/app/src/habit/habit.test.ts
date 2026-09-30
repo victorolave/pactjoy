@@ -55,24 +55,24 @@ describe("buildHabit", () => {
     expect(result).toEqual({ ok: false, error: { kind: "InvalidName" } });
   });
 
-  it("rejects a category longer than 60 characters (P2-4, reasonable length -- no exact spec bound)", () => {
+  it("rejects a category longer than 40 characters (decided 2026-09-30)", () => {
     const result = buildHabit({
       id: habitId("habit-1"),
       ownerId: userId("user-andrea"),
       name: "Correr",
-      category: "x".repeat(61),
+      category: "x".repeat(41),
       now: NOW,
     });
 
     expect(result).toEqual({ ok: false, error: { kind: "CategoryTooLong" } });
   });
 
-  it("accepts a category of exactly 60 characters", () => {
+  it("accepts a category of exactly 40 characters", () => {
     const result = buildHabit({
       id: habitId("habit-1"),
       ownerId: userId("user-andrea"),
       name: "Correr",
-      category: "x".repeat(60),
+      category: "x".repeat(40),
       now: NOW,
     });
 

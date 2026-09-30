@@ -40,6 +40,26 @@ async function seasonWithCommitment(app: ReturnType<typeof createTestApp>) {
 }
 
 describe("editCommitment", () => {
+  it("a commitment's habitId is not editable: a stray habitId in the input is ignored (2026-09-30)", async () => {
+    const app = createTestApp({ now: NOW });
+    const { season, commitment } = await seasonWithCommitment(app);
+    if (!commitment) throw new Error("fixture setup failed");
+    const input = {
+      seasonId: season.id,
+      commitmentId: commitment.id,
+      weightPercent: 35,
+      privacy: "private" as const,
+      measure: { unit: "done" as const, frequency: { kind: "timesPerWeek" as const, times: 5 } },
+      habitId: habitId("habit-other"),
+    };
+
+    const result = await editCommitment(app, actorFor("user-andrea"), input);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.commitments[0]?.habitId).toBe(habitId("habit-run"));
+  });
+
   it("SS-13: edits the actor's own commitment while the pact is open", async () => {
     const app = createTestApp({ now: NOW });
     const { season, commitment } = await seasonWithCommitment(app);

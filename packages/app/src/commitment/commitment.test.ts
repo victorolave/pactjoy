@@ -1,7 +1,7 @@
 import { fromInt, type MemberId } from "@pactjoy/engine";
 import { describe, expect, it } from "vitest";
 import { habitId } from "../shared/ids.ts";
-import { buildCommitment, commitmentId } from "./commitment.ts";
+import { buildCommitment, commitmentId, commitmentsSumToFullWeight } from "./commitment.ts";
 
 function memberIdFor(value: string): MemberId {
   return value as MemberId;
@@ -54,5 +54,37 @@ describe("buildCommitment", () => {
 
     expect(commitment.measure.unit).toBe("km");
     expect(commitment.privacy).toBe("private");
+  });
+});
+
+function commitmentWithWeight(weightPercent: number) {
+  return buildCommitment({
+    id: commitmentId(`commitment-${weightPercent}`),
+    memberId: memberIdFor("member-1"),
+    habitId: habitId("habit-1"),
+    weightPercent,
+    privacy: "visible",
+    measure: {
+      unit: "done",
+      schedule: { period: "perSession", frequency: { kind: "timesPerWeek", times: 3 } },
+    },
+  });
+}
+
+describe("commitmentsSumToFullWeight", () => {
+  it("B5: true when a member's commitment weights sum to exactly 100", () => {
+    const commitments = [commitmentWithWeight(60), commitmentWithWeight(40)];
+
+    expect(commitmentsSumToFullWeight(commitments)).toBe(true);
+  });
+
+  it("B5: false when the weights sum to less than 100", () => {
+    const commitments = [commitmentWithWeight(60), commitmentWithWeight(30)];
+
+    expect(commitmentsSumToFullWeight(commitments)).toBe(false);
+  });
+
+  it("B5: false for a member with zero commitments (sum is 0, not 100)", () => {
+    expect(commitmentsSumToFullWeight([])).toBe(false);
   });
 });

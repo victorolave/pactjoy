@@ -18,10 +18,8 @@ export interface EditCommitmentDeps {
 }
 
 /**
- * `habitId` is deliberately NOT editable here -- neither the spec (SS-13,
- * SS-15, SS-16) nor the design say whether re-targeting a commitment at a
- * different habit is an "edit" or requires remove+add; flagged as a
- * product ambiguity (not resolved by this slice, per instruction).
+ * `habitId` is deliberately NOT editable here (user decision, 2026-09-30):
+ * to re-target a commitment at another habit, remove it and add a new one.
  */
 export interface EditCommitmentInput {
   readonly seasonId: SeasonId;
