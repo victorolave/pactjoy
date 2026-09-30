@@ -23,13 +23,11 @@ const AT_MOST_TWO_DECIMALS = /^\d+(\.\d{1,2})?$/;
 export const MAX_INTEGER_DIGITS = 9;
 
 /**
- * Units counted in whole things accept integers only; minutes, hours, km
- * and custom units accept up to 2 decimals. Custom units have no per-
- * commitment precision field (kept small on purpose), so they get the
- * permissive rule.
+ * The commitment's `precision` decides (derived from the unit for built-in
+ * units, chosen for custom ones): `integer` takes whole numbers only,
+ * `decimal` up to 2 decimals. The digit cap counts significant integer
+ * digits, so leading zeros ("0000000001") don't count against it.
  */
-const INTEGER_ONLY_UNITS: readonly string[] = ["times", "pages", "glasses"];
-
 function parseQuantity(raw: string, integerOnly: boolean): Result<Fraction, EntryValueError> {
   if (raw.startsWith("-") && NON_NEGATIVE_DECIMAL.test(raw.slice(1))) {
     return err({ kind: "InvalidQuantity", reason: "negative" });
@@ -38,7 +36,7 @@ function parseQuantity(raw: string, integerOnly: boolean): Result<Fraction, Entr
     return err({ kind: "InvalidQuantity", reason: "notANumber" });
   }
   const [integerPart = "", decimalPart] = raw.split(".");
-  if (integerPart.length > MAX_INTEGER_DIGITS) {
+  if (integerPart.replace(/^0+/, "").length > MAX_INTEGER_DIGITS) {
     return err({ kind: "InvalidQuantity", reason: "tooManyDigits" });
   }
   if (integerOnly && decimalPart !== undefined) {
@@ -87,6 +85,6 @@ export function validateEntryValue(
   if (measure.unit === "done") {
     return err({ kind: "ValueKindMismatch" });
   }
-  const parsed = parseQuantity(raw.value, INTEGER_ONLY_UNITS.includes(measure.unit));
+  const parsed = parseQuantity(raw.value, measure.precision === "integer");
   return parsed.ok ? ok({ kind: "quantity", value: parsed.value }) : parsed;
 }

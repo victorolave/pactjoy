@@ -103,23 +103,33 @@ describe("validateEntryValue (A8 corrected, B10)", () => {
     expect(quantity(REACH_DAY_BOUND, "1e3")).toEqual(invalid("notANumber"));
   });
 
-  it("accepts only integers for times, pages and glasses, and up to 2 decimals for the rest", () => {
+  it("follows the commitment's precision: integer-only takes whole numbers, decimal takes up to 2 decimals", () => {
     const integerOnly = { ok: false, error: { kind: "InvalidQuantity", reason: "integerOnly" } };
-    for (const unit of ["times", "pages", "glasses"] as const) {
-      const measure = { ...LIMIT_DAY_BOUND, unit } as Measure;
+    // The precision field decides, for any unit, custom included.
+    for (const unit of ["times", "custom"] as const) {
+      const measure = { ...LIMIT_DAY_BOUND, unit, precision: "integer" } as Measure;
       expect(quantity(measure, "1.5")).toEqual(integerOnly);
       expect(quantity(measure, "2.0")).toEqual(integerOnly);
       expect(quantity(measure, "2").ok).toBe(true);
       expect(quantity(measure, "0").ok).toBe(true);
     }
-    for (const unit of ["minutes", "hours", "km", "custom"] as const) {
-      const measure = { ...REACH_DAY_BOUND, unit } as Measure;
+    for (const unit of ["minutes", "custom"] as const) {
+      const measure = { ...REACH_DAY_BOUND, unit, precision: "decimal" } as Measure;
       expect(quantity(measure, "1.25").ok).toBe(true);
       expect(quantity(measure, "1.255")).toEqual({
         ok: false,
         error: { kind: "InvalidQuantity", reason: "tooManyDecimals" },
       });
     }
+  });
+
+  it("ignores leading zeros when capping the digits", () => {
+    expect(quantity(REACH_DAY_BOUND, "0000000000001").ok).toBe(true);
+    expect(quantity(REACH_DAY_BOUND, "000000000.50").ok).toBe(true);
+    expect(quantity(REACH_DAY_BOUND, "0001000000000")).toEqual({
+      ok: false,
+      error: { kind: "InvalidQuantity", reason: "tooManyDigits" },
+    });
   });
 
   it("caps a quantity at 9 integer digits", () => {
