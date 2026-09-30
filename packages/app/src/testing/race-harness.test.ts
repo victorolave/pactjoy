@@ -12,6 +12,8 @@ import { raceTransactions } from "./race-harness.ts";
 
 const NOW = instant(1_759_060_800_000);
 const HANG_GUARD_MS = 1_000;
+/** Enough microtask turns for an instantly-committing winner to finish before a "slow" loser reads. */
+const SLOW_LOSER_MICROTASK_TICKS = 25;
 const DONE_DAILY: Measure = {
   unit: "done",
   schedule: { period: "perSession", frequency: { kind: "timesPerWeek", times: 3 } },
@@ -72,7 +74,8 @@ describe("raceTransactions", () => {
           }),
         (a) =>
           a.uow.transaction(async (repos) => {
-            for (let tick = 0; tick < 25; tick += 1) await Promise.resolve();
+            for (let tick = 0; tick < SLOW_LOSER_MICROTASK_TICKS; tick += 1)
+              await Promise.resolve();
             const season = await repos.seasons.get(given.season.id);
             await repos.entries.findByClientRequest(
               memberId("member-andrea"),

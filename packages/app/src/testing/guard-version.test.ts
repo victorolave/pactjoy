@@ -61,10 +61,26 @@ async function seasonSubject(): Promise<Subject> {
   };
 }
 
-describe.each([
-  { name: "circle", subject: circleSubject },
-  { name: "season", subject: seasonSubject },
-])("in-memory $name repository: guardVersion", ({ subject }) => {
+interface GuardSubject {
+  readonly name: string;
+  /** Builds a fresh adapter holding one aggregate stored at version 0. */
+  readonly subject: () => Promise<Subject>;
+}
+
+/**
+ * The `guardVersion` contract (D5 read-set guard) every repository adapter
+ * must satisfy. Run today against the in-memory adapters; a Postgres
+ * adapter reuses it by passing its own subject factories (move this
+ * function to a shared non-test module at that point; Biome forbids
+ * exports from test files).
+ */
+function describeGuardVersionContract(adapter: string, subjects: readonly GuardSubject[]): void {
+  describe.each(subjects)(`${adapter} $name repository: guardVersion`, ({ subject }) => {
+    defineGuardVersionCases(subject);
+  });
+}
+
+function defineGuardVersionCases(subject: () => Promise<Subject>): void {
   it("passes a guard whose version still matches", async () => {
     const txn = (await subject()).begin();
     await txn.guard(0);
@@ -76,6 +92,12 @@ describe.each([
     const txn = live.begin();
     await txn.guard(0);
     await live.bumpLiveVersion();
+    expect(() => txn.validate()).toThrow(ConcurrencyConflict);
+  });
+
+  it("fails a guard whose expected version is AHEAD of the stored one", async () => {
+    const txn = (await subject()).begin();
+    await txn.guard(1);
     expect(() => txn.validate()).toThrow(ConcurrencyConflict);
   });
 
@@ -92,7 +114,12 @@ describe.each([
     expect(() => txn.validate()).not.toThrow();
     expect(() => txn.apply()).not.toThrow();
   });
-});
+}
+
+describeGuardVersionContract("in-memory", [
+  { name: "circle", subject: circleSubject },
+  { name: "season", subject: seasonSubject },
+]);
 
 describe("guardVersion outside a transaction", () => {
   it("is a no-op on the live repositories", async () => {
