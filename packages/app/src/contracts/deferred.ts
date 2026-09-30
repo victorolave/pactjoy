@@ -1,7 +1,6 @@
 // The package compiles without DOM or Node typings; every runtime that runs
-// the suites provides these timers.
+// the suites provides this timer.
 declare function setTimeout(handler: () => void, ms: number): unknown;
-declare function clearTimeout(handle: unknown): void;
 
 export interface Deferred {
   readonly promise: Promise<void>;
@@ -17,25 +16,9 @@ export function deferred(): Deferred {
   return { promise, resolve };
 }
 
-/**
- * True when `promise` fulfils within `ms`. Only tells a blocked writer from
- * a free one, so a test can pick which branch to assert; it never decides
- * whether an outcome is correct.
- */
-export async function fulfilledWithin(promise: Promise<unknown>, ms: number): Promise<boolean> {
-  let timer: unknown;
-  const timeout = new Promise<boolean>((done) => {
-    timer = setTimeout(() => done(false), ms);
+/** Yields for `ms`, so a transaction that is free to run gets to. Never a verdict on correctness. */
+export function delay(ms: number): Promise<void> {
+  return new Promise((done) => {
+    setTimeout(done, ms);
   });
-  try {
-    return await Promise.race([
-      promise.then(
-        () => true,
-        () => false,
-      ),
-      timeout,
-    ]);
-  } finally {
-    clearTimeout(timer);
-  }
 }

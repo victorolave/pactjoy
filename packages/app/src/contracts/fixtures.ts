@@ -10,6 +10,10 @@ import { circleFixture, memberFixture, seasonFixture } from "../testing/builders
  * through `uow.transaction` / `uow.read` (never an adapter's own
  * transaction API), so the same suite runs on any adapter. `UnitOfWork` is
  * covariant in its repositories, so the full bag satisfies any `Pick`.
+ *
+ * A factory over a real database MUST provide a pool of at least 2
+ * connections: the guard cases hold one transaction open while another
+ * runs, so a single connection would deadlock the suite.
  */
 export interface ContractSubject<R> {
   readonly uow: UnitOfWork<R>;

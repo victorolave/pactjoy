@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ConcurrencyConflict } from "../shared/errors.ts";
 import { circleId, seasonId } from "../shared/ids.ts";
 import { ok } from "../shared/result.ts";
-import { deferred, fulfilledWithin } from "./deferred.ts";
+import { type Deferred, deferred, delay } from "./deferred.ts";
 import {
   CIRCLE,
   type ContractSubject,
@@ -48,6 +48,22 @@ const SEASON_TARGET: GuardTarget = {
  * could be blocked while it holds a lock: a blocked writer is started,
  * left pending, and only awaited after the lock holder was released.
  */
+/** Marks a pending promise as handled, so a late rejection never surfaces as an unhandled one. */
+function quiet<T>(promise: Promise<T>): Promise<T> {
+  promise.catch(() => undefined);
+  return promise;
+}
+
+/**
+ * Opens the gate and waits for every transaction to settle, even when an
+ * assertion failed: a transaction left open on Postgres would keep its row
+ * lock and block the next test's cleanup.
+ */
+async function drain(release: Deferred, ...pending: Promise<unknown>[]): Promise<void> {
+  release.resolve();
+  await Promise.allSettled(pending);
+}
+
 function defineGuardCases(factory: SubjectFactory, target: GuardTarget): void {
   async function setup(): Promise<Subject["uow"]> {
     const { uow } = await factory();
@@ -113,62 +129,92 @@ function defineGuardCases(factory: SubjectFactory, target: GuardTarget): void {
     const uow = await setup();
     const read = deferred();
     const release = deferred();
-    const stale = uow.transaction(async (r) => {
-      await target.get(r);
-      read.resolve();
-      await release.promise;
-      await target.guard(r, 0);
-      return ok(undefined);
-    });
-    await read.promise;
-    // Safe to await: the stale transaction holds no lock yet.
-    await bumpInTransaction(uow);
-    release.resolve();
-    await expect(stale).rejects.toBeInstanceOf(ConcurrencyConflict);
-    expect(await versionOf(uow)).toBe(1);
+    const stale = quiet(
+      uow.transaction(async (r) => {
+        await target.get(r);
+        read.resolve();
+        await release.promise;
+        await target.guard(r, 0);
+        return ok(undefined);
+      }),
+    );
+    try {
+      await Promise.race([read.promise, stale]);
+      // Safe to await: the stale transaction holds no lock yet.
+      await bumpInTransaction(uow);
+      release.resolve();
+      await expect(stale).rejects.toBeInstanceOf(ConcurrencyConflict);
+      expect(await versionOf(uow)).toBe(1);
+    } finally {
+      await drain(release, stale);
+    }
   });
 
   it("never loses an update: of two writers of the same version exactly one commits", async () => {
     const uow = await setup();
     const saved = deferred();
     const release = deferred();
-    const first = uow.transaction(async (r) => {
-      await target.guard(r, 0);
-      await target.bump(r);
-      saved.resolve();
-      await release.promise;
-      return ok(undefined);
-    });
-    await saved.promise;
-    const second = bumpInTransaction(uow); // may block on the first one's lock: do not await yet
-    release.resolve();
-    const settled = await Promise.allSettled([first, second]);
-    expect(settled.map((s) => s.status).sort()).toEqual(["fulfilled", "rejected"]);
-    const rejected = settled.find((s) => s.status === "rejected");
-    expect(rejected?.status === "rejected" && rejected.reason).toBeInstanceOf(ConcurrencyConflict);
-    expect(await versionOf(uow)).toBe(1);
+    const first = quiet(
+      uow.transaction(async (r) => {
+        await target.guard(r, 0);
+        await target.bump(r);
+        saved.resolve();
+        await release.promise;
+        return ok(undefined);
+      }),
+    );
+    let second: Promise<unknown> = Promise.resolve();
+    try {
+      await Promise.race([saved.promise, first]);
+      second = quiet(bumpInTransaction(uow)); // may block on the first one's lock: do not await yet
+      release.resolve();
+      const settled = await Promise.allSettled([first, second]);
+      expect(settled.map((s) => s.status).sort()).toEqual(["fulfilled", "rejected"]);
+      const rejected = settled.find((s) => s.status === "rejected");
+      expect(rejected?.status === "rejected" && rejected.reason).toBeInstanceOf(
+        ConcurrencyConflict,
+      );
+      expect(await versionOf(uow)).toBe(1);
+    } finally {
+      await drain(release, first, second);
+    }
   });
 
   it("never commits a guard together with a write that got in before it", async () => {
     const uow = await setup();
     const guarded = deferred();
     const release = deferred();
-    const guardOnly = uow.transaction(async (r) => {
-      await target.guard(r, 0);
-      guarded.resolve();
-      await release.promise;
-      return ok(undefined);
-    });
-    await guarded.promise;
-    const writer = bumpInTransaction(uow);
-    const writerFinishedFirst = await fulfilledWithin(writer, 50);
-    release.resolve();
-    const [guard, write] = await Promise.allSettled([guardOnly, writer]);
-    // Either the writer waited for the guard (then both commit) or it got in
-    // first (then the guard must fail): the guard never commits over it.
-    expect(guard.status === "fulfilled" && writerFinishedFirst).toBe(false);
-    if (guard.status === "fulfilled") expect(write.status).toBe("fulfilled");
-    else expect(guard.reason).toBeInstanceOf(ConcurrencyConflict);
+    const guardOnly = quiet(
+      uow.transaction(async (r) => {
+        await target.guard(r, 0);
+        guarded.resolve();
+        await release.promise;
+        return ok(undefined);
+      }),
+    );
+    let writer: Promise<unknown> = Promise.resolve();
+    try {
+      await Promise.race([guarded.promise, guardOnly]);
+      let released = false;
+      let committedBeforeRelease = false;
+      writer = quiet(
+        bumpInTransaction(uow).then((result) => {
+          committedBeforeRelease = !released;
+          return result;
+        }),
+      );
+      await delay(50); // only yields, so a free writer gets to run; the verdict is the flag
+      released = true;
+      release.resolve();
+      const [guard, write] = await Promise.allSettled([guardOnly, writer]);
+      // Either the writer waited for the guard (then both commit) or it got in
+      // first (then the guard must fail): the guard never commits over it.
+      expect(guard.status === "fulfilled" && committedBeforeRelease).toBe(false);
+      if (guard.status === "fulfilled") expect(write.status).toBe("fulfilled");
+      else expect(guard.reason).toBeInstanceOf(ConcurrencyConflict);
+    } finally {
+      await drain(release, guardOnly, writer);
+    }
   });
 
   it("does nothing for a guard outside a transaction", async () => {
