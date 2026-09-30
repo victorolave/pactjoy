@@ -1,4 +1,5 @@
 import { findActiveMember } from "../circle/circle.ts";
+import { resetApprovals } from "../pact/reset-approvals.ts";
 import type { Repositories } from "../ports/repositories.ts";
 import type { UnitOfWork } from "../ports/unit-of-work.ts";
 import type { Actor } from "../shared/actor.ts";
@@ -52,13 +53,8 @@ export type EditSeasonParamsError =
  * parámetros quedan bloqueados"). Any active member of the circle may edit
  * -- no owner/admin role (A4), same as `rename-circle.ts`.
  *
- * SEAM (B2): editing is supposed to reset all pact approvals, same as
- * every other pre-close change (SS-13, CM-8). That reset has no effect to
- * wire yet -- `Season` doesn't carry an `approvals` array until the pact
- * module lands (S6); whichever slice adds it must also call the
- * approval-reset here, same pattern as `join-circle.ts`'s documented stub.
- * For now this use case only validates the new params and bumps
- * `version`.
+ * Editing resets all pact approvals (B2, PA-2): members approved the
+ * previous parameters, not these.
  */
 export async function editSeasonParams(
   deps: EditSeasonParamsDeps,
@@ -122,7 +118,7 @@ export async function editSeasonParams(
     }
 
     const updated: Season = {
-      ...season,
+      ...resetApprovals(season),
       timeZone,
       nominalStart,
       lengthWeeks: input.lengthWeeks ?? season.lengthWeeks,

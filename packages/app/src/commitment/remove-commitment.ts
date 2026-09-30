@@ -1,5 +1,6 @@
 import type { CommitmentId } from "@pactjoy/engine";
 import { findActiveMember } from "../circle/circle.ts";
+import { resetApprovals } from "../pact/reset-approvals.ts";
 import type { Repositories } from "../ports/repositories.ts";
 import type { UnitOfWork } from "../ports/unit-of-work.ts";
 import type { Season } from "../season/season.ts";
@@ -28,11 +29,7 @@ export type RemoveCommitmentError =
  * pact is still open (SS-15-delta) -- same aggregate-mutation shape as
  * `add-commitment.ts`/`edit-commitment.ts`.
  *
- * SEAM (S6): removing a commitment is supposed to reset all pact approvals
- * (SS-13, PA-2) -- same documented stub as `add-commitment.ts`,
- * `edit-commitment.ts`, `edit-season-params.ts` and `join-circle.ts`;
- * whichever slice adds `Season.approvals` (S6) must also call the
- * approval-reset here.
+ * Removing a commitment resets all pact approvals (SS-13, PA-2).
  */
 export async function removeCommitment(
   deps: RemoveCommitmentDeps,
@@ -64,7 +61,7 @@ export async function removeCommitment(
     }
 
     const updated: Season = {
-      ...season,
+      ...resetApprovals(season),
       commitments: season.commitments.filter((commitment) => commitment.id !== input.commitmentId),
       version: season.version + 1,
     };
