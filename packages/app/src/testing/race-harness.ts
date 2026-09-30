@@ -39,6 +39,14 @@ export async function raceTransactions<W, L>(
     winnerSettled = resolve;
   });
 
+  // Resolves once the loser has reached its pause point or settled. A winner
+  // that never pauses itself (e.g. a leave) holds its commit until then, so
+  // the loser is guaranteed to have read the pre-race state.
+  let loserReached!: () => void;
+  const loserArrived = new Promise<void>((resolve) => {
+    loserReached = resolve;
+  });
+
   function wrap(isWinner: boolean): TestApp {
     const uow: UnitOfWork<Repositories> = {
       read: (work) => app.uow.read(work),
@@ -50,9 +58,15 @@ export async function raceTransactions<W, L>(
           if (counted) return;
           counted = true;
           arrived += 1;
+          if (!isWinner) loserReached();
           if (arrived === 2) releaseBoth();
         }
-        const run = app.uow.transaction((repos) => {
+        const run = app.uow.transaction(async (repos) => {
+          const result = await runWork(repos);
+          if (isWinner) await loserArrived;
+          return result;
+        });
+        function runWork(repos: Repositories): Promise<Result<T, E>> {
           let paused = false;
           async function pauseAfterFirstSeasonRead<R>(value: R): Promise<R> {
             if (paused) return value;
@@ -87,7 +101,7 @@ export async function raceTransactions<W, L>(
                 pauseAfterFirstSeasonRead(await repos.seasons.findLatestByCircle(circleId)),
             },
           });
-        });
+        }
         // A transaction that settles (err or throw) without ever reading a
         // season still counts as arrived, so the other side is never left
         // waiting on a barrier that can no longer fill.
