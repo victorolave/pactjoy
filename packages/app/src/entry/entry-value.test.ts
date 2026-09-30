@@ -17,6 +17,7 @@ const DONE_TIMES_PER_WEEK: Measure = {
 const REACH_DAY_BOUND: Measure = {
   unit: "minutes",
   customLabel: null,
+  precision: "decimal",
   target: { direction: "reach", minimum: fromInt(10), ideal: fromInt(30) },
   schedule: { period: "perSession", frequency: { kind: "specificDays", weekdays: [0, 2, 4] } },
 };
@@ -28,6 +29,7 @@ const REACH_WEEKLY_TOTAL: Measure = { ...REACH_DAY_BOUND, schedule: { period: "w
 const LIMIT_DAY_BOUND: Measure = {
   unit: "times",
   customLabel: null,
+  precision: "integer",
   target: { direction: "limit", ideal: fromInt(2), tolerance: fromInt(4) },
   schedule: { period: "perSession", frequency: { kind: "specificDays", weekdays: [0, 1, 2] } },
 };

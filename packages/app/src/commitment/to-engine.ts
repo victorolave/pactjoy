@@ -4,7 +4,7 @@ import type { CommitmentRecord } from "./commitment.ts";
 /**
  * Maps one {@link CommitmentRecord} to the engine's `Commitment` input
  * shape (design's Engine mapping, data-flow section). Drops `memberId`,
- * `habitId`, `privacy` and `measure.customLabel` -- app-only fields the
+ * `habitId`, `privacy`, `measure.customLabel` and `measure.precision` -- app-only fields the
  * engine has no use for; `id` and `weightPercent` carry over unchanged,
  * and `unit`/`schedule`/`target` are already the exact same engine types
  * (D10: thresholds are already `Fraction`s, parsed once by

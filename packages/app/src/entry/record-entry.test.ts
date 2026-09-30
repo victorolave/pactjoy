@@ -21,6 +21,7 @@ const DAY = (n: number) => localDate(`2026-10-${String(1 + n).padStart(2, "0")}`
 const PER_DAY_REACH: Measure = {
   unit: "minutes",
   customLabel: null,
+  precision: "decimal",
   target: { direction: "reach", minimum: fromInt(10), ideal: fromInt(30) },
   schedule: {
     period: "perSession",
@@ -31,6 +32,7 @@ const WEEKLY_TOTAL: Measure = { ...PER_DAY_REACH, schedule: { period: "weeklyTot
 const LIMIT: Measure = {
   unit: "times",
   customLabel: null,
+  precision: "integer",
   target: { direction: "limit", ideal: fromInt(2), tolerance: fromInt(4) },
   schedule: PER_DAY_REACH.schedule,
 };

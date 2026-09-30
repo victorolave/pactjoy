@@ -12,6 +12,26 @@ import type { HabitId } from "../shared/ids.ts";
 export const MAX_CUSTOM_LABEL_LENGTH = 20;
 
 /**
+ * Whether a quantity unit is counted in whole things (`integer`) or allows
+ * up to 2 decimals (`decimal`). It applies to the commitment's targets
+ * (minimum, ideal, tolerance) and to every entry logged against it.
+ */
+export type QuantityPrecision = "integer" | "decimal";
+
+const INTEGER_UNITS: readonly QuantityUnit[] = ["times", "pages", "glasses"];
+
+/**
+ * The precision a built-in unit always has: times, pages and glasses are
+ * whole things; minutes, hours and km take up to 2 decimals. `custom`
+ * units have no fixed answer -- the commitment chooses (default `decimal`,
+ * see `validate-commitment.ts`).
+ */
+export function precisionOfUnit(unit: QuantityUnit): QuantityPrecision | null {
+  if (unit === "custom") return null;
+  return INTEGER_UNITS.includes(unit) ? "integer" : "decimal";
+}
+
+/**
  * How a commitment measures progress (Unidad x Direccion x Periodo, P2
  * axes). `done` is only ever `reach` + `perSession` (engine R3) -- enforced
  * here at the type level, same trick the engine itself uses for
@@ -25,6 +45,7 @@ export type Measure =
   | {
       readonly unit: QuantityUnit;
       readonly customLabel: string | null;
+      readonly precision: QuantityPrecision;
       readonly target: Target;
       readonly schedule: Schedule;
     };

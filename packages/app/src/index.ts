@@ -41,7 +41,7 @@ export type {
   AddCommitmentInput,
 } from "./commitment/add-commitment.ts";
 export { addCommitment } from "./commitment/add-commitment.ts";
-export type { CommitmentRecord, Measure } from "./commitment/commitment.ts";
+export type { CommitmentRecord, Measure, QuantityPrecision } from "./commitment/commitment.ts";
 export { buildCommitment, commitmentId } from "./commitment/commitment.ts";
 export type {
   EditCommitmentDeps,

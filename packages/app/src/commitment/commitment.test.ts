@@ -47,6 +47,7 @@ describe("buildCommitment", () => {
       measure: {
         unit: "km",
         customLabel: null,
+        precision: "decimal",
         target: { direction: "reach", minimum: fromInt(3), ideal: fromInt(5) },
         schedule: { period: "weeklyTotal" },
       },

@@ -26,6 +26,7 @@ import { recordEntry } from "./record-entry.ts";
 const THURSDAY_FRIDAY: Measure = {
   unit: "minutes",
   customLabel: null,
+  precision: "decimal",
   target: { direction: "reach", minimum: fromInt(10), ideal: fromInt(30) },
   schedule: { period: "perSession", frequency: { kind: "specificDays", weekdays: [3, 4] } },
 };
