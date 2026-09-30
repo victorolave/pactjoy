@@ -59,4 +59,25 @@ describe("resolveTestDatabase", () => {
     expect((error as Error).message).toContain("db.example.test");
     expect((error as Error).message).not.toMatch(/s3cret|user:/);
   });
+
+  it("HM-S5: an unreachable URL also reports the error code, for diagnosis", async () => {
+    const cases = [
+      { code: "ECONNREFUSED", expected: "ECONNREFUSED" },
+      { code: "28P01", expected: "28P01" },
+    ];
+    for (const { code, expected } of cases) {
+      const probe = async () => {
+        throw Object.assign(new Error(`failed for ${PROVIDED}`), { code });
+      };
+
+      const error = await resolveTestDatabase({
+        env: { TEST_DATABASE_URL: PROVIDED },
+        startContainer: async () => container(),
+        probe,
+      }).catch((e: Error) => e);
+
+      expect((error as Error).message).toContain(expected);
+      expect((error as Error).message).not.toMatch(/s3cret|user:/);
+    }
+  });
 });

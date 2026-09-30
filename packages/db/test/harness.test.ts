@@ -106,7 +106,7 @@ describe("fresh database per run", () => {
     const a = await freshDatabase();
     const b = await freshDatabase();
 
-    expect(new URL(a.url).pathname).toMatch(/^\/pactjoy_test_\d+_\d+$/);
+    expect(new URL(a.url).pathname).toMatch(/^\/pactjoy_test_\d+_\d+_[0-9a-f]{8}$/);
     expect(a.url).not.toBe(b.url);
     const row = await queryOne(a.url, "select to_regclass('harness_marker')::text as marker");
     expect(row).toEqual({ marker: null });

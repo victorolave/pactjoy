@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -52,7 +53,8 @@ export interface FreshDatabase {
 /** Creates and later drops its own `pactjoy_test_<pid>_<ts>` database; never touches the caller's. */
 export async function createFreshDatabase(serverUrl: string): Promise<FreshDatabase> {
   lastStamp = Math.max(Date.now(), lastStamp + 1);
-  const name = `pactjoy_test_${process.pid}_${lastStamp}`;
+  const suffix = randomBytes(4).toString("hex");
+  const name = `pactjoy_test_${process.pid}_${lastStamp}_${suffix}`;
   const admin = connect(serverUrl);
   try {
     await admin.unsafe(`create database "${name}"`);

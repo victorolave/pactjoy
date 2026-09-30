@@ -41,8 +41,10 @@ export async function resolveTestDatabase(deps: DbSourceDeps): Promise<TestDatab
   if (provided) {
     try {
       await (deps.probe ?? connectProbe)(provided);
-    } catch {
-      throw new Error(`${NEEDS_POSTGRES} (cannot reach host ${hostOf(provided)})`);
+    } catch (error) {
+      const code = (error as { code?: unknown }).code;
+      const detail = typeof code === "string" ? `, error ${code}` : "";
+      throw new Error(`${NEEDS_POSTGRES} (cannot reach host ${hostOf(provided)}${detail})`);
     }
     return { url: provided, fromEnv: true, stop: async () => {} };
   }
