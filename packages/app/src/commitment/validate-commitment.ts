@@ -10,6 +10,7 @@ import {
 import { err, ok, type Result } from "../shared/result.ts";
 import {
   MAX_CUSTOM_LABEL_LENGTH,
+  MAX_INTEGER_DIGITS,
   type Measure,
   precisionOfUnit,
   type QuantityPrecision,
@@ -29,7 +30,10 @@ export type MeasureInput =
   | {
       readonly unit: QuantityUnit;
       readonly customLabel?: string | null;
-      /** Only read for `custom` units (default `decimal`); built-in units decide for themselves. */
+      /**
+       * Chosen by `custom` units (default `decimal`). A built-in unit has a fixed precision:
+       * it may restate it, but a conflicting value is `PrecisionNotApplicable`.
+       */
       readonly precision?: QuantityPrecision;
       readonly direction: "reach";
       readonly minimum: string;
@@ -39,7 +43,10 @@ export type MeasureInput =
   | {
       readonly unit: QuantityUnit;
       readonly customLabel?: string | null;
-      /** Only read for `custom` units (default `decimal`); built-in units decide for themselves. */
+      /**
+       * Chosen by `custom` units (default `decimal`). A built-in unit has a fixed precision:
+       * it may restate it, but a conflicting value is `PrecisionNotApplicable`.
+       */
       readonly precision?: QuantityPrecision;
       readonly direction: "limit";
       readonly ideal: string;
@@ -61,7 +68,11 @@ export type ValidateCommitmentError =
   | { readonly kind: "MinimumNotPositive" }
   | { readonly kind: "MinimumExceedsIdeal" }
   | { readonly kind: "IdealExceedsTolerance" }
-  | { readonly kind: "CustomLabelTooLong" };
+  | { readonly kind: "CustomLabelTooLong" }
+  | { readonly kind: "InvalidPrecision" }
+  | { readonly kind: "PrecisionNotApplicable" };
+
+const PRECISIONS: readonly QuantityPrecision[] = ["integer", "decimal"];
 
 // A12: at most 2 decimal places, non-negative (thresholds are always
 // physical quantities >= 0). `parseDecimal` itself accepts any number of
@@ -87,6 +98,11 @@ function parseThreshold(
   precision: QuantityPrecision,
 ): Result<Fraction, ValidateCommitmentError> {
   if (!AT_MOST_TWO_DECIMALS.test(raw)) {
+    return err({ kind: "InvalidQuantity", field });
+  }
+  // Same cap as entry values; leading zeros don't count.
+  const integerPart = raw.split(".")[0] ?? "";
+  if (integerPart.replace(/^0+/, "").length > MAX_INTEGER_DIGITS) {
     return err({ kind: "InvalidQuantity", field });
   }
   if (precision === "integer" && !WHOLE_NUMBER.test(raw)) {
@@ -137,8 +153,22 @@ export function validateCommitment(
     return err({ kind: "CustomLabelTooLong" });
   }
 
-  // Built-in units fix their own precision; only `custom` reads the field.
-  const precision = precisionOfUnit(measure.unit) ?? measure.precision ?? "decimal";
+  // `precision` only means something for `custom` units (a built-in unit's
+  // precision is fixed), but the type can't say so cleanly: a built-in unit
+  // may still restate its own value, so this is a runtime rule (the HTTP
+  // adapter builds the input from arbitrary JSON anyway).
+  if (measure.precision !== undefined && !PRECISIONS.includes(measure.precision)) {
+    return err({ kind: "InvalidPrecision" });
+  }
+  const unitPrecision = precisionOfUnit(measure.unit);
+  if (
+    unitPrecision !== null &&
+    measure.precision !== undefined &&
+    measure.precision !== unitPrecision
+  ) {
+    return err({ kind: "PrecisionNotApplicable" });
+  }
+  const precision = unitPrecision ?? measure.precision ?? "decimal";
 
   if (measure.direction === "reach") {
     const minimumResult = parseThreshold(measure.minimum, "minimum", precision);

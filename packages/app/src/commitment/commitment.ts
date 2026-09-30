@@ -8,6 +8,12 @@ import type {
 } from "@pactjoy/engine";
 import type { HabitId } from "../shared/ids.ts";
 
+/**
+ * Quantities (commitment thresholds and entry values) are capped at this
+ * many significant integer digits, keeping exact fractions small.
+ */
+export const MAX_INTEGER_DIGITS = 9;
+
 /** Max length for a custom quantity-unit label (A12, SS-11). */
 export const MAX_CUSTOM_LABEL_LENGTH = 20;
 

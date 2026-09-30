@@ -1,5 +1,5 @@
 import { type Fraction, parseDecimal } from "@pactjoy/engine";
-import type { Measure } from "../commitment/commitment.ts";
+import { MAX_INTEGER_DIGITS, type Measure } from "../commitment/commitment.ts";
 import { err, ok, type Result } from "../shared/result.ts";
 import type { EntryValue, EntryValueInput } from "./entry.ts";
 
@@ -18,9 +18,6 @@ export type EntryValueError =
 
 const NON_NEGATIVE_DECIMAL = /^\d+(\.\d+)?$/;
 const AT_MOST_TWO_DECIMALS = /^\d+(\.\d{1,2})?$/;
-
-/** Quantities are capped at this many integer digits (keeps exact fractions small). */
-export const MAX_INTEGER_DIGITS = 9;
 
 /**
  * The commitment's `precision` decides (derived from the unit for built-in

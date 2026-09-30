@@ -1,5 +1,6 @@
 import { eq, type QuantityUnit } from "@pactjoy/engine";
 import { describe, expect, it } from "vitest";
+import type { QuantityPrecision } from "./commitment.ts";
 import { validateCommitment } from "./validate-commitment.ts";
 
 describe("validateCommitment", () => {
@@ -273,9 +274,37 @@ describe("validateCommitment", () => {
       expect(precisionOf(reach("custom", { precision: "integer" })("1", "2"))).toBe("integer");
     });
 
-    it("ignores an explicit precision on a built-in unit: the unit decides", () => {
-      expect(precisionOf(reach("times", { precision: "decimal" })("1", "2"))).toBe("integer");
-      expect(precisionOf(reach("minutes", { precision: "integer" })("1", "2.5"))).toBe("decimal");
+    it("accepts an explicit precision on a built-in unit only when it equals the unit's own", () => {
+      expect(precisionOf(reach("times", { precision: "integer" })("1", "2"))).toBe("integer");
+      expect(precisionOf(reach("minutes", { precision: "decimal" })("1", "2.5"))).toBe("decimal");
+      const notApplicable = { ok: false, error: { kind: "PrecisionNotApplicable" } };
+      expect(reach("times", { precision: "decimal" })("1", "2")).toEqual(notApplicable);
+      expect(reach("minutes", { precision: "integer" })("1", "2")).toEqual(notApplicable);
+    });
+
+    it("rejects a precision that is neither integer nor decimal, on any unit", () => {
+      const invalid = { ok: false, error: { kind: "InvalidPrecision" } };
+      const bogus = "whole" as unknown as QuantityPrecision;
+      expect(reach("custom", { precision: bogus })("1", "2")).toEqual(invalid);
+      expect(reach("minutes", { precision: bogus })("1", "2")).toEqual(invalid);
+    });
+
+    it("caps thresholds at 9 integer digits, ignoring leading zeros", () => {
+      const tooMany = (field: string) => ({
+        ok: false,
+        error: { kind: "InvalidQuantity", field },
+      });
+      expect(reach("minutes")("1", "999999999.99").ok).toBe(true);
+      expect(reach("minutes")("1", "0000000001").ok).toBe(true);
+      expect(reach("minutes")("1", "1000000000")).toEqual(tooMany("ideal"));
+      expect(reach("minutes")("1000000000", "1000000000")).toEqual(tooMany("minimum"));
+      const limit = (ideal: string, tolerance: string) =>
+        validateCommitment({
+          weightPercent: 20,
+          measure: { unit: "minutes", direction: "limit", ideal, tolerance, schedule },
+        });
+      expect(limit("1", "1000000000")).toEqual(tooMany("tolerance"));
+      expect(limit("1000000000", "1000000000")).toEqual(tooMany("ideal"));
     });
 
     it("rejects a non-integer minimum or ideal on an integer unit, naming the field", () => {
