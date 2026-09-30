@@ -12,13 +12,14 @@ declare global {
 /** Raw source of every module under `src/`, keyed `../<path>` relative to this directory. */
 const SOURCES = import.meta.glob("../**/*.ts", { query: "?raw", import: "default", eager: true });
 
-const IMPORT_SPECIFIER = /(?:from|import)\s+"([^"]+)"/g;
+/** `from "x"`, side-effect `import "x"` and dynamic `import("x")`. */
+const IMPORT_SPECIFIER = /(?:from|import)\s*\(?\s*"([^"]+)"/g;
 
 function normalize(path: string): string {
   const parts: string[] = [];
   for (const part of path.split("/")) {
     if (part === "..") parts.pop();
-    else if (part !== ".") parts.push(part);
+    else if (part !== "." && part !== "") parts.push(part);
   }
   return parts.join("/");
 }
@@ -42,9 +43,13 @@ function closure(entry: string): { modules: Set<string>; bare: Set<string> } {
 }
 
 describe("@pactjoy/app entry points stay free of the contracts subpath (RC-S3)", () => {
-  it.each(["index.ts", "testing/index.ts"])("%s never reaches vitest or contracts", (entry) => {
+  // A module only that entry reaches, so a walk that silently stops early cannot pass.
+  it.each([
+    ["index.ts", "adapters/system-clock.ts"],
+    ["testing/index.ts", "testing/fixed-clock.ts"],
+  ])("%s never reaches vitest or contracts", (entry, deepModule) => {
     const { modules, bare } = closure(entry);
-    expect(modules.size).toBeGreaterThan(1);
+    expect(modules).toContain(deepModule);
     expect(bare.has("vitest")).toBe(false);
     expect([...modules].filter((module) => module.startsWith("contracts/"))).toEqual([]);
   });
