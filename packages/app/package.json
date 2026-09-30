@@ -6,6 +6,7 @@
   "description": "Use cases and ports for PactJoy. Depends only on @pactjoy/engine via its public index.",
   "exports": {
     ".": "./src/index.ts",
+    "./contracts": "./src/contracts/index.ts",
     "./testing": "./src/testing/index.ts"
   },
   "scripts": {
@@ -16,6 +17,9 @@
   },
   "dependencies": {
     "@pactjoy/engine": "workspace:*"
+  },
+  "peerDependencies": {
+    "vitest": "^5.0.1"
   },
   "devDependencies": {
     "fast-check": "^4.10.2",
