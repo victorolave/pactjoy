@@ -19,6 +19,10 @@ import type { TestApp } from "./app-harness.ts";
  * A transaction that settles without reading a season still counts as
  * arrived, so the other one is never left waiting.
  *
+ * `pauseOn: "circles"` pauses after the first circle read instead, for use
+ * cases that read the circle after the season (edit, delete): both
+ * transactions then hold the season AND circle they will guard on.
+ *
  * `pauseOn: "entries"` moves the pause point to the first idempotency
  * lookup (`entries.findByClientRequest`) instead, so two duplicate
  * `recordEntry` calls both miss before either commits (T1).
@@ -27,7 +31,7 @@ export async function raceTransactions<W, L>(
   app: TestApp,
   winner: (app: TestApp) => Promise<W>,
   loser: (app: TestApp) => Promise<L>,
-  pauseOn: "seasons" | "entries" = "seasons",
+  pauseOn: "seasons" | "entries" | "circles" = "seasons",
 ): Promise<{ readonly winner: PromiseSettledResult<W>; readonly loser: PromiseSettledResult<L> }> {
   let arrived = 0;
   let releaseBoth!: () => void;
@@ -68,7 +72,7 @@ export async function raceTransactions<W, L>(
         });
         function runWork(repos: Repositories): Promise<Result<T, E>> {
           let paused = false;
-          async function pauseAfterFirstSeasonRead<R>(value: R): Promise<R> {
+          async function pauseAfterFirstRead<R>(value: R): Promise<R> {
             if (paused) return value;
             paused = true;
             countArrival();
@@ -82,7 +86,7 @@ export async function raceTransactions<W, L>(
               entries: {
                 ...repos.entries,
                 findByClientRequest: async (memberId, commitmentId, clientRequestId) =>
-                  pauseAfterFirstSeasonRead(
+                  pauseAfterFirstRead(
                     await repos.entries.findByClientRequest(
                       memberId,
                       commitmentId,
@@ -92,13 +96,22 @@ export async function raceTransactions<W, L>(
               },
             });
           }
+          if (pauseOn === "circles") {
+            return work({
+              ...repos,
+              circles: {
+                ...repos.circles,
+                get: async (id) => pauseAfterFirstRead(await repos.circles.get(id)),
+              },
+            });
+          }
           return work({
             ...repos,
             seasons: {
               ...repos.seasons,
-              get: async (id) => pauseAfterFirstSeasonRead(await repos.seasons.get(id)),
+              get: async (id) => pauseAfterFirstRead(await repos.seasons.get(id)),
               findLatestByCircle: async (circleId) =>
-                pauseAfterFirstSeasonRead(await repos.seasons.findLatestByCircle(circleId)),
+                pauseAfterFirstRead(await repos.seasons.findLatestByCircle(circleId)),
             },
           });
         }
