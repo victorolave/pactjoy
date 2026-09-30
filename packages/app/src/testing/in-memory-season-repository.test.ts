@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildSeason } from "../season/season.ts";
+import { ConcurrencyConflict } from "../shared/errors.ts";
 import { circleId, seasonId } from "../shared/ids.ts";
 import { instant } from "../time/instant.ts";
 import { localDate } from "../time/local-date.ts";
@@ -57,5 +58,57 @@ describe("createInMemorySeasonRepository", () => {
 
     expect((await repo.findLatestByCircle(circleId("circle-1")))?.id).toBe("season-1");
     expect((await repo.findLatestByCircle(circleId("circle-2")))?.id).toBe("season-2");
+  });
+
+  it("delete() removes the season; findLatestByCircle() then falls back to the previous one", async () => {
+    const repo = createInMemorySeasonRepository();
+    const first = fixtureSeason("season-1");
+    const second = fixtureSeason("season-2");
+    await repo.save({ ...first, status: "closed" }, null);
+    await repo.save(second, null);
+
+    await repo.delete(second.id, second.version);
+
+    expect(await repo.get(second.id)).toBeNull();
+    expect((await repo.findLatestByCircle(circleId("circle-1")))?.id).toBe("season-1");
+  });
+
+  it("delete() rejects a stale version with ConcurrencyConflict and leaves the season in place", async () => {
+    const repo = createInMemorySeasonRepository();
+    const season = fixtureSeason("season-1");
+    await repo.save(season, null);
+
+    await expect(repo.delete(season.id, season.version + 1)).rejects.toBeInstanceOf(
+      ConcurrencyConflict,
+    );
+    expect(await repo.get(season.id)).toEqual(season);
+  });
+
+  it("a transactional delete is invisible outside until commit, visible inside, and discarded if never applied", async () => {
+    const repo = createInMemorySeasonRepository();
+    const season = fixtureSeason("season-1");
+    await repo.save(season, null);
+    const scope = repo.beginTransaction();
+
+    await scope.repository.delete(season.id, season.version);
+
+    expect(await scope.repository.get(season.id)).toBeNull();
+    expect(await scope.repository.findLatestByCircle(season.circleId)).toBeNull();
+    expect(await repo.get(season.id)).toEqual(season);
+    scope.validate();
+    scope.apply();
+    expect(await repo.get(season.id)).toBeNull();
+  });
+
+  it("a transactional delete with a stale version fails validate() without mutating", async () => {
+    const repo = createInMemorySeasonRepository();
+    const season = fixtureSeason("season-1");
+    await repo.save(season, null);
+    const scope = repo.beginTransaction();
+    await scope.repository.delete(season.id, season.version);
+    await repo.save({ ...season, version: season.version + 1 }, season.version);
+
+    expect(() => scope.validate()).toThrow(ConcurrencyConflict);
+    expect((await repo.get(season.id))?.version).toBe(season.version + 1);
   });
 });

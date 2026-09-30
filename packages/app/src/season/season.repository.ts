@@ -18,4 +18,10 @@ export interface SeasonRepository {
   findLatestByCircle(circleId: CircleId): Promise<Season | null>;
   /** @throws {ConcurrencyConflict} if the stored version no longer matches `expectedVersion` (D5). */
   save(season: Season, expectedVersion: number | null): Promise<void>;
+  /**
+   * Discards a season outright (used when the last member leaves a circle
+   * whose pact is still open, so nothing was ever agreed).
+   * @throws {ConcurrencyConflict} if the stored version no longer matches `expectedVersion` (D5).
+   */
+  delete(id: SeasonId, expectedVersion: number): Promise<void>;
 }
