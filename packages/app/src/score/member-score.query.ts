@@ -22,11 +22,22 @@ export interface MemberScoreInput {
 
 export type MemberScoreError = ScoreContextError | { readonly kind: "MemberNotFound" };
 
-/** A member's score as shown to a client: already rounded by the engine's display boundary (D10). */
+/**
+ * A member's score as shown to a client: already rounded by the engine's
+ * display boundary (D10). Who is asking decides the shape:
+ *
+ * - `own`: the member themself sees every member-level total.
+ * - `others`: everyone else sees ONLY `points` (matching the standings);
+ *   `consistency` and `idealCompletion` do not exist in this shape, so they
+ *   cannot be dropped by accident or leaked by serialization.
+ *
+ * Either way `commitments` are already projected for the asking member.
+ */
 export type MemberScoreView =
   | { readonly kind: "notStarted" }
   | {
       readonly kind: "scored";
+      readonly scope: "own";
       readonly memberId: MemberId;
       readonly points: number;
       /** Percent; `null` while nothing has been counted yet. */
@@ -35,17 +46,30 @@ export type MemberScoreView =
       readonly idealCompletion: number | null;
       /** Every commitment of the member, in season order, as the asking member may see it. */
       readonly commitments: readonly CommitmentScoreView[];
+    }
+  | {
+      readonly kind: "scored";
+      readonly scope: "others";
+      readonly memberId: MemberId;
+      readonly points: number;
+      readonly commitments: readonly CommitmentScoreView[];
     };
 
 function toView(
   memberId: MemberId,
   score: MemberScore,
   commitments: readonly CommitmentScoreView[],
+  own: boolean,
 ): MemberScoreView {
+  const points = displayPoints(score.points);
+  if (!own) {
+    return { kind: "scored", scope: "others", memberId, points, commitments };
+  }
   return {
     kind: "scored",
+    scope: "own",
     memberId,
-    points: displayPoints(score.points),
+    points,
     consistency: score.consistency === null ? null : displayPercent(score.consistency),
     idealCompletion: score.idealCompletion === null ? null : displayPercent(score.idealCompletion),
     commitments,
@@ -97,6 +121,6 @@ export async function memberScore(
       if (!scored) throw new Error(`engine returned no score for commitment ${record.id}`);
       return projectCommitment(record, scored, viewer.id);
     });
-    return ok(toView(target.id, score, commitments));
+    return ok(toView(target.id, score, commitments, target.id === viewer.id));
   });
 }
