@@ -17,6 +17,12 @@ export interface SeasonRepository {
    * one of those exists.
    */
   findLatestByCircle(circleId: CircleId): Promise<Season | null>;
+  /**
+   * Read-set guard (D5) for a season this transaction only READ: at commit,
+   * the transaction fails with `ConcurrencyConflict` if the stored version
+   * is no longer `expectedVersion`. Has no effect outside a transaction.
+   */
+  guardVersion(id: SeasonId, expectedVersion: number): Promise<void>;
   /** @throws {ConcurrencyConflict} if the stored version no longer matches `expectedVersion` (D5). */
   save(season: Season, expectedVersion: number | null): Promise<void>;
   /**

@@ -73,6 +73,10 @@ export function createInMemoryCircleRepository(): InMemoryCircleRepository {
       return findActiveByUser(store, userId);
     },
 
+    async guardVersion(): Promise<void> {
+      // Read-set guards only mean something inside a transaction.
+    },
+
     async save(circle: Circle, expectedVersion: number | null): Promise<void> {
       const existing = store.get(circle.id);
       const currentVersion = existing ? existing.version : null;
@@ -84,6 +88,7 @@ export function createInMemoryCircleRepository(): InMemoryCircleRepository {
 
     beginTransaction(): CircleTransactionScope {
       const staged = new Map<CircleId, StagedWrite>();
+      const guards = new Map<CircleId, number>();
 
       function view(id: CircleId): Circle | null {
         return staged.get(id)?.circle ?? store.get(id) ?? null;
@@ -110,6 +115,10 @@ export function createInMemoryCircleRepository(): InMemoryCircleRepository {
           return findActiveByUser(viewMap(), userId);
         },
 
+        async guardVersion(id: CircleId, expectedVersion: number): Promise<void> {
+          guards.set(id, expectedVersion);
+        },
+
         async save(circle: Circle, expectedVersion: number | null): Promise<void> {
           staged.set(circle.id, { circle, expectedVersion });
         },
@@ -118,6 +127,11 @@ export function createInMemoryCircleRepository(): InMemoryCircleRepository {
       return {
         repository,
         validate(): void {
+          for (const [id, expectedVersion] of guards) {
+            if (store.get(id)?.version !== expectedVersion) {
+              throw new ConcurrencyConflict();
+            }
+          }
           for (const [id, { expectedVersion }] of staged) {
             const existing = store.get(id);
             const currentVersion = existing ? existing.version : null;

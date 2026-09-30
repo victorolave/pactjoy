@@ -122,9 +122,14 @@ export async function recordEntry(
 
       const circle = await repos.circles.get(season.circleId);
       const member = circle ? findActiveMember(circle, actor.userId) : undefined;
-      if (!member) {
+      if (!member || !circle) {
         return err({ kind: "NotAMember" });
       }
+      // The entry is only valid for the membership and season state read
+      // above: if either changes before commit (a leave, B9, or any season
+      // edit), this transaction must fail instead of committing (D5).
+      await repos.circles.guardVersion(circle.id, circle.version);
+      await repos.seasons.guardVersion(season.id, season.version);
 
       const commitment = season.commitments.find(
         (candidate) => candidate.id === input.commitmentId && candidate.memberId === member.id,

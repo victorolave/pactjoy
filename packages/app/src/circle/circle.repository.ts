@@ -19,6 +19,12 @@ export interface CircleRepository {
   findByInviteCode(code: string): Promise<Circle | null>;
   /** The circle `userId` is currently an active member of, if any (A5, CM-11). */
   findActiveByUser(userId: UserId): Promise<Circle | null>;
+  /**
+   * Read-set guard (D5) for a circle this transaction only READ: at commit,
+   * the transaction fails with `ConcurrencyConflict` if the stored version
+   * is no longer `expectedVersion`. Has no effect outside a transaction.
+   */
+  guardVersion(id: CircleId, expectedVersion: number): Promise<void>;
   /** @throws {ConcurrencyConflict} if the stored version no longer matches `expectedVersion` (D5). */
   save(circle: Circle, expectedVersion: number | null): Promise<void>;
 }

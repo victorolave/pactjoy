@@ -1,5 +1,6 @@
 import { fromInt, seasonDay } from "@pactjoy/engine";
 import { describe, expect, it } from "vitest";
+import { leaveCircle } from "../circle/leave-circle.ts";
 import type { Measure } from "../commitment/commitment.ts";
 import { ConcurrencyConflict } from "../shared/errors.ts";
 import { createTestApp, type TestApp } from "../testing/app-harness.ts";
@@ -476,5 +477,66 @@ describe("recordEntry: idempotency (T1, ER-16)", () => {
     expect(loser.status).toBe("rejected");
     expect((loser as PromiseRejectedResult).reason).toBeInstanceOf(ConcurrencyConflict);
     expect(await stored(app, given)).toHaveLength(1);
+  });
+});
+
+describe("recordEntry: read-set validation (D5)", () => {
+  it("a member leaving first makes the in-flight recordEntry conflict and record nothing (B9)", async () => {
+    const app = newApp();
+    const given = await givenActiveSeason(app, PER_DAY_REACH);
+
+    const { winner, loser } = await raceTransactions(
+      app,
+      (a) => leaveCircle(a, given.andrea, { circleId: given.circle.id }),
+      (a) => recordEntry(a, given.andrea, input(given)),
+      "entries",
+    );
+
+    expect(winner).toMatchObject({ status: "fulfilled", value: { ok: true } });
+    expect(loser.status).toBe("rejected");
+    expect((loser as PromiseRejectedResult).reason).toBeInstanceOf(ConcurrencyConflict);
+    expect(await stored(app, given)).toEqual([]);
+  });
+
+  it("a season change first makes the in-flight recordEntry conflict and record nothing", async () => {
+    const app = newApp();
+    const given = await givenActiveSeason(app, PER_DAY_REACH);
+
+    const { winner, loser } = await raceTransactions(
+      app,
+      (a) =>
+        a.uow.transaction(async (repos) => {
+          await repos.seasons.save({ ...given.season, version: 1 }, 0);
+          return { ok: true as const, value: undefined };
+        }),
+      (a) => recordEntry(a, given.andrea, input(given)),
+      "entries",
+    );
+
+    expect(winner.status).toBe("fulfilled");
+    expect(loser.status).toBe("rejected");
+    expect((loser as PromiseRejectedResult).reason).toBeInstanceOf(ConcurrencyConflict);
+    expect(await stored(app, given)).toEqual([]);
+  });
+
+  it("does not conflict when nothing it read has changed", async () => {
+    const app = newApp();
+    const given = await givenActiveSeason(app, PER_DAY_REACH);
+
+    const { winner, loser } = await raceTransactions(
+      app,
+      (a) =>
+        recordEntry(
+          a,
+          given.victor,
+          input(given, { commitmentId: given.victorCommitment, value: { kind: "done" } }),
+        ),
+      (a) => recordEntry(a, given.andrea, input(given)),
+      "entries",
+    );
+
+    expect(winner).toMatchObject({ status: "fulfilled", value: { ok: true } });
+    expect(loser).toMatchObject({ status: "fulfilled", value: { ok: true } });
+    expect(await stored(app, given)).toHaveLength(2);
   });
 });

@@ -67,6 +67,10 @@ export function createInMemorySeasonRepository(): InMemorySeasonRepository {
       return findLatestByCircle(store, circleId);
     },
 
+    async guardVersion(): Promise<void> {
+      // Read-set guards only mean something inside a transaction.
+    },
+
     async save(season: Season, expectedVersion: number | null): Promise<void> {
       const existing = store.get(season.id);
       const currentVersion = existing ? existing.version : null;
@@ -85,6 +89,7 @@ export function createInMemorySeasonRepository(): InMemorySeasonRepository {
 
     beginTransaction(): SeasonTransactionScope {
       const staged = new Map<SeasonId, StagedWrite>();
+      const guards = new Map<SeasonId, number>();
 
       function view(id: SeasonId): Season | null {
         const write = staged.get(id);
@@ -109,6 +114,10 @@ export function createInMemorySeasonRepository(): InMemorySeasonRepository {
           return findLatestByCircle(viewMap(), circleId);
         },
 
+        async guardVersion(id: SeasonId, expectedVersion: number): Promise<void> {
+          guards.set(id, expectedVersion);
+        },
+
         async save(season: Season, expectedVersion: number | null): Promise<void> {
           staged.set(season.id, { season, expectedVersion });
         },
@@ -121,6 +130,11 @@ export function createInMemorySeasonRepository(): InMemorySeasonRepository {
       return {
         repository,
         validate(): void {
+          for (const [id, expectedVersion] of guards) {
+            if (store.get(id)?.version !== expectedVersion) {
+              throw new ConcurrencyConflict();
+            }
+          }
           for (const [id, { expectedVersion }] of staged) {
             const existing = store.get(id);
             const currentVersion = existing ? existing.version : null;
