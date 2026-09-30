@@ -23,8 +23,8 @@ export type WithdrawApprovalError =
  * Withdraws `actor`'s own approval while the pact is still open (A7,
  * PA-3); once the pact has closed, approvals are locked with every other
  * season parameter and this is rejected (PA-4, `PactAlreadyClosed`).
- * Withdrawing when no approval is currently recorded is a harmless
- * no-op -- the filter below simply finds nothing to remove.
+ * Withdrawing when no approval is recorded is an idempotent no-op (user
+ * decision, 2026-09-30): no error, no write, no version bump.
  */
 export async function withdrawApproval(
   deps: WithdrawApprovalDeps,
@@ -45,6 +45,10 @@ export async function withdrawApproval(
 
     if (season.status !== "pactOpen") {
       return err({ kind: "PactAlreadyClosed" });
+    }
+
+    if (!season.approvals.some((approval) => approval.memberId === member.id)) {
+      return ok(season);
     }
 
     const approvals = season.approvals.filter((approval) => approval.memberId !== member.id);

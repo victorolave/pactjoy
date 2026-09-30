@@ -116,6 +116,27 @@ describe("withdrawApproval", () => {
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.value.approvals).toHaveLength(0);
+    expect(result.value).toEqual(season);
+    const stored = await app.uow.read((repos) => repos.seasons.get(season.id));
+    expect(stored).toEqual(season);
+    expect(stored?.version).toBe(season.version);
+  });
+
+  it("withdrawing twice: the second call is an idempotent no-op that does not bump the version", async () => {
+    const app = createTestApp({ now: NOW });
+    const { season } = await twoMemberSeason(app);
+    const approved = await approvePact(app, actorFor("user-andrea"), { seasonId: season.id });
+    if (!approved.ok) throw new Error("fixture setup failed");
+    const first = await withdrawApproval(app, actorFor("user-andrea"), { seasonId: season.id });
+    if (!first.ok) throw new Error("fixture setup failed");
+
+    const second = await withdrawApproval(app, actorFor("user-andrea"), { seasonId: season.id });
+
+    expect(second.ok).toBe(true);
+    if (!second.ok) return;
+    expect(second.value.version).toBe(first.value.version);
+    expect((await app.uow.read((repos) => repos.seasons.get(season.id)))?.version).toBe(
+      first.value.version,
+    );
   });
 });
