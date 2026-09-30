@@ -5,7 +5,12 @@ import type { EntryId } from "../shared/ids.ts";
 import { err, ok, type Result } from "../shared/result.ts";
 import type { Clock } from "../time/clock.port.ts";
 import type { TimeZone } from "../time/time-zone.port.ts";
-import { type EntryRecord, type EntryValueInput, exceedsNoteLimit } from "./entry.ts";
+import {
+  type EntryRecord,
+  type EntryValueInput,
+  exceedsNoteLimit,
+  requestFingerprint,
+} from "./entry.ts";
 import { type EntryValueError, validateEntryValue } from "./entry-value.ts";
 import { loadMutableEntry, type OwnEntryError } from "./own-entry.ts";
 
@@ -36,7 +41,7 @@ export interface EditEntryResult {
  * Edits `actor`'s own Entry while its window is open (ER-10..ER-13, A9,
  * B8), validating the new value and note exactly like `recordEntry`. Keeps
  * the id, day, `recordedOn`, `recordedAt` and idempotency key; stamps
- * `editedAt`. Fails with `ConcurrencyConflict` if the entry was edited
+ * `editedAt`; an edit that changes nothing is a no-op. Fails with `ConcurrencyConflict` if the entry was edited
  * meanwhile (compare-and-swap) or the membership or season read here
  * changed before commit (D5).
  */
@@ -58,6 +63,14 @@ export async function editEntry(
     }
     if (exceedsNoteLimit(input.note)) {
       return err({ kind: "NoteTooLong" });
+    }
+
+    // Nothing changes: no write, no version bump, no editedAt. Like a pure
+    // replay it is not guarded either, unrelated bumps must not conflict.
+    if (
+      requestFingerprint(value.value, input.note) === requestFingerprint(entry.value, entry.note)
+    ) {
+      return ok({ entry });
     }
 
     await repos.circles.guardVersion(circle.id, circle.version);

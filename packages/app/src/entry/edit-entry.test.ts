@@ -107,6 +107,35 @@ describe("editEntry: editing", () => {
     expect(await stored(app, entry)).toMatchObject({ note: "second", version: 2 });
   });
 
+  it("an edit that changes nothing is a no-op: no write, no version bump, no editedAt", async () => {
+    const { app, given, entry } = await givenRecordedEntry(PER_DAY_REACH, 5);
+    // "30.0" is the same exact value as the recorded 30.
+    const same = { value: { kind: "quantity", value: "30.0" }, note: "original" } as const;
+
+    const result = await edit(app, localInstant(dayOf(6)), given.andrea, entry, same);
+
+    expect(result).toEqual({ ok: true, value: { entry } });
+    expect(await stored(app, entry)).toEqual(entry);
+  });
+
+  it("changing only the value, or only the note, is a real edit", async () => {
+    const { app, given, entry } = await givenRecordedEntry(PER_DAY_REACH, 5);
+    const now = localInstant(dayOf(5));
+
+    await edit(app, now, given.andrea, entry, {
+      value: { kind: "quantity", value: "31" },
+      note: "original",
+    });
+    expect(await stored(app, entry)).toMatchObject({ version: 1, editedAt: now });
+
+    const other = await givenRecordedEntry(PER_DAY_REACH, 5);
+    await edit(other.app, now, other.given.andrea, other.entry, {
+      value: { kind: "quantity", value: "30" },
+      note: "changed",
+    });
+    expect(await stored(other.app, other.entry)).toMatchObject({ version: 1, note: "changed" });
+  });
+
   it("freezes the entry of a member who left (B9)", async () => {
     const { app, given, entry } = await givenRecordedEntry(PER_DAY_REACH, 5);
     await leaveCircle(app, given.andrea, { circleId: given.circle.id });
