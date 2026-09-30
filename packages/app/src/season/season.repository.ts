@@ -11,8 +11,8 @@ export interface SeasonRepository {
   /**
    * The most recently created season for a circle, of any status, or
    * `null` if the circle has never had one. Used both for CM-12 (one
-   * pact-open-or-active season per circle) and the season-gate reader
-   * (B11): only the latest season can ever be `"pactOpen"` or `"active"`,
+   * pact-open-or-active season per circle) and the join gate
+   * (B11, derived in `join-circle.ts`): only the latest season can ever be `"pactOpen"` or `"active"`,
    * since creating a new one is rejected while one of those exists.
    */
   findLatestByCircle(circleId: CircleId): Promise<Season | null>;

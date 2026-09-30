@@ -7,7 +7,7 @@ import { err, ok, type Result } from "../shared/result.ts";
 import type { Clock } from "../time/clock.port.ts";
 import { activeMembers, type Circle, MAX_MEMBERS, type Member, memberId } from "./circle.ts";
 import { normalizeInviteCode } from "./invite-code.ts";
-import { canJoinCircle } from "./season-gate.port.ts";
+import { canJoinCircle } from "./season-gate.ts";
 
 export interface JoinCircleDeps {
   readonly uow: UnitOfWork<Repositories>;

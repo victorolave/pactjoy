@@ -34,7 +34,7 @@ export type {
   RenameCircleInput,
 } from "./circle/rename-circle.ts";
 export { renameCircle } from "./circle/rename-circle.ts";
-export type { SeasonGateStatus } from "./circle/season-gate.port.ts";
+export type { SeasonGateStatus } from "./circle/season-gate.ts";
 export type {
   AddCommitmentDeps,
   AddCommitmentError,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canJoinCircle } from "./season-gate.port.ts";
+import { canJoinCircle } from "./season-gate.ts";
 
 describe("canJoinCircle", () => {
   it("CM-7/CM-8 (reinterpreted, B1): allows joining when there is no season yet", () => {

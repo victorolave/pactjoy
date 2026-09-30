@@ -34,7 +34,7 @@ describe("createTestApp", () => {
     expect(app.ids.next()).toBe("circle-2");
   });
 
-  it("wires a real circles repository and season-gate reader behind a working UnitOfWork (S3)", async () => {
+  it("wires a real circles repository and season repository behind a working UnitOfWork (S3)", async () => {
     const app = createTestApp();
     const id = circleId("circle-1");
 
