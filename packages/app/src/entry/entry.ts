@@ -28,6 +28,11 @@ export const MAX_CLIENT_REQUEST_ID_LENGTH = 128;
 /** B6: the evidence note is at most this many characters. */
 export const MAX_NOTE_LENGTH = 280;
 
+/** Whether `note` is over {@link MAX_NOTE_LENGTH}, counted in characters (code points), not UTF-16 units. */
+export function exceedsNoteLimit(note: string | null): boolean {
+  return note !== null && [...note].length > MAX_NOTE_LENGTH;
+}
+
 /**
  * One recorded Entry. `day` is the opportunity it counts toward; `recordedOn`
  * is the season day it was actually logged (they differ inside the grace

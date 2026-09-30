@@ -14,8 +14,8 @@ import type { TimeZone } from "../time/time-zone.port.ts";
 import {
   type EntryRecord,
   type EntryValueInput,
+  exceedsNoteLimit,
   MAX_CLIENT_REQUEST_ID_LENGTH,
-  MAX_NOTE_LENGTH,
 } from "./entry.ts";
 import { type EntryValueError, validateEntryValue } from "./entry-value.ts";
 import { checkEntryWindow, type EntryWindowError } from "./entry-window.ts";
@@ -183,7 +183,7 @@ export async function recordEntry(
         return value;
       }
       const note = input.note ?? null;
-      if (note !== null && [...note].length > MAX_NOTE_LENGTH) {
+      if (exceedsNoteLimit(note)) {
         return err({ kind: "NoteTooLong" });
       }
 
