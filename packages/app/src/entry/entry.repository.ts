@@ -1,5 +1,5 @@
 import type { CommitmentId, MemberId } from "@pactjoy/engine";
-import type { SeasonId } from "../shared/ids.ts";
+import type { EntryId, SeasonId } from "../shared/ids.ts";
 import type { EntryRecord } from "./entry.ts";
 
 /**
@@ -14,6 +14,7 @@ export interface EntryRepository {
     commitmentId: CommitmentId,
     clientRequestId: string,
   ): Promise<EntryRecord | null>;
+  get(id: EntryId): Promise<EntryRecord | null>;
   listBySeason(seasonId: SeasonId): Promise<readonly EntryRecord[]>;
   /**
    * Inserts a new entry. The (member, commitment, clientRequestId) key is
@@ -21,4 +22,19 @@ export interface EntryRepository {
    * @throws {ConcurrencyConflict} if the id or the idempotency key is already stored.
    */
   add(entry: EntryRecord): Promise<void>;
+  /**
+   * Edits an entry's mutable fields (value, note, editedAt) as a
+   * compare-and-swap: it only applies if the stored entry still has the
+   * value, note and editedAt of `previous`, the state the caller read. A
+   * relational adapter expresses that as a conditional UPDATE and checks
+   * the affected-row count.
+   * @throws {ConcurrencyConflict} if the entry was edited or removed since `previous` was read.
+   */
+  replace(next: EntryRecord, previous: EntryRecord): Promise<void>;
+  /**
+   * Deletes an entry, with the same compare-and-swap as {@link replace}:
+   * only if the stored entry still matches `previous`.
+   * @throws {ConcurrencyConflict} if the entry was edited or removed since `previous` was read.
+   */
+  remove(previous: EntryRecord): Promise<void>;
 }

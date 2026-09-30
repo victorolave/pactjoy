@@ -96,6 +96,36 @@ describe("raceTransactions", () => {
   );
 
   it(
+    "pauseOn circles: the loser holds the circle view it read before the winner commits",
+    async () => {
+      const app = createTestApp({ now: NOW });
+      const given = await givenActiveSeason(app, DONE_DAILY);
+
+      const { winner, loser } = await raceTransactions(
+        app,
+        (a) =>
+          a.uow.transaction(async (repos) => {
+            await repos.circles.save({ ...given.circle, version: 1 }, 0);
+            return { ok: true as const, value: undefined };
+          }),
+        (a) =>
+          a.uow.transaction(async (repos) => {
+            await repos.seasons.get(given.season.id);
+            const circle = await repos.circles.get(given.circle.id);
+            await repos.circles.guardVersion(given.circle.id, circle?.version ?? -1);
+            return { ok: true as const, value: undefined };
+          }),
+        "circles",
+      );
+
+      expect(winner.status).toBe("fulfilled");
+      expect(loser.status).toBe("rejected");
+      expect((loser as PromiseRejectedResult).reason).toBeInstanceOf(ConcurrencyConflict);
+    },
+    HANG_GUARD_MS,
+  );
+
+  it(
     "pauseOn entries: does not hang when the loser settles without ever reaching the pause point",
     async () => {
       const app = createTestApp({ now: NOW });
