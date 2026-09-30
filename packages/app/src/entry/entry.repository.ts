@@ -9,8 +9,11 @@ import type { EntryRecord, StoredEntry } from "./entry.ts";
  */
 export interface EntryRepository {
   /**
-   * T1: the entry already recorded under this idempotency key, if any. This
-   * is the ONLY read that also returns tombstones (`deleted: true`).
+   * T1: the entry already recorded under this idempotency key, if any. With
+   * `getStored`, the ONLY reads that also return tombstones (`deleted: true`).
+   * The key (member, commitment, clientRequestId) is unique across live
+   * entries AND tombstones: no partial unique index `WHERE NOT deleted`,
+   * or a deleted entry's key would become free again.
    */
   findByClientRequest(
     memberId: MemberId,
@@ -19,7 +22,11 @@ export interface EntryRepository {
   ): Promise<StoredEntry | null>;
   /** Like {@link get} but also returns a tombstone: for the owner's idempotent delete. */
   getStored(id: EntryId): Promise<StoredEntry | null>;
-  /** Tombstones do not exist for `get` and `listBySeason`: scoring and reads never see them. */
+  /**
+   * `get` and `listBySeason` MUST exclude tombstones (`WHERE NOT deleted`).
+   * This is a binding contract for every adapter: scoring and all reads
+   * rely on it and never check `deleted` themselves.
+   */
   get(id: EntryId): Promise<EntryRecord | null>;
   listBySeason(seasonId: SeasonId): Promise<readonly EntryRecord[]>;
   /**
@@ -33,18 +40,18 @@ export interface EntryRepository {
    * version: `next.version` must be `expectedVersion + 1` and every other
    * field must equal the stored one (both are caller bugs, thrown as plain
    * errors). A relational adapter runs one UPDATE of only the mutable
-   * columns `WHERE id = $id AND version = $expected` and checks the
-   * affected-row count.
+   * columns `WHERE id = $id AND version = $expected AND NOT deleted` and
+   * checks the affected-row count.
    * @throws {ConcurrencyConflict} if the stored version is no longer `expectedVersion`, or the entry is gone or deleted.
    */
   replace(next: EntryRecord, expectedVersion: number): Promise<void>;
   /**
    * Deletes an entry by turning it into a tombstone (`deleted = true`,
    * `value` and `note` blanked to null, `version = expectedVersion + 1`),
-   * so its idempotency key stays taken.
-   * A relational adapter runs `UPDATE ... SET deleted = true, value = NULL, note = NULL,
-   * version = version + 1 WHERE id = $id AND version = $expected AND NOT deleted`
-   * and checks the affected-row count.
+   * so its idempotency key stays taken. A relational adapter runs
+   * `UPDATE ... SET deleted = true, value = NULL, note = NULL, version =
+   * version + 1 WHERE id = $id AND version = $expected AND NOT deleted` and
+   * checks the affected-row count.
    * @throws {ConcurrencyConflict} if the stored version is no longer `expectedVersion`, or the entry is gone or already deleted.
    */
   remove(id: EntryId, expectedVersion: number): Promise<void>;

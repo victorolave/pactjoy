@@ -462,6 +462,16 @@ describe("recordEntry: idempotency (T1, ER-16)", () => {
     expect(again.ok && again.value.replayed).toBe(true);
   });
 
+  it("stores an empty note as null, and an empty note replays as the same payload as no note", async () => {
+    const app = newApp();
+    const given = await givenActiveSeason(app, PER_DAY_REACH);
+    await recordEntry(app, given.andrea, input(given, { note: "" }));
+
+    expect((await stored(app, given))[0]?.note).toBeNull();
+    const again = await recordEntry(app, given.andrea, input(given, { note: null }));
+    expect(again.ok && again.value.replayed).toBe(true);
+  });
+
   it("replaying the ORIGINAL request after an edit succeeds and returns the current entry", async () => {
     const app = newApp();
     const given = await givenActiveSeason(app, PER_DAY_REACH);

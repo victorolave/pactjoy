@@ -16,6 +16,7 @@ import {
   type EntryValueInput,
   exceedsNoteLimit,
   MAX_CLIENT_REQUEST_ID_LENGTH,
+  normalizeNote,
   requestFingerprint,
   type StoredEntry,
 } from "./entry.ts";
@@ -62,8 +63,8 @@ export interface RecordEntryResult {
 /**
  * T1: a replay is only a replay when the payload is the ORIGINAL one (its
  * stored fingerprint, even if the entry was edited since): value, note and,
- * when given, the opportunity day. An omitted
- * `forDate` means "today", which can't be compared later, so it matches.
+ * when given, the opportunity day. An omitted `forDate` means "today",
+ * which can't be compared later, so it matches.
  */
 function samePayload(
   original: StoredEntry,
@@ -184,7 +185,7 @@ export async function recordEntry(
       if (!value.ok) {
         return value;
       }
-      const note = input.note ?? null;
+      const note = normalizeNote(input.note);
       if (exceedsNoteLimit(note)) {
         return err({ kind: "NoteTooLong" });
       }

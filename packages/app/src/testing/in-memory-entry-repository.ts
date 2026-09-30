@@ -8,19 +8,28 @@ function requestKey(entry: StoredEntry): string {
   return `${entry.memberId}|${entry.commitmentId}|${entry.clientRequestId}`;
 }
 
-/** What an edit must never change; a real adapter's UPDATE simply does not touch these columns. */
-const IMMUTABLE_FIELDS = [
-  "id",
-  "seasonId",
-  "memberId",
-  "commitmentId",
-  "day",
-  "recordedOn",
-  "recordedAt",
-  "clientRequestId",
-  "requestFingerprint",
-  "deleted",
-] as const satisfies readonly (keyof EntryRecord)[];
+/**
+ * What an edit must never change; a real adapter's UPDATE simply does not
+ * touch these columns. Exhaustive at compile time: a new `EntryRecord` field
+ * fails typecheck here until it is classified as mutable (the Exclude list)
+ * or listed below.
+ */
+const IMMUTABLE: Record<
+  Exclude<keyof EntryRecord, "value" | "note" | "editedAt" | "version">,
+  true
+> = {
+  id: true,
+  seasonId: true,
+  memberId: true,
+  commitmentId: true,
+  day: true,
+  recordedOn: true,
+  recordedAt: true,
+  clientRequestId: true,
+  requestFingerprint: true,
+  deleted: true,
+};
+const IMMUTABLE_FIELDS = Object.keys(IMMUTABLE) as (keyof typeof IMMUTABLE)[];
 
 /**
  * Built field by field, never by spreading the live entry: a field added to
@@ -193,6 +202,11 @@ export function createInMemoryEntryRepository(): InMemoryEntryRepository {
         },
 
         async replace(next: EntryRecord, expectedVersion: number): Promise<void> {
+          if (removed.has(next.id)) {
+            throw new Error(
+              "EntryRepository.replace: entry already removed in this transaction (replace after remove)",
+            );
+          }
           const current = visible(viewAll()).find((entry) => entry.id === next.id);
           if (current) {
             assertValidReplacement(current, next, expectedVersion);
@@ -221,12 +235,18 @@ export function createInMemoryEntryRepository(): InMemoryEntryRepository {
           }
         },
         apply(): void {
+          const indexOf = (id: EntryId): number => {
+            const index = store.findIndex((entry) => entry.id === id);
+            if (index === -1) {
+              throw new Error(`InMemoryEntryRepository.apply: entry ${id} is not stored`);
+            }
+            return index;
+          };
           for (const [id, { next }] of replaced) {
-            store[store.findIndex((entry) => entry.id === id)] = next;
+            store[indexOf(id)] = next;
           }
           for (const id of removed.keys()) {
-            const index = store.findIndex((entry) => entry.id === id);
-            store[index] = tombstone(store[index] as EntryRecord);
+            store[indexOf(id)] = tombstone(store[indexOf(id)] as EntryRecord);
           }
           store.push(...staged);
         },

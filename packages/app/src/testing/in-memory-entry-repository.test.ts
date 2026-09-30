@@ -124,6 +124,24 @@ describe("in-memory entry repository: remove leaves a tombstone", () => {
     expect(await repo.get(ENTRY.id)).toEqual(EDITED);
   });
 
+  it("rejects a replace after a remove of the same entry in one transaction", async () => {
+    const repo = await withStored();
+    const txn = repo.beginTransaction();
+    await txn.repository.remove(ENTRY.id, 0);
+
+    await expect(txn.repository.replace(EDITED, 0)).rejects.toThrow(/after remove/);
+  });
+
+  it("refuses to apply a change to an entry that is not stored, instead of writing out of bounds", async () => {
+    const txn = createInMemoryEntryRepository().beginTransaction();
+    await txn.repository.replace(EDITED, 0);
+    expect(() => txn.apply()).toThrow(/not stored/);
+
+    const removing = createInMemoryEntryRepository().beginTransaction();
+    await removing.repository.remove(ENTRY.id, 0);
+    expect(() => removing.apply()).toThrow(/not stored/);
+  });
+
   it("cannot be edited afterwards: a replace of a tombstone conflicts", async () => {
     const repo = await withStored();
     await repo.remove(ENTRY.id, 0);

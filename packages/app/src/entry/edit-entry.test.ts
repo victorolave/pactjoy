@@ -118,6 +118,42 @@ describe("editEntry: editing", () => {
     expect(await stored(app, entry)).toEqual(entry);
   });
 
+  it('stores an empty note as null: editing to "" clears it, and "" on a note-less entry is a no-op', async () => {
+    const { app, given, entry } = await givenRecordedEntry(PER_DAY_REACH, 5);
+    const now = localInstant(dayOf(5));
+    await edit(app, now, given.andrea, entry, { note: "" });
+    const cleared = await stored(app, entry);
+    expect(cleared).toMatchObject({ note: null, version: 1 });
+
+    const same = await edit(app, now, given.andrea, cleared as EntryRecord, {
+      value: { kind: "quantity", value: "45" },
+      note: "",
+    });
+    expect(same).toMatchObject({ ok: true, value: { entry: { note: null } } });
+    expect(await stored(app, entry)).toEqual(cleared);
+  });
+
+  it("a no-op edit is immune to unrelated circle and season version bumps", async () => {
+    const { app, given, entry } = await givenRecordedEntry(PER_DAY_REACH, 5);
+    const unchanged = { value: { kind: "quantity", value: "30" }, note: "original" } as const;
+
+    const { winner, loser } = await raceTransactions(
+      app,
+      (a) =>
+        a.uow.transaction(async (repos) => {
+          await repos.seasons.save({ ...given.season, version: 1 }, 0);
+          await repos.circles.save({ ...given.circle, version: 1 }, 0);
+          return { ok: true as const, value: undefined };
+        }),
+      (a) => edit(a, localInstant(dayOf(5)), given.andrea, entry, unchanged),
+      "circles",
+    );
+
+    expect(winner.status).toBe("fulfilled");
+    expect(loser).toMatchObject({ status: "fulfilled", value: { ok: true } });
+    expect(await stored(app, entry)).toEqual(entry);
+  });
+
   it("changing only the value, or only the note, is a real edit", async () => {
     const { app, given, entry } = await givenRecordedEntry(PER_DAY_REACH, 5);
     const now = localInstant(dayOf(5));
