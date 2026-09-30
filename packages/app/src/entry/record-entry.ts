@@ -17,6 +17,7 @@ import {
   exceedsNoteLimit,
   MAX_CLIENT_REQUEST_ID_LENGTH,
   requestFingerprint,
+  type StoredEntry,
 } from "./entry.ts";
 import { type EntryValueError, validateEntryValue } from "./entry-value.ts";
 import { checkEntryWindow, type EntryWindowError } from "./entry-window.ts";
@@ -65,7 +66,7 @@ export interface RecordEntryResult {
  * `forDate` means "today", which can't be compared later, so it matches.
  */
 function samePayload(
-  original: EntryRecord,
+  original: StoredEntry,
   input: RecordEntryInput,
   measure: Measure,
   actualStart: LocalDate | null,

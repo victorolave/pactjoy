@@ -1,6 +1,6 @@
 import type { CommitmentId, MemberId } from "@pactjoy/engine";
 import type { EntryId, SeasonId } from "../shared/ids.ts";
-import type { EntryRecord } from "./entry.ts";
+import type { EntryRecord, StoredEntry } from "./entry.ts";
 
 /**
  * Storage port for {@link EntryRecord} (ADR-0008, D6). Entries are the
@@ -16,7 +16,9 @@ export interface EntryRepository {
     memberId: MemberId,
     commitmentId: CommitmentId,
     clientRequestId: string,
-  ): Promise<EntryRecord | null>;
+  ): Promise<StoredEntry | null>;
+  /** Like {@link get} but also returns a tombstone: for the owner's idempotent delete. */
+  getStored(id: EntryId): Promise<StoredEntry | null>;
   /** Tombstones do not exist for `get` and `listBySeason`: scoring and reads never see them. */
   get(id: EntryId): Promise<EntryRecord | null>;
   listBySeason(seasonId: SeasonId): Promise<readonly EntryRecord[]>;
@@ -38,9 +40,10 @@ export interface EntryRepository {
   replace(next: EntryRecord, expectedVersion: number): Promise<void>;
   /**
    * Deletes an entry by turning it into a tombstone (`deleted = true`,
-   * `version = expectedVersion + 1`), so its idempotency key stays taken.
-   * A relational adapter runs `UPDATE ... SET deleted = true, version =
-   * version + 1 WHERE id = $id AND version = $expected AND NOT deleted`
+   * `value` and `note` blanked to null, `version = expectedVersion + 1`),
+   * so its idempotency key stays taken.
+   * A relational adapter runs `UPDATE ... SET deleted = true, value = NULL, note = NULL,
+   * version = version + 1 WHERE id = $id AND version = $expected AND NOT deleted`
    * and checks the affected-row count.
    * @throws {ConcurrencyConflict} if the stored version is no longer `expectedVersion`, or the entry is gone or already deleted.
    */

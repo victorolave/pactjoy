@@ -1,10 +1,10 @@
 import type { CommitmentId, MemberId } from "@pactjoy/engine";
 import type { EntryRepository } from "../entry/entry.repository.ts";
-import type { EntryRecord } from "../entry/entry.ts";
+import type { EntryCore, EntryRecord, EntryTombstone, StoredEntry } from "../entry/entry.ts";
 import { ConcurrencyConflict } from "../shared/errors.ts";
 import type { EntryId, SeasonId } from "../shared/ids.ts";
 
-function requestKey(entry: EntryRecord): string {
+function requestKey(entry: StoredEntry): string {
   return `${entry.memberId}|${entry.commitmentId}|${entry.clientRequestId}`;
 }
 
@@ -22,8 +22,26 @@ const IMMUTABLE_FIELDS = [
   "deleted",
 ] as const satisfies readonly (keyof EntryRecord)[];
 
-function tombstone(entry: EntryRecord): EntryRecord {
-  return { ...entry, deleted: true, version: entry.version + 1 };
+/**
+ * Built field by field, never by spreading the live entry: a field added to
+ * `EntryCore` fails typecheck here until it is kept on purpose, and a field
+ * that only lives on `EntryRecord` (evidence) can never survive a delete.
+ */
+function tombstone(entry: EntryRecord): EntryTombstone {
+  const core: EntryCore = {
+    id: entry.id,
+    seasonId: entry.seasonId,
+    memberId: entry.memberId,
+    commitmentId: entry.commitmentId,
+    day: entry.day,
+    recordedOn: entry.recordedOn,
+    recordedAt: entry.recordedAt,
+    clientRequestId: entry.clientRequestId,
+    editedAt: entry.editedAt,
+    version: entry.version + 1,
+    requestFingerprint: entry.requestFingerprint,
+  };
+  return { ...core, value: null, note: null, deleted: true };
 }
 
 /** Programming errors in the caller, not races: thrown as plain errors. */
@@ -56,14 +74,14 @@ export interface InMemoryEntryRepository extends EntryRepository {
 
 /** Deterministic in-memory {@link EntryRepository} for tests (ADR-0008). */
 export function createInMemoryEntryRepository(): InMemoryEntryRepository {
-  const store: EntryRecord[] = [];
+  const store: StoredEntry[] = [];
 
   function find(
-    entries: readonly EntryRecord[],
+    entries: readonly StoredEntry[],
     memberId: MemberId,
     commitmentId: CommitmentId,
     clientRequestId: string,
-  ): EntryRecord | null {
+  ): StoredEntry | null {
     return (
       entries.find(
         (entry) =>
@@ -75,11 +93,11 @@ export function createInMemoryEntryRepository(): InMemoryEntryRepository {
   }
 
   /** Tombstones do not exist for `get` and `listBySeason`. */
-  function visible(entries: readonly EntryRecord[]): EntryRecord[] {
-    return entries.filter((entry) => !entry.deleted);
+  function visible(entries: readonly StoredEntry[]): EntryRecord[] {
+    return entries.filter((entry): entry is EntryRecord => !entry.deleted);
   }
 
-  function conflicts(entries: readonly EntryRecord[], entry: EntryRecord): boolean {
+  function conflicts(entries: readonly StoredEntry[], entry: EntryRecord): boolean {
     return entries.some(
       (stored) => stored.id === entry.id || requestKey(stored) === requestKey(entry),
     );
@@ -88,6 +106,10 @@ export function createInMemoryEntryRepository(): InMemoryEntryRepository {
   return {
     async findByClientRequest(memberId, commitmentId, clientRequestId) {
       return find(store, memberId, commitmentId, clientRequestId);
+    },
+
+    async getStored(id: EntryId) {
+      return store.find((entry) => entry.id === id) ?? null;
     },
 
     async get(id: EntryId) {
@@ -131,10 +153,14 @@ export function createInMemoryEntryRepository(): InMemoryEntryRepository {
       const removed = new Map<EntryId, number>();
 
       /** Everything this transaction sees, tombstones included. */
-      function viewAll(): EntryRecord[] {
+      function viewAll(): StoredEntry[] {
         return [
           ...store.map((entry) =>
-            removed.has(entry.id) ? tombstone(entry) : (replaced.get(entry.id)?.next ?? entry),
+            entry.deleted
+              ? entry
+              : removed.has(entry.id)
+                ? tombstone(entry)
+                : (replaced.get(entry.id)?.next ?? entry),
           ),
           ...staged,
         ];
@@ -148,6 +174,10 @@ export function createInMemoryEntryRepository(): InMemoryEntryRepository {
       const repository: EntryRepository = {
         async findByClientRequest(memberId, commitmentId, clientRequestId) {
           return find(viewAll(), memberId, commitmentId, clientRequestId);
+        },
+
+        async getStored(id: EntryId) {
+          return viewAll().find((entry) => entry.id === id) ?? null;
         },
 
         async get(id: EntryId) {
