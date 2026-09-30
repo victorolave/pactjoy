@@ -43,6 +43,7 @@ export interface CircleFixtureOptions {
   readonly name?: string;
   readonly invite?: Invite | null;
   readonly createdAt?: Instant;
+  readonly archivedAt?: Instant | null;
   readonly version?: number;
 }
 
@@ -54,6 +55,7 @@ export function circleFixture(options: CircleFixtureOptions): Circle {
     members: options.members,
     invite: options.invite ?? null,
     createdAt: options.createdAt ?? DEFAULT_INSTANT,
+    archivedAt: options.archivedAt ?? null,
     version: options.version ?? 0,
   };
 }
