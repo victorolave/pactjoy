@@ -5,7 +5,7 @@ import type { Actor } from "../shared/actor.ts";
 import type { CircleId } from "../shared/ids.ts";
 import { err, ok, type Result } from "../shared/result.ts";
 import type { Clock } from "../time/clock.port.ts";
-import { activeMembers, type Circle, findActiveMember, type Member } from "./circle.ts";
+import { type Circle, findActiveMember, type Member } from "./circle.ts";
 
 export interface LeaveCircleDeps {
   readonly uow: UnitOfWork<Repositories>;
@@ -25,12 +25,13 @@ export type LeaveCircleError =
  * is still open, the leaver's commitments are discarded and every pact
  * approval is reset (CM-13, PA-6), written in the same transaction as the
  * circle. If the leaver was the LAST active member, the open season is
- * discarded instead (2026-09-30 decision). The season is written even with
- * no approvals yet, so a concurrent approval can't commit over the change
- * (`ConcurrencyConflict`, D5). Once the
- * season is active or closed nothing on the season changes: the pact is
- * locked and past data is kept (B9). A member who has already left cannot
- * leave again (`NotAMember`).
+ * discarded instead and the circle is archived in the same commit
+ * (terminal; an ACTIVE season is kept unchanged). The season is written
+ * even with no approvals yet, so a concurrent approval can't commit over
+ * the change (`ConcurrencyConflict`, D5). Once the season is active or
+ * closed nothing on the season changes: the pact is locked and past data
+ * is kept (B9). A member who has already left cannot leave again
+ * (`NotAMember`).
  */
 export async function leaveCircle(
   deps: LeaveCircleDeps,
@@ -52,12 +53,18 @@ export async function leaveCircle(
     const members: readonly Member[] = circle.members.map((m) =>
       m.id === member.id ? { ...m, status: "left" as const, leftAt: now } : m,
     );
-    const updated: Circle = { ...circle, members, version: circle.version + 1 };
+    const lastMemberLeft = members.every((m) => m.status === "left");
+    const updated: Circle = {
+      ...circle,
+      members,
+      archivedAt: lastMemberLeft ? now : circle.archivedAt,
+      version: circle.version + 1,
+    };
     await repos.circles.save(updated, circle.version);
 
     const latestSeason = await repos.seasons.findLatestByCircle(circle.id);
     if (latestSeason?.status === "pactOpen") {
-      if (activeMembers(updated).length === 0) {
+      if (lastMemberLeft) {
         // Nobody is left to have agreed to anything: discard the open season.
         await repos.seasons.delete(latestSeason.id, latestSeason.version);
       } else {

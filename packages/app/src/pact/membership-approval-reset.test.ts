@@ -3,7 +3,6 @@ import { createCircle } from "../circle/create-circle.ts";
 import { generateInvite } from "../circle/generate-invite.ts";
 import { joinCircle } from "../circle/join-circle.ts";
 import { leaveCircle } from "../circle/leave-circle.ts";
-import { createSeason } from "../season/create-season.ts";
 import { habitId, userId } from "../shared/ids.ts";
 import { createTestApp } from "../testing/app-harness.ts";
 import {
@@ -90,7 +89,7 @@ describe("approval resets when membership changes (PA-5, PA-6)", () => {
     expect(left.ok).toBe(true);
   });
 
-  it("the last member leaving while the pact is open discards the season; a later joiner must create a new one", async () => {
+  it("the last member leaving while the pact is open discards the season; the archived circle rejects a later joiner", async () => {
     const app = createTestApp({ now: NOW });
     const { circle, season, andrea } = await givenSoloOpenPact(app);
     const invite = await generateInvite(app, andrea, { circleId: circle.id });
@@ -101,19 +100,12 @@ describe("approval resets when membership changes (PA-5, PA-6)", () => {
     expect(left.ok).toBe(true);
     expect(await app.uow.read((repos) => repos.seasons.get(season.id))).toBeNull();
 
-    const carla = { userId: userId("user-carla") };
-    const joined = await joinCircle(app, carla, { inviteCode: invite.value.code });
-    expect(joined.ok).toBe(true);
-    const fresh = await createSeason(app, carla, {
-      circleId: circle.id,
-      timezone: "America/Santiago",
-      startDate: "2025-10-01",
-      lengthWeeks: 8,
-    });
-    expect(fresh.ok).toBe(true);
-    if (!fresh.ok) return;
-    expect(fresh.value.id).not.toBe(season.id);
-    expect(fresh.value.commitments).toEqual([]);
+    const joined = await joinCircle(
+      app,
+      { userId: userId("user-carla") },
+      { inviteCode: invite.value.code },
+    );
+    expect(joined).toEqual({ ok: false, error: { kind: "CircleArchived" } });
   });
 
   it("the last member leaving after the pact closed keeps the season", async () => {

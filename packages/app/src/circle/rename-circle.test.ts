@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { userId } from "../shared/ids.ts";
 import { createTestApp } from "../testing/app-harness.ts";
+import { givenArchivedCircle } from "../testing/pact-fixtures.ts";
 import { memberId } from "./circle.ts";
 import { createCircle } from "./create-circle.ts";
 import { renameCircle } from "./rename-circle.ts";
@@ -84,5 +85,15 @@ describe("renameCircle", () => {
     });
 
     expect(result).toEqual({ ok: false, error: { kind: "InvalidName" } });
+  });
+
+  it("rejects renaming an archived circle, leaving it untouched", async () => {
+    const app = createTestApp();
+    const { circle, andrea } = await givenArchivedCircle(app);
+
+    const result = await renameCircle(app, andrea, { circleId: circle.id, name: "Back again" });
+
+    expect(result).toEqual({ ok: false, error: { kind: "CircleArchived" } });
+    expect(await app.circles.get(circle.id)).toEqual(circle);
   });
 });

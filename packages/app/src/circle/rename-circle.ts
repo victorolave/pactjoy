@@ -16,6 +16,7 @@ export interface RenameCircleInput {
 
 export type RenameCircleError =
   | { readonly kind: "CircleNotFound" }
+  | { readonly kind: "CircleArchived" }
   | { readonly kind: "NotAMember" }
   | { readonly kind: "InvalidName" };
 
@@ -33,6 +34,9 @@ export async function renameCircle(
     const circle = await repos.circles.get(input.circleId);
     if (!circle) {
       return err({ kind: "CircleNotFound" });
+    }
+    if (circle.archivedAt !== null) {
+      return err({ kind: "CircleArchived" });
     }
     if (!findActiveMember(circle, actor.userId)) {
       return err({ kind: "NotAMember" });

@@ -56,6 +56,7 @@ export interface GenerateInviteInput {
 
 export type GenerateInviteError =
   | { readonly kind: "CircleNotFound" }
+  | { readonly kind: "CircleArchived" }
   | { readonly kind: "NotAMember" };
 
 /**
@@ -74,6 +75,9 @@ export async function generateInvite(
     const circle = await repos.circles.get(input.circleId);
     if (!circle) {
       return err({ kind: "CircleNotFound" });
+    }
+    if (circle.archivedAt !== null) {
+      return err({ kind: "CircleArchived" });
     }
     const member = findActiveMember(circle, actor.userId);
     if (!member) {
