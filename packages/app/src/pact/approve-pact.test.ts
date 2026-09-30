@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createCircle } from "../circle/create-circle.ts";
 import { generateInvite } from "../circle/generate-invite.ts";
 import { joinCircle } from "../circle/join-circle.ts";
+import { leaveCircle } from "../circle/leave-circle.ts";
 import { addCommitment } from "../commitment/add-commitment.ts";
 import { createSeason } from "../season/create-season.ts";
 import type { CircleId, SeasonId } from "../shared/ids.ts";
@@ -49,6 +50,7 @@ async function seasonWithFullyWeightedMembers(
   app: TestApp,
   count: number,
   startDate = "2025-10-01",
+  timezone = "UTC",
 ) {
   const circle = await createCircle(app, actorFor("user-andrea"), { name: "Río Runners" });
   if (!circle.ok) throw new Error("fixture setup failed");
@@ -58,7 +60,7 @@ async function seasonWithFullyWeightedMembers(
   }
   const season = await createSeason(app, actorFor("user-andrea"), {
     circleId: circle.value.id,
-    timezone: "UTC",
+    timezone,
     startDate,
     lengthWeeks: 8,
   });
@@ -247,5 +249,43 @@ describe("approvePact", () => {
     if (!second.ok) return;
     expect(second.value.approvals).toHaveLength(1);
     expect(second.value.status).toBe("pactOpen");
+  });
+
+  it("unanimity is judged over ACTIVE members: after one leaves, the remaining members' approvals close the pact", async () => {
+    const app = utcTestApp();
+    const { circle, season, memberActorIds } = await seasonWithFullyWeightedMembers(app, 3);
+    const [andrea, member0, leaver] = memberActorIds as [string, string, string];
+    const left = await leaveCircle(app, actorFor(leaver), { circleId: circle.id });
+    if (!left.ok) throw new Error("fixture setup failed");
+
+    const first = await approvePact(app, actorFor(andrea), { seasonId: season.id });
+    const second = await approvePact(app, actorFor(member0), { seasonId: season.id });
+
+    expect(first.ok && first.value.status).toBe("pactOpen");
+    expect(second.ok && second.value.status).toBe("active");
+  });
+
+  it("the closing date is resolved in the season's own timezone, not UTC (B3)", async () => {
+    // Created on 2025-09-28; closing instant is 2025-10-02T01:00Z = 2025-10-01 22:00 in Santiago (UTC-3).
+    const creationApp = createTestApp({ now: instant(1_759_046_400_000) });
+    const { season, memberActorIds } = await seasonWithFullyWeightedMembers(
+      creationApp,
+      1,
+      "2025-10-01",
+      "America/Santiago",
+    );
+    const lateApp: TestApp = {
+      ...creationApp,
+      clock: { now: () => instant(1_759_366_800_000) },
+    };
+
+    const result = await approvePact(lateApp, actorFor(memberActorIds[0] as string), {
+      seasonId: season.id,
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    // Local date is still the nominal start (10-01), so no shift. In UTC it would be 10-02 -> 10-03.
+    expect(result.value.actualStart).toBe("2025-10-01");
   });
 });
