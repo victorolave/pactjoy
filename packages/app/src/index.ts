@@ -66,6 +66,18 @@ export type {
 export { createHabit } from "./habit/create-habit.ts";
 export type { HabitRepository } from "./habit/habit.repository.ts";
 export type { Habit } from "./habit/habit.ts";
+export type {
+  ApprovePactDeps,
+  ApprovePactError,
+  ApprovePactInput,
+} from "./pact/approve-pact.ts";
+export { approvePact } from "./pact/approve-pact.ts";
+export type {
+  WithdrawApprovalDeps,
+  WithdrawApprovalError,
+  WithdrawApprovalInput,
+} from "./pact/withdraw-approval.ts";
+export { withdrawApproval } from "./pact/withdraw-approval.ts";
 export type { IdGenerator } from "./ports/id-generator.ts";
 export type { RandomSource } from "./ports/random-source.ts";
 export type { Repositories } from "./ports/repositories.ts";
@@ -84,6 +96,7 @@ export type {
 export { editSeasonParams } from "./season/edit-season-params.ts";
 export type { SeasonRepository } from "./season/season.repository.ts";
 export type {
+  PactApproval,
   ReviewCadenceWeeks,
   Season,
   SeasonLengthWeeks,

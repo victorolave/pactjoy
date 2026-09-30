@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
  */
 const EXPECTED_RUNTIME_EXPORTS = [
   "addCommitment",
+  "approvePact",
   "buildCommitment",
   "circleId",
   "commitmentId",
@@ -39,6 +40,7 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "toSeasonDay",
   "userId",
   "validateCommitment",
+  "withdrawApproval",
 ].sort();
 
 describe("@pactjoy/app public API", () => {
