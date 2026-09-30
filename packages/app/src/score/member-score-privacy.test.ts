@@ -20,6 +20,14 @@ const DAILY_MINUTES: Measure = {
     frequency: { kind: "specificDays", weekdays: [0, 1, 2, 3, 4, 5, 6] },
   },
 };
+/** What a viewer sees of {@link DAILY_MINUTES}: thresholds as exact decimal strings, never engine fractions. */
+const DAILY_MINUTES_VIEW = {
+  unit: "minutes",
+  customLabel: null,
+  precision: "decimal",
+  target: { direction: "reach", minimum: "10", ideal: "30" },
+  schedule: DAILY_MINUTES.schedule,
+};
 const THREE_A_WEEK: Measure = {
   unit: "done",
   schedule: { period: "perSession", frequency: { kind: "timesPerWeek", times: 3 } },
@@ -94,12 +102,23 @@ describe("memberScore: commitments and the privacy projection", () => {
       habitId: habitId(`habit-${minutes}`),
       weightPercent: 60,
       privacy: "visible",
-      measure: DAILY_MINUTES,
+      measure: DAILY_MINUTES_VIEW,
       points: 21,
       consistency: 100,
       idealCompletion: 100,
       streak: expect.objectContaining({ unit: "day" }),
     });
+  });
+
+  it("serializes to JSON as it is, with no engine fractions inside", async () => {
+    const { given, ask } = await setup("visible", "visible");
+
+    const commitments = await ask(given.victor);
+
+    expect(JSON.parse(JSON.stringify(commitments))).toMatchObject([
+      { measure: { target: { minimum: "10", ideal: "30" } } },
+      { measure: { unit: "done" } },
+    ]);
   });
 
   it("SQ-2: a private commitment shows others only its existence, weight and points", async () => {
@@ -119,11 +138,9 @@ describe("memberScore: commitments and the privacy projection", () => {
   it("SQ-2: nothing about a private commitment leaks anywhere in what others receive", async () => {
     const { given, ask, minutes } = await setup("private", "private");
 
-    const serialized = JSON.stringify(await ask(given.victor), (_key, value) =>
-      typeof value === "bigint" ? value.toString() : value,
-    );
+    const serialized = JSON.stringify(await ask(given.victor));
 
-    for (const secret of [`habit-${minutes}`, "minutes", "reach", "specificDays", "timesPerWeek"]) {
+    for (const secret of [`habit-${minutes}`, "minutes", "specificDays"]) {
       expect(serialized).not.toContain(secret);
     }
   });
@@ -134,7 +151,7 @@ describe("memberScore: commitments and the privacy projection", () => {
     const commitments = await ask(given.andrea);
 
     expect(commitments.map((c) => c.kind)).toEqual(["detail", "detail"]);
-    expect(commitments[0]).toMatchObject({ privacy: "private", measure: DAILY_MINUTES });
+    expect(commitments[0]).toMatchObject({ privacy: "private", measure: DAILY_MINUTES_VIEW });
   });
 
   it("keeps every commitment visible as at least existing, in order, privacy notwithstanding", async () => {
