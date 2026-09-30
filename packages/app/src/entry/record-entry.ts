@@ -174,7 +174,7 @@ export async function recordEntry(
         return value;
       }
       const note = input.note ?? null;
-      if (note !== null && note.length > MAX_NOTE_LENGTH) {
+      if (note !== null && [...note].length > MAX_NOTE_LENGTH) {
         return err({ kind: "NoteTooLong" });
       }
 

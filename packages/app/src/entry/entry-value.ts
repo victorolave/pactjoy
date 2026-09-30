@@ -8,18 +8,41 @@ export type EntryValueError =
   | { readonly kind: "ValueKindMismatch" }
   | {
       readonly kind: "InvalidQuantity";
-      readonly reason: "negative" | "tooManyDecimals" | "notANumber";
+      readonly reason:
+        | "negative"
+        | "tooManyDecimals"
+        | "notANumber"
+        | "tooManyDigits"
+        | "integerOnly";
     };
 
 const NON_NEGATIVE_DECIMAL = /^\d+(\.\d+)?$/;
 const AT_MOST_TWO_DECIMALS = /^\d+(\.\d{1,2})?$/;
 
-function parseQuantity(raw: string): Result<Fraction, EntryValueError> {
+/** Quantities are capped at this many integer digits (keeps exact fractions small). */
+export const MAX_INTEGER_DIGITS = 9;
+
+/**
+ * Units counted in whole things accept integers only; minutes, hours, km
+ * and custom units accept up to 2 decimals. Custom units have no per-
+ * commitment precision field (kept small on purpose), so they get the
+ * permissive rule.
+ */
+const INTEGER_ONLY_UNITS: readonly string[] = ["times", "pages", "glasses"];
+
+function parseQuantity(raw: string, integerOnly: boolean): Result<Fraction, EntryValueError> {
   if (raw.startsWith("-") && NON_NEGATIVE_DECIMAL.test(raw.slice(1))) {
     return err({ kind: "InvalidQuantity", reason: "negative" });
   }
   if (!NON_NEGATIVE_DECIMAL.test(raw)) {
     return err({ kind: "InvalidQuantity", reason: "notANumber" });
+  }
+  const [integerPart = "", decimalPart] = raw.split(".");
+  if (integerPart.length > MAX_INTEGER_DIGITS) {
+    return err({ kind: "InvalidQuantity", reason: "tooManyDigits" });
+  }
+  if (integerOnly && decimalPart !== undefined) {
+    return err({ kind: "InvalidQuantity", reason: "integerOnly" });
   }
   if (!AT_MOST_TWO_DECIMALS.test(raw)) {
     return err({ kind: "InvalidQuantity", reason: "tooManyDecimals" });
@@ -64,6 +87,6 @@ export function validateEntryValue(
   if (measure.unit === "done") {
     return err({ kind: "ValueKindMismatch" });
   }
-  const parsed = parseQuantity(raw.value);
+  const parsed = parseQuantity(raw.value, INTEGER_ONLY_UNITS.includes(measure.unit));
   return parsed.ok ? ok({ kind: "quantity", value: parsed.value }) : parsed;
 }

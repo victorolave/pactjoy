@@ -147,6 +147,25 @@ describe("recordEntry: recording", () => {
     });
   });
 
+  it("counts the note in characters, not UTF-16 units (B6)", async () => {
+    const app = newApp();
+    const given = await givenActiveSeason(app, PER_DAY_REACH);
+
+    const emoji = await recordEntry(
+      app,
+      given.andrea,
+      input(given, { note: "😀".repeat(MAX_NOTE_LENGTH) }),
+    );
+    expect(emoji.ok).toBe(true);
+    expect(
+      await recordEntry(
+        app,
+        given.andrea,
+        input(given, { note: "😀".repeat(MAX_NOTE_LENGTH + 1), clientRequestId: "r2" }),
+      ),
+    ).toEqual({ ok: false, error: { kind: "NoteTooLong" } });
+  });
+
   it("rejects a note over 280 characters (B6) and accepts exactly 280", async () => {
     const app = newApp();
     const given = await givenActiveSeason(app, PER_DAY_REACH);

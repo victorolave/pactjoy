@@ -100,4 +100,31 @@ describe("validateEntryValue (A8 corrected, B10)", () => {
     expect(quantity(REACH_DAY_BOUND, "")).toEqual(invalid("notANumber"));
     expect(quantity(REACH_DAY_BOUND, "1e3")).toEqual(invalid("notANumber"));
   });
+
+  it("accepts only integers for times, pages and glasses, and up to 2 decimals for the rest", () => {
+    const integerOnly = { ok: false, error: { kind: "InvalidQuantity", reason: "integerOnly" } };
+    for (const unit of ["times", "pages", "glasses"] as const) {
+      const measure = { ...LIMIT_DAY_BOUND, unit } as Measure;
+      expect(quantity(measure, "1.5")).toEqual(integerOnly);
+      expect(quantity(measure, "2.0")).toEqual(integerOnly);
+      expect(quantity(measure, "2").ok).toBe(true);
+      expect(quantity(measure, "0").ok).toBe(true);
+    }
+    for (const unit of ["minutes", "hours", "km", "custom"] as const) {
+      const measure = { ...REACH_DAY_BOUND, unit } as Measure;
+      expect(quantity(measure, "1.25").ok).toBe(true);
+      expect(quantity(measure, "1.255")).toEqual({
+        ok: false,
+        error: { kind: "InvalidQuantity", reason: "tooManyDecimals" },
+      });
+    }
+  });
+
+  it("caps a quantity at 9 integer digits", () => {
+    expect(quantity(REACH_DAY_BOUND, "999999999").ok).toBe(true);
+    expect(quantity(REACH_DAY_BOUND, "999999999.99").ok).toBe(true);
+    const tooBig = { ok: false, error: { kind: "InvalidQuantity", reason: "tooManyDigits" } };
+    expect(quantity(REACH_DAY_BOUND, "1000000000")).toEqual(tooBig);
+    expect(quantity(LIMIT_DAY_BOUND, "1000000000")).toEqual(tooBig);
+  });
 });
