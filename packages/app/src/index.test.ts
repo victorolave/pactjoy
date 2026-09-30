@@ -39,6 +39,7 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "renameCircle",
   "reviewCadenceForLength",
   "seasonId",
+  "standings",
   "timeZoneId",
   "toSeasonDay",
   "userId",

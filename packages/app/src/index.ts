@@ -116,6 +116,14 @@ export type {
 } from "./score/member-score.query.ts";
 export { memberScore } from "./score/member-score.query.ts";
 export type {
+  StandingsDeps,
+  StandingsError,
+  StandingsInput,
+  StandingsRowView,
+  StandingsView,
+} from "./score/standings.query.ts";
+export { standings } from "./score/standings.query.ts";
+export type {
   CreateSeasonDeps,
   CreateSeasonError,
   CreateSeasonInput,
