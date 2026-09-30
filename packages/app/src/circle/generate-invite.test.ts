@@ -3,6 +3,7 @@ import type { RandomSource } from "../ports/random-source.ts";
 import { InviteCodeGenerationFailed } from "../shared/errors.ts";
 import { userId } from "../shared/ids.ts";
 import { createTestApp } from "../testing/app-harness.ts";
+import { givenArchivedCircle } from "../testing/pact-fixtures.ts";
 import { createCircle } from "./create-circle.ts";
 import { generateInvite } from "./generate-invite.ts";
 
@@ -137,5 +138,15 @@ describe("generateInvite", () => {
     );
 
     expect(second).toEqual({ ok: true, value: expect.objectContaining({ code: "222222" }) });
+  });
+
+  it("rejects generating an invite for an archived circle, leaving it untouched", async () => {
+    const app = createTestApp();
+    const { circle, andrea } = await givenArchivedCircle(app);
+
+    const result = await generateInvite(app, andrea, { circleId: circle.id });
+
+    expect(result).toEqual({ ok: false, error: { kind: "CircleArchived" } });
+    expect(await app.circles.get(circle.id)).toEqual(circle);
   });
 });

@@ -43,6 +43,7 @@ export interface CreateSeasonInput {
 
 export type CreateSeasonError =
   | { readonly kind: "CircleNotFound" }
+  | { readonly kind: "CircleArchived" }
   | { readonly kind: "NotAMember" }
   | { readonly kind: "InvalidTimezone" }
   | { readonly kind: "InvalidStartDate" }
@@ -68,6 +69,9 @@ export async function createSeason(
     const circle = await repos.circles.get(input.circleId);
     if (!circle) {
       return err({ kind: "CircleNotFound" });
+    }
+    if (circle.archivedAt !== null) {
+      return err({ kind: "CircleArchived" });
     }
     if (!findActiveMember(circle, actor.userId)) {
       return err({ kind: "NotAMember" });

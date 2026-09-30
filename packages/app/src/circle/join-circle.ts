@@ -22,6 +22,7 @@ export interface JoinCircleInput {
 export type JoinCircleError =
   | { readonly kind: "InviteNotFound" }
   | { readonly kind: "InviteExpired" }
+  | { readonly kind: "CircleArchived" }
   | { readonly kind: "AlreadyInActiveCircle" }
   | { readonly kind: "SeasonNotJoinable" }
   | { readonly kind: "CircleFull" };
@@ -44,6 +45,10 @@ export async function joinCircle(
     const circle = await repos.circles.findByInviteCode(normalizedCode);
     if (!circle?.invite) {
       return err({ kind: "InviteNotFound" });
+    }
+
+    if (circle.archivedAt !== null) {
+      return err({ kind: "CircleArchived" });
     }
 
     const now = deps.clock.now();

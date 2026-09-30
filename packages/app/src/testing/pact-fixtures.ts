@@ -2,6 +2,7 @@ import type { Circle } from "../circle/circle.ts";
 import { createCircle } from "../circle/create-circle.ts";
 import { generateInvite } from "../circle/generate-invite.ts";
 import { joinCircle } from "../circle/join-circle.ts";
+import { leaveCircle } from "../circle/leave-circle.ts";
 import { addCommitment } from "../commitment/add-commitment.ts";
 import { approvePact } from "../pact/approve-pact.ts";
 import { createSeason } from "../season/create-season.ts";
@@ -93,4 +94,20 @@ export async function givenSoloOpenPact(app: TestApp): Promise<{
     }),
   );
   return { circle, season, andrea };
+}
+
+/**
+ * GIVEN: a circle archived by its last member leaving (2026-09-30). `inviteCode`
+ * was generated before leaving, so it is the code a late joiner would hold.
+ */
+export async function givenArchivedCircle(app: TestApp): Promise<{
+  readonly circle: Circle;
+  readonly inviteCode: string;
+  readonly andrea: Actor;
+}> {
+  const andrea: Actor = { userId: userId("user-andrea") };
+  const created = must(await createCircle(app, andrea, { name: "Solo" }));
+  const invite = must(await generateInvite(app, andrea, { circleId: created.id }));
+  const circle = must(await leaveCircle(app, andrea, { circleId: created.id }));
+  return { circle, inviteCode: invite.code, andrea };
 }

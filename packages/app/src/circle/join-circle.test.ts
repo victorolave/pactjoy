@@ -6,6 +6,7 @@ import { ok } from "../shared/result.ts";
 import type { TestApp } from "../testing/app-harness.ts";
 import { createTestApp } from "../testing/app-harness.ts";
 import { memberFixture, seasonFixture } from "../testing/builders.ts";
+import { givenArchivedCircle } from "../testing/pact-fixtures.ts";
 import { instant } from "../time/instant.ts";
 import { memberId } from "./circle.ts";
 import { createCircle } from "./create-circle.ts";
@@ -250,5 +251,15 @@ describe("joinCircle", () => {
     // a failed transaction must not clobber a concurrent transaction's commit.
     const persisted = await app.circles.get(circle.id);
     expect(persisted?.members).toHaveLength(6);
+  });
+
+  it("rejects joining an archived circle even with a still-unexpired invite, leaving it untouched", async () => {
+    const app = createTestApp();
+    const { circle, inviteCode } = await givenArchivedCircle(app);
+
+    const result = await joinCircle(app, actorFor("user-carla"), { inviteCode });
+
+    expect(result).toEqual({ ok: false, error: { kind: "CircleArchived" } });
+    expect(await app.circles.get(circle.id)).toEqual(circle);
   });
 });

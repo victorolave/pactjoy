@@ -4,6 +4,7 @@ import { ConcurrencyConflict } from "../shared/errors.ts";
 import { circleId, userId } from "../shared/ids.ts";
 import { ok } from "../shared/result.ts";
 import { createTestApp } from "../testing/app-harness.ts";
+import { givenArchivedCircle } from "../testing/pact-fixtures.ts";
 import { instant } from "../time/instant.ts";
 import { createSeason } from "./create-season.ts";
 
@@ -264,5 +265,21 @@ describe("createSeason", () => {
       repos.seasons.findLatestByCircle(circle.value.id),
     );
     expect(persisted?.id).toBe(winner.value.id);
+  });
+
+  it("rejects creating a season in an archived circle, leaving no season behind", async () => {
+    const app = createTestApp({ now: NOW });
+    const { circle, andrea } = await givenArchivedCircle(app);
+
+    const result = await createSeason(app, andrea, {
+      circleId: circle.id,
+      timezone: "America/Santiago",
+      startDate: "2025-10-01",
+      lengthWeeks: 8,
+    });
+
+    expect(result).toEqual({ ok: false, error: { kind: "CircleArchived" } });
+    expect(await app.seasons.findLatestByCircle(circle.id)).toBeNull();
+    expect(await app.circles.get(circle.id)).toEqual(circle);
   });
 });
