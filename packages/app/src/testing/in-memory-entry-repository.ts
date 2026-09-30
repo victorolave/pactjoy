@@ -88,13 +88,34 @@ export function createInMemoryEntryRepository(): InMemoryEntryRepository {
       store[index] = next;
     },
 
+    async remove(previous: EntryRecord): Promise<void> {
+      const index = store.findIndex((entry) => entry.id === previous.id);
+      const current = store[index];
+      if (!current || !sameMutableState(current, previous)) {
+        throw new ConcurrencyConflict();
+      }
+      store.splice(index, 1);
+    },
+
     beginTransaction(): EntryTransactionScope {
       const staged: EntryRecord[] = [];
       // Edits by entry id; `previous` stays the state first read, `next` the latest edit.
       const replaced = new Map<EntryId, { previous: EntryRecord; next: EntryRecord }>();
 
+      const removed = new Map<EntryId, EntryRecord>();
+
       function view(): EntryRecord[] {
-        return [...store.map((entry) => replaced.get(entry.id)?.next ?? entry), ...staged];
+        return [
+          ...store
+            .filter((entry) => !removed.has(entry.id))
+            .map((entry) => replaced.get(entry.id)?.next ?? entry),
+          ...staged,
+        ];
+      }
+
+      function stillMatches(previous: EntryRecord): boolean {
+        const current = store.find((entry) => entry.id === previous.id);
+        return current !== undefined && sameMutableState(current, previous);
       }
 
       const repository: EntryRepository = {
@@ -120,6 +141,10 @@ export function createInMemoryEntryRepository(): InMemoryEntryRepository {
             next,
           });
         },
+
+        async remove(previous: EntryRecord): Promise<void> {
+          removed.set(previous.id, previous);
+        },
       };
 
       return {
@@ -128,16 +153,23 @@ export function createInMemoryEntryRepository(): InMemoryEntryRepository {
           if (staged.some((entry) => conflicts(store, entry))) {
             throw new ConcurrencyConflict();
           }
-          for (const { previous } of replaced.values()) {
-            const current = store.find((entry) => entry.id === previous.id);
-            if (!current || !sameMutableState(current, previous)) {
-              throw new ConcurrencyConflict();
-            }
+          const read = [
+            ...[...replaced.values()].map(({ previous }) => previous),
+            ...removed.values(),
+          ];
+          if (!read.every(stillMatches)) {
+            throw new ConcurrencyConflict();
           }
         },
         apply(): void {
           for (const [id, { next }] of replaced) {
             store[store.findIndex((entry) => entry.id === id)] = next;
+          }
+          for (const id of removed.keys()) {
+            store.splice(
+              store.findIndex((entry) => entry.id === id),
+              1,
+            );
           }
           store.push(...staged);
         },

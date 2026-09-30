@@ -31,4 +31,10 @@ export interface EntryRepository {
    * @throws {ConcurrencyConflict} if the entry was edited or removed since `previous` was read.
    */
   replace(next: EntryRecord, previous: EntryRecord): Promise<void>;
+  /**
+   * Deletes an entry, with the same compare-and-swap as {@link replace}:
+   * only if the stored entry still matches `previous`.
+   * @throws {ConcurrencyConflict} if the entry was edited or removed since `previous` was read.
+   */
+  remove(previous: EntryRecord): Promise<void>;
 }

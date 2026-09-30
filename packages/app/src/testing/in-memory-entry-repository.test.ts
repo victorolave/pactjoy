@@ -42,6 +42,57 @@ describe("in-memory entry repository: get", () => {
   });
 });
 
+describe("in-memory entry repository: remove (compare-and-swap)", () => {
+  it("stages the removal: gone inside the transaction, live only after apply", async () => {
+    const repo = await withStored();
+    const txn = repo.beginTransaction();
+
+    await txn.repository.remove(ENTRY);
+
+    expect(await txn.repository.get(ENTRY.id)).toBeNull();
+    expect(await txn.repository.listBySeason(ENTRY.seasonId)).toEqual([]);
+    expect(
+      await txn.repository.findByClientRequest(ENTRY.memberId, ENTRY.commitmentId, "req-1"),
+    ).toBeNull();
+    expect(await repo.get(ENTRY.id)).toEqual(ENTRY);
+    txn.validate();
+    txn.apply();
+    expect(await repo.get(ENTRY.id)).toBeNull();
+    expect(await repo.listBySeason(ENTRY.seasonId)).toEqual([]);
+  });
+
+  it.each([
+    ["value", { value: { kind: "quantity", value: fromInt(31) } }],
+    ["note", { note: "first" }],
+    ["editedAt", { editedAt: instant(3) }],
+  ] as const)("conflicts when only the %s was edited after it was read", async (_field, change) => {
+    const repo = await withStored();
+    const txn = repo.beginTransaction();
+    await txn.repository.remove(ENTRY);
+    await repo.replace({ ...ENTRY, ...change }, ENTRY);
+
+    expect(() => txn.validate()).toThrow(ConcurrencyConflict);
+    expect(await repo.get(ENTRY.id)).toEqual({ ...ENTRY, ...change });
+  });
+
+  it("conflicts when the entry was already removed, on a transaction and on the live repository", async () => {
+    const repo = createInMemoryEntryRepository();
+    const txn = repo.beginTransaction();
+    await txn.repository.remove(ENTRY);
+
+    expect(() => txn.validate()).toThrow(ConcurrencyConflict);
+    await expect(repo.remove(ENTRY)).rejects.toBeInstanceOf(ConcurrencyConflict);
+  });
+
+  it("refuses a live removal of an entry edited since it was read and keeps it", async () => {
+    const repo = await withStored();
+    await repo.replace(EDITED, ENTRY);
+
+    await expect(repo.remove(ENTRY)).rejects.toBeInstanceOf(ConcurrencyConflict);
+    expect(await repo.get(ENTRY.id)).toEqual(EDITED);
+  });
+});
+
 describe("in-memory entry repository: replace (compare-and-swap)", () => {
   it("stages the replacement: visible inside the transaction, live only after apply", async () => {
     const repo = await withStored();
