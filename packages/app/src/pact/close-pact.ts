@@ -10,9 +10,10 @@ import { epochDay, type LocalDate, localDateOfEpochDay } from "../time/local-dat
  * Defensive and kept on purpose: a non-archived circle always has an active
  * member (archiving on the last leave), so this is unreachable in
  * production, but `every` over `[]` is vacuously true and would silently
- * close a pact if that invariant ever broke. Works identically for a solo (1-member)
- * circle: the single member's own approval already satisfies "every active
- * member has approved" -- no member-count special case needed (B4).
+ * close a pact if that invariant ever broke. Works identically for a solo
+ * (1-member) circle: the single member's own approval already satisfies
+ * "every active member has approved" -- no member-count special case
+ * needed (B4).
  */
 export function isUnanimouslyApproved(
   activeMemberIds: readonly MemberId[],

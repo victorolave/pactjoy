@@ -26,12 +26,12 @@ export type LeaveCircleError =
  * approval is reset (CM-13, PA-6), written in the same transaction as the
  * circle. If the leaver was the LAST active member, the open season is
  * discarded instead and the circle is archived in the same commit
- * (terminal; an ACTIVE season is kept unchanged). The season is written even with
- * no approvals yet, so a concurrent approval can't commit over the change
- * (`ConcurrencyConflict`, D5). Once the
- * season is active or closed nothing on the season changes: the pact is
- * locked and past data is kept (B9). A member who has already left cannot
- * leave again (`NotAMember`).
+ * (terminal; an ACTIVE season is kept unchanged). The season is written
+ * even with no approvals yet, so a concurrent approval can't commit over
+ * the change (`ConcurrencyConflict`, D5). Once the season is active or
+ * closed nothing on the season changes: the pact is locked and past data
+ * is kept (B9). A member who has already left cannot leave again
+ * (`NotAMember`).
  */
 export async function leaveCircle(
   deps: LeaveCircleDeps,

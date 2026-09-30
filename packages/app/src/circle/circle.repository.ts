@@ -6,6 +6,12 @@ import type { Circle } from "./circle.ts";
  * in-memory adapter (`testing/in-memory-circle-repository.ts`), same
  * convention as `ports/id-generator.ts`/`ports/random-source.ts` -- the
  * interface alone has no runtime behavior of its own.
+ *
+ * Invariant every adapter and writer must preserve: a circle with
+ * `archivedAt === null` has at least one active member, and only
+ * `leaveCircle` archives it (in the same commit as the last leave).
+ * Nothing un-archives; `save` must never persist a non-archived circle
+ * with zero active members.
  */
 export interface CircleRepository {
   get(id: CircleId): Promise<Circle | null>;

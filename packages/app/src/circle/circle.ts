@@ -41,7 +41,8 @@ export interface Circle {
    * Set when the last active member leaves (2026-09-30 decision). Archiving
    * is TERMINAL: an archived circle keeps its history readable but accepts
    * no join, invite, rename or new season. Invariant: a circle with
-   * `archivedAt === null` always has at least one active member.
+   * `archivedAt === null` always has at least one active member, and only
+   * `leaveCircle` archives (see `CircleRepository`).
    */
   readonly archivedAt: Instant | null;
   readonly version: number;
