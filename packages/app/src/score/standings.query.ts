@@ -39,7 +39,7 @@ export type StandingsView =
  * Entries on every call, pauses included (P2-2, SQ-8). Participants are the
  * circle's members who hold at least one commitment in the season; a member
  * who left is handed to the engine with `status: "left"` and dropped by its
- * eligibility filter (SQ-4). Any active member or season participant may read them, including after leaving the circle (read-only).
+ * eligibility filter (engine Q3, SQ-4): leavers are not ranked. Any active member or season participant may read them, including after leaving the circle (read-only).
  */
 export async function standings(
   deps: StandingsDeps,

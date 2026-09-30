@@ -115,25 +115,18 @@ describe("standings: ranking by points, recomputed on every call", () => {
 });
 
 describe("standings: eligibility", () => {
-  // PENDING (2026-09-30): decision B wants left members ranked in the seasons they played,
-  // but the engine rule Q3 drops them. Kept as the engine defines it until the user resolves it.
-  it("SQ-4: a member who left is not in the ranking", async () => {
+  // Engine rule Q3 (kept by decision, 2026-09-30): a member who left is excluded from the
+  // rows and from the rank count.
+  it("SQ-4/SQ-5: a leaver is not ranked, the full rows and the count still come back (T2), and the leaver can still read", async () => {
     const { given, ask, victorLeaves } = await setup();
     await victorLeaves();
-
-    const result = await ask(given.andrea);
-
-    expect(result).toMatchObject({ ok: true, value: { rows: [{ memberId: ANDREA, rank: 1 }] } });
-  });
-
-  it("SQ-5: one eligible member left still gets the full standings plus the eligible count (T2)", async () => {
-    const { given, ask, victorLeaves } = await setup();
-    await victorLeaves();
-
-    expect(await ask(given.andrea)).toMatchObject({
+    const onlyAndrea = {
       ok: true,
-      value: { kind: "ranked", eligibleParticipantCount: 1, rows: [{ memberId: ANDREA }] },
-    });
+      value: { kind: "ranked", eligibleParticipantCount: 1, rows: [{ memberId: ANDREA, rank: 1 }] },
+    };
+
+    expect(await ask(given.andrea)).toMatchObject(onlyAndrea);
+    expect(await ask(given.victor)).toMatchObject(onlyAndrea);
   });
 
   it("only ranks members who hold a commitment in the season", async () => {
@@ -177,13 +170,6 @@ describe("standings: when and for whom", () => {
       ok: false,
       error: { kind: "NotAMember" },
     });
-  });
-
-  it("lets a participant who left the circle read the season's standings", async () => {
-    const { given, ask, victorLeaves } = await setup();
-    await victorLeaves();
-
-    expect(await ask(given.victor)).toMatchObject({ ok: true, value: { kind: "ranked" } });
   });
 
   it("rejects a member who left without ever holding a commitment", async () => {
