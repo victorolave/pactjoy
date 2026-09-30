@@ -49,6 +49,7 @@ describe("editEntry: editing", () => {
       value: { kind: "quantity", value: fromInt(45) },
       note: "edited",
       editedAt: at,
+      version: 1,
     };
     expect(result).toEqual({ ok: true, value: { entry: expected } });
     expect(await stored(app, entry)).toEqual(expected);
@@ -89,6 +90,30 @@ describe("editEntry: editing", () => {
 
     // Day 5 is past the session's own day + 1 but inside its week.
     expect((await edit(app, localInstant(dayOf(5)), given.andrea, entry)).ok).toBe(true);
+  });
+
+  it("edits an already edited entry again, from its current state", async () => {
+    const { app, given, entry } = await givenRecordedEntry(PER_DAY_REACH, 5);
+    await edit(app, localInstant(dayOf(5)), given.andrea, entry, { note: "first" });
+    const again = localInstant(dayOf(6));
+
+    const result = await edit(app, again, given.andrea, entry, { note: "second" });
+
+    expect(result).toMatchObject({
+      ok: true,
+      value: { entry: { note: "second", editedAt: again, version: 2 } },
+    });
+    expect(await stored(app, entry)).toMatchObject({ note: "second", version: 2 });
+  });
+
+  it("freezes the entry of a member who left (B9)", async () => {
+    const { app, given, entry } = await givenRecordedEntry(PER_DAY_REACH, 5);
+    await leaveCircle(app, given.andrea, { circleId: given.circle.id });
+
+    const result = await edit(app, localInstant(dayOf(5)), given.andrea, entry);
+
+    expect(result).toEqual({ ok: false, error: { kind: "NotAMember" } });
+    expect(await stored(app, entry)).toEqual(entry);
   });
 
   it("only the owner may edit (ER-18)", async () => {

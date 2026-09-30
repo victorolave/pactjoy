@@ -139,13 +139,13 @@ describe("deleteEntry: who and what", () => {
 describe("deleteEntry: concurrency (D5)", () => {
   it("an edit committed first makes the in-flight delete conflict: the edited entry stays", async () => {
     const { app, given, entry } = await givenRecordedEntry(PER_DAY_REACH, 5);
-    const edited = { ...entry, note: "edited", editedAt: localInstant(dayOf(5)) };
+    const edited = { ...entry, note: "edited", editedAt: localInstant(dayOf(5)), version: 1 };
 
     const { winner, loser } = await raceTransactions(
       app,
       (a) =>
         a.uow.transaction(async (repos) => {
-          await repos.entries.replace(edited, entry);
+          await repos.entries.replace(edited, entry.version);
           return { ok: true as const, value: undefined };
         }),
       (a) => remove(a, localInstant(dayOf(5)), given.andrea, entry),

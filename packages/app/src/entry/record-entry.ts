@@ -199,6 +199,7 @@ export async function recordEntry(
         note,
         clientRequestId: input.clientRequestId,
         editedAt: null,
+        version: 0,
       };
       await repos.entries.add(entry);
       return ok({ entry, replayed: false });

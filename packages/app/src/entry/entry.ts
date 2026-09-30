@@ -51,4 +51,6 @@ export interface EntryRecord {
   readonly note: string | null;
   readonly clientRequestId: string;
   readonly editedAt: Instant | null;
+  /** Optimistic version (D5): 0 when recorded, +1 on every edit. */
+  readonly version: number;
 }

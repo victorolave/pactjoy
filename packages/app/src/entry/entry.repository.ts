@@ -23,18 +23,19 @@ export interface EntryRepository {
    */
   add(entry: EntryRecord): Promise<void>;
   /**
-   * Edits an entry's mutable fields (value, note, editedAt) as a
-   * compare-and-swap: it only applies if the stored entry still has the
-   * value, note and editedAt of `previous`, the state the caller read. A
-   * relational adapter expresses that as a conditional UPDATE and checks
-   * the affected-row count.
-   * @throws {ConcurrencyConflict} if the entry was edited or removed since `previous` was read.
+   * Replaces an entry's mutable fields (value, note, editedAt) and bumps its
+   * version: `next.version` must be `expectedVersion + 1` and every other
+   * field must equal the stored one (both are caller bugs, thrown as plain
+   * errors). A relational adapter runs one UPDATE of only the mutable
+   * columns `WHERE id = $id AND version = $expected` and checks the
+   * affected-row count.
+   * @throws {ConcurrencyConflict} if the stored version is no longer `expectedVersion`, or the entry is gone.
    */
-  replace(next: EntryRecord, previous: EntryRecord): Promise<void>;
+  replace(next: EntryRecord, expectedVersion: number): Promise<void>;
   /**
-   * Deletes an entry, with the same compare-and-swap as {@link replace}:
-   * only if the stored entry still matches `previous`.
-   * @throws {ConcurrencyConflict} if the entry was edited or removed since `previous` was read.
+   * Deletes an entry, with the same version check as {@link replace}
+   * (`DELETE ... WHERE id = $id AND version = $expected`).
+   * @throws {ConcurrencyConflict} if the stored version is no longer `expectedVersion`, or the entry is gone.
    */
-  remove(previous: EntryRecord): Promise<void>;
+  remove(id: EntryId, expectedVersion: number): Promise<void>;
 }

@@ -20,12 +20,14 @@ const ENTRY: EntryRecord = {
   note: null,
   clientRequestId: "req-1",
   editedAt: null,
+  version: 0,
 };
 const EDITED: EntryRecord = {
   ...ENTRY,
   value: { kind: "quantity", value: fromInt(45) },
   note: "more",
   editedAt: instant(2),
+  version: 1,
 };
 
 async function withStored() {
@@ -42,12 +44,12 @@ describe("in-memory entry repository: get", () => {
   });
 });
 
-describe("in-memory entry repository: remove (compare-and-swap)", () => {
+describe("in-memory entry repository: remove (by version)", () => {
   it("stages the removal: gone inside the transaction, live only after apply", async () => {
     const repo = await withStored();
     const txn = repo.beginTransaction();
 
-    await txn.repository.remove(ENTRY);
+    await txn.repository.remove(ENTRY.id, 0);
 
     expect(await txn.repository.get(ENTRY.id)).toBeNull();
     expect(await txn.repository.listBySeason(ENTRY.seasonId)).toEqual([]);
@@ -61,44 +63,40 @@ describe("in-memory entry repository: remove (compare-and-swap)", () => {
     expect(await repo.listBySeason(ENTRY.seasonId)).toEqual([]);
   });
 
-  it.each([
-    ["value", { value: { kind: "quantity", value: fromInt(31) } }],
-    ["note", { note: "first" }],
-    ["editedAt", { editedAt: instant(3) }],
-  ] as const)("conflicts when only the %s was edited after it was read", async (_field, change) => {
+  it("conflicts when the entry moved to another version after it was read", async () => {
     const repo = await withStored();
     const txn = repo.beginTransaction();
-    await txn.repository.remove(ENTRY);
-    await repo.replace({ ...ENTRY, ...change }, ENTRY);
+    await txn.repository.remove(ENTRY.id, 0);
+    await repo.replace(EDITED, 0);
 
     expect(() => txn.validate()).toThrow(ConcurrencyConflict);
-    expect(await repo.get(ENTRY.id)).toEqual({ ...ENTRY, ...change });
+    expect(await repo.get(ENTRY.id)).toEqual(EDITED);
   });
 
-  it("conflicts when the entry was already removed, on a transaction and on the live repository", async () => {
+  it("conflicts when the entry is gone, on a transaction and on the live repository", async () => {
     const repo = createInMemoryEntryRepository();
     const txn = repo.beginTransaction();
-    await txn.repository.remove(ENTRY);
+    await txn.repository.remove(ENTRY.id, 0);
 
     expect(() => txn.validate()).toThrow(ConcurrencyConflict);
-    await expect(repo.remove(ENTRY)).rejects.toBeInstanceOf(ConcurrencyConflict);
+    await expect(repo.remove(ENTRY.id, 0)).rejects.toBeInstanceOf(ConcurrencyConflict);
   });
 
-  it("refuses a live removal of an entry edited since it was read and keeps it", async () => {
+  it("refuses a live removal at a stale version and keeps the entry", async () => {
     const repo = await withStored();
-    await repo.replace(EDITED, ENTRY);
+    await repo.replace(EDITED, 0);
 
-    await expect(repo.remove(ENTRY)).rejects.toBeInstanceOf(ConcurrencyConflict);
+    await expect(repo.remove(ENTRY.id, 0)).rejects.toBeInstanceOf(ConcurrencyConflict);
     expect(await repo.get(ENTRY.id)).toEqual(EDITED);
   });
 });
 
-describe("in-memory entry repository: replace (compare-and-swap)", () => {
+describe("in-memory entry repository: replace (by version)", () => {
   it("stages the replacement: visible inside the transaction, live only after apply", async () => {
     const repo = await withStored();
     const txn = repo.beginTransaction();
 
-    await txn.repository.replace(EDITED, ENTRY);
+    await txn.repository.replace(EDITED, 0);
 
     expect(await txn.repository.get(ENTRY.id)).toEqual(EDITED);
     expect(await txn.repository.listBySeason(ENTRY.seasonId)).toEqual([EDITED]);
@@ -108,37 +106,65 @@ describe("in-memory entry repository: replace (compare-and-swap)", () => {
     expect(await repo.get(ENTRY.id)).toEqual(EDITED);
   });
 
-  it.each([
-    ["value", { value: { kind: "quantity", value: fromInt(31) } }],
-    ["kind", { value: { kind: "missed" } }],
-    ["note", { note: "first" }],
-    ["editedAt", { editedAt: instant(3) }],
-  ] as const)("conflicts when only the %s was edited after it was read", async (_field, change) => {
+  it("conflicts when the stored version moved on after it was read", async () => {
     const repo = await withStored();
     const txn = repo.beginTransaction();
-    await txn.repository.replace(EDITED, ENTRY);
+    await txn.repository.replace(EDITED, 0);
 
     const other = repo.beginTransaction();
-    await other.repository.replace({ ...ENTRY, ...change }, ENTRY);
+    await other.repository.replace({ ...ENTRY, note: "first", version: 1 }, 0);
     other.validate();
     other.apply();
 
     expect(() => txn.validate()).toThrow(ConcurrencyConflict);
-    expect(await repo.get(ENTRY.id)).toEqual({ ...ENTRY, ...change });
+    expect((await repo.get(ENTRY.id))?.note).toBe("first");
   });
 
   it("conflicts when the stored entry no longer exists", async () => {
     const repo = createInMemoryEntryRepository();
     const txn = repo.beginTransaction();
-    await txn.repository.replace(EDITED, ENTRY);
+    await txn.repository.replace(EDITED, 0);
 
     expect(() => txn.validate()).toThrow(ConcurrencyConflict);
   });
 
   it("applies directly on the live repository, with the same check", async () => {
     const repo = await withStored();
-    await repo.replace(EDITED, ENTRY);
+    await repo.replace(EDITED, 0);
     expect(await repo.get(ENTRY.id)).toEqual(EDITED);
-    await expect(repo.replace(EDITED, ENTRY)).rejects.toBeInstanceOf(ConcurrencyConflict);
+    await expect(repo.replace({ ...EDITED, version: 1 }, 0)).rejects.toBeInstanceOf(
+      ConcurrencyConflict,
+    );
+  });
+
+  it.each([
+    ["seasonId", { seasonId: seasonId("other") }],
+    ["memberId", { memberId: memberId("other") }],
+    ["commitmentId", { commitmentId: commitmentId("other") }],
+    ["day", { day: seasonDay(3) }],
+    ["recordedOn", { recordedOn: seasonDay(3) }],
+    ["recordedAt", { recordedAt: instant(99) }],
+    ["clientRequestId", { clientRequestId: "other" }],
+  ] as const)(
+    "throws when the immutable %s changes, in a transaction and live",
+    async (_field, change) => {
+      const repo = await withStored();
+      const txn = repo.beginTransaction();
+      const tampered = { ...EDITED, ...change };
+
+      await expect(txn.repository.replace(tampered, 0)).rejects.toThrow(/immutable field/);
+      await expect(repo.replace(tampered, 0)).rejects.toThrow(/immutable field/);
+      expect(await repo.get(ENTRY.id)).toEqual(ENTRY);
+    },
+  );
+
+  it("throws when next.version is not expectedVersion + 1", async () => {
+    const repo = await withStored();
+    const skipped = { ...EDITED, version: 5 };
+
+    await expect(repo.replace(skipped, 0)).rejects.toThrow(/expectedVersion \+ 1/);
+    await expect(repo.beginTransaction().repository.replace(skipped, 0)).rejects.toThrow(
+      /expectedVersion \+ 1/,
+    );
   });
 });
