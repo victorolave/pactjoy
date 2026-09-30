@@ -34,7 +34,7 @@ export type {
   RenameCircleInput,
 } from "./circle/rename-circle.ts";
 export { renameCircle } from "./circle/rename-circle.ts";
-export type { SeasonGateReader, SeasonGateStatus } from "./circle/season-gate.port.ts";
+export type { SeasonGateStatus } from "./circle/season-gate.port.ts";
 export type {
   AddCommitmentDeps,
   AddCommitmentError,
@@ -103,7 +103,6 @@ export type {
   SeasonStatus,
 } from "./season/season.ts";
 export { reviewCadenceForLength } from "./season/season.ts";
-export { createSeasonGateReader } from "./season/season-gate-reader.ts";
 export type { Actor } from "./shared/actor.ts";
 export { ConcurrencyConflict, InviteCodeGenerationFailed } from "./shared/errors.ts";
 export type { CircleId, EntryId, HabitId, SeasonId, UserId } from "./shared/ids.ts";

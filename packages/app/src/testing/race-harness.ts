@@ -8,8 +8,8 @@ import type { TestApp } from "./app-harness.ts";
  * many `await`s each use case happens to perform.
  *
  * Both calls run against the same in-memory stores. Each transaction is
- * paused right after its first season read (`seasons.get`,
- * `seasons.findLatestByCircle` or `seasonGate.statusForCircle`) until BOTH
+ * paused right after its first season read (`seasons.get` or
+ * `seasons.findLatestByCircle`) until BOTH
  * transactions have read -- so both hold a pre-race view of the season.
  * Then `winner` is released and runs to completion (commit); only after its
  * transaction has settled is `loser` released, so the loser always commits
@@ -57,10 +57,6 @@ export async function raceTransactions<W, L>(
               get: async (id) => pauseAfterFirstSeasonRead(await repos.seasons.get(id)),
               findLatestByCircle: async (circleId) =>
                 pauseAfterFirstSeasonRead(await repos.seasons.findLatestByCircle(circleId)),
-            },
-            seasonGate: {
-              statusForCircle: async (circleId) =>
-                pauseAfterFirstSeasonRead(await repos.seasonGate.statusForCircle(circleId)),
             },
           });
         });
