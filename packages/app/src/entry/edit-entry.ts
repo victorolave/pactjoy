@@ -68,8 +68,9 @@ export async function editEntry(
       value: value.value,
       note: input.note,
       editedAt: deps.clock.now(),
+      version: entry.version + 1,
     };
-    await repos.entries.replace(edited, entry);
+    await repos.entries.replace(edited, entry.version);
     return ok({ entry: edited });
   });
 }

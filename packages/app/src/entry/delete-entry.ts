@@ -41,7 +41,7 @@ export async function deleteEntry(
 
     await repos.circles.guardVersion(circle.id, circle.version);
     await repos.seasons.guardVersion(season.id, season.version);
-    await repos.entries.remove(entry);
+    await repos.entries.remove(entry.id, entry.version);
     return ok(undefined);
   });
 }

@@ -1,4 +1,4 @@
-import { type CommitmentId, eq, type MemberId } from "@pactjoy/engine";
+import type { CommitmentId, MemberId } from "@pactjoy/engine";
 import type { EntryRepository } from "../entry/entry.repository.ts";
 import type { EntryRecord } from "../entry/entry.ts";
 import { ConcurrencyConflict } from "../shared/errors.ts";
@@ -8,13 +8,28 @@ function requestKey(entry: EntryRecord): string {
   return `${entry.memberId}|${entry.commitmentId}|${entry.clientRequestId}`;
 }
 
-/** The fields `replace` compares: what an edit can change (value, note, editedAt). */
-function sameMutableState(a: EntryRecord, b: EntryRecord): boolean {
-  const sameValue =
-    a.value.kind === "quantity" && b.value.kind === "quantity"
-      ? eq(a.value.value, b.value.value)
-      : a.value.kind === b.value.kind;
-  return sameValue && a.note === b.note && a.editedAt === b.editedAt;
+/** What an edit must never change; a real adapter's UPDATE simply does not touch these columns. */
+const IMMUTABLE_FIELDS = [
+  "id",
+  "seasonId",
+  "memberId",
+  "commitmentId",
+  "day",
+  "recordedOn",
+  "recordedAt",
+  "clientRequestId",
+] as const satisfies readonly (keyof EntryRecord)[];
+
+/** Programming errors in the caller, not races: thrown as plain errors. */
+function assertValidReplacement(current: EntryRecord, next: EntryRecord, expectedVersion: number) {
+  for (const field of IMMUTABLE_FIELDS) {
+    if (current[field] !== next[field]) {
+      throw new Error(`EntryRepository.replace: immutable field "${field}" changed`);
+    }
+  }
+  if (next.version !== expectedVersion + 1) {
+    throw new Error("EntryRepository.replace: next.version must be expectedVersion + 1");
+  }
 }
 
 /**
@@ -79,19 +94,19 @@ export function createInMemoryEntryRepository(): InMemoryEntryRepository {
       store.push(entry);
     },
 
-    async replace(next: EntryRecord, previous: EntryRecord): Promise<void> {
-      const index = store.findIndex((entry) => entry.id === previous.id);
+    async replace(next: EntryRecord, expectedVersion: number): Promise<void> {
+      const index = store.findIndex((entry) => entry.id === next.id);
       const current = store[index];
-      if (!current || !sameMutableState(current, previous)) {
+      if (!current || current.version !== expectedVersion) {
         throw new ConcurrencyConflict();
       }
+      assertValidReplacement(current, next, expectedVersion);
       store[index] = next;
     },
 
-    async remove(previous: EntryRecord): Promise<void> {
-      const index = store.findIndex((entry) => entry.id === previous.id);
-      const current = store[index];
-      if (!current || !sameMutableState(current, previous)) {
+    async remove(id: EntryId, expectedVersion: number): Promise<void> {
+      const index = store.findIndex((entry) => entry.id === id);
+      if (store[index]?.version !== expectedVersion) {
         throw new ConcurrencyConflict();
       }
       store.splice(index, 1);
@@ -99,10 +114,9 @@ export function createInMemoryEntryRepository(): InMemoryEntryRepository {
 
     beginTransaction(): EntryTransactionScope {
       const staged: EntryRecord[] = [];
-      // Edits by entry id; `previous` stays the state first read, `next` the latest edit.
-      const replaced = new Map<EntryId, { previous: EntryRecord; next: EntryRecord }>();
-
-      const removed = new Map<EntryId, EntryRecord>();
+      // Edits and removals by entry id, each with the version first read.
+      const replaced = new Map<EntryId, { expectedVersion: number; next: EntryRecord }>();
+      const removed = new Map<EntryId, number>();
 
       function view(): EntryRecord[] {
         return [
@@ -113,9 +127,8 @@ export function createInMemoryEntryRepository(): InMemoryEntryRepository {
         ];
       }
 
-      function stillMatches(previous: EntryRecord): boolean {
-        const current = store.find((entry) => entry.id === previous.id);
-        return current !== undefined && sameMutableState(current, previous);
+      function stillAt(id: EntryId, expectedVersion: number): boolean {
+        return store.find((entry) => entry.id === id)?.version === expectedVersion;
       }
 
       const repository: EntryRepository = {
@@ -135,15 +148,17 @@ export function createInMemoryEntryRepository(): InMemoryEntryRepository {
           staged.push(entry);
         },
 
-        async replace(next: EntryRecord, previous: EntryRecord): Promise<void> {
-          replaced.set(previous.id, {
-            previous: replaced.get(previous.id)?.previous ?? previous,
-            next,
-          });
+        async replace(next: EntryRecord, expectedVersion: number): Promise<void> {
+          const current = view().find((entry) => entry.id === next.id);
+          if (current) {
+            assertValidReplacement(current, next, expectedVersion);
+          }
+          const first = replaced.get(next.id)?.expectedVersion ?? expectedVersion;
+          replaced.set(next.id, { expectedVersion: first, next });
         },
 
-        async remove(previous: EntryRecord): Promise<void> {
-          removed.set(previous.id, previous);
+        async remove(id: EntryId, expectedVersion: number): Promise<void> {
+          removed.set(id, expectedVersion);
         },
       };
 
@@ -154,10 +169,10 @@ export function createInMemoryEntryRepository(): InMemoryEntryRepository {
             throw new ConcurrencyConflict();
           }
           const read = [
-            ...[...replaced.values()].map(({ previous }) => previous),
-            ...removed.values(),
+            ...[...replaced].map(([id, { expectedVersion }]) => [id, expectedVersion] as const),
+            ...removed,
           ];
-          if (!read.every(stillMatches)) {
+          if (!read.every(([id, expectedVersion]) => stillAt(id, expectedVersion))) {
             throw new ConcurrencyConflict();
           }
         },
