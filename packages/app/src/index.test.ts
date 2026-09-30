@@ -20,6 +20,7 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "createSystemClock",
   "deleteEntry",
   "editCommitment",
+  "editEntry",
   "editSeasonParams",
   "entryId",
   "err",

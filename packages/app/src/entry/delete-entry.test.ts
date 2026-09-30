@@ -1,12 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { leaveCircle } from "../circle/leave-circle.ts";
-import type { Season } from "../season/season.ts";
 import type { Actor } from "../shared/actor.ts";
-import { ConcurrencyConflict } from "../shared/errors.ts";
 import { entryId, seasonId, userId } from "../shared/ids.ts";
 import type { TestApp } from "../testing/app-harness.ts";
 import { atInstant, END_OF_DAY, localInstant } from "../testing/entry-fixtures.ts";
 import { dayOf, PER_DAY_REACH, TIMES_PER_WEEK, WEEKLY_TOTAL } from "../testing/entry-measures.ts";
+import { changeSeason, expectConflict } from "../testing/entry-test-helpers.ts";
 import { raceTransactions } from "../testing/race-harness.ts";
 import { givenRecordedEntry } from "../testing/recorded-entry-fixture.ts";
 import type { Instant } from "../time/instant.ts";
@@ -15,19 +14,6 @@ import type { EntryRecord } from "./entry.ts";
 
 function remove(app: TestApp, at: Instant, actor: Actor, entry: EntryRecord, id = entry.id) {
   return deleteEntry(atInstant(app, at), actor, { entryId: id });
-}
-
-function expectConflict(result: PromiseSettledResult<unknown>): void {
-  expect(result.status).toBe("rejected");
-  expect((result as PromiseRejectedResult).reason).toBeInstanceOf(ConcurrencyConflict);
-}
-
-/** Commits a season change (one version ahead) as if someone else had made it. */
-function changeSeason(app: TestApp, season: Season, change: Partial<Season> = {}) {
-  return app.uow.transaction(async (repos) => {
-    await repos.seasons.save({ ...season, ...change, version: season.version + 1 }, season.version);
-    return { ok: true as const, value: undefined };
-  });
 }
 
 async function stored(app: TestApp, entry: EntryRecord) {

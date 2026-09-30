@@ -27,3 +27,12 @@ export const TIMES_PER_WEEK: Measure = {
   ...PER_DAY_REACH,
   schedule: { period: "perSession", frequency: { kind: "timesPerWeek", times: 3 } },
 };
+
+/** Limit, integer `times`, every weekday. */
+export const LIMIT: Measure = {
+  unit: "times",
+  customLabel: null,
+  precision: "integer",
+  target: { direction: "limit", ideal: fromInt(2), tolerance: fromInt(4) },
+  schedule: PER_DAY_REACH.schedule,
+};
