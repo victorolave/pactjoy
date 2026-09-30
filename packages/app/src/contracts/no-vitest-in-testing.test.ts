@@ -1,14 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-declare global {
-  interface ImportMeta {
-    glob(
-      pattern: string,
-      options: { query: string; import: string; eager: true },
-    ): Record<string, string>;
-  }
-}
-
 /** Raw source of every module under `src/`, keyed `../<path>` relative to this directory. */
 const SOURCES = import.meta.glob("../**/*.ts", { query: "?raw", import: "default", eager: true });
 

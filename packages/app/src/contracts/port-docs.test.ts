@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-// `import.meta.glob` is typed by the ImportMeta augmentation in no-vitest-in-testing.test.ts.
 const SOURCES = import.meta.glob("../{circle,season}/*.repository.ts", {
   query: "?raw",
   import: "default",
@@ -20,6 +19,8 @@ describe("guardVersion port docs", () => {
   );
 
   it("circle repository documents the global invite-code uniqueness", () => {
-    expect(SOURCES["../circle/circle.repository.ts"]).toMatch(/globally unique/i);
+    const doc = SOURCES["../circle/circle.repository.ts"];
+    expect(doc).toMatch(/globally unique/i);
+    expect(doc).toMatch(/`generateInvite` does not retry/);
   });
 });

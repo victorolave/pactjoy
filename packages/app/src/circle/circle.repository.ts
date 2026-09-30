@@ -28,6 +28,8 @@ export interface CircleRepository {
    * collision on `save` as `ConcurrencyConflict`. Reusing an EXPIRED code
    * is astronomically rare, so that divergence from the in-memory adapter
    * (which only rejects active collisions) is accepted (ADR-0010).
+   * `generateInvite` does not retry that collision (it only pre-checks for
+   * an active one), so the caller sees the conflict and the client retries.
    */
   findByInviteCode(code: string): Promise<Circle | null>;
   /** The circle `userId` is currently an active member of, if any (A5, CM-11). */
