@@ -382,7 +382,7 @@ describe("recordEntry: idempotency (T1, ER-16)", () => {
       await recordEntry(
         app,
         given.andrea,
-        input(given, { value: { kind: "quantity", value: "31" } }),
+        input(given, { note: "a", value: { kind: "quantity", value: "31" } }),
       ),
     ).toEqual(reused);
     expect(await recordEntry(app, given.andrea, input(given, { note: "b" }))).toEqual(reused);
@@ -398,6 +398,33 @@ describe("recordEntry: idempotency (T1, ER-16)", () => {
     ).toEqual(reused);
     const same = await recordEntry(app, given.andrea, input(given, { note: "a", forDate: DAY(2) }));
     expect(same.ok && same.value.replayed).toBe(true);
+    expect(await stored(app, given)).toHaveLength(1);
+  });
+
+  it("compares quantities by exact value, so 2.0, 2 and 2.00 are the same payload", async () => {
+    const app = newApp();
+    const given = await givenActiveSeason(app, PER_DAY_REACH);
+    await recordEntry(
+      app,
+      given.andrea,
+      input(given, { value: { kind: "quantity", value: "2.0" } }),
+    );
+
+    for (const value of ["2", "2.00"]) {
+      const again = await recordEntry(
+        app,
+        given.andrea,
+        input(given, { value: { kind: "quantity", value } }),
+      );
+      expect(again.ok && again.value.replayed).toBe(true);
+    }
+    expect(
+      await recordEntry(
+        app,
+        given.andrea,
+        input(given, { value: { kind: "quantity", value: "2.5" } }),
+      ),
+    ).toEqual({ ok: false, error: { kind: "IdempotencyKeyReused" } });
     expect(await stored(app, given)).toHaveLength(1);
   });
 
@@ -422,6 +449,13 @@ describe("recordEntry: idempotency (T1, ER-16)", () => {
       ok: false,
       error: { kind: "InvalidClientRequestId", reason: "tooLong" },
     });
+    const emojis = "😀".repeat(MAX_CLIENT_REQUEST_ID_LENGTH);
+    expect(
+      (await recordEntry(app, given.andrea, input(given, { clientRequestId: emojis }))).ok,
+    ).toBe(true);
+    expect(
+      await recordEntry(app, given.andrea, input(given, { clientRequestId: `${emojis}😀` })),
+    ).toEqual({ ok: false, error: { kind: "InvalidClientRequestId", reason: "tooLong" } });
     const exact = "k".repeat(MAX_CLIENT_REQUEST_ID_LENGTH);
     expect(
       (await recordEntry(app, given.andrea, input(given, { clientRequestId: exact }))).ok,
@@ -519,6 +553,30 @@ describe("recordEntry: read-set validation (D5)", () => {
     expect(loser.status).toBe("rejected");
     expect((loser as PromiseRejectedResult).reason).toBeInstanceOf(ConcurrencyConflict);
     expect(await stored(app, given)).toEqual([]);
+  });
+
+  it("a pure replay is not hit by an unrelated circle or season version bump", async () => {
+    const app = newApp();
+    const given = await givenActiveSeason(app, PER_DAY_REACH);
+    await recordEntry(app, given.andrea, input(given));
+
+    const { winner, loser } = await raceTransactions(
+      app,
+      (a) =>
+        a.uow.transaction(async (repos) => {
+          await repos.seasons.save({ ...given.season, version: 1 }, 0);
+          await repos.circles.save({ ...given.circle, version: 1 }, 0);
+          return { ok: true as const, value: undefined };
+        }),
+      (a) => recordEntry(a, given.andrea, input(given)),
+      "entries",
+    );
+
+    expect(winner.status).toBe("fulfilled");
+    expect(loser).toMatchObject({
+      status: "fulfilled",
+      value: { ok: true, value: { replayed: true } },
+    });
   });
 
   it("does not conflict when nothing it read has changed", async () => {

@@ -107,10 +107,11 @@ export async function recordEntry(
   actor: Actor,
   input: RecordEntryInput,
 ): Promise<Result<RecordEntryResult, RecordEntryError>> {
-  if (input.clientRequestId.length === 0) {
+  const keyLength = [...input.clientRequestId].length;
+  if (keyLength === 0) {
     return err({ kind: "InvalidClientRequestId", reason: "empty" });
   }
-  if (input.clientRequestId.length > MAX_CLIENT_REQUEST_ID_LENGTH) {
+  if (keyLength > MAX_CLIENT_REQUEST_ID_LENGTH) {
     return err({ kind: "InvalidClientRequestId", reason: "tooLong" });
   }
   return deps.uow.transaction(
@@ -125,11 +126,6 @@ export async function recordEntry(
       if (!member || !circle) {
         return err({ kind: "NotAMember" });
       }
-      // The entry is only valid for the membership and season state read
-      // above: if either changes before commit (a leave, B9, or any season
-      // edit), this transaction must fail instead of committing (D5).
-      await repos.circles.guardVersion(circle.id, circle.version);
-      await repos.seasons.guardVersion(season.id, season.version);
 
       const commitment = season.commitments.find(
         (candidate) => candidate.id === input.commitmentId && candidate.memberId === member.id,
@@ -148,6 +144,14 @@ export async function recordEntry(
           ? ok({ entry: replay, replayed: true })
           : err({ kind: "IdempotencyKeyReused" });
       }
+
+      // A NEW entry is only valid for the membership and season state read
+      // above: if either changes before commit (a leave, B9, or any season
+      // edit), this transaction must fail instead of committing (D5). A pure
+      // replay writes nothing, so it is deliberately not guarded: unrelated
+      // version bumps must not turn an idempotent retry into a conflict.
+      await repos.circles.guardVersion(circle.id, circle.version);
+      await repos.seasons.guardVersion(season.id, season.version);
 
       if (season.status !== "active" || season.actualStart === null) {
         return err({ kind: "SeasonNotActive" });
