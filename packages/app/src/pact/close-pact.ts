@@ -6,9 +6,11 @@ import { epochDay, type LocalDate, localDateOfEpochDay } from "../time/local-dat
 /**
  * Unanimity (PA-1, new PA-11/B4): true once every currently active member
  * has an approval recorded. A circle with zero active members is never
- * unanimously approved -- there is nobody whose approval could complete it
- * (defensive; `activeMemberIds` is never empty in production, a circle
- * always keeps its creator, B4). Works identically for a solo (1-member)
+ * unanimously approved -- there is nobody whose approval could complete it.
+ * Defensive and kept on purpose: a non-archived circle always has an active
+ * member (archiving on the last leave), so this is unreachable in
+ * production, but `every` over `[]` is vacuously true and would silently
+ * close a pact if that invariant ever broke. Works identically for a solo (1-member)
  * circle: the single member's own approval already satisfies "every active
  * member has approved" -- no member-count special case needed (B4).
  */
