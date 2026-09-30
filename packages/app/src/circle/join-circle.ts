@@ -1,3 +1,4 @@
+import { resetApprovals } from "../pact/reset-approvals.ts";
 import type { IdGenerator } from "../ports/id-generator.ts";
 import type { Repositories } from "../ports/repositories.ts";
 import type { UnitOfWork } from "../ports/unit-of-work.ts";
@@ -28,10 +29,10 @@ export type JoinCircleError =
 /**
  * Joins a circle via a valid, unexpired invite code (CM-3..CM-5, CM-9..
  * CM-11). Joining while the pact is open resets all pact approvals (CM-8,
- * PA-5) -- that reset is NOT implemented here: it depends on the pact
- * module, which doesn't exist until S6. This use case only adds the
- * member; whichever slice wires `pact/approve-pact.ts` must also call the
- * approval-reset here.
+ * PA-5): the season is written in the same transaction as the circle, and
+ * ALWAYS so while the pact is open (even with no approvals recorded yet),
+ * so a concurrent approval can never commit over the membership change
+ * unnoticed -- the loser gets `ConcurrencyConflict` (D5).
  */
 export async function joinCircle(
   deps: JoinCircleDeps,
@@ -77,6 +78,14 @@ export async function joinCircle(
       version: circle.version + 1,
     };
     await repos.circles.save(updated, circle.version);
+
+    const latestSeason = await repos.seasons.findLatestByCircle(circle.id);
+    if (latestSeason?.status === "pactOpen") {
+      await repos.seasons.save(
+        { ...resetApprovals(latestSeason), version: latestSeason.version + 1 },
+        latestSeason.version,
+      );
+    }
     return ok(updated);
   });
 }

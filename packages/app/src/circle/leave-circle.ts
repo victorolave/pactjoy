@@ -1,3 +1,4 @@
+import { resetApprovals } from "../pact/reset-approvals.ts";
 import type { Repositories } from "../ports/repositories.ts";
 import type { UnitOfWork } from "../ports/unit-of-work.ts";
 import type { Actor } from "../shared/actor.ts";
@@ -20,12 +21,14 @@ export type LeaveCircleError =
   | { readonly kind: "NotAMember" };
 
 /**
- * Marks `actor` as having left the circle (CM-13, CM-14). Only the
- * membership-state transition is implemented here: discarding the
- * leaver's commitments and resetting pact approvals (CM-13's other two
- * effects) depend on the commitment (S5) and pact (S6) modules, which
- * don't exist yet -- whichever slice adds them must also call them from
- * here. A member who has already left cannot leave again (`NotAMember`).
+ * Marks `actor` as having left the circle (CM-13, CM-14). While the pact
+ * is still open, the leaver's commitments are discarded and every pact
+ * approval is reset (CM-13, PA-6), written in the same transaction as the
+ * circle (and always, even with no approvals yet, so a concurrent approval
+ * can't commit over the change -- `ConcurrencyConflict`, D5). Once the
+ * season is active or closed nothing on the season changes: the pact is
+ * locked and past data is kept (B9). A member who has already left cannot
+ * leave again (`NotAMember`).
  */
 export async function leaveCircle(
   deps: LeaveCircleDeps,
@@ -49,6 +52,18 @@ export async function leaveCircle(
     );
     const updated: Circle = { ...circle, members, version: circle.version + 1 };
     await repos.circles.save(updated, circle.version);
+
+    const latestSeason = await repos.seasons.findLatestByCircle(circle.id);
+    if (latestSeason?.status === "pactOpen") {
+      await repos.seasons.save(
+        {
+          ...resetApprovals(latestSeason),
+          commitments: latestSeason.commitments.filter((c) => c.memberId !== member.id),
+          version: latestSeason.version + 1,
+        },
+        latestSeason.version,
+      );
+    }
     return ok(updated);
   });
 }
