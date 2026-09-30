@@ -12,6 +12,12 @@ import type { Circle } from "./circle.ts";
  * `leaveCircle` archives it (in the same commit as the last leave).
  * Nothing un-archives; `save` must never persist a non-archived circle
  * with zero active members.
+ *
+ * Ordering contract: `Circle.members` MUST come back in a STABLE order
+ * (e.g. by join time, then id), the same on every read. Standings break
+ * ties by input order (engine decision Q2: no secondary tiebreaker), so an
+ * adapter that returns members in arbitrary order makes tied members swap
+ * places between calls.
  */
 export interface CircleRepository {
   get(id: CircleId): Promise<Circle | null>;

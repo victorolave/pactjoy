@@ -115,6 +115,8 @@ describe("standings: ranking by points, recomputed on every call", () => {
 });
 
 describe("standings: eligibility", () => {
+  // PENDING (2026-09-30): decision B wants left members ranked in the seasons they played,
+  // but the engine rule Q3 drops them. Kept as the engine defines it until the user resolves it.
   it("SQ-4: a member who left is not in the ranking", async () => {
     const { given, ask, victorLeaves } = await setup();
     await victorLeaves();
@@ -177,10 +179,31 @@ describe("standings: when and for whom", () => {
     });
   });
 
-  it("rejects a member who already left the circle", async () => {
+  it("lets a participant who left the circle read the season's standings", async () => {
     const { given, ask, victorLeaves } = await setup();
     await victorLeaves();
 
-    expect(await ask(given.victor)).toEqual({ ok: false, error: { kind: "NotAMember" } });
+    expect(await ask(given.victor)).toMatchObject({ ok: true, value: { kind: "ranked" } });
+  });
+
+  it("rejects a member who left without ever holding a commitment", async () => {
+    const { app, given, ask } = await setup();
+    const bystander = memberFixture({
+      id: memberId("member-bystander"),
+      userId: userId("user-bystander"),
+      status: "left",
+    });
+    await app.uow.transaction(async (repos) => {
+      await repos.circles.save(
+        { ...given.circle, members: [...given.circle.members, bystander] },
+        given.circle.version,
+      );
+      return { ok: true, value: undefined };
+    });
+
+    expect(await ask({ userId: userId("user-bystander") })).toEqual({
+      ok: false,
+      error: { kind: "NotAMember" },
+    });
   });
 });

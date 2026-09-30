@@ -39,7 +39,7 @@ export type StandingsView =
  * Entries on every call, pauses included (P2-2, SQ-8). Participants are the
  * circle's members who hold at least one commitment in the season; a member
  * who left is handed to the engine with `status: "left"` and dropped by its
- * eligibility filter (SQ-4). Any active member of the circle may read them.
+ * eligibility filter (SQ-4). Any active member or season participant may read them, including after leaving the circle (read-only).
  */
 export async function standings(
   deps: StandingsDeps,
@@ -55,10 +55,8 @@ export async function standings(
     if (start === null) {
       return ok({ kind: "notStarted" });
     }
-    const [entries, pauses] = await Promise.all([
-      repos.entries.listBySeason(season.id),
-      repos.pauses.listBySeason(season.id),
-    ]);
+    const entries = await repos.entries.listBySeason(season.id);
+    const pauses = await repos.pauses.listBySeason(season.id);
     const participants = circle.members
       .filter((member) =>
         season.commitments.some((commitment) => commitment.memberId === member.id),
