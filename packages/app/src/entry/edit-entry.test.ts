@@ -227,7 +227,7 @@ describe("editEntry: the new value", () => {
     expect(await stored(app, entry)).toEqual(entry);
   });
 
-  it("rejects a note over 280 characters, counting code points, and accepts exactly 280 (B6)", async () => {
+  it("ER-22: rejects a note over 280 characters, counting code points, and accepts exactly 280 (B6)", async () => {
     const { app, given, entry } = await givenRecordedEntry(PER_DAY_REACH, 5);
     const now = localInstant(dayOf(5));
     const tooLong = { ok: false, error: { kind: "NoteTooLong" } };
