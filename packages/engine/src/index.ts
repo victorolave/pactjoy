@@ -37,6 +37,9 @@
  *   `PauseDecision`), `Season`/`Weekday`, `SeasonDay` + its `seasonDay`
  *   constructor, and `MemberId`: what the app needs to build a `ScoreInput`
  *   and a `StandingsParticipant` in the first place.
+ * - `weekOf`: the season week (0-based) a day falls in, so the app's
+ *   week-bound entry window reuses the engine's week rule instead of
+ *   duplicating it.
  * - `graceDeadline`: the single source of the "end of the next day" grace
  *   boundary (`sdd/app-foundation/spec/season-clock` SC-5/SC-7) -- the app
  *   must reuse this instead of duplicating `GRACE_DAYS`.
@@ -60,7 +63,7 @@
  */
 
 export type { Season, SeasonDay, Weekday } from "./calendar/season-calendar.ts";
-export { seasonDay } from "./calendar/season-calendar.ts";
+export { seasonDay, weekOf } from "./calendar/season-calendar.ts";
 export type {
   Commitment,
   CommitmentId,
