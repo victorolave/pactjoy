@@ -18,7 +18,12 @@ const IMMUTABLE_FIELDS = [
   "recordedOn",
   "recordedAt",
   "clientRequestId",
+  "deleted",
 ] as const satisfies readonly (keyof EntryRecord)[];
+
+function tombstone(entry: EntryRecord): EntryRecord {
+  return { ...entry, deleted: true, version: entry.version + 1 };
+}
 
 /** Programming errors in the caller, not races: thrown as plain errors. */
 function assertValidReplacement(current: EntryRecord, next: EntryRecord, expectedVersion: number) {
@@ -68,6 +73,11 @@ export function createInMemoryEntryRepository(): InMemoryEntryRepository {
     );
   }
 
+  /** Tombstones do not exist for `get` and `listBySeason`. */
+  function visible(entries: readonly EntryRecord[]): EntryRecord[] {
+    return entries.filter((entry) => !entry.deleted);
+  }
+
   function conflicts(entries: readonly EntryRecord[], entry: EntryRecord): boolean {
     return entries.some(
       (stored) => stored.id === entry.id || requestKey(stored) === requestKey(entry),
@@ -80,11 +90,11 @@ export function createInMemoryEntryRepository(): InMemoryEntryRepository {
     },
 
     async get(id: EntryId) {
-      return store.find((entry) => entry.id === id) ?? null;
+      return visible(store).find((entry) => entry.id === id) ?? null;
     },
 
     async listBySeason(seasonId: SeasonId) {
-      return store.filter((entry) => entry.seasonId === seasonId);
+      return visible(store).filter((entry) => entry.seasonId === seasonId);
     },
 
     async add(entry: EntryRecord): Promise<void> {
@@ -97,7 +107,7 @@ export function createInMemoryEntryRepository(): InMemoryEntryRepository {
     async replace(next: EntryRecord, expectedVersion: number): Promise<void> {
       const index = store.findIndex((entry) => entry.id === next.id);
       const current = store[index];
-      if (!current || current.version !== expectedVersion) {
+      if (!current || current.deleted || current.version !== expectedVersion) {
         throw new ConcurrencyConflict();
       }
       assertValidReplacement(current, next, expectedVersion);
@@ -106,10 +116,11 @@ export function createInMemoryEntryRepository(): InMemoryEntryRepository {
 
     async remove(id: EntryId, expectedVersion: number): Promise<void> {
       const index = store.findIndex((entry) => entry.id === id);
-      if (store[index]?.version !== expectedVersion) {
+      const current = store[index];
+      if (!current || current.deleted || current.version !== expectedVersion) {
         throw new ConcurrencyConflict();
       }
-      store.splice(index, 1);
+      store[index] = tombstone(current);
     },
 
     beginTransaction(): EntryTransactionScope {
@@ -118,30 +129,32 @@ export function createInMemoryEntryRepository(): InMemoryEntryRepository {
       const replaced = new Map<EntryId, { expectedVersion: number; next: EntryRecord }>();
       const removed = new Map<EntryId, number>();
 
-      function view(): EntryRecord[] {
+      /** Everything this transaction sees, tombstones included. */
+      function viewAll(): EntryRecord[] {
         return [
-          ...store
-            .filter((entry) => !removed.has(entry.id))
-            .map((entry) => replaced.get(entry.id)?.next ?? entry),
+          ...store.map((entry) =>
+            removed.has(entry.id) ? tombstone(entry) : (replaced.get(entry.id)?.next ?? entry),
+          ),
           ...staged,
         ];
       }
 
       function stillAt(id: EntryId, expectedVersion: number): boolean {
-        return store.find((entry) => entry.id === id)?.version === expectedVersion;
+        const current = store.find((entry) => entry.id === id);
+        return current?.version === expectedVersion;
       }
 
       const repository: EntryRepository = {
         async findByClientRequest(memberId, commitmentId, clientRequestId) {
-          return find(view(), memberId, commitmentId, clientRequestId);
+          return find(viewAll(), memberId, commitmentId, clientRequestId);
         },
 
         async get(id: EntryId) {
-          return view().find((entry) => entry.id === id) ?? null;
+          return visible(viewAll()).find((entry) => entry.id === id) ?? null;
         },
 
         async listBySeason(seasonId: SeasonId) {
-          return view().filter((entry) => entry.seasonId === seasonId);
+          return visible(viewAll()).filter((entry) => entry.seasonId === seasonId);
         },
 
         async add(entry: EntryRecord): Promise<void> {
@@ -149,7 +162,7 @@ export function createInMemoryEntryRepository(): InMemoryEntryRepository {
         },
 
         async replace(next: EntryRecord, expectedVersion: number): Promise<void> {
-          const current = view().find((entry) => entry.id === next.id);
+          const current = visible(viewAll()).find((entry) => entry.id === next.id);
           if (current) {
             assertValidReplacement(current, next, expectedVersion);
           }
@@ -181,10 +194,8 @@ export function createInMemoryEntryRepository(): InMemoryEntryRepository {
             store[store.findIndex((entry) => entry.id === id)] = next;
           }
           for (const id of removed.keys()) {
-            store.splice(
-              store.findIndex((entry) => entry.id === id),
-              1,
-            );
+            const index = store.findIndex((entry) => entry.id === id);
+            store[index] = tombstone(store[index] as EntryRecord);
           }
           store.push(...staged);
         },

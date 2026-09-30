@@ -21,6 +21,7 @@ const ENTRY: EntryRecord = {
   clientRequestId: "req-1",
   editedAt: null,
   version: 0,
+  deleted: false,
 };
 const EDITED: EntryRecord = {
   ...ENTRY,
@@ -44,8 +45,10 @@ describe("in-memory entry repository: get", () => {
   });
 });
 
-describe("in-memory entry repository: remove (by version)", () => {
-  it("stages the removal: gone inside the transaction, live only after apply", async () => {
+const TOMBSTONE: EntryRecord = { ...ENTRY, version: 1, deleted: true };
+
+describe("in-memory entry repository: remove leaves a tombstone", () => {
+  it("stages the tombstone: invisible to reads inside the transaction, live only after apply", async () => {
     const repo = await withStored();
     const txn = repo.beginTransaction();
 
@@ -55,12 +58,36 @@ describe("in-memory entry repository: remove (by version)", () => {
     expect(await txn.repository.listBySeason(ENTRY.seasonId)).toEqual([]);
     expect(
       await txn.repository.findByClientRequest(ENTRY.memberId, ENTRY.commitmentId, "req-1"),
-    ).toBeNull();
+    ).toEqual(TOMBSTONE);
     expect(await repo.get(ENTRY.id)).toEqual(ENTRY);
     txn.validate();
     txn.apply();
     expect(await repo.get(ENTRY.id)).toBeNull();
     expect(await repo.listBySeason(ENTRY.seasonId)).toEqual([]);
+    expect(await repo.findByClientRequest(ENTRY.memberId, ENTRY.commitmentId, "req-1")).toEqual(
+      TOMBSTONE,
+    );
+  });
+
+  it("keeps the idempotency key: the tombstone is found by it and the key cannot be added again", async () => {
+    const repo = await withStored();
+    await repo.remove(ENTRY.id, 0);
+
+    expect(await repo.findByClientRequest(ENTRY.memberId, ENTRY.commitmentId, "req-1")).toEqual(
+      TOMBSTONE,
+    );
+    await expect(repo.add({ ...ENTRY, id: entryId("entry-2") })).rejects.toBeInstanceOf(
+      ConcurrencyConflict,
+    );
+  });
+
+  it("hides only the tombstoned entry from the season's entries", async () => {
+    const repo = await withStored();
+    const other = { ...ENTRY, id: entryId("entry-2"), clientRequestId: "req-2" };
+    await repo.add(other);
+    await repo.remove(ENTRY.id, 0);
+
+    expect(await repo.listBySeason(ENTRY.seasonId)).toEqual([other]);
   });
 
   it("conflicts when the entry moved to another version after it was read", async () => {
@@ -73,13 +100,16 @@ describe("in-memory entry repository: remove (by version)", () => {
     expect(await repo.get(ENTRY.id)).toEqual(EDITED);
   });
 
-  it("conflicts when the entry is gone, on a transaction and on the live repository", async () => {
-    const repo = createInMemoryEntryRepository();
-    const txn = repo.beginTransaction();
+  it("conflicts when the entry is gone or already tombstoned, in a transaction and live", async () => {
+    const empty = createInMemoryEntryRepository();
+    const txn = empty.beginTransaction();
     await txn.repository.remove(ENTRY.id, 0);
-
     expect(() => txn.validate()).toThrow(ConcurrencyConflict);
-    await expect(repo.remove(ENTRY.id, 0)).rejects.toBeInstanceOf(ConcurrencyConflict);
+    await expect(empty.remove(ENTRY.id, 0)).rejects.toBeInstanceOf(ConcurrencyConflict);
+
+    const repo = await withStored();
+    await repo.remove(ENTRY.id, 0);
+    await expect(repo.remove(ENTRY.id, 1)).rejects.toBeInstanceOf(ConcurrencyConflict);
   });
 
   it("refuses a live removal at a stale version and keeps the entry", async () => {
@@ -88,6 +118,15 @@ describe("in-memory entry repository: remove (by version)", () => {
 
     await expect(repo.remove(ENTRY.id, 0)).rejects.toBeInstanceOf(ConcurrencyConflict);
     expect(await repo.get(ENTRY.id)).toEqual(EDITED);
+  });
+
+  it("cannot be edited afterwards: a replace of a tombstone conflicts", async () => {
+    const repo = await withStored();
+    await repo.remove(ENTRY.id, 0);
+
+    await expect(repo.replace({ ...TOMBSTONE, version: 2 }, 1)).rejects.toBeInstanceOf(
+      ConcurrencyConflict,
+    );
   });
 });
 
@@ -145,6 +184,7 @@ describe("in-memory entry repository: replace (by version)", () => {
     ["recordedOn", { recordedOn: seasonDay(3) }],
     ["recordedAt", { recordedAt: instant(99) }],
     ["clientRequestId", { clientRequestId: "other" }],
+    ["deleted", { deleted: true }],
   ] as const)(
     "throws when the immutable %s changes, in a transaction and live",
     async (_field, change) => {

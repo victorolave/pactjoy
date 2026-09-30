@@ -46,6 +46,7 @@ export type RecordEntryError =
   | { readonly kind: "BeforeSeasonStart" }
   | { readonly kind: "NoteTooLong" }
   | { readonly kind: "IdempotencyKeyReused" }
+  | { readonly kind: "EntryDeleted" }
   | { readonly kind: "InvalidClientRequestId"; readonly reason: "empty" | "tooLong" }
   | EntryWindowError
   | EntryValueError;
@@ -98,6 +99,7 @@ function samePayload(
  * ADR-0009). The app never fills gaps: no entry means no progress (A8).
  *
  * Idempotent (T1): a replayed `clientRequestId` returns the original entry
+ * (or `EntryDeleted` if it was deleted since, it is never recreated)
  * and is resolved before the window/value checks, so an offline retry
  * still succeeds after its window closed. A concurrent duplicate loses on
  * the repository's unique key with `ConcurrencyConflict` (D5).
@@ -140,9 +142,13 @@ export async function recordEntry(
         input.clientRequestId,
       );
       if (replay) {
-        return samePayload(replay, input, commitment.measure, season.actualStart)
-          ? ok({ entry: replay, replayed: true })
-          : err({ kind: "IdempotencyKeyReused" });
+        if (!samePayload(replay, input, commitment.measure, season.actualStart)) {
+          return err({ kind: "IdempotencyKeyReused" });
+        }
+        // The entry was deleted: its key stays taken, it is never recreated.
+        return replay.deleted
+          ? err({ kind: "EntryDeleted" })
+          : ok({ entry: replay, replayed: true });
       }
 
       // A NEW entry is only valid for the membership and season state read
@@ -200,6 +206,7 @@ export async function recordEntry(
         clientRequestId: input.clientRequestId,
         editedAt: null,
         version: 0,
+        deleted: false,
       };
       await repos.entries.add(entry);
       return ok({ entry, replayed: false });

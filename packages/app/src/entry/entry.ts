@@ -53,4 +53,9 @@ export interface EntryRecord {
   readonly editedAt: Instant | null;
   /** Optimistic version (D5): 0 when recorded, +1 on every edit. */
   readonly version: number;
+  /**
+   * Tombstone (delete): the row stays so its idempotency key stays taken, but
+   * for scoring and reads the entry does not exist. Only `remove` sets it.
+   */
+  readonly deleted: boolean;
 }
