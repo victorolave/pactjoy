@@ -81,3 +81,25 @@ export function buildCommitment(input: BuildCommitmentInput): CommitmentRecord {
     measure: input.measure,
   };
 }
+
+/**
+ * A member's commitment weights must sum to exactly this to approve the
+ * pact (B5, new PA-10) -- mirrors the engine's own internal
+ * `TOTAL_WEIGHT_PERCENT` (not exported: pact-approval is the only app-side
+ * caller, and unlike the reach/limit numeric invariants duplicated-then-
+ * unified in S5 (#4758/#4835 fresh review), a bare `=== 100` sum check
+ * carries no business logic worth centralizing behind an engine export).
+ */
+export const FULL_WEIGHT_PERCENT = 100;
+
+/**
+ * B5 (new PA-10): whether one member's own commitments' `weightPercent`
+ * values sum to exactly {@link FULL_WEIGHT_PERCENT}. A member with zero
+ * commitments sums to 0, which is never 100 -- so this single predicate
+ * also covers "a member with zero commitments cannot approve" with no
+ * separate special case. `approve-pact.ts` is the only production caller.
+ */
+export function commitmentsSumToFullWeight(commitments: readonly CommitmentRecord[]): boolean {
+  const total = commitments.reduce((sum, commitment) => sum + commitment.weightPercent, 0);
+  return total === FULL_WEIGHT_PERCENT;
+}

@@ -45,6 +45,21 @@ describe("buildSeason", () => {
 
     expect(season.commitments).toEqual([]);
   });
+
+  it("S6: a brand-new season has no approvals and an open (null) pactClosedAt", () => {
+    const season = buildSeason({
+      id: seasonId("season-1"),
+      circleId: circleId("circle-1"),
+      timeZone: timeZoneId("America/Santiago"),
+      nominalStart: localDate("2026-10-01"),
+      lengthWeeks: 8,
+      reviewCadenceWeeks: 2,
+      now: NOW,
+    });
+
+    expect(season.approvals).toEqual([]);
+    expect(season.pactClosedAt).toBeNull();
+  });
 });
 
 describe("reviewCadenceForLength", () => {
