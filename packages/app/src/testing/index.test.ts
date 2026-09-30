@@ -6,6 +6,7 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "createFixedClock",
   "createFixedOffsetTimeZone",
   "createInMemoryCircleRepository",
+  "createInMemoryEntryRepository",
   "createInMemoryHabitRepository",
   "createInMemorySeasonRepository",
   "createInMemoryUnitOfWork",

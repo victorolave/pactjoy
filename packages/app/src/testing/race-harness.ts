@@ -18,11 +18,16 @@ import type { TestApp } from "./app-harness.ts";
  *
  * A transaction that settles without reading a season still counts as
  * arrived, so the other one is never left waiting.
+ *
+ * `pauseOn: "entries"` moves the pause point to the first idempotency
+ * lookup (`entries.findByClientRequest`) instead, so two duplicate
+ * `recordEntry` calls both miss before either commits (T1).
  */
 export async function raceTransactions<W, L>(
   app: TestApp,
   winner: (app: TestApp) => Promise<W>,
   loser: (app: TestApp) => Promise<L>,
+  pauseOn: "seasons" | "entries" = "seasons",
 ): Promise<{ readonly winner: PromiseSettledResult<W>; readonly loser: PromiseSettledResult<L> }> {
   let arrived = 0;
   let releaseBoth!: () => void;
@@ -32,6 +37,14 @@ export async function raceTransactions<W, L>(
   let winnerSettled!: () => void;
   const winnerDone = new Promise<void>((resolve) => {
     winnerSettled = resolve;
+  });
+
+  // Resolves once the loser has reached its pause point or settled. A winner
+  // that never pauses itself (e.g. a leave) holds its commit until then, so
+  // the loser is guaranteed to have read the pre-race state.
+  let loserReached!: () => void;
+  const loserArrived = new Promise<void>((resolve) => {
+    loserReached = resolve;
   });
 
   function wrap(isWinner: boolean): TestApp {
@@ -45,9 +58,15 @@ export async function raceTransactions<W, L>(
           if (counted) return;
           counted = true;
           arrived += 1;
+          if (!isWinner) loserReached();
           if (arrived === 2) releaseBoth();
         }
-        const run = app.uow.transaction((repos) => {
+        const run = app.uow.transaction(async (repos) => {
+          const result = await runWork(repos);
+          if (isWinner) await loserArrived;
+          return result;
+        });
+        function runWork(repos: Repositories): Promise<Result<T, E>> {
           let paused = false;
           async function pauseAfterFirstSeasonRead<R>(value: R): Promise<R> {
             if (paused) return value;
@@ -56,6 +75,22 @@ export async function raceTransactions<W, L>(
             await bothRead;
             if (!isWinner) await winnerDone;
             return value;
+          }
+          if (pauseOn === "entries") {
+            return work({
+              ...repos,
+              entries: {
+                ...repos.entries,
+                findByClientRequest: async (memberId, commitmentId, clientRequestId) =>
+                  pauseAfterFirstSeasonRead(
+                    await repos.entries.findByClientRequest(
+                      memberId,
+                      commitmentId,
+                      clientRequestId,
+                    ),
+                  ),
+              },
+            });
           }
           return work({
             ...repos,
@@ -66,7 +101,7 @@ export async function raceTransactions<W, L>(
                 pauseAfterFirstSeasonRead(await repos.seasons.findLatestByCircle(circleId)),
             },
           });
-        });
+        }
         // A transaction that settles (err or throw) without ever reading a
         // season still counts as arrived, so the other side is never left
         // waiting on a barrier that can no longer fill.

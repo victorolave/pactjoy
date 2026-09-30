@@ -19,6 +19,26 @@ export interface CircleRepository {
   findByInviteCode(code: string): Promise<Circle | null>;
   /** The circle `userId` is currently an active member of, if any (A5, CM-11). */
   findActiveByUser(userId: UserId): Promise<Circle | null>;
+  /**
+   * Read-set guard (D5) for a circle this transaction only READ: at commit,
+   * the transaction fails with `ConcurrencyConflict` if the stored version
+   * is no longer `expectedVersion`. Has no effect outside a transaction.
+   *
+   * Adapters MUST make the check atomic with the transaction's own writes:
+   * a version that changes between the check and the commit would defeat
+   * the guard. In Postgres that requires a LOCKING read or SERIALIZABLE
+   * isolation: `SELECT ... FOR SHARE` on the row when the guard is
+   * registered (held until commit), or run the whole transaction
+   * SERIALIZABLE. A bare version check without a lock is NOT enough. Beware
+   * that `FOR SHARE` followed by an UPDATE of the same row in the same
+   * transaction can deadlock when two transactions do it at once: use
+   * `FOR UPDATE` for aggregates that are both guarded and saved, or map
+   * Postgres error 40P01 (deadlock_detected) to `ConcurrencyConflict`.
+   * A guard on a missing id always fails. Guarding and saving the same
+   * aggregate in one transaction is allowed: the guard is checked against
+   * the version as it was BEFORE this transaction's own write.
+   */
+  guardVersion(id: CircleId, expectedVersion: number): Promise<void>;
   /** @throws {ConcurrencyConflict} if the stored version no longer matches `expectedVersion` (D5). */
   save(circle: Circle, expectedVersion: number | null): Promise<void>;
 }

@@ -164,6 +164,36 @@ describe("editCommitment", () => {
     expect(result).toEqual({ ok: false, error: { kind: "CustomLabelTooLong" } });
   });
 
+  it("propagates precision errors: InvalidPrecision and PrecisionNotApplicable", async () => {
+    const app = createTestApp({ now: NOW });
+    const { season, commitment } = await seasonWithCommitment(app);
+    if (!commitment) throw new Error("fixture setup failed");
+    const edit = (unit: "custom" | "times", precision: string) =>
+      editCommitment(app, actorFor("user-andrea"), {
+        seasonId: season.id,
+        commitmentId: commitment.id,
+        weightPercent: 20,
+        privacy: "visible",
+        measure: {
+          unit,
+          direction: "reach",
+          minimum: "1",
+          ideal: "2",
+          schedule: { period: "weeklyTotal" },
+          precision: precision as "integer",
+        },
+      });
+
+    expect(await edit("custom", "whole")).toEqual({
+      ok: false,
+      error: { kind: "InvalidPrecision" },
+    });
+    expect(await edit("times", "decimal")).toEqual({
+      ok: false,
+      error: { kind: "PrecisionNotApplicable" },
+    });
+  });
+
   it("D5: two concurrent edits of the same commitment race on the season's version -- exactly one commits, the loser gets ConcurrencyConflict", async () => {
     const app = createTestApp({ now: NOW });
     const { season, commitment } = await seasonWithCommitment(app);

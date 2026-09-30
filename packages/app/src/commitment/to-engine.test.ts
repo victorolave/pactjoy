@@ -50,6 +50,7 @@ describe("commitmentToEngine", () => {
       measure: {
         unit: "glasses",
         customLabel: null,
+        precision: "integer",
         target: { direction: "limit", ideal: fromInt(2), tolerance: fromInt(4) },
         schedule: {
           period: "perSession",
@@ -71,6 +72,7 @@ describe("commitmentToEngine", () => {
       },
     });
     expect(mapped).not.toHaveProperty("customLabel");
+    expect(mapped).not.toHaveProperty("precision");
     expect(mapped).not.toHaveProperty("habitId");
     expect(mapped).not.toHaveProperty("privacy");
   });
@@ -85,6 +87,7 @@ describe("commitmentToEngine", () => {
       measure: {
         unit: "custom",
         customLabel: "páginas",
+        precision: "decimal",
         target: { direction: "reach", minimum: fromInt(1), ideal: fromInt(3) },
         schedule: { period: "weeklyTotal" },
       },
@@ -100,6 +103,7 @@ describe("commitmentToEngine", () => {
       schedule: { period: "weeklyTotal" },
     });
     expect(mapped).not.toHaveProperty("customLabel");
+    expect(mapped).not.toHaveProperty("precision");
   });
 
   it("round-trips validateCommitment -> commitmentToEngine and stays valid per the engine's own predicates (fresh-review fix: single source of truth)", () => {

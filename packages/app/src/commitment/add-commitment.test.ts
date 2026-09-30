@@ -51,6 +51,35 @@ describe("addCommitment", () => {
     expect(stored?.commitments).toHaveLength(1);
   });
 
+  it("propagates precision errors: InvalidPrecision and PrecisionNotApplicable", async () => {
+    const app = createTestApp({ now: NOW });
+    const { season } = await seasonFor(app);
+    const add = (unit: "custom" | "times", precision: string) =>
+      addCommitment(app, actorFor("user-andrea"), {
+        seasonId: season.id,
+        habitId: habitId("habit-run"),
+        weightPercent: 20,
+        privacy: "visible",
+        measure: {
+          unit,
+          direction: "reach",
+          minimum: "1",
+          ideal: "2",
+          schedule: { period: "weeklyTotal" },
+          precision: precision as "integer",
+        },
+      });
+
+    expect(await add("custom", "whole")).toEqual({
+      ok: false,
+      error: { kind: "InvalidPrecision" },
+    });
+    expect(await add("times", "decimal")).toEqual({
+      ok: false,
+      error: { kind: "PrecisionNotApplicable" },
+    });
+  });
+
   it("rejects when the season does not exist", async () => {
     const app = createTestApp({ now: NOW });
 

@@ -1,5 +1,6 @@
-import { eq } from "@pactjoy/engine";
+import { eq, type QuantityUnit } from "@pactjoy/engine";
 import { describe, expect, it } from "vitest";
+import type { QuantityPrecision } from "./commitment.ts";
 import { validateCommitment } from "./validate-commitment.ts";
 
 describe("validateCommitment", () => {
@@ -239,6 +240,102 @@ describe("validateCommitment", () => {
       });
 
       expect(result).toEqual({ ok: false, error: { kind: "IdealExceedsTolerance" } });
+    });
+  });
+
+  describe("quantity precision per unit", () => {
+    const schedule = { period: "weeklyTotal" } as const;
+    function reach(unit: QuantityUnit, extra: { precision?: "integer" | "decimal" } = {}) {
+      return (minimum: string, ideal: string) =>
+        validateCommitment({
+          weightPercent: 20,
+          measure: { unit, direction: "reach", minimum, ideal, schedule, ...extra },
+        });
+    }
+
+    function precisionOf(result: ReturnType<typeof validateCommitment>) {
+      if (!result.ok || result.value.unit === "done")
+        throw new Error("expected a quantity measure");
+      return result.value.precision;
+    }
+
+    it("derives precision from the unit: integer for times, pages and glasses, decimal otherwise", () => {
+      for (const unit of ["times", "pages", "glasses"] as const) {
+        expect(precisionOf(reach(unit)("1", "2"))).toBe("integer");
+      }
+      for (const unit of ["minutes", "hours", "km"] as const) {
+        expect(precisionOf(reach(unit)("1", "2.5"))).toBe("decimal");
+      }
+    });
+
+    it("lets a custom unit choose its precision, defaulting to decimal", () => {
+      expect(precisionOf(reach("custom")("1", "2.5"))).toBe("decimal");
+      expect(precisionOf(reach("custom", { precision: "decimal" })("1", "2.5"))).toBe("decimal");
+      expect(precisionOf(reach("custom", { precision: "integer" })("1", "2"))).toBe("integer");
+    });
+
+    it("accepts an explicit precision on a built-in unit only when it equals the unit's own", () => {
+      expect(precisionOf(reach("times", { precision: "integer" })("1", "2"))).toBe("integer");
+      expect(precisionOf(reach("minutes", { precision: "decimal" })("1", "2.5"))).toBe("decimal");
+      const notApplicable = { ok: false, error: { kind: "PrecisionNotApplicable" } };
+      expect(reach("times", { precision: "decimal" })("1", "2")).toEqual(notApplicable);
+      expect(reach("minutes", { precision: "integer" })("1", "2")).toEqual(notApplicable);
+    });
+
+    it("rejects a precision that is neither integer nor decimal, on any unit", () => {
+      const invalid = { ok: false, error: { kind: "InvalidPrecision" } };
+      const bogus = "whole" as unknown as QuantityPrecision;
+      expect(reach("custom", { precision: bogus })("1", "2")).toEqual(invalid);
+      expect(reach("minutes", { precision: bogus })("1", "2")).toEqual(invalid);
+    });
+
+    it("caps thresholds at 9 integer digits, ignoring leading zeros", () => {
+      const tooMany = (field: string) => ({
+        ok: false,
+        error: { kind: "InvalidQuantity", field },
+      });
+      expect(reach("minutes")("1", "999999999.99").ok).toBe(true);
+      expect(reach("minutes")("1", "0000000001").ok).toBe(true);
+      expect(reach("minutes")("1", "1000000000")).toEqual(tooMany("ideal"));
+      expect(reach("minutes")("1000000000", "1000000000")).toEqual(tooMany("minimum"));
+      const limit = (ideal: string, tolerance: string) =>
+        validateCommitment({
+          weightPercent: 20,
+          measure: { unit: "minutes", direction: "limit", ideal, tolerance, schedule },
+        });
+      expect(limit("1", "1000000000")).toEqual(tooMany("tolerance"));
+      expect(limit("1000000000", "1000000000")).toEqual(tooMany("ideal"));
+    });
+
+    it("rejects a non-integer minimum or ideal on an integer unit, naming the field", () => {
+      const required = (field: string) => ({
+        ok: false,
+        error: { kind: "IntegerRequired", field },
+      });
+      expect(reach("pages")("1.5", "3")).toEqual(required("minimum"));
+      expect(reach("pages")("1", "3.25")).toEqual(required("ideal"));
+      expect(reach("pages")("1", "3.0")).toEqual(required("ideal"));
+      expect(reach("custom", { precision: "integer" })("1", "2.5")).toEqual(required("ideal"));
+    });
+
+    it("rejects a non-integer tolerance or limit ideal on an integer unit", () => {
+      const required = (field: string) => ({
+        ok: false,
+        error: { kind: "IntegerRequired", field },
+      });
+      const limit = (ideal: string, tolerance: string) =>
+        validateCommitment({
+          weightPercent: 20,
+          measure: { unit: "glasses", direction: "limit", ideal, tolerance, schedule },
+        });
+      expect(limit("1.5", "3")).toEqual(required("ideal"));
+      expect(limit("1", "3.5")).toEqual(required("tolerance"));
+      expect(limit("1", "3").ok).toBe(true);
+    });
+
+    it("keeps accepting decimal targets on decimal units", () => {
+      expect(reach("km")("1.5", "3.25").ok).toBe(true);
+      expect(reach("custom", { precision: "decimal" })("0.5", "2.25").ok).toBe(true);
     });
   });
 });

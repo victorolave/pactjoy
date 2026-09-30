@@ -12,6 +12,10 @@ import {
   type InMemoryCircleRepository,
 } from "./in-memory-circle-repository.ts";
 import {
+  createInMemoryEntryRepository,
+  type InMemoryEntryRepository,
+} from "./in-memory-entry-repository.ts";
+import {
   createInMemoryHabitRepository,
   type InMemoryHabitRepository,
 } from "./in-memory-habit-repository.ts";
@@ -38,6 +42,7 @@ export interface TestApp {
   readonly timeZone: TimeZone;
   readonly uow: UnitOfWork<Repositories>;
   readonly circles: InMemoryCircleRepository;
+  readonly entries: InMemoryEntryRepository;
   readonly habits: InMemoryHabitRepository;
   readonly seasons: InMemorySeasonRepository;
 }
@@ -56,9 +61,10 @@ const DEFAULT_RANDOM_SEED = 42;
 /** Builds a fully deterministic {@link TestApp} for use-case tests. */
 export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
   const circles = createInMemoryCircleRepository();
+  const entries = createInMemoryEntryRepository();
   const habits = createInMemoryHabitRepository();
   const seasons = createInMemorySeasonRepository();
-  const repositories: Repositories = { circles, habits, seasons };
+  const repositories: Repositories = { circles, entries, habits, seasons };
 
   return {
     clock: createFixedClock(options.now ?? DEFAULT_NOW),
@@ -66,6 +72,7 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
     random: createSeededRandomSource(options.randomSeed ?? DEFAULT_RANDOM_SEED),
     timeZone: options.timeZone ?? createIntlTimeZone(),
     circles,
+    entries,
     habits,
     seasons,
     uow: createInMemoryUnitOfWork({
@@ -78,19 +85,23 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
       // makes this possible without a partial commit across repositories.
       beginTransaction: () => {
         const circleScope = circles.beginTransaction();
+        const entryScope = entries.beginTransaction();
         const habitScope = habits.beginTransaction();
         const seasonScope = seasons.beginTransaction();
         return {
           repositories: {
             circles: circleScope.repository,
+            entries: entryScope.repository,
             habits: habitScope.repository,
             seasons: seasonScope.repository,
           },
           commit(): void {
             circleScope.validate();
+            entryScope.validate();
             habitScope.validate();
             seasonScope.validate();
             circleScope.apply();
+            entryScope.apply();
             habitScope.apply();
             seasonScope.apply();
           },

@@ -8,7 +8,13 @@ import {
   parseDecimal,
 } from "@pactjoy/engine";
 import { err, ok, type Result } from "../shared/result.ts";
-import { MAX_CUSTOM_LABEL_LENGTH, type Measure } from "./commitment.ts";
+import {
+  MAX_CUSTOM_LABEL_LENGTH,
+  MAX_INTEGER_DIGITS,
+  type Measure,
+  precisionOfUnit,
+  type QuantityPrecision,
+} from "./commitment.ts";
 
 /**
  * Raw, not-yet-validated shape for one commitment's measure -- decimal
@@ -24,6 +30,11 @@ export type MeasureInput =
   | {
       readonly unit: QuantityUnit;
       readonly customLabel?: string | null;
+      /**
+       * Chosen by `custom` units (default `decimal`). A built-in unit has a fixed precision:
+       * it may restate it, but a conflicting value is `PrecisionNotApplicable`.
+       */
+      readonly precision?: QuantityPrecision;
       readonly direction: "reach";
       readonly minimum: string;
       readonly ideal: string;
@@ -32,6 +43,11 @@ export type MeasureInput =
   | {
       readonly unit: QuantityUnit;
       readonly customLabel?: string | null;
+      /**
+       * Chosen by `custom` units (default `decimal`). A built-in unit has a fixed precision:
+       * it may restate it, but a conflicting value is `PrecisionNotApplicable`.
+       */
+      readonly precision?: QuantityPrecision;
       readonly direction: "limit";
       readonly ideal: string;
       readonly tolerance: string;
@@ -43,13 +59,20 @@ export interface ValidateCommitmentInput {
   readonly measure: MeasureInput;
 }
 
+type ThresholdField = "minimum" | "ideal" | "tolerance";
+
 export type ValidateCommitmentError =
   | { readonly kind: "InvalidWeight" }
-  | { readonly kind: "InvalidQuantity"; readonly field: "minimum" | "ideal" | "tolerance" }
+  | { readonly kind: "InvalidQuantity"; readonly field: ThresholdField }
+  | { readonly kind: "IntegerRequired"; readonly field: ThresholdField }
   | { readonly kind: "MinimumNotPositive" }
   | { readonly kind: "MinimumExceedsIdeal" }
   | { readonly kind: "IdealExceedsTolerance" }
-  | { readonly kind: "CustomLabelTooLong" };
+  | { readonly kind: "CustomLabelTooLong" }
+  | { readonly kind: "InvalidPrecision" }
+  | { readonly kind: "PrecisionNotApplicable" };
+
+const PRECISIONS: readonly QuantityPrecision[] = ["integer", "decimal"];
 
 // A12: at most 2 decimal places, non-negative (thresholds are always
 // physical quantities >= 0). `parseDecimal` itself accepts any number of
@@ -62,11 +85,30 @@ export type ValidateCommitmentError =
 // never be negative in the first place.
 const AT_MOST_TWO_DECIMALS = /^\d+(\.\d{1,2})?$/;
 
-function parseQuantity(raw: string): Fraction | null {
+const WHOLE_NUMBER = /^\d+$/;
+
+/**
+ * Parses one threshold. On an integer-precision unit only plain digits are
+ * accepted (even "2.0" is rejected, same rule as entry values), reported
+ * as `IntegerRequired` rather than a generic `InvalidQuantity`.
+ */
+function parseThreshold(
+  raw: string,
+  field: ThresholdField,
+  precision: QuantityPrecision,
+): Result<Fraction, ValidateCommitmentError> {
   if (!AT_MOST_TWO_DECIMALS.test(raw)) {
-    return null;
+    return err({ kind: "InvalidQuantity", field });
   }
-  return parseDecimal(raw);
+  // Same cap as entry values; leading zeros don't count.
+  const integerPart = raw.split(".")[0] ?? "";
+  if (integerPart.replace(/^0+/, "").length > MAX_INTEGER_DIGITS) {
+    return err({ kind: "InvalidQuantity", field });
+  }
+  if (precision === "integer" && !WHOLE_NUMBER.test(raw)) {
+    return err({ kind: "IntegerRequired", field });
+  }
+  return ok(parseDecimal(raw));
 }
 
 /**
@@ -111,15 +153,34 @@ export function validateCommitment(
     return err({ kind: "CustomLabelTooLong" });
   }
 
+  // `precision` only means something for `custom` units (a built-in unit's
+  // precision is fixed), but the type can't say so cleanly: a built-in unit
+  // may still restate its own value, so this is a runtime rule (the HTTP
+  // adapter builds the input from arbitrary JSON anyway).
+  if (measure.precision !== undefined && !PRECISIONS.includes(measure.precision)) {
+    return err({ kind: "InvalidPrecision" });
+  }
+  const unitPrecision = precisionOfUnit(measure.unit);
+  if (
+    unitPrecision !== null &&
+    measure.precision !== undefined &&
+    measure.precision !== unitPrecision
+  ) {
+    return err({ kind: "PrecisionNotApplicable" });
+  }
+  const precision = unitPrecision ?? measure.precision ?? "decimal";
+
   if (measure.direction === "reach") {
-    const minimum = parseQuantity(measure.minimum);
-    if (!minimum) {
-      return err({ kind: "InvalidQuantity", field: "minimum" });
+    const minimumResult = parseThreshold(measure.minimum, "minimum", precision);
+    if (!minimumResult.ok) {
+      return minimumResult;
     }
-    const ideal = parseQuantity(measure.ideal);
-    if (!ideal) {
-      return err({ kind: "InvalidQuantity", field: "ideal" });
+    const idealResult = parseThreshold(measure.ideal, "ideal", precision);
+    if (!idealResult.ok) {
+      return idealResult;
     }
+    const minimum = minimumResult.value;
+    const ideal = idealResult.value;
     if (!isPositiveReachMinimum(minimum)) {
       return err({ kind: "MinimumNotPositive" });
     }
@@ -129,30 +190,33 @@ export function validateCommitment(
     return ok({
       unit: measure.unit,
       customLabel: measure.customLabel ?? null,
+      precision,
       target: { direction: "reach", minimum, ideal },
       schedule: measure.schedule,
     });
   }
 
   // direction === "limit"
-  const ideal = parseQuantity(measure.ideal);
-  if (!ideal) {
-    return err({ kind: "InvalidQuantity", field: "ideal" });
+  const idealResult = parseThreshold(measure.ideal, "ideal", precision);
+  if (!idealResult.ok) {
+    return idealResult;
   }
-  const tolerance = parseQuantity(measure.tolerance);
-  if (!tolerance) {
-    return err({ kind: "InvalidQuantity", field: "tolerance" });
+  const toleranceResult = parseThreshold(measure.tolerance, "tolerance", precision);
+  if (!toleranceResult.ok) {
+    return toleranceResult;
   }
+  const ideal = idealResult.value;
+  const tolerance = toleranceResult.value;
   // No "ideal >= 0" re-check here (unlike the engine's `assertValidTarget`):
-  // `parseQuantity`'s regex already rejects a leading "-", so `ideal` can
-  // never be negative at this point -- see this module's `parseQuantity`
-  // docstring above.
+  // `parseThreshold`'s regex already rejects a leading "-", so `ideal` can
+  // never be negative at this point -- see the regex's comment above.
   if (!isLimitIdealWithinTolerance(ideal, tolerance)) {
     return err({ kind: "IdealExceedsTolerance" });
   }
   return ok({
     unit: measure.unit,
     customLabel: measure.customLabel ?? null,
+    precision,
     target: { direction: "limit", ideal, tolerance },
     schedule: measure.schedule,
   });
