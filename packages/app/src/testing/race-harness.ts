@@ -16,7 +16,8 @@ import type { TestApp } from "./app-harness.ts";
  * second, against a stale view, and the outcome is fixed rather than
  * timing-dependent.
  *
- * Every transaction of both calls MUST read a season, or this never resolves.
+ * A transaction that settles without reading a season still counts as
+ * arrived, so the other one is never left waiting.
  */
 export async function raceTransactions<W, L>(
   app: TestApp,
@@ -39,13 +40,19 @@ export async function raceTransactions<W, L>(
       transaction<T, E>(
         work: (repositories: Repositories) => Promise<Result<T, E>>,
       ): Promise<Result<T, E>> {
+        let counted = false;
+        function countArrival(): void {
+          if (counted) return;
+          counted = true;
+          arrived += 1;
+          if (arrived === 2) releaseBoth();
+        }
         const run = app.uow.transaction((repos) => {
           let paused = false;
           async function pauseAfterFirstSeasonRead<R>(value: R): Promise<R> {
             if (paused) return value;
             paused = true;
-            arrived += 1;
-            if (arrived === 2) releaseBoth();
+            countArrival();
             await bothRead;
             if (!isWinner) await winnerDone;
             return value;
@@ -60,7 +67,13 @@ export async function raceTransactions<W, L>(
             },
           });
         });
-        return isWinner ? run.finally(winnerSettled) : run;
+        // A transaction that settles (err or throw) without ever reading a
+        // season still counts as arrived, so the other side is never left
+        // waiting on a barrier that can no longer fill.
+        return run.finally(() => {
+          countArrival();
+          if (isWinner) winnerSettled();
+        });
       },
     };
     return { ...app, uow };
