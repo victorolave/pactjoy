@@ -44,6 +44,7 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "toSeasonDay",
   "userId",
   "validateCommitment",
+  "visibleNote",
   "withdrawApproval",
 ].sort();
 

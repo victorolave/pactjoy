@@ -11,6 +11,7 @@ import { displayPercent, displayPoints } from "@pactjoy/engine";
 import type { CommitmentRecord, Measure, QuantityPrecision } from "../commitment/commitment.ts";
 import { toDecimalString } from "../shared/decimal.ts";
 import type { HabitId } from "../shared/ids.ts";
+import { canSeeDetail } from "./privacy.ts";
 
 /**
  * A {@link Measure} as a client receives it: thresholds are exact decimal
@@ -91,7 +92,7 @@ export function projectCommitment(
   viewer: MemberId,
 ): CommitmentScoreView {
   const points = displayPoints(score.points);
-  if (record.privacy === "private" && record.memberId !== viewer) {
+  if (!canSeeDetail(record, viewer)) {
     return {
       kind: "hidden",
       commitmentId: record.id,

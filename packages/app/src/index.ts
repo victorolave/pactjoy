@@ -115,6 +115,7 @@ export type {
   MemberScoreView,
 } from "./score/member-score.query.ts";
 export { memberScore } from "./score/member-score.query.ts";
+export { visibleNote } from "./score/privacy.ts";
 export type {
   StandingsDeps,
   StandingsError,
