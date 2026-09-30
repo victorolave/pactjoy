@@ -20,6 +20,10 @@ import {
   type InMemoryHabitRepository,
 } from "./in-memory-habit-repository.ts";
 import {
+  createInMemoryPauseRequestReader,
+  type InMemoryPauseRequestReader,
+} from "./in-memory-pause-request-reader.ts";
+import {
   createInMemorySeasonRepository,
   type InMemorySeasonRepository,
 } from "./in-memory-season-repository.ts";
@@ -44,6 +48,7 @@ export interface TestApp {
   readonly circles: InMemoryCircleRepository;
   readonly entries: InMemoryEntryRepository;
   readonly habits: InMemoryHabitRepository;
+  readonly pauses: InMemoryPauseRequestReader;
   readonly seasons: InMemorySeasonRepository;
 }
 
@@ -63,8 +68,9 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
   const circles = createInMemoryCircleRepository();
   const entries = createInMemoryEntryRepository();
   const habits = createInMemoryHabitRepository();
+  const pauses = createInMemoryPauseRequestReader();
   const seasons = createInMemorySeasonRepository();
-  const repositories: Repositories = { circles, entries, habits, seasons };
+  const repositories: Repositories = { circles, entries, habits, pauses, seasons };
 
   return {
     clock: createFixedClock(options.now ?? DEFAULT_NOW),
@@ -74,6 +80,7 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
     circles,
     entries,
     habits,
+    pauses,
     seasons,
     uow: createInMemoryUnitOfWork({
       repositories,
@@ -93,6 +100,7 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
             circles: circleScope.repository,
             entries: entryScope.repository,
             habits: habitScope.repository,
+            pauses,
             seasons: seasonScope.repository,
           },
           commit(): void {
