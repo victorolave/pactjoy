@@ -1,5 +1,6 @@
-import type { CommitmentId } from "@pactjoy/engine";
+import { type CommitmentId, eq } from "@pactjoy/engine";
 import { findActiveMember } from "../circle/circle.ts";
+import type { Measure } from "../commitment/commitment.ts";
 import type { IdGenerator } from "../ports/id-generator.ts";
 import type { Repositories } from "../ports/repositories.ts";
 import type { UnitOfWork } from "../ports/unit-of-work.ts";
@@ -10,7 +11,12 @@ import type { Clock } from "../time/clock.port.ts";
 import type { LocalDate } from "../time/local-date.ts";
 import { toSeasonDay } from "../time/season-calendar.ts";
 import type { TimeZone } from "../time/time-zone.port.ts";
-import { type EntryRecord, type EntryValueInput, MAX_NOTE_LENGTH } from "./entry.ts";
+import {
+  type EntryRecord,
+  type EntryValueInput,
+  MAX_CLIENT_REQUEST_ID_LENGTH,
+  MAX_NOTE_LENGTH,
+} from "./entry.ts";
 import { type EntryValueError, validateEntryValue } from "./entry-value.ts";
 import { checkEntryWindow, type EntryWindowError } from "./entry-window.ts";
 
@@ -39,6 +45,8 @@ export type RecordEntryError =
   | { readonly kind: "SeasonNotActive" }
   | { readonly kind: "BeforeSeasonStart" }
   | { readonly kind: "NoteTooLong" }
+  | { readonly kind: "IdempotencyKeyReused" }
+  | { readonly kind: "InvalidClientRequestId"; readonly reason: "empty" | "tooLong" }
   | EntryWindowError
   | EntryValueError;
 
@@ -46,6 +54,38 @@ export interface RecordEntryResult {
   readonly entry: EntryRecord;
   /** `true` when `clientRequestId` had already been recorded and the original entry is returned (T1). */
   readonly replayed: boolean;
+}
+
+/**
+ * T1: a replay is only a replay when the payload is the one that was
+ * recorded: value, note and, when given, the opportunity day. An omitted
+ * `forDate` means "today", which can't be compared later, so it matches.
+ */
+function samePayload(
+  original: EntryRecord,
+  input: RecordEntryInput,
+  measure: Measure,
+  actualStart: LocalDate | null,
+): boolean {
+  const value = validateEntryValue(measure, input.value);
+  if (!value.ok || value.value.kind !== original.value.kind) {
+    return false;
+  }
+  if (
+    value.value.kind === "quantity" &&
+    original.value.kind === "quantity" &&
+    !eq(value.value.value, original.value.value)
+  ) {
+    return false;
+  }
+  if ((input.note ?? null) !== original.note) {
+    return false;
+  }
+  if (input.forDate !== undefined && actualStart !== null) {
+    const day = toSeasonDay(input.forDate, actualStart);
+    return day.kind === "day" && day.day === original.day;
+  }
+  return true;
 }
 
 /**
@@ -67,6 +107,12 @@ export async function recordEntry(
   actor: Actor,
   input: RecordEntryInput,
 ): Promise<Result<RecordEntryResult, RecordEntryError>> {
+  if (input.clientRequestId.length === 0) {
+    return err({ kind: "InvalidClientRequestId", reason: "empty" });
+  }
+  if (input.clientRequestId.length > MAX_CLIENT_REQUEST_ID_LENGTH) {
+    return err({ kind: "InvalidClientRequestId", reason: "tooLong" });
+  }
   return deps.uow.transaction(
     async (repos): Promise<Result<RecordEntryResult, RecordEntryError>> => {
       const season = await repos.seasons.get(input.seasonId);
@@ -93,7 +139,9 @@ export async function recordEntry(
         input.clientRequestId,
       );
       if (replay) {
-        return ok({ entry: replay, replayed: true });
+        return samePayload(replay, input, commitment.measure, season.actualStart)
+          ? ok({ entry: replay, replayed: true })
+          : err({ kind: "IdempotencyKeyReused" });
       }
 
       if (season.status !== "active" || season.actualStart === null) {

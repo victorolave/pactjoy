@@ -22,6 +22,9 @@ export type EntryValueInput =
   | { readonly kind: "quantity"; readonly value: string }
   | { readonly kind: "missed" };
 
+/** T1: a client idempotency key is 1..128 characters. */
+export const MAX_CLIENT_REQUEST_ID_LENGTH = 128;
+
 /** B6: the evidence note is at most this many characters. */
 export const MAX_NOTE_LENGTH = 280;
 

@@ -12,7 +12,7 @@ import {
 } from "../testing/entry-fixtures.ts";
 import { raceTransactions } from "../testing/race-harness.ts";
 import { localDate } from "../time/local-date.ts";
-import { MAX_NOTE_LENGTH } from "./entry.ts";
+import { MAX_CLIENT_REQUEST_ID_LENGTH, MAX_NOTE_LENGTH } from "./entry.ts";
 import { type RecordEntryInput, recordEntry } from "./record-entry.ts";
 
 // Season day 0 is 2026-10-01 (UTC-3 fixed zone), so 2026-10-03 is day 2.
@@ -348,6 +348,62 @@ describe("recordEntry: idempotency (T1, ER-16)", () => {
     expect(first.ok && second.ok && second.value.entry).toEqual(first.ok && first.value.entry);
     expect(second.ok && second.value.replayed).toBe(true);
     expect(await stored(seed, given)).toHaveLength(1);
+  });
+
+  it("rejects a replayed key with a different payload (value, note or day) and keeps the original", async () => {
+    const app = newApp();
+    const given = await givenActiveSeason(app, PER_DAY_REACH);
+    await recordEntry(app, given.andrea, input(given, { note: "a" }));
+    const reused = { ok: false, error: { kind: "IdempotencyKeyReused" } };
+
+    expect(
+      await recordEntry(
+        app,
+        given.andrea,
+        input(given, { value: { kind: "quantity", value: "31" } }),
+      ),
+    ).toEqual(reused);
+    expect(await recordEntry(app, given.andrea, input(given, { note: "b" }))).toEqual(reused);
+    expect(
+      await recordEntry(app, given.andrea, input(given, { note: "a", forDate: DAY(1) })),
+    ).toEqual(reused);
+    expect(
+      await recordEntry(
+        app,
+        given.andrea,
+        input(given, { note: "a", value: { kind: "quantity", value: "abc" } }),
+      ),
+    ).toEqual(reused);
+    const same = await recordEntry(app, given.andrea, input(given, { note: "a", forDate: DAY(2) }));
+    expect(same.ok && same.value.replayed).toBe(true);
+    expect(await stored(app, given)).toHaveLength(1);
+  });
+
+  it("treats an omitted note and an explicit null note as the same payload", async () => {
+    const app = newApp();
+    const given = await givenActiveSeason(app, PER_DAY_REACH);
+    await recordEntry(app, given.andrea, input(given));
+    const again = await recordEntry(app, given.andrea, input(given, { note: null }));
+    expect(again.ok && again.value.replayed).toBe(true);
+  });
+
+  it("rejects an empty or over-long clientRequestId", async () => {
+    const app = newApp();
+    const given = await givenActiveSeason(app, PER_DAY_REACH);
+
+    expect(await recordEntry(app, given.andrea, input(given, { clientRequestId: "" }))).toEqual({
+      ok: false,
+      error: { kind: "InvalidClientRequestId", reason: "empty" },
+    });
+    const long = "k".repeat(MAX_CLIENT_REQUEST_ID_LENGTH + 1);
+    expect(await recordEntry(app, given.andrea, input(given, { clientRequestId: long }))).toEqual({
+      ok: false,
+      error: { kind: "InvalidClientRequestId", reason: "tooLong" },
+    });
+    const exact = "k".repeat(MAX_CLIENT_REQUEST_ID_LENGTH);
+    expect(
+      (await recordEntry(app, given.andrea, input(given, { clientRequestId: exact }))).ok,
+    ).toBe(true);
   });
 
   it("scopes the key to (member, commitment): another actor or commitment is not a replay", async () => {
