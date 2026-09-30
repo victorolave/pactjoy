@@ -5,7 +5,7 @@ import type { Actor } from "../shared/actor.ts";
 import type { CircleId } from "../shared/ids.ts";
 import { err, ok, type Result } from "../shared/result.ts";
 import type { Clock } from "../time/clock.port.ts";
-import { type Circle, findActiveMember, type Member } from "./circle.ts";
+import { activeMembers, type Circle, findActiveMember, type Member } from "./circle.ts";
 
 export interface LeaveCircleDeps {
   readonly uow: UnitOfWork<Repositories>;
@@ -24,8 +24,10 @@ export type LeaveCircleError =
  * Marks `actor` as having left the circle (CM-13, CM-14). While the pact
  * is still open, the leaver's commitments are discarded and every pact
  * approval is reset (CM-13, PA-6), written in the same transaction as the
- * circle (and always, even with no approvals yet, so a concurrent approval
- * can't commit over the change -- `ConcurrencyConflict`, D5). Once the
+ * circle. If the leaver was the LAST active member, the open season is
+ * discarded instead (2026-09-30 decision). The season is written even with
+ * no approvals yet, so a concurrent approval can't commit over the change
+ * (`ConcurrencyConflict`, D5). Once the
  * season is active or closed nothing on the season changes: the pact is
  * locked and past data is kept (B9). A member who has already left cannot
  * leave again (`NotAMember`).
@@ -55,14 +57,19 @@ export async function leaveCircle(
 
     const latestSeason = await repos.seasons.findLatestByCircle(circle.id);
     if (latestSeason?.status === "pactOpen") {
-      await repos.seasons.save(
-        {
-          ...resetApprovals(latestSeason),
-          commitments: latestSeason.commitments.filter((c) => c.memberId !== member.id),
-          version: latestSeason.version + 1,
-        },
-        latestSeason.version,
-      );
+      if (activeMembers(updated).length === 0) {
+        // Nobody is left to have agreed to anything: discard the open season.
+        await repos.seasons.delete(latestSeason.id, latestSeason.version);
+      } else {
+        await repos.seasons.save(
+          {
+            ...resetApprovals(latestSeason),
+            commitments: latestSeason.commitments.filter((c) => c.memberId !== member.id),
+            version: latestSeason.version + 1,
+          },
+          latestSeason.version,
+        );
+      }
     }
     return ok(updated);
   });
