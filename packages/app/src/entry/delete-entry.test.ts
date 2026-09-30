@@ -31,7 +31,7 @@ describe("deleteEntry: deleting", () => {
     expect(await app.uow.read((repos) => repos.entries.listBySeason(given.season.id))).toEqual([]);
   });
 
-  it("leaves a tombstone that keeps the idempotency key and bumps the version", async () => {
+  it("leaves a tombstone that blanks value and note, keeps the idempotency key and bumps the version", async () => {
     const { app, given, entry } = await givenRecordedEntry(PER_DAY_REACH, 5);
 
     await remove(app, localInstant(dayOf(5)), given.andrea, entry);
@@ -39,16 +39,12 @@ describe("deleteEntry: deleting", () => {
     const found = await app.uow.read((repos) =>
       repos.entries.findByClientRequest(entry.memberId, entry.commitmentId, entry.clientRequestId),
     );
-    expect(found).toEqual({ ...entry, deleted: true, version: entry.version + 1 });
-  });
-
-  it("cannot delete or find an already deleted entry", async () => {
-    const { app, given, entry } = await givenRecordedEntry(PER_DAY_REACH, 5);
-    await remove(app, localInstant(dayOf(5)), given.andrea, entry);
-
-    expect(await remove(app, localInstant(dayOf(5)), given.andrea, entry)).toEqual({
-      ok: false,
-      error: { kind: "EntryNotFound" },
+    expect(found).toEqual({
+      ...entry,
+      value: null,
+      note: null,
+      deleted: true,
+      version: entry.version + 1,
     });
   });
 
@@ -86,6 +82,43 @@ describe("deleteEntry: deleting", () => {
       error: { kind: "WindowClosed" },
     });
     expect(await stored(app, entry)).toEqual(entry);
+  });
+
+  it("is idempotent: deleting your own already deleted entry succeeds and changes nothing", async () => {
+    const { app, given, entry } = await givenRecordedEntry(PER_DAY_REACH, 5);
+    await remove(app, localInstant(dayOf(5)), given.andrea, entry);
+    const tombstone = await app.uow.read((repos) =>
+      repos.entries.findByClientRequest(entry.memberId, entry.commitmentId, entry.clientRequestId),
+    );
+
+    const again = await remove(app, localInstant(dayOf(5)), given.andrea, entry);
+
+    expect(again).toEqual({ ok: true, value: undefined });
+    const after = await app.uow.read((repos) =>
+      repos.entries.findByClientRequest(entry.memberId, entry.commitmentId, entry.clientRequestId),
+    );
+    expect(after).toEqual(tombstone);
+  });
+
+  it("does not let anyone else delete, or learn about, a tombstone", async () => {
+    const { app, given, entry } = await givenRecordedEntry(PER_DAY_REACH, 5);
+    await remove(app, localInstant(dayOf(5)), given.andrea, entry);
+    const now = localInstant(dayOf(5));
+
+    expect(await remove(app, now, given.victor, entry)).toEqual({
+      ok: false,
+      error: { kind: "EntryNotOwned" },
+    });
+    const stranger: Actor = { userId: userId("user-stranger") };
+    expect(await remove(app, now, stranger, entry)).toEqual({
+      ok: false,
+      error: { kind: "NotAMember" },
+    });
+    await leaveCircle(app, given.andrea, { circleId: given.circle.id });
+    expect(await remove(app, now, given.andrea, entry)).toEqual({
+      ok: false,
+      error: { kind: "NotAMember" },
+    });
   });
 });
 

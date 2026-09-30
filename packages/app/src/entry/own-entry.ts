@@ -17,6 +17,7 @@ export type OwnEntryError =
   | { readonly kind: "SeasonNotFound" }
   | { readonly kind: "NotAMember" }
   | { readonly kind: "EntryNotOwned" }
+  | { readonly kind: "EntryDeleted" }
   | { readonly kind: "SeasonNotActive" }
   | { readonly kind: "BeforeSeasonStart" }
   | EntryWindowError;
@@ -43,7 +44,7 @@ export async function loadMutableEntry(
   actor: Actor,
   id: EntryId,
 ): Promise<Result<OwnEntryContext, OwnEntryError>> {
-  const entry = await repos.entries.get(id);
+  const entry = await repos.entries.getStored(id);
   if (!entry) {
     return err({ kind: "EntryNotFound" });
   }
@@ -58,6 +59,10 @@ export async function loadMutableEntry(
   }
   if (entry.memberId !== member.id) {
     return err({ kind: "EntryNotOwned" });
+  }
+  // Only the owner learns that an entry is gone: anyone else got EntryNotOwned above.
+  if (entry.deleted) {
+    return err({ kind: "EntryDeleted" });
   }
   const commitment = season.commitments.find((candidate) => candidate.id === entry.commitmentId);
   if (!commitment) {

@@ -136,6 +136,21 @@ describe("editEntry: editing", () => {
     expect(await stored(other.app, other.entry)).toMatchObject({ version: 1, note: "changed" });
   });
 
+  it("cannot edit a deleted entry: EntryDeleted for its owner, EntryNotOwned for anyone else", async () => {
+    const { app, given, entry } = await givenRecordedEntry(PER_DAY_REACH, 5);
+    await deleteEntry(atInstant(app, localInstant(dayOf(5))), given.andrea, { entryId: entry.id });
+    const now = localInstant(dayOf(5));
+
+    expect(await edit(app, now, given.andrea, entry)).toEqual({
+      ok: false,
+      error: { kind: "EntryDeleted" },
+    });
+    expect(await edit(app, now, given.victor, entry)).toEqual({
+      ok: false,
+      error: { kind: "EntryNotOwned" },
+    });
+  });
+
   it("freezes the entry of a member who left (B9)", async () => {
     const { app, given, entry } = await givenRecordedEntry(PER_DAY_REACH, 5);
     await leaveCircle(app, given.andrea, { circleId: given.circle.id });
@@ -245,7 +260,7 @@ describe("editEntry: concurrency (D5)", () => {
     const tombstone = await app.uow.read((repos) =>
       repos.entries.findByClientRequest(entry.memberId, entry.commitmentId, entry.clientRequestId),
     );
-    expect(tombstone).toEqual({ ...entry, deleted: true, version: 1 });
+    expect(tombstone).toEqual({ ...entry, value: null, note: null, deleted: true, version: 1 });
   });
 
   it("a season change first makes the in-flight edit conflict and change nothing", async () => {

@@ -46,7 +46,8 @@ describe("in-memory entry repository: get", () => {
   });
 });
 
-const TOMBSTONE: EntryRecord = { ...ENTRY, version: 1, deleted: true };
+// Deleting blanks the evidence: only the identity, the key and the fingerprint stay.
+const TOMBSTONE = { ...ENTRY, value: null, note: null, version: 1, deleted: true };
 
 describe("in-memory entry repository: remove leaves a tombstone", () => {
   it("stages the tombstone: invisible to reads inside the transaction, live only after apply", async () => {
@@ -77,6 +78,8 @@ describe("in-memory entry repository: remove leaves a tombstone", () => {
     expect(await repo.findByClientRequest(ENTRY.memberId, ENTRY.commitmentId, "req-1")).toEqual(
       TOMBSTONE,
     );
+    expect(await repo.getStored(ENTRY.id)).toEqual(TOMBSTONE);
+    expect(await repo.beginTransaction().repository.getStored(ENTRY.id)).toEqual(TOMBSTONE);
     await expect(repo.add({ ...ENTRY, id: entryId("entry-2") })).rejects.toBeInstanceOf(
       ConcurrencyConflict,
     );
@@ -125,7 +128,7 @@ describe("in-memory entry repository: remove leaves a tombstone", () => {
     const repo = await withStored();
     await repo.remove(ENTRY.id, 0);
 
-    await expect(repo.replace({ ...TOMBSTONE, version: 2 }, 1)).rejects.toBeInstanceOf(
+    await expect(repo.replace({ ...TOMBSTONE, version: 2 } as never, 1)).rejects.toBeInstanceOf(
       ConcurrencyConflict,
     );
   });
@@ -192,7 +195,7 @@ describe("in-memory entry repository: replace (by version)", () => {
     async (_field, change) => {
       const repo = await withStored();
       const txn = repo.beginTransaction();
-      const tampered = { ...EDITED, ...change };
+      const tampered = { ...EDITED, ...change } as EntryRecord;
 
       await expect(txn.repository.replace(tampered, 0)).rejects.toThrow(/immutable field/);
       await expect(repo.replace(tampered, 0)).rejects.toThrow(/immutable field/);
