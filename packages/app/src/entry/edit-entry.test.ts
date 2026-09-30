@@ -15,6 +15,7 @@ import { changeSeason, expectConflict } from "../testing/entry-test-helpers.ts";
 import { raceTransactions } from "../testing/race-harness.ts";
 import { givenRecordedEntry } from "../testing/recorded-entry-fixture.ts";
 import type { Instant } from "../time/instant.ts";
+import { deleteEntry } from "./delete-entry.ts";
 import { type EditEntryInput, editEntry } from "./edit-entry.ts";
 import { type EntryRecord, MAX_NOTE_LENGTH } from "./entry.ts";
 
@@ -196,6 +197,26 @@ describe("editEntry: concurrency (D5)", () => {
     expect(winner).toMatchObject({ status: "fulfilled", value: { ok: true } });
     expectConflict(loser);
     expect(await stored(app, entry)).toEqual(entry);
+  });
+
+  it("a delete committed first makes the in-flight edit conflict and the entry stays deleted", async () => {
+    const { app, given, entry } = await givenRecordedEntry(PER_DAY_REACH, 5);
+    const now = localInstant(dayOf(5));
+
+    const { winner, loser } = await raceTransactions(
+      app,
+      (a) => deleteEntry(atInstant(a, now), given.andrea, { entryId: entry.id }),
+      (a) => edit(a, now, given.andrea, entry),
+      "circles",
+    );
+
+    expect(winner).toMatchObject({ status: "fulfilled", value: { ok: true } });
+    expectConflict(loser);
+    expect(await stored(app, entry)).toBeNull();
+    const tombstone = await app.uow.read((repos) =>
+      repos.entries.findByClientRequest(entry.memberId, entry.commitmentId, entry.clientRequestId),
+    );
+    expect(tombstone).toEqual({ ...entry, deleted: true, version: 1 });
   });
 
   it("a season change first makes the in-flight edit conflict and change nothing", async () => {

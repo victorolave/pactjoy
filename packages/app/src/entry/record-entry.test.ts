@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { leaveCircle } from "../circle/leave-circle.ts";
 import type { Measure } from "../commitment/commitment.ts";
 import { ConcurrencyConflict } from "../shared/errors.ts";
+import { entryId } from "../shared/ids.ts";
 import { createTestApp, type TestApp } from "../testing/app-harness.ts";
 import {
   atInstant,
@@ -13,6 +14,7 @@ import {
 } from "../testing/entry-fixtures.ts";
 import { raceTransactions } from "../testing/race-harness.ts";
 import { localDate } from "../time/local-date.ts";
+import { deleteEntry } from "./delete-entry.ts";
 import { MAX_CLIENT_REQUEST_ID_LENGTH, MAX_NOTE_LENGTH } from "./entry.ts";
 import { type RecordEntryInput, recordEntry } from "./record-entry.ts";
 
@@ -434,6 +436,36 @@ describe("recordEntry: idempotency (T1, ER-16)", () => {
     await recordEntry(app, given.andrea, input(given));
     const again = await recordEntry(app, given.andrea, input(given, { note: null }));
     expect(again.ok && again.value.replayed).toBe(true);
+  });
+
+  it("replaying the key of a deleted entry returns EntryDeleted and does not recreate it", async () => {
+    const app = newApp();
+    const given = await givenActiveSeason(app, PER_DAY_REACH);
+    const first = await recordEntry(app, given.andrea, input(given));
+    await deleteEntry(app, given.andrea, {
+      entryId: first.ok ? first.value.entry.id : entryId("?"),
+    });
+
+    expect(await recordEntry(app, given.andrea, input(given))).toEqual({
+      ok: false,
+      error: { kind: "EntryDeleted" },
+    });
+    expect(await stored(app, given)).toEqual([]);
+  });
+
+  it("a deleted key reused with a different payload is still IdempotencyKeyReused", async () => {
+    const app = newApp();
+    const given = await givenActiveSeason(app, PER_DAY_REACH);
+    const first = await recordEntry(app, given.andrea, input(given));
+    await deleteEntry(app, given.andrea, {
+      entryId: first.ok ? first.value.entry.id : entryId("?"),
+    });
+
+    const other = input(given, { value: { kind: "quantity", value: "31" } });
+    expect(await recordEntry(app, given.andrea, other)).toEqual({
+      ok: false,
+      error: { kind: "IdempotencyKeyReused" },
+    });
   });
 
   it("rejects an empty or over-long clientRequestId", async () => {

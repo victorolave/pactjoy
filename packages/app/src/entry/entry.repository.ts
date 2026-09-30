@@ -8,12 +8,16 @@ import type { EntryRecord } from "./entry.ts";
  * through its in-memory adapter (`testing/in-memory-entry-repository.ts`).
  */
 export interface EntryRepository {
-  /** T1: the entry already recorded under this idempotency key, if any. */
+  /**
+   * T1: the entry already recorded under this idempotency key, if any. This
+   * is the ONLY read that also returns tombstones (`deleted: true`).
+   */
   findByClientRequest(
     memberId: MemberId,
     commitmentId: CommitmentId,
     clientRequestId: string,
   ): Promise<EntryRecord | null>;
+  /** Tombstones do not exist for `get` and `listBySeason`: scoring and reads never see them. */
   get(id: EntryId): Promise<EntryRecord | null>;
   listBySeason(seasonId: SeasonId): Promise<readonly EntryRecord[]>;
   /**
@@ -29,13 +33,16 @@ export interface EntryRepository {
    * errors). A relational adapter runs one UPDATE of only the mutable
    * columns `WHERE id = $id AND version = $expected` and checks the
    * affected-row count.
-   * @throws {ConcurrencyConflict} if the stored version is no longer `expectedVersion`, or the entry is gone.
+   * @throws {ConcurrencyConflict} if the stored version is no longer `expectedVersion`, or the entry is gone or deleted.
    */
   replace(next: EntryRecord, expectedVersion: number): Promise<void>;
   /**
-   * Deletes an entry, with the same version check as {@link replace}
-   * (`DELETE ... WHERE id = $id AND version = $expected`).
-   * @throws {ConcurrencyConflict} if the stored version is no longer `expectedVersion`, or the entry is gone.
+   * Deletes an entry by turning it into a tombstone (`deleted = true`,
+   * `version = expectedVersion + 1`), so its idempotency key stays taken.
+   * A relational adapter runs `UPDATE ... SET deleted = true, version =
+   * version + 1 WHERE id = $id AND version = $expected AND NOT deleted`
+   * and checks the affected-row count.
+   * @throws {ConcurrencyConflict} if the stored version is no longer `expectedVersion`, or the entry is gone or already deleted.
    */
   remove(id: EntryId, expectedVersion: number): Promise<void>;
 }

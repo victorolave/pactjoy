@@ -31,6 +31,27 @@ describe("deleteEntry: deleting", () => {
     expect(await app.uow.read((repos) => repos.entries.listBySeason(given.season.id))).toEqual([]);
   });
 
+  it("leaves a tombstone that keeps the idempotency key and bumps the version", async () => {
+    const { app, given, entry } = await givenRecordedEntry(PER_DAY_REACH, 5);
+
+    await remove(app, localInstant(dayOf(5)), given.andrea, entry);
+
+    const found = await app.uow.read((repos) =>
+      repos.entries.findByClientRequest(entry.memberId, entry.commitmentId, entry.clientRequestId),
+    );
+    expect(found).toEqual({ ...entry, deleted: true, version: entry.version + 1 });
+  });
+
+  it("cannot delete or find an already deleted entry", async () => {
+    const { app, given, entry } = await givenRecordedEntry(PER_DAY_REACH, 5);
+    await remove(app, localInstant(dayOf(5)), given.andrea, entry);
+
+    expect(await remove(app, localInstant(dayOf(5)), given.andrea, entry)).toEqual({
+      ok: false,
+      error: { kind: "EntryNotFound" },
+    });
+  });
+
   it("closes the per-session window after the day's own grace (ER-11)", async () => {
     const { app, given, entry } = await givenRecordedEntry(PER_DAY_REACH, 5);
 
