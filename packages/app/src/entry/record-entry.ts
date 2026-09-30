@@ -1,4 +1,4 @@
-import { type CommitmentId, eq } from "@pactjoy/engine";
+import type { CommitmentId } from "@pactjoy/engine";
 import { findActiveMember } from "../circle/circle.ts";
 import type { Measure } from "../commitment/commitment.ts";
 import type { IdGenerator } from "../ports/id-generator.ts";
@@ -16,6 +16,7 @@ import {
   type EntryValueInput,
   exceedsNoteLimit,
   MAX_CLIENT_REQUEST_ID_LENGTH,
+  requestFingerprint,
 } from "./entry.ts";
 import { type EntryValueError, validateEntryValue } from "./entry-value.ts";
 import { checkEntryWindow, type EntryWindowError } from "./entry-window.ts";
@@ -58,8 +59,9 @@ export interface RecordEntryResult {
 }
 
 /**
- * T1: a replay is only a replay when the payload is the one that was
- * recorded: value, note and, when given, the opportunity day. An omitted
+ * T1: a replay is only a replay when the payload is the ORIGINAL one (its
+ * stored fingerprint, even if the entry was edited since): value, note and,
+ * when given, the opportunity day. An omitted
  * `forDate` means "today", which can't be compared later, so it matches.
  */
 function samePayload(
@@ -69,17 +71,10 @@ function samePayload(
   actualStart: LocalDate | null,
 ): boolean {
   const value = validateEntryValue(measure, input.value);
-  if (!value.ok || value.value.kind !== original.value.kind) {
+  if (!value.ok) {
     return false;
   }
-  if (
-    value.value.kind === "quantity" &&
-    original.value.kind === "quantity" &&
-    !eq(value.value.value, original.value.value)
-  ) {
-    return false;
-  }
-  if ((input.note ?? null) !== original.note) {
+  if (requestFingerprint(value.value, input.note ?? null) !== original.requestFingerprint) {
     return false;
   }
   if (input.forDate !== undefined && actualStart !== null) {
@@ -206,6 +201,7 @@ export async function recordEntry(
         clientRequestId: input.clientRequestId,
         editedAt: null,
         version: 0,
+        requestFingerprint: requestFingerprint(value.value, note),
         deleted: false,
       };
       await repos.entries.add(entry);

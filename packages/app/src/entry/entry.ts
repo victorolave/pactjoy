@@ -54,8 +54,24 @@ export interface EntryRecord {
   /** Optimistic version (D5): 0 when recorded, +1 on every edit. */
   readonly version: number;
   /**
+   * {@link requestFingerprint} of the ORIGINAL `recordEntry` request (T1):
+   * a replayed key is compared against it, not against the current entry,
+   * which an edit may have changed since. Never changes.
+   */
+  readonly requestFingerprint: string;
+  /**
    * Tombstone (delete): the row stays so its idempotency key stays taken, but
    * for scoring and reads the entry does not exist. Only `remove` sets it.
    */
   readonly deleted: boolean;
+}
+
+/**
+ * A canonical string for a value and note, so "the same request" is an
+ * exact comparison: quantities are normalized fractions (2, 2.0 and 2.00
+ * are the same), never floats.
+ */
+export function requestFingerprint(value: EntryValue, note: string | null): string {
+  const quantity = value.kind === "quantity" ? `${value.value.num}/${value.value.den}` : null;
+  return JSON.stringify([value.kind, quantity, note]);
 }

@@ -15,6 +15,7 @@ import {
 import { raceTransactions } from "../testing/race-harness.ts";
 import { localDate } from "../time/local-date.ts";
 import { deleteEntry } from "./delete-entry.ts";
+import { editEntry } from "./edit-entry.ts";
 import { MAX_CLIENT_REQUEST_ID_LENGTH, MAX_NOTE_LENGTH } from "./entry.ts";
 import { type RecordEntryInput, recordEntry } from "./record-entry.ts";
 
@@ -403,6 +404,29 @@ describe("recordEntry: idempotency (T1, ER-16)", () => {
     expect(await stored(app, given)).toHaveLength(1);
   });
 
+  it("tells 0.5 from 1 and done from missed: the fingerprint keeps the whole fraction and the kind", async () => {
+    const half = newApp();
+    const a = await givenActiveSeason(half, PER_DAY_REACH);
+    await recordEntry(half, a.andrea, input(a, { value: { kind: "quantity", value: "0.5" } }));
+    expect(
+      await recordEntry(half, a.andrea, input(a, { value: { kind: "quantity", value: "1" } })),
+    ).toEqual({ ok: false, error: { kind: "IdempotencyKeyReused" } });
+
+    const done = newApp();
+    const b = await givenActiveSeason(done, {
+      unit: "done",
+      schedule: {
+        period: "perSession",
+        frequency: { kind: "specificDays", weekdays: [0, 1, 2, 3, 4, 5, 6] },
+      },
+    });
+    await recordEntry(done, b.andrea, input(b, { value: { kind: "done" } }));
+    expect(await recordEntry(done, b.andrea, input(b, { value: { kind: "missed" } }))).toEqual({
+      ok: false,
+      error: { kind: "IdempotencyKeyReused" },
+    });
+  });
+
   it("compares quantities by exact value, so 2.0, 2 and 2.00 are the same payload", async () => {
     const app = newApp();
     const given = await givenActiveSeason(app, PER_DAY_REACH);
@@ -436,6 +460,43 @@ describe("recordEntry: idempotency (T1, ER-16)", () => {
     await recordEntry(app, given.andrea, input(given));
     const again = await recordEntry(app, given.andrea, input(given, { note: null }));
     expect(again.ok && again.value.replayed).toBe(true);
+  });
+
+  it("replaying the ORIGINAL request after an edit succeeds and returns the current entry", async () => {
+    const app = newApp();
+    const given = await givenActiveSeason(app, PER_DAY_REACH);
+    const first = await recordEntry(app, given.andrea, input(given, { note: "a" }));
+    const id = first.ok ? first.value.entry.id : entryId("?");
+    const edited = await editEntry(app, given.andrea, {
+      entryId: id,
+      value: { kind: "quantity", value: "45" },
+      note: "b",
+    });
+
+    const replay = await recordEntry(app, given.andrea, input(given, { note: "a" }));
+
+    expect(replay).toEqual({
+      ok: true,
+      value: { entry: edited.ok && edited.value.entry, replayed: true },
+    });
+    expect(await stored(app, given)).toHaveLength(1);
+  });
+
+  it("the edited payload is NOT the original: sending it under the same key is IdempotencyKeyReused", async () => {
+    const app = newApp();
+    const given = await givenActiveSeason(app, PER_DAY_REACH);
+    const first = await recordEntry(app, given.andrea, input(given));
+    await editEntry(app, given.andrea, {
+      entryId: first.ok ? first.value.entry.id : entryId("?"),
+      value: { kind: "quantity", value: "45" },
+      note: null,
+    });
+
+    const edited = input(given, { value: { kind: "quantity", value: "45" } });
+    expect(await recordEntry(app, given.andrea, edited)).toEqual({
+      ok: false,
+      error: { kind: "IdempotencyKeyReused" },
+    });
   });
 
   it("replaying the key of a deleted entry returns EntryDeleted and does not recreate it", async () => {

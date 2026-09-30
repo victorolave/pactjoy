@@ -21,6 +21,7 @@ const ENTRY: EntryRecord = {
   clientRequestId: "req-1",
   editedAt: null,
   version: 0,
+  requestFingerprint: "fp",
   deleted: false,
 };
 const EDITED: EntryRecord = {
@@ -184,6 +185,7 @@ describe("in-memory entry repository: replace (by version)", () => {
     ["recordedOn", { recordedOn: seasonDay(3) }],
     ["recordedAt", { recordedAt: instant(99) }],
     ["clientRequestId", { clientRequestId: "other" }],
+    ["requestFingerprint", { requestFingerprint: "other" }],
     ["deleted", { deleted: true }],
   ] as const)(
     "throws when the immutable %s changes, in a transaction and live",

@@ -18,6 +18,7 @@ const IMMUTABLE_FIELDS = [
   "recordedOn",
   "recordedAt",
   "clientRequestId",
+  "requestFingerprint",
   "deleted",
 ] as const satisfies readonly (keyof EntryRecord)[];
 
