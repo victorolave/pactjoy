@@ -40,7 +40,7 @@ async function setup() {
     return result.value;
   };
   const viewAsJson = async (viewer: Actor) => JSON.parse(JSON.stringify(await view(viewer)));
-  return { given, view, viewAsJson };
+  return { app, given, view, viewAsJson };
 }
 
 describe("memberScore: member-level totals", () => {
@@ -67,6 +67,34 @@ describe("memberScore: member-level totals", () => {
     expect(raw).toMatchObject({ kind: "scored", scope: "others", memberId: ANDREA, points: 36 });
     expect(Object.keys(raw).sort()).toEqual(keys);
     expect(Object.keys(json).sort()).toEqual(keys);
+  });
+
+  it("the whole view another member gets is points plus a hidden private commitment, nothing else", async () => {
+    const { app, given, view } = await setup();
+    await app.uow.transaction(async (repos) => {
+      await repos.seasons.save(
+        {
+          ...given.season,
+          commitments: given.season.commitments.map((commitment) =>
+            commitment.id === given.andreaCommitment
+              ? { ...commitment, privacy: "private" as const }
+              : commitment,
+          ),
+        },
+        given.season.version,
+      );
+      return { ok: true, value: undefined };
+    });
+
+    expect(await view(given.victor)).toStrictEqual({
+      kind: "scored",
+      scope: "others",
+      memberId: ANDREA,
+      points: 36,
+      commitments: [
+        { kind: "hidden", commitmentId: given.andreaCommitment, weightPercent: 100, points: 36 },
+      ],
+    });
   });
 
   it("the own view is complete even when nothing has been counted yet", async () => {
