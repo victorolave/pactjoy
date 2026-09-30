@@ -20,7 +20,11 @@ export interface EntryRepository {
     commitmentId: CommitmentId,
     clientRequestId: string,
   ): Promise<StoredEntry | null>;
-  /** Like {@link get} but also returns a tombstone: for the owner's idempotent delete. */
+  /**
+   * Like {@link get} but also returns a tombstone, for the owner's idempotent
+   * delete. Callers MUST check ownership before revealing `deleted`: anyone
+   * else must not learn that an entry existed and was deleted.
+   */
   getStored(id: EntryId): Promise<StoredEntry | null>;
   /**
    * `get` and `listBySeason` MUST exclude tombstones (`WHERE NOT deleted`).

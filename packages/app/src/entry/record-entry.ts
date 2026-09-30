@@ -76,7 +76,7 @@ function samePayload(
   if (!value.ok) {
     return false;
   }
-  if (requestFingerprint(value.value, input.note ?? null) !== original.requestFingerprint) {
+  if (requestFingerprint(value.value, normalizeNote(input.note)) !== original.requestFingerprint) {
     return false;
   }
   if (input.forDate !== undefined && actualStart !== null) {
