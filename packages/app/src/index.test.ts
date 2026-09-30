@@ -32,6 +32,7 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "leaveCircle",
   "localDate",
   "localDateOfSeasonDay",
+  "memberScore",
   "ok",
   "recordEntry",
   "removeCommitment",
