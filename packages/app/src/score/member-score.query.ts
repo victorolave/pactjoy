@@ -1,10 +1,14 @@
 import type { MemberId } from "@pactjoy/engine";
 import { displayPercent, displayPoints, type MemberScore, scoreMember } from "@pactjoy/engine";
-import { activeMembers } from "../circle/circle.ts";
 import type { Actor } from "../shared/actor.ts";
 import type { SeasonId } from "../shared/ids.ts";
 import { err, ok, type Result } from "../shared/result.ts";
-import { loadScoreContext, type ScoreContextError, type ScoreQueryDeps } from "./score-context.ts";
+import {
+  isParticipant,
+  loadScoreContext,
+  type ScoreContextError,
+  type ScoreQueryDeps,
+} from "./score-context.ts";
 import { toScoreInput } from "./score-input.ts";
 
 export type MemberScoreDeps = ScoreQueryDeps;
@@ -45,7 +49,7 @@ export function toView(memberId: MemberId, score: MemberScore): MemberScoreView 
  * from Entries through the engine on every call -- nothing is cached or
  * stored (P2-2) -- with pauses read through the read-only port. The season
  * clock decides "today"; a season that has not started yields `notStarted`.
- * Any active member of the circle may read any other active member's score.
+ * Any active member or season participant may read any participant's score, including after leaving the circle (read-only).
  */
 export async function memberScore(
   deps: MemberScoreDeps,
@@ -58,8 +62,9 @@ export async function memberScore(
       return context;
     }
     const { season, circle, viewer, start } = context.value;
-    const target = activeMembers(circle).find(
-      (member) => member.id === (input.memberId ?? viewer.id),
+    const targetId = input.memberId ?? viewer.id;
+    const target = circle.members.find(
+      (member) => member.id === targetId && isParticipant(season, member.id),
     );
     if (!target) {
       return err({ kind: "MemberNotFound" });
@@ -67,10 +72,8 @@ export async function memberScore(
     if (start === null) {
       return ok({ kind: "notStarted" });
     }
-    const [entries, pauses] = await Promise.all([
-      repos.entries.listBySeason(season.id),
-      repos.pauses.listBySeason(season.id),
-    ]);
+    const entries = await repos.entries.listBySeason(season.id);
+    const pauses = await repos.pauses.listBySeason(season.id);
     const score = scoreMember(
       toScoreInput({
         season,

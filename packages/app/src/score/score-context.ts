@@ -1,5 +1,5 @@
-import type { SeasonDay } from "@pactjoy/engine";
-import { type Circle, findActiveMember, type Member } from "../circle/circle.ts";
+import type { MemberId, SeasonDay } from "@pactjoy/engine";
+import type { Circle, Member } from "../circle/circle.ts";
 import type { Repositories } from "../ports/repositories.ts";
 import type { Season } from "../season/season.ts";
 import type { Actor } from "../shared/actor.ts";
@@ -35,6 +35,11 @@ export interface ScoreContext {
   readonly start: { readonly actualStart: LocalDate; readonly today: SeasonDay } | null;
 }
 
+/** A season participant is anyone who held at least one commitment in it, whether or not they still belong to the circle. */
+export function isParticipant(season: Season, memberId: MemberId): boolean {
+  return season.commitments.some((commitment) => commitment.memberId === memberId);
+}
+
 export async function loadScoreContext(
   deps: ScoreQueryDeps,
   repos: Repositories,
@@ -46,7 +51,13 @@ export async function loadScoreContext(
     return err({ kind: "SeasonNotFound" });
   }
   const circle = await repos.circles.get(season.circleId);
-  const viewer = circle ? findActiveMember(circle, actor.userId) : undefined;
+  // Read-only access: any active member, plus participants of the season even after
+  // they left the circle or the circle was archived (2026-09-30 decision).
+  const viewer = circle?.members.find(
+    (member) =>
+      member.userId === actor.userId &&
+      (member.status === "active" || isParticipant(season, member.id)),
+  );
   if (!circle || !viewer) {
     return err({ kind: "NotAMember" });
   }

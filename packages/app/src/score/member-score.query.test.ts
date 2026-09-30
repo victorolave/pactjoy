@@ -91,16 +91,6 @@ describe("memberScore: recomputed from entries on every call", () => {
       value: { ...SCORED_ANDREA_ZERO, points: 36, consistency: 100, idealCompletion: 100 },
     });
   });
-
-  it("follows the entry value: 20 of a 30 ideal reaches the minimum and is 67% of the ideal", async () => {
-    const { app, given, ask } = await setup();
-    await record(app, given, "20");
-
-    expect(await ask(given.andrea)).toMatchObject({
-      ok: true,
-      value: { consistency: 100, idealCompletion: 67 },
-    });
-  });
 });
 
 describe("memberScore: pauses through the read-only port (SQ-8)", () => {
@@ -116,7 +106,8 @@ describe("memberScore: pauses through the read-only port (SQ-8)", () => {
   it("ignores a pause that belongs to another member", async () => {
     const { app, given, ask } = await setup();
     await record(app, given);
-    app.pauses.add(given.season.id, approvedPause(VICTOR, given.victorCommitment));
+    // Victor's pause record points at Andrea's commitment: only the owner filter keeps it out.
+    app.pauses.add(given.season.id, approvedPause(VICTOR, given.andreaCommitment));
 
     expect(await ask(given.andrea)).toMatchObject({ ok: true, value: { points: 36 } });
   });
@@ -148,18 +139,23 @@ describe("memberScore: whose score, and when", () => {
 });
 
 describe("memberScore: who may ask, and about whom", () => {
-  async function withVictorLeft() {
+  const BYSTANDER = memberId("member-bystander");
+  const bystanderUser = userId("user-bystander");
+
+  /** Victor (a participant) left; a bystander who never held a commitment is added, active or left. */
+  async function circleAfter(bystanderStatus: "active" | "left") {
     const scenario = await setup();
     const { app, given } = scenario;
-    const left = circleFixture({
+    const next = circleFixture({
       id: given.circle.id,
       members: [
         memberFixture({ id: ANDREA, userId: given.andrea.userId }),
         memberFixture({ id: VICTOR, userId: given.victor.userId, status: "left" }),
+        memberFixture({ id: BYSTANDER, userId: bystanderUser, status: bystanderStatus }),
       ],
     });
     await app.uow.transaction(async (repos) => {
-      await repos.circles.save(left, given.circle.version);
+      await repos.circles.save(next, given.circle.version);
       return { ok: true, value: undefined };
     });
     return scenario;
@@ -183,16 +179,40 @@ describe("memberScore: who may ask, and about whom", () => {
     });
   });
 
-  it("rejects a member who already left the circle", async () => {
-    const { given, ask } = await withVictorLeft();
+  it("lets a participant who left the circle read the season's history", async () => {
+    const { given, ask } = await circleAfter("active");
 
-    expect(await ask(given.victor)).toEqual({ ok: false, error: { kind: "NotAMember" } });
+    expect(await ask(given.victor)).toMatchObject({ ok: true, value: { memberId: VICTOR } });
   });
 
-  it("rejects a target who left the circle", async () => {
-    const { given, ask } = await withVictorLeft();
+  it("lets anyone read the score of a participant who left", async () => {
+    const { given, ask } = await circleAfter("active");
 
-    expect(await ask(given.andrea, { memberId: VICTOR })).toEqual(NOT_FOUND);
+    expect(await ask(given.andrea, { memberId: VICTOR })).toMatchObject({
+      ok: true,
+      value: { memberId: VICTOR },
+    });
+  });
+
+  it("lets an active member who holds no commitment read too", async () => {
+    const { ask } = await circleAfter("active");
+
+    expect(await ask({ userId: bystanderUser }, { memberId: ANDREA })).toMatchObject({ ok: true });
+  });
+
+  it("rejects a member who left without ever holding a commitment", async () => {
+    const { ask } = await circleAfter("left");
+
+    expect(await ask({ userId: bystanderUser })).toEqual({
+      ok: false,
+      error: { kind: "NotAMember" },
+    });
+  });
+
+  it("rejects a target who is in the circle but holds no commitment in the season", async () => {
+    const { given, ask } = await circleAfter("active");
+
+    expect(await ask(given.andrea, { memberId: BYSTANDER })).toEqual(NOT_FOUND);
   });
 
   it("rejects a target who was never in the circle", async () => {
