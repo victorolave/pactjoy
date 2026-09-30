@@ -34,7 +34,7 @@ export function exceedsNoteLimit(note: string | null): boolean {
 }
 
 /** What every stored entry keeps, live or deleted: identity, idempotency key and audit metadata. */
-interface EntryCore {
+export interface EntryCore {
   readonly id: EntryId;
   readonly seasonId: SeasonId;
   readonly memberId: MemberId;

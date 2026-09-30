@@ -1,6 +1,6 @@
 import type { CommitmentId, MemberId } from "@pactjoy/engine";
 import type { EntryRepository } from "../entry/entry.repository.ts";
-import type { EntryRecord, EntryTombstone, StoredEntry } from "../entry/entry.ts";
+import type { EntryCore, EntryRecord, EntryTombstone, StoredEntry } from "../entry/entry.ts";
 import { ConcurrencyConflict } from "../shared/errors.ts";
 import type { EntryId, SeasonId } from "../shared/ids.ts";
 
@@ -22,8 +22,26 @@ const IMMUTABLE_FIELDS = [
   "deleted",
 ] as const satisfies readonly (keyof EntryRecord)[];
 
+/**
+ * Built field by field, never by spreading the live entry: a field added to
+ * `EntryCore` fails typecheck here until it is kept on purpose, and a field
+ * that only lives on `EntryRecord` (evidence) can never survive a delete.
+ */
 function tombstone(entry: EntryRecord): EntryTombstone {
-  return { ...entry, value: null, note: null, deleted: true, version: entry.version + 1 };
+  const core: EntryCore = {
+    id: entry.id,
+    seasonId: entry.seasonId,
+    memberId: entry.memberId,
+    commitmentId: entry.commitmentId,
+    day: entry.day,
+    recordedOn: entry.recordedOn,
+    recordedAt: entry.recordedAt,
+    clientRequestId: entry.clientRequestId,
+    editedAt: entry.editedAt,
+    version: entry.version + 1,
+    requestFingerprint: entry.requestFingerprint,
+  };
+  return { ...core, value: null, note: null, deleted: true };
 }
 
 /** Programming errors in the caller, not races: thrown as plain errors. */
