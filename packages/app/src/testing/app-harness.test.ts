@@ -34,7 +34,7 @@ describe("createTestApp", () => {
     expect(app.ids.next()).toBe("circle-2");
   });
 
-  it("wires a real circles repository and season-gate reader behind a working UnitOfWork (S3)", async () => {
+  it("wires a real circles repository and season repository behind a working UnitOfWork (S3)", async () => {
     const app = createTestApp();
     const id = circleId("circle-1");
 
@@ -50,7 +50,7 @@ describe("createTestApp", () => {
         },
         null,
       );
-      expect(await repos.seasonGate.statusForCircle(id)).toBe("noSeason");
+      expect(await repos.seasons.findLatestByCircle(id)).toBeNull();
       return ok(undefined);
     });
 
@@ -77,9 +77,7 @@ describe("createTestApp", () => {
       null,
     );
 
-    // seasonGate reads live through the same `seasons` store (S4/B11) --
-    // no more standalone settable double.
-    expect(await app.seasonGate.statusForCircle(id)).toBe("active");
+    expect((await app.seasons.findLatestByCircle(id))?.status).toBe("active");
     expect((await app.circles.get(id))?.name).toBe("Río Runners");
     // The same in-memory instances back uow.transaction()/uow.read() (same store, not a copy).
     expect((await app.uow.read((repos) => repos.circles.get(id)))?.name).toBe("Río Runners");

@@ -1,4 +1,5 @@
 import { findActiveMember } from "../circle/circle.ts";
+import { resetApprovals } from "../pact/reset-approvals.ts";
 import type { IdGenerator } from "../ports/id-generator.ts";
 import type { Repositories } from "../ports/repositories.ts";
 import type { UnitOfWork } from "../ports/unit-of-work.ts";
@@ -39,12 +40,7 @@ export type AddCommitmentError =
  * saves the whole `Season` under its own optimistic `version` (D5), same
  * pattern as `edit-season-params.ts`.
  *
- * SEAM (S6): adding a commitment is supposed to reset all pact approvals,
- * same as every other pre-close change (SS-13, PA-2). That reset has no
- * effect to wire yet -- `Season` doesn't carry an `approvals` array until
- * the pact module lands (S6); whichever slice adds it must also call the
- * approval-reset here, same documented pattern as
- * `edit-season-params.ts`/`join-circle.ts`.
+ * Adding a commitment resets all pact approvals (SS-13, PA-2).
  */
 export async function addCommitment(
   deps: AddCommitmentDeps,
@@ -85,7 +81,7 @@ export async function addCommitment(
     });
 
     const updated: Season = {
-      ...season,
+      ...resetApprovals(season),
       commitments: [...season.commitments, commitment],
       version: season.version + 1,
     };

@@ -1,10 +1,8 @@
 import { createIntlTimeZone } from "../adapters/intl-time-zone.ts";
-import type { SeasonGateReader } from "../circle/season-gate.port.ts";
 import type { IdGenerator } from "../ports/id-generator.ts";
 import type { RandomSource } from "../ports/random-source.ts";
 import type { Repositories } from "../ports/repositories.ts";
 import type { UnitOfWork } from "../ports/unit-of-work.ts";
-import { createSeasonGateReader } from "../season/season-gate-reader.ts";
 import type { Clock } from "../time/clock.port.ts";
 import { type Instant, instant } from "../time/instant.ts";
 import type { TimeZone } from "../time/time-zone.port.ts";
@@ -31,10 +29,7 @@ import { createSequentialIdGenerator } from "./sequential-ids.ts";
  * (ADR-0008) -- `circles`/`habits`/`seasons` are the same concrete
  * instances backing `uow` (not copies), exposed directly so tests can set
  * up GIVEN state without going through a use case (e.g. saving a `Season`
- * fixture directly via `app.uow.transaction` to control `seasonGate`'s
- * answer, S4/B11 -- there is no more `setStatus` override: `seasonGate` is
- * now a real `createSeasonGateReader(seasons)` reading through the same
- * live `seasons` store, not a standalone settable double).
+ * fixture directly via `app.seasons.save` to control the join gate, B11).
  */
 export interface TestApp {
   readonly clock: Clock;
@@ -45,7 +40,6 @@ export interface TestApp {
   readonly circles: InMemoryCircleRepository;
   readonly habits: InMemoryHabitRepository;
   readonly seasons: InMemorySeasonRepository;
-  readonly seasonGate: SeasonGateReader;
 }
 
 export interface CreateTestAppOptions {
@@ -64,8 +58,7 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
   const circles = createInMemoryCircleRepository();
   const habits = createInMemoryHabitRepository();
   const seasons = createInMemorySeasonRepository();
-  const seasonGate = createSeasonGateReader(seasons);
-  const repositories: Repositories = { circles, habits, seasons, seasonGate };
+  const repositories: Repositories = { circles, habits, seasons };
 
   return {
     clock: createFixedClock(options.now ?? DEFAULT_NOW),
@@ -75,15 +68,8 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
     circles,
     habits,
     seasons,
-    seasonGate,
     uow: createInMemoryUnitOfWork({
       repositories,
-      // `seasonGate` is purely read-only (no `save`-like port method) and
-      // itself only reads through `seasons`, so it needs no isolation of
-      // its own: it already sees `seasons`' scoped, staged view whenever
-      // it's constructed fresh per-scope below (read-your-own-writes,
-      // ADR-0008, D4/D5).
-      //
       // Atomic across repositories (D5): validate EVERY scope's staged
       // writes first -- if any throws ConcurrencyConflict, nothing has
       // been mutated yet, so this whole transaction leaves no trace. Only
@@ -99,7 +85,6 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
             circles: circleScope.repository,
             habits: habitScope.repository,
             seasons: seasonScope.repository,
-            seasonGate: createSeasonGateReader(seasonScope.repository),
           },
           commit(): void {
             circleScope.validate();

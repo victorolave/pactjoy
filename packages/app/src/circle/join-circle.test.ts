@@ -18,9 +18,8 @@ function actorFor(id: string) {
 }
 
 /**
- * GIVEN-state helper: saves a `Season` row directly so `seasonGate` (now
- * backed by the real `seasons` repository, S4/B11) answers a specific
- * status for `circleId` -- replaces S3's removed `app.seasonGate.setStatus`.
+ * GIVEN-state helper: saves a `Season` row directly so the join gate sees a
+ * specific status for `circleId` (B11).
  */
 async function givenSeasonStatus(
   app: TestApp,

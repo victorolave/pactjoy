@@ -1,5 +1,6 @@
 import type { CommitmentId } from "@pactjoy/engine";
 import { findActiveMember } from "../circle/circle.ts";
+import { resetApprovals } from "../pact/reset-approvals.ts";
 import type { Repositories } from "../ports/repositories.ts";
 import type { UnitOfWork } from "../ports/unit-of-work.ts";
 import type { Season } from "../season/season.ts";
@@ -43,10 +44,7 @@ export type EditCommitmentError =
  * `Season.commitments` is replaced in place and saved under the season's
  * own optimistic `version` (D5).
  *
- * SEAM (S6): editing a commitment is supposed to reset all pact approvals
- * (SS-13, PA-2) -- same documented stub as `add-commitment.ts`,
- * `edit-season-params.ts` and `join-circle.ts`; whichever slice adds
- * `Season.approvals` (S6) must also call the approval-reset here.
+ * Editing a commitment resets all pact approvals (SS-13, PA-2).
  */
 export async function editCommitment(
   deps: EditCommitmentDeps,
@@ -93,7 +91,7 @@ export async function editCommitment(
     };
 
     const updated: Season = {
-      ...season,
+      ...resetApprovals(season),
       commitments: season.commitments.map((commitment) =>
         commitment.id === input.commitmentId ? updatedCommitment : commitment,
       ),

@@ -8,7 +8,7 @@ import type { TimeZoneId } from "../time/time-zone.port.ts";
 /**
  * A season's lifecycle (Temporada). There is no `"draft"` status (B1):
  * every season is created directly with its pact open. Mirrors
- * `circle/season-gate.port.ts`'s `SeasonGateStatus` minus its `"noSeason"`
+ * `circle/season-gate.ts`'s `SeasonGateStatus` minus its `"noSeason"`
  * sentinel (which only exists because a circle may never have had one).
  */
 export type SeasonStatus = "pactOpen" | "active" | "closed";

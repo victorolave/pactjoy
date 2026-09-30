@@ -102,8 +102,8 @@ export interface SeasonFixtureOptions {
 
 /**
  * Builds a {@link Season} directly for GIVEN-state test setup (e.g.
- * `join-circle.test.ts` controlling `seasonGate`'s answer via a real
- * `Season` row instead of S3's removed `setStatus` double, B11).
+ * `join-circle.test.ts` controlling the join gate via a real `Season`
+ * row, B11).
  */
 export function seasonFixture(options: SeasonFixtureOptions): Season {
   return {

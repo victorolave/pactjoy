@@ -17,7 +17,6 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "createHabit",
   "createIntlTimeZone",
   "createSeason",
-  "createSeasonGateReader",
   "createSystemClock",
   "editCommitment",
   "editSeasonParams",

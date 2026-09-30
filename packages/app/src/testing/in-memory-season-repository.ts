@@ -4,7 +4,8 @@ import { ConcurrencyConflict } from "../shared/errors.ts";
 import type { CircleId, SeasonId } from "../shared/ids.ts";
 
 interface StagedWrite {
-  readonly season: Season;
+  /** `null` stages a deletion. */
+  readonly season: Season | null;
   readonly expectedVersion: number | null;
 }
 
@@ -75,17 +76,26 @@ export function createInMemorySeasonRepository(): InMemorySeasonRepository {
       store.set(season.id, season);
     },
 
+    async delete(id: SeasonId, expectedVersion: number): Promise<void> {
+      if (store.get(id)?.version !== expectedVersion) {
+        throw new ConcurrencyConflict();
+      }
+      store.delete(id);
+    },
+
     beginTransaction(): SeasonTransactionScope {
       const staged = new Map<SeasonId, StagedWrite>();
 
       function view(id: SeasonId): Season | null {
-        return staged.get(id)?.season ?? store.get(id) ?? null;
+        const write = staged.get(id);
+        return write ? write.season : (store.get(id) ?? null);
       }
 
       function viewMap(): Map<SeasonId, Season> {
         const merged = new Map(store);
         for (const [id, { season }] of staged) {
-          merged.set(id, season);
+          if (season) merged.set(id, season);
+          else merged.delete(id);
         }
         return merged;
       }
@@ -102,6 +112,10 @@ export function createInMemorySeasonRepository(): InMemorySeasonRepository {
         async save(season: Season, expectedVersion: number | null): Promise<void> {
           staged.set(season.id, { season, expectedVersion });
         },
+
+        async delete(id: SeasonId, expectedVersion: number): Promise<void> {
+          staged.set(id, { season: null, expectedVersion });
+        },
       };
 
       return {
@@ -117,7 +131,8 @@ export function createInMemorySeasonRepository(): InMemorySeasonRepository {
         },
         apply(): void {
           for (const [id, { season }] of staged) {
-            store.set(id, season);
+            if (season) store.set(id, season);
+            else store.delete(id);
           }
         },
       };
