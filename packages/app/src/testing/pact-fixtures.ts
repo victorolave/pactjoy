@@ -66,3 +66,31 @@ export async function storedSeason(app: TestApp, id: SeasonId): Promise<Season> 
   if (!season) throw new Error("season vanished");
   return season;
 }
+
+/** GIVEN: a solo (1-member) circle with an open pact and one full-weight commitment, no approval yet (B4). */
+export async function givenSoloOpenPact(app: TestApp): Promise<{
+  readonly circle: Circle;
+  readonly season: Season;
+  readonly andrea: Actor;
+}> {
+  const andrea: Actor = { userId: userId("user-andrea") };
+  const circle = must(await createCircle(app, andrea, { name: "Solo" }));
+  const created = must(
+    await createSeason(app, andrea, {
+      circleId: circle.id,
+      timezone: "America/Santiago",
+      startDate: "2025-10-01",
+      lengthWeeks: 8,
+    }),
+  );
+  const season = must(
+    await addCommitment(app, andrea, {
+      seasonId: created.id,
+      habitId: habitId("habit-solo"),
+      weightPercent: 100,
+      privacy: "visible",
+      measure: { unit: "done", frequency: { kind: "timesPerWeek", times: 3 } },
+    }),
+  );
+  return { circle, season, andrea };
+}

@@ -56,8 +56,11 @@ export async function joinCircle(
       return err({ kind: "AlreadyInActiveCircle" });
     }
 
-    const gateStatus = await repos.seasonGate.statusForCircle(circle.id);
-    if (!canJoinCircle(gateStatus)) {
+    // One read of the season drives BOTH the join gate and the approval
+    // reset below: reading them separately would let a pact close in
+    // between and let someone join an already-active season.
+    const latestSeason = await repos.seasons.findLatestByCircle(circle.id);
+    if (!canJoinCircle(latestSeason?.status ?? "noSeason")) {
       return err({ kind: "SeasonNotJoinable" });
     }
 
@@ -79,7 +82,6 @@ export async function joinCircle(
     };
     await repos.circles.save(updated, circle.version);
 
-    const latestSeason = await repos.seasons.findLatestByCircle(circle.id);
     if (latestSeason?.status === "pactOpen") {
       await repos.seasons.save(
         { ...resetApprovals(latestSeason), version: latestSeason.version + 1 },
