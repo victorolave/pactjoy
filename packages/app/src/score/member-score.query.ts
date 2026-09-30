@@ -3,6 +3,7 @@ import { displayPercent, displayPoints, type MemberScore, scoreMember } from "@p
 import type { Actor } from "../shared/actor.ts";
 import type { SeasonId } from "../shared/ids.ts";
 import { err, ok, type Result } from "../shared/result.ts";
+import { type CommitmentScoreView, projectCommitment } from "./commitment-projection.ts";
 import {
   isParticipant,
   loadScoreContext,
@@ -32,15 +33,22 @@ export type MemberScoreView =
       readonly consistency: number | null;
       /** Percent; `null` while some commitment has nothing counted yet. */
       readonly idealCompletion: number | null;
+      /** Every commitment of the member, in season order, as the asking member may see it. */
+      readonly commitments: readonly CommitmentScoreView[];
     };
 
-export function toView(memberId: MemberId, score: MemberScore): MemberScoreView {
+function toView(
+  memberId: MemberId,
+  score: MemberScore,
+  commitments: readonly CommitmentScoreView[],
+): MemberScoreView {
   return {
     kind: "scored",
     memberId,
     points: displayPoints(score.points),
     consistency: score.consistency === null ? null : displayPercent(score.consistency),
     idealCompletion: score.idealCompletion === null ? null : displayPercent(score.idealCompletion),
+    commitments,
   };
 }
 
@@ -74,16 +82,21 @@ export async function memberScore(
     }
     const entries = await repos.entries.listBySeason(season.id);
     const pauses = await repos.pauses.listBySeason(season.id);
-    const score = scoreMember(
-      toScoreInput({
-        season,
-        actualStart: start.actualStart,
-        memberId: target.id,
-        entries,
-        pauses,
-        today: start.today,
-      }),
-    );
-    return ok(toView(target.id, score));
+    const scoreInput = toScoreInput({
+      season,
+      actualStart: start.actualStart,
+      memberId: target.id,
+      entries,
+      pauses,
+      today: start.today,
+    });
+    const score = scoreMember(scoreInput);
+    const records = season.commitments.filter((commitment) => commitment.memberId === target.id);
+    const commitments = records.map((record) => {
+      const scored = score.commitments.find((entry) => entry.commitmentId === record.id);
+      if (!scored) throw new Error(`engine returned no score for commitment ${record.id}`);
+      return projectCommitment(record, scored, viewer.id);
+    });
+    return ok(toView(target.id, score, commitments));
   });
 }
