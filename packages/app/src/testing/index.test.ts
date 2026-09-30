@@ -8,6 +8,7 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "createInMemoryCircleRepository",
   "createInMemoryEntryRepository",
   "createInMemoryHabitRepository",
+  "createInMemoryPauseRequestReader",
   "createInMemorySeasonRepository",
   "createInMemoryUnitOfWork",
   "createSeededRandomSource",

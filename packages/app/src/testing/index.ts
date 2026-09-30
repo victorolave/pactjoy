@@ -23,6 +23,8 @@ export type { InMemoryEntryRepository } from "./in-memory-entry-repository.ts";
 export { createInMemoryEntryRepository } from "./in-memory-entry-repository.ts";
 export type { InMemoryHabitRepository } from "./in-memory-habit-repository.ts";
 export { createInMemoryHabitRepository } from "./in-memory-habit-repository.ts";
+export type { InMemoryPauseRequestReader } from "./in-memory-pause-request-reader.ts";
+export { createInMemoryPauseRequestReader } from "./in-memory-pause-request-reader.ts";
 export type { InMemorySeasonRepository } from "./in-memory-season-repository.ts";
 export { createInMemorySeasonRepository } from "./in-memory-season-repository.ts";
 export type { InMemoryUnitOfWorkOptions } from "./in-memory-unit-of-work.ts";
