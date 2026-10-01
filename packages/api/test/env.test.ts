@@ -51,6 +51,21 @@ describe("loadApiEnv", () => {
     expect(ok.ok && ok.value.supabaseUrl).toBe("http://kong:8000");
   });
 
+  it("SUPABASE_URL with a query or a fragment is invalid (the derived URLs would be wrong)", () => {
+    for (const bad of ["https://abc.supabase.co?x=1", "https://abc.supabase.co/#frag"]) {
+      expect(failure({ ...BASE, SUPABASE_URL: bad })).toEqual({
+        missing: [],
+        invalid: ["SUPABASE_URL"],
+      });
+    }
+  });
+
+  it("API_JWT_ISSUER override with a trailing slash is invalid (iss must match exactly)", () => {
+    expect(
+      failure({ ...BASE, API_JWT_ISSUER: "https://abc.supabase.co/auth/v1/" }).invalid,
+    ).toEqual(["API_JWT_ISSUER"]);
+  });
+
   it("API_JWT_ISSUER defaults to SUPABASE_URL/auth/v1 and can be overridden (local gateway)", () => {
     const local = load({
       API_DATABASE_URL: SECRET_URL,

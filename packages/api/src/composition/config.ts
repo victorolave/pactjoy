@@ -26,6 +26,13 @@ const isHttpUrl = (value: string): boolean => {
   }
 };
 
+/** A base URL gets paths appended, so a query or fragment would corrupt every derived URL. */
+const isBaseUrl = (value: string): boolean => {
+  if (!isHttpUrl(value)) return false;
+  const url = new URL(value);
+  return url.search === "" && url.hash === "" && !value.includes("?") && !value.includes("#");
+};
+
 const isExactOrigin = (value: string): boolean => {
   try {
     // WHATWG URL accepts `*` in a host, so wildcards must be refused explicitly.
@@ -53,11 +60,12 @@ export function loadApiEnv(get: (name: string) => string | undefined): Result<Ap
   const rawSupabase = read("SUPABASE_URL");
   let supabaseUrl: string | undefined;
   if (rawSupabase === undefined) missing.push("SUPABASE_URL");
-  else if (isHttpUrl(rawSupabase)) supabaseUrl = rawSupabase.replace(/\/+$/, "");
+  else if (isBaseUrl(rawSupabase)) supabaseUrl = rawSupabase.replace(/\/+$/, "");
   else invalid.push("SUPABASE_URL");
 
   const rawIssuer = read("API_JWT_ISSUER");
-  if (rawIssuer !== undefined && !isHttpUrl(rawIssuer)) invalid.push("API_JWT_ISSUER");
+  if (rawIssuer !== undefined && (!isHttpUrl(rawIssuer) || rawIssuer.endsWith("/")))
+    invalid.push("API_JWT_ISSUER");
 
   const rawOrigins = read("ALLOWED_ORIGINS");
   const origins = rawOrigins === undefined ? [] : rawOrigins.split(",").map((o) => o.trim());
