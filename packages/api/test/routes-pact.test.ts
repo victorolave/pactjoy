@@ -76,7 +76,7 @@ describe("PUT /seasons/:seasonId/approval (UE-P-S1..S3)", () => {
     expect(JSON.stringify(json.data.commitments)).not.toContain("timesPerWeek");
   });
 
-  it("RV-S3/UE-P-S6: a missing, malformed or negative expectedPactRevision is 422 with no repository call", async () => {
+  it("UE-P-S7: a missing, malformed or negative expectedPactRevision is 422 with no repository call", async () => {
     const { call, path, transaction } = await givenSeason();
     const before = transaction.mock.calls.length;
     const missing = await call("PUT", path, "andrea");
@@ -98,7 +98,7 @@ describe("PUT /seasons/:seasonId/approval (UE-P-S1..S3)", () => {
     expect(transaction.mock.calls.length).toBe(before);
   });
 
-  it("UE-P-S7: an unknown body field is 422 unknownField, no repository call", async () => {
+  it("RV-S3: an unknown body field is 422 unknownField, no repository call", async () => {
     const { call, path, transaction, body } = await givenSeason();
     const before = transaction.mock.calls.length;
     const extra = await call("PUT", path, "andrea", { ...body, force: true });
@@ -107,7 +107,7 @@ describe("PUT /seasons/:seasonId/approval (UE-P-S1..S3)", () => {
     expect(transaction.mock.calls.length).toBe(before);
   });
 
-  it("UE-P-S5: a well-formed revision that differs is 409 StaleSeason with no details, and writes nothing", async () => {
+  it("UE-P-S6: a well-formed revision that differs is 409 StaleSeason with no details, and writes nothing", async () => {
     const { call, path, app, seasonId, pactRevision } = await givenSeason();
     const before = await app.seasons.get(seasonId as never);
     const res = await call("PUT", path, "andrea", { expectedPactRevision: pactRevision + 1 });
