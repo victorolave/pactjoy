@@ -70,6 +70,7 @@ export type ValidateCommitmentError =
   | { readonly kind: "MinimumExceedsIdeal" }
   | { readonly kind: "IdealExceedsTolerance" }
   | { readonly kind: "CustomLabelTooLong" }
+  | { readonly kind: "CustomLabelMalformed" }
   | { readonly kind: "CustomLabelHasInvisibleCharacters" }
   | { readonly kind: "CustomLabelBlank" }
   | { readonly kind: "InvalidTimesPerWeek" }
@@ -108,8 +109,8 @@ const EMOJI_JOINER =
   /(?<=\p{Extended_Pictographic}[️\u{1F3FB}-\u{1F3FF}]*)‍(?=\p{Extended_Pictographic})/gu;
 
 function hasInvisibleCharacter(label: string): boolean {
-  // A lone surrogate is malformed text, reported with the same error (no new kind).
-  return !isWellFormed(label) || INVISIBLE_CHARACTER.test(label.replace(EMOJI_JOINER, ""));
+  // Lone surrogates are checked separately (`CustomLabelMalformed`) before this runs.
+  return INVISIBLE_CHARACTER.test(label.replace(EMOJI_JOINER, ""));
 }
 
 const MIN_TIMES_PER_WEEK = 1;
@@ -217,6 +218,9 @@ export function validateCommitment(
 
   if (measure.customLabel != null && measure.customLabel.length > MAX_CUSTOM_LABEL_LENGTH) {
     return err({ kind: "CustomLabelTooLong" });
+  }
+  if (measure.customLabel != null && !isWellFormed(measure.customLabel)) {
+    return err({ kind: "CustomLabelMalformed" });
   }
   if (measure.customLabel != null && hasInvisibleCharacter(measure.customLabel)) {
     return err({ kind: "CustomLabelHasInvisibleCharacters" });
