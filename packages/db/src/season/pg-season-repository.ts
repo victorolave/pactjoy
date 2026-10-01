@@ -30,6 +30,7 @@ interface SeasonRow {
   review_cadence_weeks: number;
   status: SeasonStatus;
   pact_closed_at: Instant | null;
+  pact_revision: number;
   created_at: Instant;
   version: number;
 }
@@ -50,7 +51,7 @@ const iso = (at: Instant) => new Date(at).toISOString();
 const isoOrNull = (at: Instant | null) => (at === null ? null : iso(at));
 
 const SEASON_COLUMNS =
-  "id, circle_id, time_zone, nominal_start, actual_start, length_weeks, review_cadence_weeks, status, pact_closed_at, created_at, version";
+  "id, circle_id, time_zone, nominal_start, actual_start, length_weeks, review_cadence_weeks, status, pact_closed_at, pact_revision, created_at, version";
 
 /** `($1, $2), ($3, $4)`-style placeholders for `rows` rows of `width` columns, `casts[i]` appended to column i. */
 function placeholders(rows: number, width: number, casts: Record<number, string> = {}): string {
@@ -120,6 +121,7 @@ export function createPgSeasonRepository(exec: SqlExecutor, mode: BindMode): Sea
         (a): PactApproval => ({ memberId: memberId(a.member_id), approvedAt: a.approved_at }),
       ),
       pactClosedAt: row.pact_closed_at,
+      pactRevision: row.pact_revision,
       createdAt: row.created_at,
       version: row.version,
     };
@@ -175,7 +177,7 @@ export function createPgSeasonRepository(exec: SqlExecutor, mode: BindMode): Sea
       if (expectedVersion === null) {
         // `insert_seq` is generated. A duplicate id raises 23505 on seasons_pkey, mapped to ConcurrencyConflict.
         await exec.query(
-          "insert into pactjoy.seasons (id, circle_id, time_zone, nominal_start, actual_start, length_weeks, review_cadence_weeks, status, pact_closed_at, created_at, version) values ($1, $2, $3, $4::date, $5::date, $6, $7, $8, $9::timestamptz, $10::timestamptz, $11)",
+          "insert into pactjoy.seasons (id, circle_id, time_zone, nominal_start, actual_start, length_weeks, review_cadence_weeks, status, pact_closed_at, pact_revision, created_at, version) values ($1, $2, $3, $4::date, $5::date, $6, $7, $8, $9::timestamptz, $10, $11::timestamptz, $12)",
           [
             season.id,
             season.circleId,
@@ -186,6 +188,7 @@ export function createPgSeasonRepository(exec: SqlExecutor, mode: BindMode): Sea
             season.reviewCadenceWeeks,
             season.status,
             isoOrNull(season.pactClosedAt),
+            season.pactRevision,
             iso(season.createdAt),
             season.version,
           ],
@@ -194,7 +197,7 @@ export function createPgSeasonRepository(exec: SqlExecutor, mode: BindMode): Sea
       } else {
         // Only mutable columns are SET: never `id`, `circle_id` or `insert_seq` (key columns, ADR-0010), nor `created_at`.
         const { rowCount } = await exec.query(
-          "update pactjoy.seasons set time_zone = $2, nominal_start = $3::date, actual_start = $4::date, length_weeks = $5, review_cadence_weeks = $6, status = $7, pact_closed_at = $8::timestamptz, version = $9 where id = $1 and version = $10",
+          "update pactjoy.seasons set time_zone = $2, nominal_start = $3::date, actual_start = $4::date, length_weeks = $5, review_cadence_weeks = $6, status = $7, pact_closed_at = $8::timestamptz, pact_revision = $9, version = $10 where id = $1 and version = $11",
           [
             season.id,
             season.timeZone,
@@ -204,6 +207,7 @@ export function createPgSeasonRepository(exec: SqlExecutor, mode: BindMode): Sea
             season.reviewCadenceWeeks,
             season.status,
             isoOrNull(season.pactClosedAt),
+            season.pactRevision,
             season.version,
             expectedVersion,
           ],

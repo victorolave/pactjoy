@@ -73,6 +73,7 @@ const season: Season = {
   commitments: [reach, limit, priv],
   approvals: [{ memberId: memberId("m1"), approvedAt: T }],
   pactClosedAt: null,
+  pactRevision: 5,
   createdAt: T,
   version: 2,
 };
@@ -126,6 +127,7 @@ describe("presenters: season, score", () => {
       pactClosedAt: null,
       createdAt: ISO,
       version: 2,
+      pactRevision: 5,
     });
   });
 

@@ -47,6 +47,7 @@ const S: Season = {
   commitments: [],
   approvals: [],
   pactClosedAt: null,
+  pactRevision: 0,
   createdAt: T0,
   version: 0,
 };

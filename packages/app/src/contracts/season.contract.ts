@@ -143,11 +143,20 @@ export function describeSeasonRepositoryContract(
         nominalStart: localDate("2026-03-08"),
         actualStart: localDate("2026-03-09"),
         pactClosedAt: instant(1_700_000_123_456),
+        pactRevision: 3,
         createdAt: instant(1_700_000_000_001),
         version: 4,
       });
       await saveSeason(uow, full, null);
       expect(await get(full.id)).toEqual(full);
+    });
+
+    it("PI-1: an update persists a bumped pactRevision", async () => {
+      const { uow, get } = await subject();
+      await saveSeason(uow, season(1), null);
+      const bumped = season(1, { pactRevision: 1, version: 1 });
+      await saveSeason(uow, bumped, 0);
+      expect(await get()).toEqual(bumped);
     });
 
     it("SP-S17/S18: round-trips every measure kind, fractions beyond 2^53 included", async () => {

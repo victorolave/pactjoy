@@ -32,6 +32,7 @@ describe("approval resets at every pre-close seam (PA-2, PA-5, PA-6, B2)", () =>
     expect(stored.approvals).toEqual([]);
     expect(stored.status).toBe("pactOpen");
     expect(stored.nominalStart).toBe("2025-10-06");
+    expect(stored.pactRevision).toBe(season.pactRevision + 1);
   });
 
   it("PA-2: addCommitment resets every recorded approval", async () => {
@@ -50,6 +51,7 @@ describe("approval resets at every pre-close seam (PA-2, PA-5, PA-6, B2)", () =>
     const stored = await storedSeason(app, season.id);
     expect(stored.approvals).toEqual([]);
     expect(stored.commitments).toHaveLength(3);
+    expect(stored.pactRevision).toBe(season.pactRevision + 1);
   });
 
   it("PA-2: editCommitment resets every recorded approval", async () => {
@@ -67,7 +69,9 @@ describe("approval resets at every pre-close seam (PA-2, PA-5, PA-6, B2)", () =>
     });
 
     expect(result.ok).toBe(true);
-    expect((await storedSeason(app, season.id)).approvals).toEqual([]);
+    const stored = await storedSeason(app, season.id);
+    expect(stored.approvals).toEqual([]);
+    expect(stored.pactRevision).toBe(season.pactRevision + 1);
   });
 
   it("PA-2: removeCommitment resets every recorded approval", async () => {
@@ -85,5 +89,6 @@ describe("approval resets at every pre-close seam (PA-2, PA-5, PA-6, B2)", () =>
     const stored = await storedSeason(app, season.id);
     expect(stored.approvals).toEqual([]);
     expect(stored.commitments).toHaveLength(1);
+    expect(stored.pactRevision).toBe(season.pactRevision + 1);
   });
 });

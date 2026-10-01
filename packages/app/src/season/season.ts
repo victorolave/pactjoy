@@ -48,6 +48,11 @@ export interface Season {
   readonly commitments: readonly CommitmentRecord[];
   readonly approvals: readonly PactApproval[];
   readonly pactClosedAt: Instant | null;
+  /**
+   * Counts how many times the content being approved changed: bumped by
+   * `resetApprovals` only (never by approve, withdraw or close). 0 on creation.
+   */
+  readonly pactRevision: number;
   readonly createdAt: Instant;
   readonly version: number;
 }
@@ -141,6 +146,7 @@ export function buildSeason(input: BuildSeasonInput): Season {
     commitments: [],
     approvals: [],
     pactClosedAt: null,
+    pactRevision: 0,
     createdAt: input.now,
     version: 0,
   };
