@@ -6,6 +6,7 @@ import type { Handler } from "../http/types.ts";
 import { circleRoutes } from "./circles.ts";
 import { commitmentRoutes } from "./commitments.ts";
 import { habitRoutes } from "./habits.ts";
+import { pactRoutes } from "./pact.ts";
 import { seasonRoutes } from "./seasons.ts";
 import type { ApiDeps, Route } from "./support.ts";
 
@@ -18,6 +19,7 @@ const routeTable = (deps: ApiDeps): Route[] => [
   ...habitRoutes(deps),
   ...seasonRoutes(deps),
   ...commitmentRoutes(deps),
+  ...pactRoutes(deps),
 ];
 
 /** The whole API as a Web `Request` handler, built from ports only. */
