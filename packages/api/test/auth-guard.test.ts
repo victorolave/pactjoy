@@ -20,7 +20,7 @@ const ROUTE: PipelineRoute<Actor> = {
 const INFO = { requestId: "req-1", route: ROUTE };
 
 function setup(verifier: TokenVerifier = createFakeTokenVerifier({ good: ALICE })) {
-  const logger = { warn: vi.fn(), error: vi.fn() };
+  const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
   return { authenticate: createAuthGuard({ verifier, logger }), logger };
 }
 

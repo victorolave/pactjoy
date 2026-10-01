@@ -1,5 +1,5 @@
 import { ConcurrencyConflict, InviteCodeGenerationFailed } from "@pactjoy/app";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createThrownMapper } from "../src/errors/thrown.ts";
 import { createPipeline } from "../src/http/pipeline.ts";
 
@@ -97,5 +97,37 @@ describe("thrown error mapping", () => {
     const internal = await post();
     expect(internal.status).toBe(500);
     expect(await internal.text()).not.toContain("secret");
+  });
+
+  it("never logs the message of a coded (pg) error, only name and code", () => {
+    const error = vi.fn();
+    const logger = { info: vi.fn(), warn: vi.fn(), error };
+    const pg = Object.assign(new Error('invalid input syntax for type uuid: "secret-note"'), {
+      name: "PostgresError",
+      code: "22P02",
+    });
+    expect(code(createThrownMapper(undefined, logger)(pg, info))).toBe("Internal");
+    expect(error).toHaveBeenCalledWith("request.failed", {
+      requestId: "rid-1",
+      error: { name: "PostgresError", code: "22P02" },
+    });
+    expect(JSON.stringify(error.mock.calls)).not.toContain("secret-note");
+    createThrownMapper(undefined, logger)(new Error("plain"), info);
+    expect(error.mock.calls[1]?.[1]).toEqual({
+      requestId: "rid-1",
+      error: { name: "Error", message: "plain" },
+    });
+  });
+
+  it("InviteCodeGenerationFailed (500) is logged too", () => {
+    const error = vi.fn();
+    createThrownMapper(undefined, { info: vi.fn(), warn: vi.fn(), error })(
+      new InviteCodeGenerationFailed(),
+      info,
+    );
+    expect(error).toHaveBeenCalledWith("request.failed", {
+      requestId: "rid-1",
+      error: { name: "InviteCodeGenerationFailed", message: expect.any(String) },
+    });
   });
 });

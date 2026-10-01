@@ -26,6 +26,8 @@ export interface ApiDeps {
   readonly random: RandomSource;
   readonly tokenVerifier: TokenVerifier;
   readonly logger: Logger;
+  /** Millisecond clock for request durations; defaults to Date.now. */
+  readonly now?: () => number;
   /** Decides which thrown errors mean "database unavailable" (503); injected by the shell. */
   readonly isUnavailable?: (e: unknown) => boolean;
 }

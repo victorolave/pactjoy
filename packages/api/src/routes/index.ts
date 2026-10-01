@@ -32,6 +32,8 @@ export function createApi(deps: ApiDeps, options: ApiOptions): Handler {
     routes: routeTable(deps),
     authenticate: createAuthGuard({ verifier: deps.tokenVerifier, logger: deps.logger }),
     options,
-    onError: createThrownMapper(deps.isUnavailable),
+    onError: createThrownMapper(deps.isUnavailable, deps.logger),
+    logger: deps.logger,
+    ...(deps.now ? { now: deps.now } : {}),
   });
 }

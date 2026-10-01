@@ -21,7 +21,7 @@ function setup(overrides: Partial<ApiDeps> = {}, allowedOrigins: string[] = []) 
       ids: createDeterministicUuidGenerator(),
       random: app.random,
       tokenVerifier: createFakeTokenVerifier({ andrea: ANDREA, victor: VICTOR }),
-      logger: { warn: () => undefined, error: () => undefined },
+      logger: { info: () => undefined, warn: () => undefined, error: () => undefined },
       ...overrides,
     },
     { basePath: "/api", allowedOrigins },

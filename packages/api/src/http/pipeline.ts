@@ -1,3 +1,4 @@
+import type { Logger } from "../composition/logger.ts";
 import { DEFAULT_MAX_BODY_BYTES, readJsonBody } from "./body.ts";
 import { createCors } from "./cors.ts";
 import { respond } from "./envelope.ts";
@@ -52,8 +53,13 @@ export function createPipeline<A>(deps: {
   readonly authenticate: Authenticate<A>;
   readonly options: PipelineOptions;
   readonly onError?: OnError;
+  /** One `request` info line per request (SF3): pattern, status, duration, error code; no ids or secrets. */
+  readonly logger?: Logger;
+  /** Millisecond clock for `durationMs`; injected so tests are deterministic. */
+  readonly now?: () => number;
 }): Handler {
-  const { routes, authenticate, options, onError } = deps;
+  const { routes, authenticate, options, onError, logger } = deps;
+  const now = deps.now ?? Date.now;
   if (options.basePath !== "" && !/^\/.*[^/]$/.test(options.basePath)) {
     throw new Error(`basePath must start with "/" and not end with "/": ${options.basePath}`);
   }
@@ -70,14 +76,32 @@ export function createPipeline<A>(deps: {
   return async (request) => {
     const supplied = request.headers.get("x-request-id");
     const requestId = supplied !== null && UUID.test(supplied) ? supplied : crypto.randomUUID();
+    const started = now();
+    const method = request.method.toUpperCase();
+    // The pattern, never the raw path (it carries ids); "unmatched" when no route matched.
+    let route = "unmatched";
+    const logLine = (status: number, code?: string) => {
+      try {
+        logger?.info("request", {
+          requestId,
+          method,
+          route,
+          status,
+          durationMs: now() - started,
+          ...(code === undefined ? {} : { code }),
+        });
+      } catch {
+        // A logging failure must never fail the request.
+      }
+    };
     const finish = (result: ApiResult, extra?: HeadersInit): Response => {
       const response = respond(result, extra);
       cors.decorate(request, response.headers);
       response.headers.set("X-Request-Id", requestId);
+      logLine(response.status, "error" in result ? result.error.code : undefined);
       return response;
     };
 
-    const method = request.method.toUpperCase();
     try {
       // Deviation from the design order (preflight first): the base path is checked first,
       // so a request outside it never gets CORS handling. Intended; do not reorder.
@@ -86,6 +110,8 @@ export function createPipeline<A>(deps: {
       if (method === "OPTIONS") {
         const response = cors.preflight(request);
         response.headers.set("X-Request-Id", requestId);
+        route = "preflight";
+        logLine(response.status);
         return response;
       }
       const match = router.match(method, path);
@@ -93,6 +119,7 @@ export function createPipeline<A>(deps: {
       if (match.kind === "methodNotAllowed") {
         return finish(failure(405, "MethodNotAllowed"), { Allow: match.allow.join(", ") });
       }
+      route = match.route.pattern;
       const auth = await authenticate(request, { requestId, route: match.route });
       if (!auth.ok) return finish(auth.result, auth.headers);
       const body = await readJsonBody(request, maxBytes);

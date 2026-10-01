@@ -3,6 +3,7 @@
  * the console adapter drops those field names as a second line of defence.
  */
 export interface Logger {
+  info(event: string, fields?: Readonly<Record<string, unknown>>): void;
   warn(event: string, fields?: Readonly<Record<string, unknown>>): void;
   error(event: string, fields?: Readonly<Record<string, unknown>>): void;
 }
@@ -72,7 +73,7 @@ export function createConsoleLogger(
   write: (line: string) => void = (line) => console.log(line),
 ): Logger {
   const emit = (
-    level: "warn" | "error",
+    level: "info" | "warn" | "error",
     event: string,
     fields?: Readonly<Record<string, unknown>>,
   ) => {
@@ -87,6 +88,7 @@ export function createConsoleLogger(
     }
   };
   return {
+    info: (event, fields) => emit("info", event, fields),
     warn: (event, fields) => emit("warn", event, fields),
     error: (event, fields) => emit("error", event, fields),
   };
