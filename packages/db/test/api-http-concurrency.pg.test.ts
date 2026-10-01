@@ -29,7 +29,10 @@ async function openSeason() {
   return { circleId: circle.json.data.id as string, seasonId: season.json.data.id as string };
 }
 
-/** `who` creates a habit and commits 100% of their weight to it. Returns the commitment id. */
+/**
+ * `who` creates a habit and commits 100% of their weight to it. Returns the commitment id and the
+ * pact revision the response shows (what an approver would send as `expectedPactRevision`).
+ */
 async function commit(seasonId: string, who: string) {
   const habit = await call("POST", "/habits", who, { name: `Run ${who}` });
   const added = await call("POST", `/seasons/${seasonId}/commitments`, who, {
@@ -42,7 +45,7 @@ async function commit(seasonId: string, who: string) {
   const mine = added.json.data.commitments.find(
     (c: { habitId?: string }) => c.habitId === habit.json.data.id,
   );
-  return mine.id as string;
+  return { id: mine.id as string, pactRevision: added.json.data.pactRevision as number };
 }
 
 describe("HTTP over Postgres: concurrency", () => {
@@ -109,17 +112,26 @@ describe("HTTP over Postgres: concurrency", () => {
       const invite = await call("POST", `/circles/${circleId}/invite`, "u1");
       await call("POST", "/circles/join", "u2", { inviteCode: invite.json.data.code });
       await commit(seasonId, "u1");
-      await commit(seasonId, "u2");
+      // Both approvers read the pact once, after the last commitment landed.
+      const { pactRevision } = await commit(seasonId, "u2");
+      const approval = { expectedPactRevision: pactRevision };
 
       const race = await Promise.all(
-        ["u1", "u2"].map((who) => call("PUT", `/seasons/${seasonId}/approval`, who)),
+        ["u1", "u2"].map((who) => call("PUT", `/seasons/${seasonId}/approval`, who, approval)),
       );
       expect(race.map((r) => r.status).every((s) => s === 200 || s === 409)).toBe(true);
-      // A loser retries (its 409 is the signal to do so); it must now succeed.
+      // The only 409 is the optimistic-write conflict: approving never changes the revision, so
+      // the precondition itself is never stale here.
+      for (const r of race) {
+        if (r.status === 409) expect(r.json.error.code).toBe("ConcurrencyConflict");
+      }
+      // A loser retries with the SAME revision (approval does not change it); it must now succeed.
       const losers = ["u1", "u2"].filter((_, k) => race[k]?.status === 409);
       if (losers.length > 0) sawConflict = true;
       for (const who of losers)
-        expect((await call("PUT", `/seasons/${seasonId}/approval`, who)).status).toBe(200);
+        expect((await call("PUT", `/seasons/${seasonId}/approval`, who, approval)).status).toBe(
+          200,
+        );
       const [season] = await admin`select status from pactjoy.seasons where id = ${seasonId}`;
       expect(season?.status).toBe("active");
       const [approvals] =
@@ -131,8 +143,11 @@ describe("HTTP over Postgres: concurrency", () => {
 
   it("UE-E-S7: two identical concurrent recordEntry calls store one entry and never fail with 500", async () => {
     const { seasonId } = await openSeason();
-    const commitmentId = await commit(seasonId, "u1");
-    expect((await call("PUT", `/seasons/${seasonId}/approval`, "u1")).status).toBe(200);
+    const { id: commitmentId, pactRevision } = await commit(seasonId, "u1");
+    const approval = await call("PUT", `/seasons/${seasonId}/approval`, "u1", {
+      expectedPactRevision: pactRevision,
+    });
+    expect(approval.status).toBe(200);
     const entry = {
       commitmentId,
       value: { kind: "quantity", value: "30" },

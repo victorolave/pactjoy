@@ -31,7 +31,10 @@ describe("the pact never times out", () => {
     const later = atInstant(app, instant(localInstant(SEASON_START) + 90 * DAY_MS));
 
     // Only Andrea acts, 90 days on; Victor never does.
-    const approved = await approvePact(later, given.andrea, { seasonId: given.season.id });
+    const approved = await approvePact(later, given.andrea, {
+      seasonId: given.season.id,
+      expectedPactRevision: given.season.pactRevision,
+    });
 
     expect(approved.ok).toBe(true);
     const stored = await app.seasons.get(given.season.id);

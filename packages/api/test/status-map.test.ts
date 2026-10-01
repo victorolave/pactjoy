@@ -45,8 +45,8 @@ function errorCoverageGaps(index: string, source: string) {
 }
 
 describe("app error status map", () => {
-  it("EM-S1..S5: 57 kinds, 33x422 4x403 6x404 13x409 1x410", () => {
-    expect(KINDS).toHaveLength(57);
+  it("EM-S1..S5: 58 kinds, 33x422 4x403 6x404 14x409 1x410", () => {
+    expect(KINDS).toHaveLength(58);
     expect(kindsWith(422)).toHaveLength(33);
     expect(kindsWith(403)).toEqual([
       "CommitmentNotOwned",
@@ -62,8 +62,12 @@ describe("app error status map", () => {
       "MemberNotFound",
       "SeasonNotFound",
     ]);
-    expect(kindsWith(409)).toHaveLength(13);
+    expect(kindsWith(409)).toHaveLength(14);
     expect(kindsWith(410)).toEqual(["InviteExpired"]);
+  });
+
+  it("StaleSeason (approval precondition) is 409", () => {
+    expect(APP_ERROR_STATUS.StaleSeason).toBe(409);
   });
 
   it("EM-S8: the time-dependent window kinds are 409, OutsideSeason and IdempotencyKeyReused are 422", () => {

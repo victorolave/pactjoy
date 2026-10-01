@@ -92,7 +92,12 @@ describe("createPostgresUnitOfWork", () => {
         measure: { unit: "done", frequency: { kind: "timesPerWeek", times: 3 } },
       }),
     );
-    const active = must(await approvePact(deps, andrea, { seasonId: created.id }));
+    const active = must(
+      await approvePact(deps, andrea, {
+        seasonId: created.id,
+        expectedPactRevision: withCommitment.pactRevision,
+      }),
+    );
     expect(active.status).toBe("active");
     const commitment = withCommitment.commitments[0];
     if (!commitment) throw new Error("commitment missing");

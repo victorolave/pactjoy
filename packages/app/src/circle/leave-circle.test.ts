@@ -141,7 +141,10 @@ describe("leaveCircle", () => {
     it("the last member leaving an ACTIVE season archives the circle and keeps the season unchanged", async () => {
       const app = createTestApp({ now: NOW });
       const { circle, season, andrea } = await givenSoloOpenPact(app);
-      const closed = await approvePact(app, andrea, { seasonId: season.id });
+      const closed = await approvePact(app, andrea, {
+        seasonId: season.id,
+        expectedPactRevision: season.pactRevision,
+      });
       if (!closed.ok) throw new Error("fixture setup failed");
 
       const result = await leaveCircle(app, andrea, { circleId: circle.id });

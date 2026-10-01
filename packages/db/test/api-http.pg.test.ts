@@ -28,7 +28,9 @@ describe("HTTP over Postgres: the real handler on the migrated database", () => 
       privacy: "visible",
       measure: DAILY,
     });
-    const approved = await call("PUT", `/seasons/${seasonId}/approval`, "u1");
+    const approved = await call("PUT", `/seasons/${seasonId}/approval`, "u1", {
+      expectedPactRevision: added.json.data.pactRevision,
+    });
     const entry = {
       commitmentId: added.json.data.commitments[0].id,
       value: { kind: "quantity", value: "30" },

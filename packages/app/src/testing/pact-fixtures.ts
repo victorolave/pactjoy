@@ -57,7 +57,12 @@ export async function givenOpenPactWithOneApproval(app: TestApp): Promise<OpenPa
       }),
     );
   }
-  season = must(await approvePact(app, andrea, { seasonId: season.id }));
+  season = must(
+    await approvePact(app, andrea, {
+      seasonId: season.id,
+      expectedPactRevision: season.pactRevision,
+    }),
+  );
   return { circle, season, andrea, victor };
 }
 

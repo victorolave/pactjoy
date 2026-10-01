@@ -29,7 +29,11 @@ describe("raceTransactions", () => {
       const { winner, loser } = await raceTransactions(
         app,
         (a) => joinCircle(a, andrea, { inviteCode: "NOSUCH" }),
-        (a) => approvePact(a, andrea, { seasonId: season.id }),
+        (a) =>
+          approvePact(a, andrea, {
+            seasonId: season.id,
+            expectedPactRevision: season.pactRevision,
+          }),
       );
 
       expect(winner).toMatchObject({ status: "fulfilled", value: { ok: false } });
@@ -47,7 +51,11 @@ describe("raceTransactions", () => {
 
       const { winner, loser } = await raceTransactions(
         app,
-        (a) => approvePact(a, andrea, { seasonId: season.id }),
+        (a) =>
+          approvePact(a, andrea, {
+            seasonId: season.id,
+            expectedPactRevision: season.pactRevision,
+          }),
         (a) => joinCircle(a, andrea, { inviteCode: "NOSUCH" }),
       );
 
@@ -152,7 +160,11 @@ describe("raceTransactions", () => {
       const { winner, loser } = await raceTransactions(
         app,
         (a) => a.uow.transaction(async () => Promise.reject(new Error("boom"))),
-        (a) => approvePact(a, andrea, { seasonId: season.id }),
+        (a) =>
+          approvePact(a, andrea, {
+            seasonId: season.id,
+            expectedPactRevision: season.pactRevision,
+          }),
       );
 
       expect(winner.status).toBe("rejected");

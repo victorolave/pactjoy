@@ -69,7 +69,7 @@ const TABLE: Row[] = [
     { weightPercent: 100, privacy: "visible", measure: MEASURE },
   ],
   ["removeCommitment", "DELETE", `/seasons/${ID}/commitments/${ID2}`],
-  ["approvePact", "PUT", `/seasons/${ID}/approval`],
+  ["approvePact", "PUT", `/seasons/${ID}/approval`, { expectedPactRevision: 0 }],
   ["withdrawApproval", "DELETE", `/seasons/${ID}/approval`],
   [
     "recordEntry",

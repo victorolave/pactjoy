@@ -39,7 +39,8 @@ describe("pact approval races (deterministic, D5)", () => {
 
     const { winner, loser } = await raceTransactions(
       app,
-      (a) => approvePact(a, victor, { seasonId: season.id }),
+      (a) =>
+        approvePact(a, victor, { seasonId: season.id, expectedPactRevision: season.pactRevision }),
       (a) => joinCircle(a, carla, { inviteCode: invite.value.code }),
     );
 
@@ -60,7 +61,8 @@ describe("pact approval races (deterministic, D5)", () => {
     const { winner, loser } = await raceTransactions(
       app,
       (a) => joinCircle(a, carla, { inviteCode: invite.value.code }),
-      (a) => approvePact(a, victor, { seasonId: season.id }),
+      (a) =>
+        approvePact(a, victor, { seasonId: season.id, expectedPactRevision: season.pactRevision }),
     );
 
     expect(winner.status).toBe("fulfilled");
@@ -83,7 +85,8 @@ describe("pact approval races (deterministic, D5)", () => {
     const { winner, loser } = await raceTransactions(
       app,
       (a) => joinCircle(a, carla, { inviteCode: invite.value.code }),
-      (a) => approvePact(a, andrea, { seasonId: season.id }),
+      (a) =>
+        approvePact(a, andrea, { seasonId: season.id, expectedPactRevision: season.pactRevision }),
     );
 
     expect(winner.status).toBe("fulfilled");
@@ -101,7 +104,8 @@ describe("pact approval races (deterministic, D5)", () => {
     const { winner, loser } = await raceTransactions(
       app,
       (a) => leaveCircle(a, andrea, { circleId: circle.id }),
-      (a) => approvePact(a, victor, { seasonId: season.id }),
+      (a) =>
+        approvePact(a, victor, { seasonId: season.id, expectedPactRevision: season.pactRevision }),
     );
 
     expect(winner.status).toBe("fulfilled");
@@ -127,7 +131,11 @@ describe("pact approval races (deterministic, D5)", () => {
     const { winner, loser } = await raceTransactions(
       app,
       (a) => leaveCircle(a, victor, { circleId: circle.id }),
-      (a) => approvePact(a, andrea, { seasonId: approvedSeason.id }),
+      (a) =>
+        approvePact(a, andrea, {
+          seasonId: approvedSeason.id,
+          expectedPactRevision: approvedSeason.pactRevision,
+        }),
     );
 
     expect(winner.status).toBe("fulfilled");
@@ -146,7 +154,8 @@ describe("pact approval races (deterministic, D5)", () => {
 
     const { winner, loser } = await raceTransactions(
       app,
-      (a) => approvePact(a, victor, { seasonId: season.id }),
+      (a) =>
+        approvePact(a, victor, { seasonId: season.id, expectedPactRevision: season.pactRevision }),
       (a) =>
         editCommitment(a, andrea, {
           seasonId: season.id,
@@ -180,7 +189,8 @@ describe("pact approval races (deterministic, D5)", () => {
           privacy: "private",
           measure: { unit: "done", frequency: { kind: "timesPerWeek", times: 3 } },
         }),
-      (a) => approvePact(a, victor, { seasonId: season.id }),
+      (a) =>
+        approvePact(a, victor, { seasonId: season.id, expectedPactRevision: season.pactRevision }),
     );
 
     expect(winner.status).toBe("fulfilled");
@@ -188,6 +198,18 @@ describe("pact approval races (deterministic, D5)", () => {
     const stored = await storedSeason(app, season.id);
     expect(stored.status).toBe("pactOpen");
     expect(stored.approvals).toEqual([]);
+
+    // The loser retrying with the revision it read is stale; re-reading the revision succeeds.
+    const stale = await approvePact(app, victor, {
+      seasonId: season.id,
+      expectedPactRevision: season.pactRevision,
+    });
+    expect(stale).toEqual({ ok: false, error: { kind: "StaleSeason" } });
+    const fresh = await approvePact(app, victor, {
+      seasonId: season.id,
+      expectedPactRevision: stored.pactRevision,
+    });
+    expect(fresh.ok).toBe(true);
     expect(stored.commitments[0]?.privacy).toBe("private");
   });
 
@@ -199,8 +221,16 @@ describe("pact approval races (deterministic, D5)", () => {
 
     const { winner, loser } = await raceTransactions(
       app,
-      (a) => approvePact(a, andrea, { seasonId: approvedSeason.id }),
-      (a) => approvePact(a, victor, { seasonId: approvedSeason.id }),
+      (a) =>
+        approvePact(a, andrea, {
+          seasonId: approvedSeason.id,
+          expectedPactRevision: approvedSeason.pactRevision,
+        }),
+      (a) =>
+        approvePact(a, victor, {
+          seasonId: approvedSeason.id,
+          expectedPactRevision: approvedSeason.pactRevision,
+        }),
     );
 
     expect(winner.status).toBe("fulfilled");
@@ -209,7 +239,10 @@ describe("pact approval races (deterministic, D5)", () => {
     expect(afterRace.approvals.map((a) => a.memberId)).toEqual([andreasMemberId(afterRace)]);
     expect(afterRace.status).toBe("pactOpen");
 
-    const retry = await approvePact(app, victor, { seasonId: approvedSeason.id });
+    const retry = await approvePact(app, victor, {
+      seasonId: approvedSeason.id,
+      expectedPactRevision: approvedSeason.pactRevision,
+    });
     expect(retry.ok && retry.value.status).toBe("active");
   });
 
@@ -220,7 +253,8 @@ describe("pact approval races (deterministic, D5)", () => {
     const { winner, loser } = await raceTransactions(
       app,
       (a) => leaveCircle(a, andrea, { circleId: circle.id }),
-      (a) => approvePact(a, andrea, { seasonId: season.id }),
+      (a) =>
+        approvePact(a, andrea, { seasonId: season.id, expectedPactRevision: season.pactRevision }),
     );
 
     expect(winner).toMatchObject({ status: "fulfilled", value: { ok: true } });
