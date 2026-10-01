@@ -1,5 +1,6 @@
 const ALLOW_METHODS = "GET, POST, PUT, PATCH, DELETE";
-const ALLOW_HEADERS = "authorization, content-type, x-client-info, apikey";
+const ALLOW_HEADERS = "authorization, content-type, x-client-info, apikey, x-request-id";
+const EXPOSE_HEADERS = "X-Request-Id, Retry-After";
 const MAX_AGE_SECONDS = "600";
 
 /**
@@ -13,23 +14,25 @@ export function createCors(allowedOrigins: readonly string[]) {
     return origin !== null && allowed.has(origin) ? origin : null;
   };
 
-  return {
-    /** Adds ACAO and Vary to an allowed origin; requests without Origin are untouched. */
-    decorate(request: Request, headers: Headers): void {
-      const origin = allowedOrigin(request);
-      if (origin === null) return;
-      headers.set("Access-Control-Allow-Origin", origin);
-      headers.set("Vary", "Origin");
-    },
-    preflight(request: Request): Response {
-      const headers = new Headers();
-      if (allowedOrigin(request) !== null) {
-        this.decorate(request, headers);
-        headers.set("Access-Control-Allow-Methods", ALLOW_METHODS);
-        headers.set("Access-Control-Allow-Headers", ALLOW_HEADERS);
-        headers.set("Access-Control-Max-Age", MAX_AGE_SECONDS);
-      }
-      return new Response(null, { status: 204, headers });
-    },
+  /** Adds ACAO and the exposed headers for an allowed origin; Vary whenever origins are configured. */
+  const decorate = (request: Request, headers: Headers): void => {
+    if (allowed.size > 0) headers.append("Vary", "Origin");
+    const origin = allowedOrigin(request);
+    if (origin === null) return;
+    headers.set("Access-Control-Allow-Origin", origin);
+    headers.set("Access-Control-Expose-Headers", EXPOSE_HEADERS);
   };
+
+  const preflight = (request: Request): Response => {
+    const headers = new Headers();
+    decorate(request, headers);
+    if (allowedOrigin(request) !== null) {
+      headers.set("Access-Control-Allow-Methods", ALLOW_METHODS);
+      headers.set("Access-Control-Allow-Headers", ALLOW_HEADERS);
+      headers.set("Access-Control-Max-Age", MAX_AGE_SECONDS);
+    }
+    return new Response(null, { status: 204, headers });
+  };
+
+  return { decorate, preflight };
 }

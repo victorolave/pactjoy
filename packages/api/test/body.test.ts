@@ -66,11 +66,31 @@ describe("readJsonBody", () => {
 
   it("GET and DELETE must not carry a body", async () => {
     const del = new Request("http://x/a", { method: "DELETE", body: "{}" });
-    expect(code(await readJsonBody(del, MAX))).toBe("400 InvalidJson");
+    const r = await readJsonBody(del, MAX);
+    expect(code(r)).toBe("422 InvalidRequest");
+    expect(!r.ok && "error" in r.result && r.result.error.details).toEqual({
+      reason: "bodyNotAllowed",
+    });
     expect(await readJsonBody(new Request("http://x/a"), MAX)).toEqual({
       ok: true,
       body: undefined,
     });
+  });
+
+  it("only utf-8 is accepted as a charset: anything else is 415", async () => {
+    for (const ct of ["application/json; charset=latin1", "application/json;charset=utf-16"]) {
+      expect(code(await readJsonBody(post("{}", { "content-type": ct }), MAX))).toBe(
+        "415 UnsupportedMediaType",
+      );
+    }
+    for (const ct of ["application/json; charset=UTF-8", 'application/json; charset="utf-8"']) {
+      expect(code(await readJsonBody(post("{}", { "content-type": ct }), MAX))).toBe("ok");
+    }
+  });
+
+  it("a UTF-8 BOM is InvalidJson (ignoreBOM keeps it, so the decode is strict)", async () => {
+    const bom = new Uint8Array([0xef, 0xbb, 0xbf, 0x7b, 0x7d]);
+    expect(code(await readJsonBody(post(bom), MAX))).toBe("400 InvalidJson");
   });
 
   it("RV-S4: an over-limit Content-Length is 413 without reading", async () => {
@@ -83,6 +103,7 @@ describe("readJsonBody", () => {
       duplex: "half",
     } as RequestInit);
     expect(code(await readJsonBody(req, MAX))).toBe("413 PayloadTooLarge");
+    expect(req.bodyUsed).toBe(true); // the fast-reject cancelled the stream
   });
 
   it("RV-S4: exactly the limit is accepted, one byte more is 413", async () => {
