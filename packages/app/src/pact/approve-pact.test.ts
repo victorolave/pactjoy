@@ -13,6 +13,7 @@ import { createTestApp } from "../testing/app-harness.ts";
 import { createFixedOffsetTimeZone } from "../testing/fixed-time-zone.ts";
 import { instant } from "../time/instant.ts";
 import { approvePact } from "./approve-pact.ts";
+import { withdrawApproval } from "./withdraw-approval.ts";
 
 function actorFor(id: string) {
   return { userId: userId(id) };
@@ -342,10 +343,10 @@ describe("approvePact", () => {
     expect(result.value.actualStart).toBe("2025-10-01");
   });
 
-  describe("expectedPactRevision precondition (PI-S1..S4)", () => {
+  describe("expectedPactRevision precondition (PI-S1..S5)", () => {
     const stale = { ok: false, error: { kind: "StaleSeason" } };
 
-    it("PI-S1: rejects StaleSeason when the pact changed since the caller read it, and writes nothing", async () => {
+    it("PI-S2: rejects StaleSeason when the pact changed since the caller read it, and writes nothing", async () => {
       const app = utcTestApp();
       const { season, memberActorIds } = await seasonWithFullyWeightedMembers(app, 2);
       const edited = await editSeasonParams(app, actorFor("user-andrea"), {
@@ -365,7 +366,7 @@ describe("approvePact", () => {
       expect(await app.seasons.get(season.id)).toEqual(before);
     });
 
-    it("PI-S2: PactNotOpen beats StaleSeason", async () => {
+    it("PI-S4: PactNotOpen beats StaleSeason", async () => {
       const app = utcTestApp();
       const { season } = await seasonWithFullyWeightedMembers(app, 1);
       const closed = await approvePact(app, actorFor("user-andrea"), {
@@ -382,7 +383,7 @@ describe("approvePact", () => {
       expect(result).toEqual({ ok: false, error: { kind: "PactNotOpen" } });
     });
 
-    it("PI-S3: StaleSeason beats CommitmentWeightsNotFull", async () => {
+    it("PI-S4: StaleSeason beats CommitmentWeightsNotFull", async () => {
       const app = utcTestApp();
       const circle = await createCircle(app, actorFor("user-andrea"), { name: "Río Runners" });
       if (!circle.ok) throw new Error("fixture setup failed");
@@ -402,7 +403,7 @@ describe("approvePact", () => {
       expect(result).toEqual(stale);
     });
 
-    it("PI-S4: approving with the current revision succeeds and leaves the revision unchanged", async () => {
+    it("PI-S1: approving with the current revision succeeds and leaves the revision unchanged", async () => {
       const app = utcTestApp();
       const { season, memberActorIds } = await seasonWithFullyWeightedMembers(app, 2);
 
@@ -412,6 +413,52 @@ describe("approvePact", () => {
       });
 
       expect(result.ok && result.value.pactRevision).toBe(season.pactRevision);
+    });
+
+    it("PI-S4: a non-member with a stale revision gets NotAMember, not StaleSeason", async () => {
+      const app = utcTestApp();
+      const { season } = await seasonWithFullyWeightedMembers(app, 1);
+
+      const result = await approvePact(app, actorFor("user-outsider"), {
+        seasonId: season.id,
+        expectedPactRevision: season.pactRevision + 5,
+      });
+
+      expect(result).toEqual({ ok: false, error: { kind: "NotAMember" } });
+    });
+
+    it("PI-S4: an unknown season gets SeasonNotFound whatever the revision", async () => {
+      const app = utcTestApp();
+
+      const result = await approvePact(app, actorFor("user-outsider"), {
+        seasonId: seasonId("season-ghost"),
+        expectedPactRevision: 9,
+      });
+
+      expect(result).toEqual({ ok: false, error: { kind: "SeasonNotFound" } });
+    });
+
+    it("PI-S5: withdrawing leaves pactRevision unchanged, so the same revision approves again", async () => {
+      const app = utcTestApp();
+      const { season, memberActorIds } = await seasonWithFullyWeightedMembers(app, 2);
+      const actor = actorFor(memberActorIds[0] as string);
+      const approved = await approvePact(app, actor, {
+        seasonId: season.id,
+        expectedPactRevision: season.pactRevision,
+      });
+      if (!approved.ok) throw new Error("fixture setup failed");
+      const withdrawn = await withdrawApproval(app, actor, { seasonId: season.id });
+      if (!withdrawn.ok) throw new Error("fixture setup failed");
+      expect(withdrawn.value.pactRevision).toBe(season.pactRevision);
+
+      const again = await approvePact(app, actor, {
+        seasonId: season.id,
+        expectedPactRevision: season.pactRevision,
+      });
+
+      expect(again.ok).toBe(true);
+      if (!again.ok) return;
+      expect(again.value.approvals).toHaveLength(1);
     });
   });
 });
