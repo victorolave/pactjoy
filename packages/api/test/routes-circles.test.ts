@@ -1,7 +1,7 @@
-import { userId } from "@pactjoy/app";
+import { ConcurrencyConflict, instant, userId } from "@pactjoy/app";
 import { createTestApp } from "@pactjoy/app/testing";
 import { describe, expect, it, vi } from "vitest";
-import { createApi } from "../src/routes/index.ts";
+import { type ApiDeps, createApi } from "../src/routes/index.ts";
 import { createDeterministicUuidGenerator, createFakeTokenVerifier } from "../src/testing/index.ts";
 
 const ANDREA = userId("aaaaaaaa-0000-4000-8000-000000000001");
@@ -9,7 +9,7 @@ const VICTOR = userId("aaaaaaaa-0000-4000-8000-000000000002");
 const UNKNOWN_CIRCLE = "bbbbbbbb-0000-4000-8000-000000000000";
 const CODE = /^[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{6}$/;
 
-function setup() {
+function setup(overrides: Partial<ApiDeps> = {}, allowedOrigins: string[] = []) {
   const app = createTestApp();
   const transaction = vi.fn(app.uow.transaction.bind(app.uow));
   const read = vi.fn(app.uow.read.bind(app.uow));
@@ -22,22 +22,34 @@ function setup() {
       random: app.random,
       tokenVerifier: createFakeTokenVerifier({ andrea: ANDREA, victor: VICTOR }),
       logger: { warn: () => undefined, error: () => undefined },
+      ...overrides,
     },
-    { basePath: "/api", allowedOrigins: [] },
+    { basePath: "/api", allowedOrigins },
   );
-  const call = async (method: string, path: string, token: string | null, body?: unknown) => {
+  const call = async (
+    method: string,
+    path: string,
+    token: string | null,
+    body?: unknown,
+    origin?: string,
+  ) => {
     const response = await handler(
       new Request(`http://x/api${path}`, {
         method,
         headers: {
+          ...(origin ? { origin } : {}),
           ...(token ? { authorization: `Bearer ${token}` } : {}),
           ...(body === undefined ? {} : { "content-type": "application/json" }),
         },
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       }),
     );
-    // biome-ignore lint/suspicious/noExplicitAny: test helper over an untyped JSON envelope
-    return { status: response.status, json: (await response.json()) as any };
+    return {
+      status: response.status,
+      headers: response.headers,
+      // biome-ignore lint/suspicious/noExplicitAny: test helper over an untyped JSON envelope
+      json: (await response.json()) as any,
+    };
   };
   return { app, call, transaction, read };
 }
@@ -154,5 +166,62 @@ describe("authentication on every route", () => {
     const { status, json } = await call(method, path, null, body);
     expect([status, json.error.code]).toEqual([401, "Unauthorized"]);
     expect(transaction).not.toHaveBeenCalled();
+  });
+});
+
+describe("archived circles (UE-C-S4)", () => {
+  async function archived() {
+    const ctx = setup();
+    const created = await ctx.call("POST", "/circles", "andrea", { name: "Crew" });
+    const circle = await ctx.app.circles.get(created.json.data.id);
+    if (!circle) throw new Error("seed failed");
+    await ctx.app.circles.save(
+      { ...circle, archivedAt: instant(1), version: circle.version + 1 },
+      circle.version,
+    );
+    return { ...ctx, path: `/circles/${circle.id}` };
+  }
+
+  it("rename and generate-invite answer 409 CircleArchived", async () => {
+    const { call, path } = await archived();
+    const rename = await call("PATCH", path, "andrea", { name: "Back" });
+    expect([rename.status, rename.json.error.code]).toEqual([409, "CircleArchived"]);
+    const invite = await call("POST", `${path}/invite`, "andrea");
+    expect([invite.status, invite.json.error.code]).toEqual([409, "CircleArchived"]);
+  });
+});
+
+describe("createApi wiring", () => {
+  const conflicting = {
+    transaction: () => Promise.reject(new ConcurrencyConflict()),
+    read: () => Promise.reject(new ConcurrencyConflict()),
+  } as unknown as ApiDeps["uow"];
+
+  it("maps a thrown ConcurrencyConflict to 409", async () => {
+    const { call } = setup({ uow: conflicting });
+    const { status, json } = await call("POST", "/circles", "andrea", { name: "Crew" });
+    expect([status, json.error.code]).toEqual([409, "ConcurrencyConflict"]);
+  });
+
+  it("maps a throw matched by isUnavailable to 503 with Retry-After", async () => {
+    const boom = new Error("db down");
+    const { call } = setup({
+      uow: { transaction: () => Promise.reject(boom), read: () => Promise.reject(boom) } as never,
+      isUnavailable: (e) => e === boom,
+    });
+    const { status, headers, json } = await call("POST", "/circles", "andrea", { name: "Crew" });
+    expect([status, json.error.code, headers.get("retry-after")]).toEqual([
+      503,
+      "ServiceUnavailable",
+      "5",
+    ]);
+  });
+
+  it("emits CORS headers for an allowed origin only", async () => {
+    const { call } = setup({}, ["https://app.example"]);
+    const ok = await call("POST", "/circles", "andrea", { name: "A" }, "https://app.example");
+    expect(ok.headers.get("access-control-allow-origin")).toBe("https://app.example");
+    const bad = await call("POST", "/circles", "victor", { name: "B" }, "https://evil.example");
+    expect(bad.headers.get("access-control-allow-origin")).toBeNull();
   });
 });
