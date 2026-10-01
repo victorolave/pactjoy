@@ -42,7 +42,7 @@ export function createHttpOverPostgres(max = 3) {
       ids: createUuidV7IdGenerator({ clock }),
       random: createCryptoRandomSource(),
       tokenVerifier: createFakeTokenVerifier(tokens),
-      logger: { warn: () => undefined, error: () => undefined },
+      logger: { info: () => undefined, warn: () => undefined, error: () => undefined },
     },
     { basePath: "/api", allowedOrigins: [] },
   );
