@@ -48,10 +48,23 @@ Local spike S0.1 (2026-10-01; Supabase CLI 2.119.0, edge-runtime 1.77.1, Deno 2.
 | Local signing keys | The CLI default is already ES256 and the JWKS is served; no key file is needed locally. |
 | End to end | ES256 token: `POST /circles` gives 201 against local Postgres, a second one 409 `AlreadyInActiveCircle`. |
 | CORS | The local Kong gateway adds `Access-Control-Allow-Origin: *`, so local runs do not prove the allow-list. |
-| `deno.json` | Needs `"lock": false`, otherwise `deno check` writes a `deno.lock`. Versions are pinned in the map instead. |
+| `deno.json` | Needs `"lock": false`, otherwise `deno check` writes a `deno.lock`. Versions are pinned in the map instead (see "Why no lockfile"). |
 | Database URL from the container | `host.docker.internal:54322`. |
 
 Not yet verified, because they need the hosted project (ops steps S0.2 and S0.3 below): out-of-tree import resolution on `functions deploy --use-api`, the bundle contents through `functions download`, the real prefix on the hosted gateway, the Supavisor transaction pooler under pool `max=3`, TLS and cold start. If the hosted bundle fails to resolve the imports, fall back to F1 or F2 above; only the shell and the import map change.
+
+### Deploy-bundling risk (gate for C8)
+
+`deno.json` maps `@pactjoy/*` to `../../../packages/*/src`, which is OUTSIDE `supabase/functions`. Only `functions serve` was spiked. It is unknown whether `supabase functions deploy` (with `--use-api` or with Docker) bundles files outside the function directory. Until S0.2 confirms it with a real deploy followed by `functions download` (checking that the `packages/*/src` files are in the bundle), the shell is not proven deployable and C8 must not count as done (DE-R4). If the files are missing, the fallback options, not yet chosen, are:
+
+- a prebuild step that copies or bundles `packages/*/src` into `supabase/functions/_shared/` before deploy (F1);
+- `deno bundle` into a single file inside the function directory, with a CI bundle step (F2).
+
+Either way only the shell, the import map and the deploy procedure change; `packages/*` do not.
+
+### Why no lockfile
+
+`deno.json` sets `"lock": false`. The direct npm dependencies are exact-pinned in the import map (and a test checks them against `pnpm-lock.yaml`), and `postgres` and `jose` have no transitive dependencies. A `deno.lock` written by a newer Deno could break the older Deno in the Edge runtime. The cost is losing integrity hashes for those two packages.
 
 ### Config and gotchas
 
@@ -90,7 +103,7 @@ Nothing here runs from CI or from the repository.
   - `API_DATABASE_URL`: the Supavisor transaction pooler URL (port 6543) of a dedicated database role, never the service-role key;
   - `ALLOWED_ORIGINS`: comma-separated exact origins (for example the PWA origin); empty allows no browser origin;
   - `API_JWT_ISSUER`: optional; defaults to `${SUPABASE_URL}/auth/v1`, which is right on hosted.
-- S0.2: `supabase functions deploy api --use-docker` first, then `--use-api`. Download the deployed bundle (`supabase functions download api`) and check that `@pactjoy/*` sources and `postgres`/`jose` resolved. Record the result in the Spike results above.
+- S0.2 (gate for C8, do this BEFORE treating the shell as done): `supabase functions deploy api --use-docker` first, then `--use-api`. Then `supabase functions download api` and check that the out-of-tree `packages/*/src` files, `postgres` and `jose` are in the bundle. Call the deployed function once to confirm the imports resolve at runtime. Record the result in the Spike results above; if the files are missing, choose between the fallbacks in "Deploy-bundling risk".
 - S0.3: smoke test with a real OTP-login token: `POST /api/circles` returns 201, an invalid token returns 401 with the envelope, a browser preflight from an allowed origin returns 204. Check the pooler under concurrency and the cold start once.
 - Add the `db` and `deno` CI checks to branch protection.
 - If the deploy cannot resolve out-of-tree imports, apply fallback F1 or F2 (shell and import map only) and update this ADR.
