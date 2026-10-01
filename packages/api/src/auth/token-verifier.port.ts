@@ -9,6 +9,7 @@ export interface TokenRejection {
   readonly reason:
     | "malformed"
     | "expired"
+    | "notYetValid"
     | "invalidSignature"
     | "unsupportedAlgorithm"
     | "wrongIssuer"
