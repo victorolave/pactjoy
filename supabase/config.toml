@@ -1,0 +1,33 @@
+# Minimal local Supabase config: only the deviations from the CLI defaults (ADR-0011).
+# Local development only. Nothing here is applied to the hosted project by the repository;
+# `supabase config push` is deliberately not used (open question Q4).
+
+project_id = "pactjoy"
+
+[api]
+# The `pactjoy` schema must never be exposed through the Data API (ADR-0010).
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+
+[db]
+major_version = 17
+
+[auth]
+site_url = "http://localhost:5173"
+# Open signup is a product question (Q6); this flag is the single place to close it locally.
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+otp_length = 6
+otp_expiry = 3600
+
+# Placeholder template: the copy is not decided. It must carry {{ .Token }} (6-digit OTP).
+[auth.email.template.magic_link]
+subject = "Your PactJoy code"
+content_path = "./supabase/templates/otp.html"
+
+[functions.api]
+# The gateway returns no envelope and no CORS headers on a 401, so the JWT is verified in code.
+verify_jwt = false
+import_map = "./functions/api/deno.json"
