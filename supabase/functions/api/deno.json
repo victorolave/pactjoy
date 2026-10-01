@@ -1,4 +1,5 @@
 {
+  "lock": false,
   "imports": {
     "@pactjoy/engine": "../../../packages/engine/src/index.ts",
     "@pactjoy/app": "../../../packages/app/src/index.ts",
