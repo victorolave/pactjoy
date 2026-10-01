@@ -43,7 +43,7 @@ describe("buildCircle", () => {
     expect(result).toEqual({ ok: false, error: { kind: "InvalidName" } });
   });
 
-  it("rejects a name with a lone surrogate (well-formed text), keeping a well-formed emoji", () => {
+  it("rejects a name with a lone surrogate (storable text), keeping a well-formed emoji", () => {
     const build = (name: string) =>
       buildCircle({
         id: circleId("circle-1"),
@@ -55,6 +55,7 @@ describe("buildCircle", () => {
 
     expect(build("Los \uD83D")).toEqual({ ok: false, error: { kind: "InvalidName" } });
     expect(build("\uDE00 Los")).toEqual({ ok: false, error: { kind: "InvalidName" } });
+    expect(build("Los \u0000")).toEqual({ ok: false, error: { kind: "InvalidName" } });
     expect(build("Los 😀").ok).toBe(true);
   });
 });

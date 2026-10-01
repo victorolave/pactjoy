@@ -7,6 +7,7 @@ import type { UnitOfWork } from "../ports/unit-of-work.ts";
 import type { Actor } from "../shared/actor.ts";
 import { entryId, type SeasonId } from "../shared/ids.ts";
 import { err, ok, type Result } from "../shared/result.ts";
+import { isStorableText } from "../shared/storable-text.ts";
 import type { Clock } from "../time/clock.port.ts";
 import type { LocalDate } from "../time/local-date.ts";
 import { toSeasonDay } from "../time/season-calendar.ts";
@@ -15,7 +16,7 @@ import {
   type EntryRecord,
   type EntryValueInput,
   exceedsNoteLimit,
-  isWellFormedNote,
+  isStorableNote,
   MAX_CLIENT_REQUEST_ID_LENGTH,
   normalizeNote,
   requestFingerprint,
@@ -52,7 +53,7 @@ export type RecordEntryError =
   | { readonly kind: "InvalidNote" }
   | { readonly kind: "IdempotencyKeyReused" }
   | { readonly kind: "EntryDeleted" }
-  | { readonly kind: "InvalidClientRequestId"; readonly reason: "empty" | "tooLong" }
+  | { readonly kind: "InvalidClientRequestId"; readonly reason: "empty" | "tooLong" | "malformed" }
   | EntryWindowError
   | EntryValueError;
 
@@ -114,6 +115,11 @@ export async function recordEntry(
   }
   if (keyLength > MAX_CLIENT_REQUEST_ID_LENGTH) {
     return err({ kind: "InvalidClientRequestId", reason: "tooLong" });
+  }
+  // Postgres rejects NUL and postgres.js encodes a lone surrogate as U+FFFD, so two
+  // distinct keys could collide on the unique key. Replay compares the raw string.
+  if (!isStorableText(input.clientRequestId)) {
+    return err({ kind: "InvalidClientRequestId", reason: "malformed" });
   }
   return deps.uow.transaction(
     async (repos): Promise<Result<RecordEntryResult, RecordEntryError>> => {
@@ -188,7 +194,7 @@ export async function recordEntry(
         return value;
       }
       const note = normalizeNote(input.note);
-      if (!isWellFormedNote(note)) {
+      if (!isStorableNote(note)) {
         return err({ kind: "InvalidNote" });
       }
       if (exceedsNoteLimit(note)) {

@@ -1,6 +1,6 @@
 import type { HabitId, UserId } from "../shared/ids.ts";
 import { err, ok, type Result } from "../shared/result.ts";
-import { isWellFormed } from "../shared/well-formed.ts";
+import { isStorableText } from "../shared/storable-text.ts";
 import type { Instant } from "../time/instant.ts";
 
 /**
@@ -52,17 +52,17 @@ function trimmedOrNull(value: string | null | undefined): string | null {
  */
 export function buildHabit(input: BuildHabitInput): Result<Habit, BuildHabitError> {
   const name = input.name.trim();
-  if (name.length === 0 || !isWellFormed(name)) {
+  if (name.length === 0 || !isStorableText(name)) {
     return err({ kind: "InvalidName" });
   }
 
   const why = trimmedOrNull(input.why);
-  if (why !== null && !isWellFormed(why)) {
+  if (why !== null && !isStorableText(why)) {
     return err({ kind: "InvalidWhy" });
   }
 
   const category = trimmedOrNull(input.category);
-  if (category !== null && !isWellFormed(category)) {
+  if (category !== null && !isStorableText(category)) {
     return err({ kind: "InvalidCategory" });
   }
   if (category !== null && category.length > MAX_CATEGORY_LENGTH) {

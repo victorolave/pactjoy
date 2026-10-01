@@ -1,7 +1,7 @@
 import type { MemberId } from "@pactjoy/engine";
 import type { CircleId, UserId } from "../shared/ids.ts";
 import { err, ok, type Result } from "../shared/result.ts";
-import { isWellFormed } from "../shared/well-formed.ts";
+import { isStorableText } from "../shared/storable-text.ts";
 import type { Instant } from "../time/instant.ts";
 import type { InviteCode } from "./invite-code.ts";
 
@@ -81,7 +81,7 @@ export interface BuildCircleInput {
  */
 export function buildCircle(input: BuildCircleInput): Result<Circle, BuildCircleError> {
   const name = input.name.trim();
-  if (name.length === 0 || !isWellFormed(name)) {
+  if (name.length === 0 || !isStorableText(name)) {
     return err({ kind: "InvalidName" });
   }
 

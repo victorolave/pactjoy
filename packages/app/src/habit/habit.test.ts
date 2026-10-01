@@ -59,7 +59,8 @@ describe("buildHabit", () => {
     ["high", "\uD83D"],
     ["low", "\uDE00"],
     ["reversed pair", "\uDE00\uD83D"],
-  ])("rejects a name with a lone %s surrogate (well-formed text)", (_n, bad) => {
+    ["NUL", "\u0000"],
+  ])("rejects a name with a lone %s surrogate (storable text)", (_n, bad) => {
     const result = buildHabit({
       id: habitId("habit-1"),
       ownerId: userId("user-andrea"),
@@ -82,6 +83,10 @@ describe("buildHabit", () => {
       ok: false,
       error: { kind: "InvalidWhy" },
     });
+    expect(buildHabit({ ...base, why: "ener\u0000gía" })).toEqual({
+      ok: false,
+      error: { kind: "InvalidWhy" },
+    });
     expect(buildHabit({ ...base, why: "energía 😀" }).ok).toBe(true);
   });
 
@@ -94,6 +99,10 @@ describe("buildHabit", () => {
     };
 
     expect(buildHabit({ ...base, category: "Sal\uDE00ud" })).toEqual({
+      ok: false,
+      error: { kind: "InvalidCategory" },
+    });
+    expect(buildHabit({ ...base, category: "Sal\u0000ud" })).toEqual({
       ok: false,
       error: { kind: "InvalidCategory" },
     });

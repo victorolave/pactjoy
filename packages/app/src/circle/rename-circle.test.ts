@@ -87,7 +87,7 @@ describe("renameCircle", () => {
     expect(result).toEqual({ ok: false, error: { kind: "InvalidName" } });
   });
 
-  it("rejects a name with a lone surrogate (well-formed text), leaving the circle untouched", async () => {
+  it("rejects a name with a lone surrogate (storable text), leaving the circle untouched", async () => {
     const app = createTestApp();
     const created = await createCircle(app, actorFor("user-andrea"), { name: "Original" });
     if (!created.ok) throw new Error("fixture setup failed");
@@ -98,6 +98,11 @@ describe("renameCircle", () => {
     });
 
     expect(result).toEqual({ ok: false, error: { kind: "InvalidName" } });
+    const nul = await renameCircle(app, actorFor("user-andrea"), {
+      circleId: created.value.id,
+      name: "Los \u0000",
+    });
+    expect(nul).toEqual({ ok: false, error: { kind: "InvalidName" } });
     const emoji = await renameCircle(app, actorFor("user-andrea"), {
       circleId: created.value.id,
       name: "Los 😀",

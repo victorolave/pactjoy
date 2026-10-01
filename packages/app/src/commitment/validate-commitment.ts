@@ -8,7 +8,7 @@ import {
   parseDecimal,
 } from "@pactjoy/engine";
 import { err, ok, type Result } from "../shared/result.ts";
-import { isWellFormed } from "../shared/well-formed.ts";
+import { isStorableText } from "../shared/storable-text.ts";
 import {
   MAX_CUSTOM_LABEL_LENGTH,
   MAX_INTEGER_DIGITS,
@@ -219,7 +219,7 @@ export function validateCommitment(
   if (measure.customLabel != null && measure.customLabel.length > MAX_CUSTOM_LABEL_LENGTH) {
     return err({ kind: "CustomLabelTooLong" });
   }
-  if (measure.customLabel != null && !isWellFormed(measure.customLabel)) {
+  if (measure.customLabel != null && !isStorableText(measure.customLabel)) {
     return err({ kind: "CustomLabelMalformed" });
   }
   if (measure.customLabel != null && hasInvisibleCharacter(measure.customLabel)) {

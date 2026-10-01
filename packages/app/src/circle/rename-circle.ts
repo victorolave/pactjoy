@@ -3,7 +3,7 @@ import type { UnitOfWork } from "../ports/unit-of-work.ts";
 import type { Actor } from "../shared/actor.ts";
 import type { CircleId } from "../shared/ids.ts";
 import { err, ok, type Result } from "../shared/result.ts";
-import { isWellFormed } from "../shared/well-formed.ts";
+import { isStorableText } from "../shared/storable-text.ts";
 import { type Circle, findActiveMember } from "./circle.ts";
 
 export interface RenameCircleDeps {
@@ -44,7 +44,7 @@ export async function renameCircle(
     }
 
     const name = input.name.trim();
-    if (name.length === 0 || !isWellFormed(name)) {
+    if (name.length === 0 || !isStorableText(name)) {
       return err({ kind: "InvalidName" });
     }
 
