@@ -41,14 +41,17 @@ describe("POST /habits (UE-C-S9)", () => {
     ["category wrong type", { name: "x", category: true }, "type"],
     ["unknown field (ownerId is never accepted)", { name: "x", ownerId: ANDREA }, "unknownField"],
     ["no body", undefined, "required"],
-  ])("RV-S1/S3: 422 InvalidRequest on %s, no repository call", async (_l, body, problem) => {
-    const { call, transaction, read } = setup();
-    const { status, json } = await call("POST", "/habits", "andrea", body);
-    expect([status, json.error.code]).toEqual([422, "InvalidRequest"]);
-    expect(json.error.details.issues[0].problem).toBe(problem);
-    expect(transaction).not.toHaveBeenCalled();
-    expect(read).not.toHaveBeenCalled();
-  });
+  ])(
+    "RV-S1/S3, RV-S7, RV-S11: 422 InvalidRequest on %s, no repository call",
+    async (_l, body, problem) => {
+      const { call, transaction, read } = setup();
+      const { status, json } = await call("POST", "/habits", "andrea", body);
+      expect([status, json.error.code]).toEqual([422, "InvalidRequest"]);
+      expect(json.error.details.issues[0].problem).toBe(problem);
+      expect(transaction).not.toHaveBeenCalled();
+      expect(read).not.toHaveBeenCalled();
+    },
+  );
 
   it("401 without a token", async () => {
     const { call, transaction } = setup();
