@@ -39,5 +39,17 @@ export function setup() {
     // biome-ignore lint/suspicious/noExplicitAny: test helper over an untyped JSON envelope
     return { status: response.status, json: (await response.json()) as any };
   };
-  return { app, call, transaction, read };
+  /** Sends `text` verbatim as the JSON body (JSON.stringify cannot emit an own `__proto__` key). */
+  const callRaw = async (method: string, path: string, token: string, text: string) => {
+    const response = await handler(
+      new Request(`http://x/api${path}`, {
+        method,
+        headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+        body: text,
+      }),
+    );
+    // biome-ignore lint/suspicious/noExplicitAny: test helper over an untyped JSON envelope
+    return { status: response.status, json: (await response.json()) as any };
+  };
+  return { app, call, callRaw, transaction, read };
 }

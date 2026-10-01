@@ -165,13 +165,46 @@ describe("POST /seasons/:seasonId/commitments (UE-S-S5)", () => {
       "measure.schedule.period",
     ],
     ["measure not an object", NOWHERE, nested("done"), "measure"],
-  ])("422 InvalidRequest on %s, no repository call", async (_l, path, body, field) => {
-    const { call, transaction, read } = setup();
-    const { status, json } = await call("POST", path, "andrea", body);
+    ...["__proto__", "constructor", 1, {}].map((direction) => [
+      `direction ${JSON.stringify(direction)} is not an own variant`,
+      NOWHERE,
+      nested({ ...REACH, direction }),
+      "measure.direction",
+    ]),
+    [
+      "period inherited name (toString)",
+      NOWHERE,
+      nested({ ...REACH, schedule: { period: "toString" } }),
+      "measure.schedule.period",
+    ],
+    [
+      "frequency kind __proto__",
+      NOWHERE,
+      nested({ ...DONE, frequency: { kind: "__proto__" } }),
+      "measure.frequency.kind",
+    ],
+  ] as [string, string, unknown, string][])(
+    "422 InvalidRequest on %s, no repository call",
+    async (_l, path, body, field) => {
+      const { call, transaction, read } = setup();
+      const { status, json } = await call("POST", path, "andrea", body);
+      expect([status, json.error.code]).toEqual([422, "InvalidRequest"]);
+      expect(json.error.details.issues[0].path).toBe(field);
+      expect(transaction).not.toHaveBeenCalled();
+      expect(read).not.toHaveBeenCalled();
+    },
+  );
+
+  it("an own __proto__ key from raw JSON text is an unknownField (422)", async () => {
+    const { callRaw, transaction } = setup();
+    const text = `{"habitId":"${UNKNOWN_CIRCLE}","weightPercent":100,"privacy":"visible","__proto__":{"x":1},"measure":${JSON.stringify(DONE)}}`;
+    const { status, json } = await callRaw("POST", NOWHERE, "andrea", text);
     expect([status, json.error.code]).toEqual([422, "InvalidRequest"]);
-    expect(json.error.details.issues[0].path).toBe(field);
+    expect(json.error.details.issues[0]).toMatchObject({
+      path: "__proto__",
+      problem: "unknownField",
+    });
     expect(transaction).not.toHaveBeenCalled();
-    expect(read).not.toHaveBeenCalled();
   });
 
   it("401 without a token", async () => {
