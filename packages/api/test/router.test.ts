@@ -60,6 +60,9 @@ describe("router.match", () => {
     expect(router.match("POST", "//habits")).toEqual({ kind: "notFound" });
     expect(router.match("POST", "/habits/")).toEqual({ kind: "notFound" });
     expect(router.match("POST", "/")).toEqual({ kind: "notFound" });
+    // a param must never bind an empty value
+    expect(router.match("PATCH", "/circles/")).toEqual({ kind: "notFound" });
+    expect(router.match("GET", "/seasons//standings")).toEqual({ kind: "notFound" });
   });
 
   it("bad percent-encoding is 404, not a throw", () => {
