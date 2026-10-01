@@ -1,4 +1,4 @@
-import type { CommitmentId } from "@pactjoy/engine";
+import type { CommitmentId, MemberId } from "@pactjoy/engine";
 import { findActiveMember } from "../circle/circle.ts";
 import type { Measure } from "../commitment/commitment.ts";
 import type { IdGenerator } from "../ports/id-generator.ts";
@@ -61,6 +61,8 @@ export interface RecordEntryResult {
   readonly entry: EntryRecord;
   /** `true` when `clientRequestId` had already been recorded and the original entry is returned (T1). */
   readonly replayed: boolean;
+  /** The actor's own member id, from the transaction that recorded or replayed (the viewer for presenting). */
+  readonly memberId: MemberId;
 }
 
 /**
@@ -153,7 +155,7 @@ export async function recordEntry(
         // The entry was deleted: its key stays taken, it is never recreated.
         return replay.deleted
           ? err({ kind: "EntryDeleted" })
-          : ok({ entry: replay, replayed: true });
+          : ok({ entry: replay, replayed: true, memberId: member.id });
       }
 
       // A NEW entry is only valid for the membership and season state read
@@ -218,7 +220,7 @@ export async function recordEntry(
         deleted: false,
       };
       await repos.entries.add(entry);
-      return ok({ entry, replayed: false });
+      return ok({ entry, replayed: false, memberId: member.id });
     },
   );
 }

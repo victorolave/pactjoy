@@ -64,6 +64,30 @@ async function stored(app: TestApp, given: { season: { id: RecordEntryInput["sea
   return app.uow.read((repos) => repos.entries.listBySeason(given.season.id));
 }
 
+describe("recordEntry: the recording member", () => {
+  it("returns the in-transaction member's id, fresh and replayed, and for edits (not the circle owner's)", async () => {
+    const app = newApp();
+    const given = await givenActiveSeason(app, PER_DAY_REACH);
+    const victorInput = input(given, {
+      commitmentId: given.victorCommitment,
+      value: { kind: "done" },
+    });
+
+    const fresh = await recordEntry(app, given.victor, victorInput);
+    const replay = await recordEntry(app, given.victor, victorInput);
+    const id = fresh.ok ? fresh.value.entry.id : entryId("?");
+    const edited = await editEntry(app, given.victor, {
+      entryId: id,
+      value: { kind: "done" },
+      note: "b",
+    });
+
+    expect(fresh.ok && fresh.value.memberId).toBe("member-victor");
+    expect(replay.ok && replay.value).toMatchObject({ replayed: true, memberId: "member-victor" });
+    expect(edited.ok && edited.value.memberId).toBe("member-victor");
+  });
+});
+
 describe("recordEntry: recording", () => {
   it("stores the entry as entered, for today, with the season day and instant (ER-17)", async () => {
     const app = newApp();
@@ -89,7 +113,11 @@ describe("recordEntry: recording", () => {
       clientRequestId: "req-1",
       editedAt: null,
     });
-    expect(result.ok && result.value).toEqual({ entry: entries[0], replayed: false });
+    expect(result.ok && result.value).toEqual({
+      entry: entries[0],
+      replayed: false,
+      memberId: "member-andrea",
+    });
   });
 
   it("records for an earlier day inside its grace, keeping recordedOn as today", async () => {
@@ -517,7 +545,11 @@ describe("recordEntry: idempotency (T1, ER-16)", () => {
 
     expect(replay).toEqual({
       ok: true,
-      value: { entry: edited.ok && edited.value.entry, replayed: true },
+      value: {
+        entry: edited.ok && edited.value.entry,
+        replayed: true,
+        memberId: "member-andrea",
+      },
     });
     expect(await stored(app, given)).toHaveLength(1);
   });

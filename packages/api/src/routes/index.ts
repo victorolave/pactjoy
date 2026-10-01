@@ -5,6 +5,7 @@ import { createPipeline, type PipelineOptions } from "../http/pipeline.ts";
 import type { Handler } from "../http/types.ts";
 import { circleRoutes } from "./circles.ts";
 import { commitmentRoutes } from "./commitments.ts";
+import { entryRoutes } from "./entries.ts";
 import { habitRoutes } from "./habits.ts";
 import { pactRoutes } from "./pact.ts";
 import { seasonRoutes } from "./seasons.ts";
@@ -20,6 +21,7 @@ const routeTable = (deps: ApiDeps): Route[] => [
   ...seasonRoutes(deps),
   ...commitmentRoutes(deps),
   ...pactRoutes(deps),
+  ...entryRoutes(deps),
 ];
 
 /** The whole API as a Web `Request` handler, built from ports only. */
