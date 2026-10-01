@@ -1482,13 +1482,13 @@ snapshots:
 
   '@types/docker-modem@3.0.6':
     dependencies:
-      '@types/node': 24.19.0
+      '@types/node': 26.6.2
       '@types/ssh2': 1.15.6
 
   '@types/dockerode@4.0.1':
     dependencies:
       '@types/docker-modem': 3.0.6
-      '@types/node': 24.19.0
+      '@types/node': 26.6.2
       '@types/ssh2': 1.15.6
 
   '@types/estree@1.0.9': {}
@@ -1504,15 +1504,14 @@ snapshots:
   '@types/node@26.6.2':
     dependencies:
       undici-types: 8.9.0
-    optional: true
 
   '@types/ssh2-streams@0.1.13':
     dependencies:
-      '@types/node': 24.19.0
+      '@types/node': 26.6.2
 
   '@types/ssh2@0.5.52':
     dependencies:
-      '@types/node': 24.19.0
+      '@types/node': 26.6.2
       '@types/ssh2-streams': 0.1.13
 
   '@types/ssh2@1.15.6':
@@ -2017,7 +2016,7 @@ snapshots:
       '@protobufjs/path': 1.1.2
       '@protobufjs/pool': 1.1.0
       '@protobufjs/utf8': 1.1.2
-      '@types/node': 24.19.0
+      '@types/node': 26.6.2
       long: 5.3.2
 
   pump@3.0.4:
@@ -2279,8 +2278,7 @@ snapshots:
 
   undici-types@7.24.6: {}
 
-  undici-types@8.9.0:
-    optional: true
+  undici-types@8.9.0: {}
 
   undici@7.30.0: {}
 
