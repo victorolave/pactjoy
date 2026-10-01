@@ -19,6 +19,9 @@ export function parseTimestamptz(text: string): Instant {
   if (m === null) throw new Error(`Unsupported timestamptz value: ${JSON.stringify(text)}`);
   const [, year, month, day, hour, minute, second, fraction, sign, offsetHours, offsetMinutes] =
     m as unknown as string[];
+  // Date.UTC aliases years 0-99 to 1900-1999, and nothing before the epoch is an Instant.
+  if (Number(year) < 1970)
+    throw new Error(`Unsupported timestamptz value: ${JSON.stringify(text)}`);
   const millis = Number((fraction ?? "").padEnd(3, "0").slice(0, 3));
   const local = Date.UTC(
     Number(year),
@@ -38,6 +41,10 @@ export function parseTimestamptz(text: string): Instant {
     Number(second) > 59
   ) {
     throw new Error(`Invalid timestamptz value: ${JSON.stringify(text)}`);
+  }
+  // Postgres offsets span -15:59 to +15:59.
+  if (Number(offsetHours) > 15 || Number(offsetMinutes ?? 0) > 59) {
+    throw new Error(`Invalid timestamptz offset: ${JSON.stringify(text)}`);
   }
   const offsetMs = (Number(offsetHours) * 60 + Number(offsetMinutes ?? 0)) * 60_000;
   return instant(sign === "-" ? local + offsetMs : local - offsetMs);

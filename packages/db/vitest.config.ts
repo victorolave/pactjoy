@@ -1,5 +1,7 @@
 import { defineConfig } from "vitest/config";
 
+// WARNING: a new pure test (fakes only, no Postgres) that lives in test/ MUST be listed
+// here, or it runs in the `db` project and demands Docker. Prefer putting it in src/.
 const UNIT_ONLY_IN_TEST_DIR = ["test/db-source.test.ts", "test/bootstrap-roles.test.ts"];
 
 export default defineConfig({
