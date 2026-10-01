@@ -22,9 +22,9 @@ const importsPostgres = (text: string) =>
   /(?:\bfrom|\bimport|\brequire)\s*\(?\s*["']postgres(?:\/[^"']*)?["']/.test(text);
 
 describe("package boundary", () => {
-  it("HM-S10: the index exports exactly the factory and its two types", async () => {
+  it("HM-S10: the index exports exactly the factory, the unavailability predicate and the two types", async () => {
     const runtime = Object.keys(await import("../src/index.ts"));
-    expect(runtime).toEqual(["createPostgresUnitOfWork"]);
+    expect(runtime.sort()).toEqual(["createPostgresUnitOfWork", "isDatabaseUnavailable"]);
 
     const declared = [
       ...readFileSync(join(DB_ROOT, "src/index.ts"), "utf8").matchAll(
@@ -34,7 +34,12 @@ describe("package boundary", () => {
     expect(declared.sort()).toEqual(
       ["PostgresUnitOfWork", "PostgresUnitOfWorkOptions", "createPostgresUnitOfWork"].sort(),
     );
-    expect(readFileSync(join(DB_ROOT, "src/index.ts"), "utf8")).not.toMatch(/export\s*(\*|\{)/);
+    // No wildcard re-export; the only brace re-export allowed is the predicate.
+    const index = readFileSync(join(DB_ROOT, "src/index.ts"), "utf8");
+    expect(index).not.toMatch(/export\s*\*/);
+    expect([...index.matchAll(/export\s*\{([^}]*)\}/g)].map((m) => m[1]?.trim())).toEqual([
+      "isDatabaseUnavailable",
+    ]);
   });
 
   it("HM-S11: the index imports no driver and its types mention no driver type", () => {
