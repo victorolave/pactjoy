@@ -3,7 +3,7 @@ import type { TestProject } from "vitest/node";
 import { bootstrapRoles } from "./bootstrap-roles.ts";
 import { connect } from "./db.ts";
 import { resolveTestDatabase } from "./db-source.ts";
-import { createFreshDatabase, migrate } from "./migrate.ts";
+import { createFreshDatabase, migrateWithClientDefaults } from "./migrate.ts";
 
 declare module "vitest" {
   export interface ProvidedContext {
@@ -31,7 +31,7 @@ export default async function setup(project: TestProject): Promise<() => Promise
     const sql = connect(source.url);
     await bootstrapRoles(sql).finally(() => sql.end());
     const url = fresh?.url ?? source.url;
-    await migrate(url);
+    await migrateWithClientDefaults(url);
     project.provide("databaseUrl", url);
   } catch (error) {
     await teardown();

@@ -2,7 +2,8 @@ import { randomBytes } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { connect } from "./db.ts";
+import { simulateClientDefaultGrants } from "./bootstrap-roles.ts";
+import { connect, type Sql } from "./db.ts";
 
 /** The same files production applies with `supabase db push` (HM-R3). */
 export const MIGRATIONS_DIR = fileURLToPath(
@@ -10,7 +11,11 @@ export const MIGRATIONS_DIR = fileURLToPath(
 );
 
 /** Applies every `.sql` file in lexical order, each in its own transaction; names the failing file. */
-export async function migrate(url: string, dir = MIGRATIONS_DIR): Promise<string[]> {
+export async function migrate(
+  url: string,
+  dir = MIGRATIONS_DIR,
+  afterFile?: (file: string, sql: Sql) => Promise<void>,
+): Promise<string[]> {
   const files = (await readdir(dir)).filter((f) => f.endsWith(".sql")).sort();
   const sql = connect(url);
   try {
@@ -20,6 +25,7 @@ export async function migrate(url: string, dir = MIGRATIONS_DIR): Promise<string
         await sql.begin(async (tx) => {
           await tx.unsafe(text);
         });
+        await afterFile?.(file, sql);
       } catch (cause) {
         throw new Error(`migration ${file} failed: ${(cause as Error).message}`, { cause });
       }
@@ -74,4 +80,17 @@ export async function createFreshDatabase(serverUrl: string): Promise<FreshDatab
       }
     },
   };
+}
+
+/** Simulates the Supabase default grants (global before, in-schema once `pactjoy` exists), then migrates. */
+export async function migrateWithClientDefaults(url: string): Promise<void> {
+  const sql = connect(url);
+  try {
+    await simulateClientDefaultGrants(sql);
+  } finally {
+    await sql.end();
+  }
+  await migrate(url, MIGRATIONS_DIR, async (file, executor) => {
+    if (file.startsWith("20261001000000_")) await simulateClientDefaultGrants(executor, "pactjoy");
+  });
 }

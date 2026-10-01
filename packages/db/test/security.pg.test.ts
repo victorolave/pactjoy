@@ -1,5 +1,6 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { connect, databaseUrl } from "./db.ts";
+import { createFreshDatabase, migrateWithClientDefaults } from "./migrate.ts";
 
 const admin = connect(databaseUrl());
 const ROLES = ["anon", "authenticated"] as const;
@@ -12,9 +13,14 @@ const tables = async () =>
   ).map((row) => String(row.name));
 
 /** Runs one statement as `role` (SET LOCAL ROLE) and returns the SQLSTATE, or null on success. */
-async function sqlstateAs(role: string, statement: string): Promise<string | null> {
+async function sqlstateAs(
+  role: string,
+  statement: string,
+  asAdmin = "select 1",
+): Promise<string | null> {
   try {
     await admin.begin(async (tx) => {
+      await tx.unsafe(asAdmin);
       await tx.unsafe(`set local role ${role}`);
       await tx.unsafe(statement);
       throw new Error("rollback");
@@ -61,9 +67,16 @@ describe("schema security", () => {
         `delete from pactjoy.${table}`,
         `truncate pactjoy.${table}`,
       ];
+      // Even with schema USAGE (granted inside the rolled-back transaction), the
+      // table-level privileges and RLS still deny every statement.
       for (const role of ROLES)
-        for (const statement of statements)
+        for (const statement of statements) {
+          const usage = `grant usage on schema pactjoy to ${role}`;
           expect(await sqlstateAs(role, statement), `${role}: ${statement}`).toBe("42501");
+          expect(await sqlstateAs(role, statement, usage), `${role} + usage: ${statement}`).toBe(
+            "42501",
+          );
+        }
     }
   });
 
@@ -72,6 +85,22 @@ describe("schema security", () => {
       select grantee, table_name from information_schema.role_table_grants
       where table_schema = 'pactjoy' and grantee in ('anon', 'authenticated', 'PUBLIC')`;
     expect(grants).toEqual([]);
+    const columns = await admin`
+      select c.relname, a.attname, r.rolname
+      from pg_attribute a join pg_class c on c.oid = a.attrelid
+      join pg_namespace n on n.oid = c.relnamespace cross join pg_roles r
+      where n.nspname = 'pactjoy' and c.relkind in ('r', 'p') and a.attnum > 0
+        and not a.attisdropped and r.rolname in ('anon', 'authenticated')
+        and (has_column_privilege(r.oid, c.oid, a.attnum, 'SELECT')
+          or has_column_privilege(r.oid, c.oid, a.attnum, 'INSERT')
+          or has_column_privilege(r.oid, c.oid, a.attnum, 'UPDATE')
+          or has_column_privilege(r.oid, c.oid, a.attnum, 'REFERENCES'))`;
+    expect(columns).toEqual([]);
+    const columnAcls = await admin`
+      select c.relname, a.attname from pg_attribute a join pg_class c on c.oid = a.attrelid
+      join pg_namespace n on n.oid = c.relnamespace
+      where n.nspname = 'pactjoy' and a.attacl is not null`;
+    expect(columnAcls).toEqual([]);
     const sequences = await admin`
       select c.relname, r.rolname,
         has_sequence_privilege(r.oid, c.oid, 'USAGE') or has_sequence_privilege(r.oid, c.oid, 'SELECT')
@@ -112,5 +141,40 @@ describe("schema security", () => {
       .catch((error: unknown) => {
         if (error !== rollback) throw error;
       });
+  });
+
+  it("SS-S11b: with the Supabase global default grant simulated, a later table stays ungranted", async () => {
+    const fresh = await createFreshDatabase(databaseUrl());
+    try {
+      await migrateWithClientDefaults(fresh.url);
+      const sql = connect(fresh.url);
+      try {
+        const leftover = await sql`
+          select 1 from pg_default_acl d, aclexplode(d.defaclacl) a
+          join pg_roles r on r.oid = a.grantee where r.rolname in ('anon', 'authenticated')`;
+        expect(leftover).toEqual([]);
+        const rollback = new Error("rollback");
+        await sql
+          .begin(async (tx) => {
+            await tx.unsafe("create table pactjoy.later_probe (id uuid)");
+            await tx.unsafe("create sequence pactjoy.later_seq");
+            for (const role of ROLES) {
+              const [table] =
+                await tx`select has_table_privilege(${role}, 'pactjoy.later_probe', 'SELECT') as ok`;
+              const [seq] =
+                await tx`select has_sequence_privilege(${role}, 'pactjoy.later_seq', 'USAGE') as ok`;
+              expect([table?.ok, seq?.ok], role).toEqual([false, false]);
+            }
+            throw rollback;
+          })
+          .catch((error: unknown) => {
+            if (error !== rollback) throw error;
+          });
+      } finally {
+        await sql.end();
+      }
+    } finally {
+      await fresh.drop();
+    }
   });
 });
