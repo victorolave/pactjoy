@@ -188,6 +188,7 @@ export function createPgSeasonRepository(exec: SqlExecutor): SeasonRepository {
         await exec.query("delete from pactjoy.season_approvals where season_id = $1", [season.id]);
       }
       if (season.commitments.length > 0) {
+        // `::text::jsonb`: postgres.js reads the jsonb parameter type from the server and would JSON.stringify the already-stringified payload again; `::text` makes it pass through.
         await exec.query(
           `insert into pactjoy.season_commitments (season_id, position, id, member_id, habit_id, weight_percent, privacy, measure) values ${placeholders(season.commitments.length, 8, { 7: "::text::jsonb" })}`,
           season.commitments.flatMap((c, position) => [

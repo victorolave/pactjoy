@@ -111,6 +111,37 @@ describe("season repository on Postgres (read/write side)", () => {
     expect(rows).toEqual([{ type: "object", v: 1 }]);
   });
 
+  it("a commitment id is unique across seasons (season_commitments_id_key), raised as a raw 23505", async () => {
+    const commitment = {
+      id: uuid(0x301) as never,
+      memberId: MEMBER,
+      habitId: uuid(0x401) as never,
+      weightPercent: 100,
+      privacy: "visible" as const,
+      measure: {
+        unit: "done" as const,
+        schedule: {
+          period: "perSession" as const,
+          frequency: { kind: "timesPerWeek" as const, times: 3 },
+        },
+      },
+    };
+    await uow.transaction(async ({ seasons }) => {
+      await seasons.save({ ...season, commitments: [commitment] }, null);
+      return ok(undefined);
+    });
+    const error = await uow
+      .transaction(async ({ seasons }) => {
+        await seasons.save(
+          { ...season, id: seasonId(uuid(0xe2)), commitments: [commitment] },
+          null,
+        );
+        return ok(undefined);
+      })
+      .catch((e) => e);
+    expect(error).toMatchObject({ code: "23505", constraint_name: "season_commitments_id_key" });
+  });
+
   it("a circle invite regenerated while a season insert is uncommitted never waits (KEY SHARE vs save)", async () => {
     const c = { ...circle, invite: null };
     let release!: () => void;
