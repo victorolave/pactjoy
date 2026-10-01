@@ -31,5 +31,47 @@ jobs:
       - name: Biome CI (format, lint, import order)
         run: pnpm exec biome ci .
 
-      - name: Lint, typecheck and test
-        run: pnpm turbo run lint typecheck test
+      - name: Lint and typecheck
+        run: pnpm turbo run lint typecheck
+
+      # packages/db tests need Postgres and run in the `db` job below.
+      - name: Test (all packages except @pactjoy/db)
+        run: pnpm turbo run test --filter='!@pactjoy/db'
+
+  db:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # Makes the db harness use the service container instead of Testcontainers
+      # (it still creates its own fresh database on this server). Passed through
+      # by turbo via `env` in packages/db/turbo.json.
+      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Test @pactjoy/db against the Postgres service
+        run: pnpm turbo run test --filter=@pactjoy/db
