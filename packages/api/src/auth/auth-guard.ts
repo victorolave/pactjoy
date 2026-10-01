@@ -26,10 +26,10 @@ const UNAVAILABLE = {
 export function createAuthGuard(deps: {
   readonly verifier: TokenVerifier;
   readonly logger: Logger;
-}): (request: Request, info?: { readonly requestId: string }) => ReturnType<Authenticate<Actor>> {
-  return async (request, info?: { readonly requestId: string }) => {
+}): Authenticate<Actor> {
+  return async (request, info) => {
     const reject = (reason: TokenRejection["reason"]) => {
-      deps.logger.warn("auth.rejected", { reason, ...(info ? { requestId: info.requestId } : {}) });
+      deps.logger.warn("auth.rejected", { reason, requestId: info.requestId });
       return reason === "keysUnavailable" ? UNAVAILABLE : UNAUTHORIZED;
     };
     const token = BEARER.exec(request.headers.get("authorization") ?? "")?.[1];
