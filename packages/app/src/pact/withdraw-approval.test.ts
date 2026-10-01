@@ -45,7 +45,10 @@ describe("withdrawApproval", () => {
   it("PA-3: withdrawing while the pact is open leaves it open, unaffecting other members", async () => {
     const app = createTestApp({ now: NOW });
     const { season } = await twoMemberSeason(app);
-    const approved = await approvePact(app, actorFor("user-andrea"), { seasonId: season.id });
+    const approved = await approvePact(app, actorFor("user-andrea"), {
+      seasonId: season.id,
+      expectedPactRevision: season.pactRevision,
+    });
     if (!approved.ok) throw new Error("fixture setup failed");
     expect(approved.value.approvals).toHaveLength(1);
 
@@ -73,10 +76,12 @@ describe("withdrawApproval", () => {
     if (!victorCommitted.ok) throw new Error("fixture setup failed");
     const firstApproval = await approvePact(app, actorFor("user-andrea"), {
       seasonId: victorCommitted.value.id,
+      expectedPactRevision: victorCommitted.value.pactRevision,
     });
     if (!firstApproval.ok) throw new Error("fixture setup failed");
     const closed = await approvePact(app, actorFor("user-victor"), {
       seasonId: firstApproval.value.id,
+      expectedPactRevision: firstApproval.value.pactRevision,
     });
     if (!closed.ok) throw new Error("fixture setup failed");
     expect(closed.value.status).toBe("active");
@@ -126,7 +131,10 @@ describe("withdrawApproval", () => {
   it("withdrawing twice: the second call is an idempotent no-op that does not bump the version", async () => {
     const app = createTestApp({ now: NOW });
     const { season } = await twoMemberSeason(app);
-    const approved = await approvePact(app, actorFor("user-andrea"), { seasonId: season.id });
+    const approved = await approvePact(app, actorFor("user-andrea"), {
+      seasonId: season.id,
+      expectedPactRevision: season.pactRevision,
+    });
     if (!approved.ok) throw new Error("fixture setup failed");
     const first = await withdrawApproval(app, actorFor("user-andrea"), { seasonId: season.id });
     if (!first.ok) throw new Error("fixture setup failed");

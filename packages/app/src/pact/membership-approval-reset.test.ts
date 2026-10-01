@@ -67,7 +67,10 @@ describe("approval resets when membership changes (PA-5, PA-6)", () => {
   it("PA-6: leaving a circle whose season is already active neither discards commitments nor touches approvals", async () => {
     const app = createTestApp({ now: NOW });
     const { circle, season, victor } = await givenOpenPactWithOneApproval(app);
-    const closed = await approvePact(app, victor, { seasonId: season.id });
+    const closed = await approvePact(app, victor, {
+      seasonId: season.id,
+      expectedPactRevision: season.pactRevision,
+    });
     if (!closed.ok) throw new Error("fixture setup failed");
     expect(closed.value.status).toBe("active");
 
@@ -114,7 +117,10 @@ describe("approval resets when membership changes (PA-5, PA-6)", () => {
   it("the last member leaving after the pact closed keeps the season", async () => {
     const app = createTestApp({ now: NOW });
     const { circle, season, andrea } = await givenSoloOpenPact(app);
-    const closed = await approvePact(app, andrea, { seasonId: season.id });
+    const closed = await approvePact(app, andrea, {
+      seasonId: season.id,
+      expectedPactRevision: season.pactRevision,
+    });
     if (!closed.ok) throw new Error("fixture setup failed");
     expect(closed.value.status).toBe("active");
 

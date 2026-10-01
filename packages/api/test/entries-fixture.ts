@@ -28,7 +28,8 @@ export async function givenActiveSeason(measure: object = DONE) {
     measure,
   });
   const commitmentId: string = added.json.data.commitments[0].id;
-  await ctx.call("PUT", `/seasons/${seasonId}/approval`, "andrea");
+  const approval = { expectedPactRevision: added.json.data.pactRevision };
+  await ctx.call("PUT", `/seasons/${seasonId}/approval`, "andrea", approval);
   return { ...ctx, seasonId, commitmentId, path: `/seasons/${seasonId}/entries` };
 }
 
@@ -46,6 +47,7 @@ export async function givenTwoMemberSeason(measure: object = DONE) {
   });
   const seasonId: string = season.json.data.id;
   const commitmentIds: Record<"andrea" | "victor", string> = { andrea: "", victor: "" };
+  let pactRevision = 0;
   for (const who of ["andrea", "victor"] as const) {
     const habit = await ctx.call("POST", "/habits", who, { name: `Run ${who}` });
     const added = await ctx.call("POST", `/seasons/${seasonId}/commitments`, who, {
@@ -58,8 +60,10 @@ export async function givenTwoMemberSeason(measure: object = DONE) {
       (c: { habitId?: string }) => c.habitId === habit.json.data.id,
     );
     commitmentIds[who] = mine.id;
+    pactRevision = added.json.data.pactRevision;
   }
-  await ctx.call("PUT", `/seasons/${seasonId}/approval`, "andrea");
-  await ctx.call("PUT", `/seasons/${seasonId}/approval`, "victor");
+  const approval = { expectedPactRevision: pactRevision };
+  await ctx.call("PUT", `/seasons/${seasonId}/approval`, "andrea", approval);
+  await ctx.call("PUT", `/seasons/${seasonId}/approval`, "victor", approval);
   return { ...ctx, circleId, seasonId, commitmentIds, path: `/seasons/${seasonId}/entries` };
 }

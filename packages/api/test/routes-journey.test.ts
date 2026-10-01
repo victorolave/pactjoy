@@ -31,6 +31,7 @@ describe("AC-S3: the whole journey over in-memory adapters", () => {
     });
     const seasonId: string = season.json.data.id;
     const commitmentIds: Record<string, string> = {};
+    let pactRevision = 0;
     for (const who of ["andrea", "victor"]) {
       const habit = await call("POST", "/habits", who, { name: `Run ${who}` });
       const added = await call("POST", `/seasons/${seasonId}/commitments`, who, {
@@ -43,9 +44,13 @@ describe("AC-S3: the whole journey over in-memory adapters", () => {
       commitmentIds[who] = added.json.data.commitments.find(
         (c: { habitId?: string }) => c.habitId === habit.json.data.id,
       ).id;
+      pactRevision = added.json.data.pactRevision;
     }
     for (const who of ["andrea", "victor"]) {
-      expect((await call("PUT", `/seasons/${seasonId}/approval`, who)).status).toBe(200);
+      const approved = await call("PUT", `/seasons/${seasonId}/approval`, who, {
+        expectedPactRevision: pactRevision,
+      });
+      expect(approved.status).toBe(200);
     }
 
     const entries = `/seasons/${seasonId}/entries`;

@@ -119,18 +119,22 @@ describe("GET /seasons/:seasonId/score (UE-E-S11)", () => {
       lengthWeeks: 4,
     });
     const seasonId: string = season.json.data.id;
+    let pactRevision = 0;
     for (const who of ["andrea", "victor"] as const) {
       const habit = await ctx.call("POST", "/habits", who, { name: `Secret ${who}` });
-      await ctx.call("POST", `/seasons/${seasonId}/commitments`, who, {
+      const added = await ctx.call("POST", `/seasons/${seasonId}/commitments`, who, {
         habitId: habit.json.data.id,
         weightPercent: 100,
         privacy: who === "victor" ? "private" : "visible",
         measure: DAILY,
       });
+      pactRevision = added.json.data.pactRevision;
     }
     // Approvals only after every commitment is in: adding one resets them.
     for (const who of ["andrea", "victor"] as const) {
-      await ctx.call("PUT", `/seasons/${seasonId}/approval`, who);
+      await ctx.call("PUT", `/seasons/${seasonId}/approval`, who, {
+        expectedPactRevision: pactRevision,
+      });
     }
     const stored = await ctx.app.circles.get(circleId as never);
     const victor = stored?.members.find((m) => m.userId === VICTOR)?.id as string;

@@ -19,12 +19,15 @@ export interface ApprovePactDeps {
 
 export interface ApprovePactInput {
   readonly seasonId: SeasonId;
+  /** The `pactRevision` the caller last saw; approving a pact that changed since is `StaleSeason`. */
+  readonly expectedPactRevision: number;
 }
 
 export type ApprovePactError =
   | { readonly kind: "SeasonNotFound" }
   | { readonly kind: "NotAMember" }
   | { readonly kind: "PactNotOpen" }
+  | { readonly kind: "StaleSeason" }
   | { readonly kind: "CommitmentWeightsNotFull" };
 
 /** Upserts `memberId`'s approval by replacing any existing entry (re-approving just refreshes `approvedAt`, never duplicates). */
@@ -39,7 +42,8 @@ function upsertApproval(
 
 /**
  * Records `actor`'s approval of the pact (PA-1, PA-9, new PA-10/B5, new
- * PA-11/B4). Requires the approving member's OWN commitment weights to sum
+ * PA-11/B4). The caller states the `pactRevision` it approves (`expectedPactRevision`); a
+ * mismatch is `StaleSeason`, checked after `PactNotOpen` and before the weights check. Requires the approving member's OWN commitment weights to sum
  * to exactly 100% (B5) -- a member with zero commitments always fails this
  * (`commitmentsSumToFullWeight([])` is 0, never 100), so no separate check
  * is needed. Once every currently active member has an approval recorded
@@ -68,6 +72,11 @@ export async function approvePact(
 
     if (season.status !== "pactOpen") {
       return err({ kind: "PactNotOpen" });
+    }
+
+    // Approval is consent to a specific pact: if the content changed since the caller read it, refuse.
+    if (season.pactRevision !== input.expectedPactRevision) {
+      return err({ kind: "StaleSeason" });
     }
 
     const ownCommitments = season.commitments.filter(

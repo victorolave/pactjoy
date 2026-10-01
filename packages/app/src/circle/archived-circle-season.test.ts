@@ -18,7 +18,10 @@ describe("an archived circle's kept ACTIVE season is frozen", () => {
   it("every season and commitment use case rejects the leaver with NotAMember and changes nothing", async () => {
     const app = createTestApp({ now: NOW });
     const { circle, season, andrea } = await givenSoloOpenPact(app);
-    const closed = await approvePact(app, andrea, { seasonId: season.id });
+    const closed = await approvePact(app, andrea, {
+      seasonId: season.id,
+      expectedPactRevision: season.pactRevision,
+    });
     if (!closed.ok) throw new Error("fixture setup failed");
     const left = await leaveCircle(app, andrea, { circleId: circle.id });
     if (!left.ok) throw new Error("fixture setup failed");
@@ -27,7 +30,8 @@ describe("an archived circle's kept ACTIVE season is frozen", () => {
     const seasonId = season.id;
 
     const attempts = {
-      approvePact: () => approvePact(app, andrea, { seasonId }),
+      approvePact: () =>
+        approvePact(app, andrea, { seasonId, expectedPactRevision: season.pactRevision }),
       withdrawApproval: () => withdrawApproval(app, andrea, { seasonId }),
       addCommitment: () =>
         addCommitment(app, andrea, {

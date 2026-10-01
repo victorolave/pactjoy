@@ -5,6 +5,7 @@ import { joinCircle } from "../circle/join-circle.ts";
 import { leaveCircle } from "../circle/leave-circle.ts";
 import { addCommitment } from "../commitment/add-commitment.ts";
 import { createSeason } from "../season/create-season.ts";
+import { editSeasonParams } from "../season/edit-season-params.ts";
 import type { CircleId, SeasonId } from "../shared/ids.ts";
 import { habitId, seasonId, userId } from "../shared/ids.ts";
 import type { TestApp } from "../testing/app-harness.ts";
@@ -89,9 +90,11 @@ describe("approvePact", () => {
 
     const first = await approvePact(app, actorFor(memberActorIds[0] as string), {
       seasonId: season.id,
+      expectedPactRevision: season.pactRevision,
     });
     const second = await approvePact(app, actorFor(memberActorIds[1] as string), {
       seasonId: season.id,
+      expectedPactRevision: season.pactRevision,
     });
     expect(first.ok).toBe(true);
     expect(second.ok).toBe(true);
@@ -100,6 +103,7 @@ describe("approvePact", () => {
 
     const third = await approvePact(app, actorFor(memberActorIds[2] as string), {
       seasonId: season.id,
+      expectedPactRevision: season.pactRevision,
     });
 
     expect(third.ok).toBe(true);
@@ -115,9 +119,11 @@ describe("approvePact", () => {
 
     const first = await approvePact(app, actorFor(memberActorIds[0] as string), {
       seasonId: season.id,
+      expectedPactRevision: season.pactRevision,
     });
     const closing = await approvePact(app, actorFor(memberActorIds[1] as string), {
       seasonId: season.id,
+      expectedPactRevision: season.pactRevision,
     });
 
     expect(first.ok && closing.ok).toBe(true);
@@ -133,6 +139,7 @@ describe("approvePact", () => {
 
     const result = await approvePact(app, actorFor(memberActorIds[0] as string), {
       seasonId: season.id,
+      expectedPactRevision: season.pactRevision,
     });
 
     expect(result.ok).toBe(true);
@@ -145,7 +152,10 @@ describe("approvePact", () => {
     const app = utcTestApp();
     const { season } = await seasonWithFullyWeightedMembers(app, 1);
 
-    const result = await approvePact(app, actorFor("user-outsider"), { seasonId: season.id });
+    const result = await approvePact(app, actorFor("user-outsider"), {
+      seasonId: season.id,
+      expectedPactRevision: season.pactRevision,
+    });
 
     expect(result).toEqual({ ok: false, error: { kind: "NotAMember" } });
   });
@@ -155,6 +165,7 @@ describe("approvePact", () => {
 
     const result = await approvePact(app, actorFor("user-andrea"), {
       seasonId: seasonId("season-ghost"),
+      expectedPactRevision: 0,
     });
 
     expect(result).toEqual({ ok: false, error: { kind: "SeasonNotFound" } });
@@ -163,11 +174,17 @@ describe("approvePact", () => {
   it("rejects once the pact is already closed", async () => {
     const app = utcTestApp();
     const { season } = await seasonWithFullyWeightedMembers(app, 1);
-    const closed = await approvePact(app, actorFor("user-andrea"), { seasonId: season.id });
+    const closed = await approvePact(app, actorFor("user-andrea"), {
+      seasonId: season.id,
+      expectedPactRevision: season.pactRevision,
+    });
     if (!closed.ok) throw new Error("fixture setup failed");
     expect(closed.value.status).toBe("active");
 
-    const result = await approvePact(app, actorFor("user-andrea"), { seasonId: season.id });
+    const result = await approvePact(app, actorFor("user-andrea"), {
+      seasonId: season.id,
+      expectedPactRevision: season.pactRevision,
+    });
 
     expect(result).toEqual({ ok: false, error: { kind: "PactNotOpen" } });
   });
@@ -194,6 +211,7 @@ describe("approvePact", () => {
 
     const result = await approvePact(app, actorFor("user-andrea"), {
       seasonId: withCommitment.value.id,
+      expectedPactRevision: withCommitment.value.pactRevision,
     });
 
     expect(result).toEqual({ ok: false, error: { kind: "CommitmentWeightsNotFull" } });
@@ -211,7 +229,10 @@ describe("approvePact", () => {
     });
     if (!season.ok) throw new Error("fixture setup failed");
 
-    const result = await approvePact(app, actorFor("user-andrea"), { seasonId: season.value.id });
+    const result = await approvePact(app, actorFor("user-andrea"), {
+      seasonId: season.value.id,
+      expectedPactRevision: season.value.pactRevision,
+    });
 
     expect(result).toEqual({ ok: false, error: { kind: "CommitmentWeightsNotFull" } });
   });
@@ -223,6 +244,7 @@ describe("approvePact", () => {
 
     const result = await approvePact(app, actorFor(memberActorIds[0] as string), {
       seasonId: season.id,
+      expectedPactRevision: season.pactRevision,
     });
 
     expect(result.ok).toBe(true);
@@ -243,6 +265,7 @@ describe("approvePact", () => {
 
     const result = await approvePact(lateApp, actorFor(memberActorIds[0] as string), {
       seasonId: season.id,
+      expectedPactRevision: season.pactRevision,
     });
 
     expect(result.ok).toBe(true);
@@ -257,10 +280,12 @@ describe("approvePact", () => {
 
     const first = await approvePact(app, actorFor(memberActorIds[0] as string), {
       seasonId: season.id,
+      expectedPactRevision: season.pactRevision,
     });
     if (!first.ok) throw new Error("fixture setup failed");
     const second = await approvePact(app, actorFor(memberActorIds[0] as string), {
       seasonId: first.value.id,
+      expectedPactRevision: first.value.pactRevision,
     });
 
     expect(second.ok).toBe(true);
@@ -275,9 +300,18 @@ describe("approvePact", () => {
     const [andrea, member0, leaver] = memberActorIds as [string, string, string];
     const left = await leaveCircle(app, actorFor(leaver), { circleId: circle.id });
     if (!left.ok) throw new Error("fixture setup failed");
+    // Leaving changes the pact (approvals reset), so callers must re-read its revision.
+    const reread = await app.seasons.get(season.id);
+    if (!reread) throw new Error("fixture setup failed");
 
-    const first = await approvePact(app, actorFor(andrea), { seasonId: season.id });
-    const second = await approvePact(app, actorFor(member0), { seasonId: season.id });
+    const first = await approvePact(app, actorFor(andrea), {
+      seasonId: season.id,
+      expectedPactRevision: reread.pactRevision,
+    });
+    const second = await approvePact(app, actorFor(member0), {
+      seasonId: season.id,
+      expectedPactRevision: reread.pactRevision,
+    });
 
     expect(first.ok && first.value.status).toBe("pactOpen");
     expect(second.ok && second.value.status).toBe("active");
@@ -299,11 +333,85 @@ describe("approvePact", () => {
 
     const result = await approvePact(lateApp, actorFor(memberActorIds[0] as string), {
       seasonId: season.id,
+      expectedPactRevision: season.pactRevision,
     });
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     // Local date is still the nominal start (10-01), so no shift. In UTC it would be 10-02 -> 10-03.
     expect(result.value.actualStart).toBe("2025-10-01");
+  });
+
+  describe("expectedPactRevision precondition (PI-S1..S4)", () => {
+    const stale = { ok: false, error: { kind: "StaleSeason" } };
+
+    it("PI-S1: rejects StaleSeason when the pact changed since the caller read it, and writes nothing", async () => {
+      const app = utcTestApp();
+      const { season, memberActorIds } = await seasonWithFullyWeightedMembers(app, 2);
+      const edited = await editSeasonParams(app, actorFor("user-andrea"), {
+        seasonId: season.id,
+        lengthWeeks: 6,
+      });
+      if (!edited.ok) throw new Error("fixture setup failed");
+      expect(edited.value.pactRevision).toBe(season.pactRevision + 1);
+      const before = await app.seasons.get(season.id);
+
+      const result = await approvePact(app, actorFor(memberActorIds[0] as string), {
+        seasonId: season.id,
+        expectedPactRevision: season.pactRevision,
+      });
+
+      expect(result).toEqual(stale);
+      expect(await app.seasons.get(season.id)).toEqual(before);
+    });
+
+    it("PI-S2: PactNotOpen beats StaleSeason", async () => {
+      const app = utcTestApp();
+      const { season } = await seasonWithFullyWeightedMembers(app, 1);
+      const closed = await approvePact(app, actorFor("user-andrea"), {
+        seasonId: season.id,
+        expectedPactRevision: season.pactRevision,
+      });
+      if (!closed.ok) throw new Error("fixture setup failed");
+
+      const result = await approvePact(app, actorFor("user-andrea"), {
+        seasonId: season.id,
+        expectedPactRevision: season.pactRevision + 7,
+      });
+
+      expect(result).toEqual({ ok: false, error: { kind: "PactNotOpen" } });
+    });
+
+    it("PI-S3: StaleSeason beats CommitmentWeightsNotFull", async () => {
+      const app = utcTestApp();
+      const circle = await createCircle(app, actorFor("user-andrea"), { name: "Río Runners" });
+      if (!circle.ok) throw new Error("fixture setup failed");
+      const season = await createSeason(app, actorFor("user-andrea"), {
+        circleId: circle.value.id,
+        timezone: "UTC",
+        startDate: "2025-10-01",
+        lengthWeeks: 8,
+      });
+      if (!season.ok) throw new Error("fixture setup failed");
+
+      const result = await approvePact(app, actorFor("user-andrea"), {
+        seasonId: season.value.id,
+        expectedPactRevision: season.value.pactRevision + 1,
+      });
+
+      expect(result).toEqual(stale);
+    });
+
+    it("PI-S4: approving with the current revision succeeds and leaves the revision unchanged", async () => {
+      const app = utcTestApp();
+      const { season, memberActorIds } = await seasonWithFullyWeightedMembers(app, 2);
+
+      const result = await approvePact(app, actorFor(memberActorIds[0] as string), {
+        seasonId: season.id,
+        expectedPactRevision: season.pactRevision,
+      });
+
+      expect(result.ok && result.value.pactRevision).toBe(season.pactRevision);
+    });
   });
 });

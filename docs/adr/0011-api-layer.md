@@ -8,7 +8,7 @@
 
 `packages/app` exposes 18 use cases behind ports (ADR-0008) and `packages/db` implements them on Postgres (ADR-0010). The next step is the HTTP surface the PWA talks to, without letting Supabase or any other vendor leak into the domain or the use cases (CLAUDE.md, high decoupling). The runtime is a Supabase Edge Function (Deno), which has three consequences that shape the design: it cannot run NestJS, its import resolution for code outside the function directory is unverified, and a dead database connection can kill the worker instead of raising a catchable error.
 
-Product questions Q1 to Q15 are open (see Open questions); the first eight cover account deletion, read models, display names, `config push`, CORS origins, signup policy, status-code semantics and owner visibility of private commitments. The design isolates each of them to one place so that answering them later changes a table or a flag, not the structure.
+Product questions Q1 to Q15 were open when this ADR was written and were decided by the owner on 2026-10-01 (see Decided questions); the first eight cover account deletion, read models, display names, `config push`, CORS origins, signup policy, status-code semantics and owner visibility of private commitments. The design isolates each of them to one place so that answering them later changes a table or a flag, not the structure.
 
 ## Decision
 
@@ -32,7 +32,8 @@ Status: this ADR is a draft. Every item below is a proposal until the slices tha
   - other messages are scrubbed before truncating (`scheme://user:pass@` becomes `scheme://***@`, `Bearer` values and JWT-like strings are masked);
   - values under sensitive keys are redacted (matched on the normalized key name: token, auth, password, secret, cookie, invite code, user id, email, database URL, connection string, DSN, API key, jwt);
   - the Authorization header, bodies, notes, invite codes and environment values are never logged.
-- Left OPEN, with the current behaviour kept: the stale-approval policy (Q13) and the 403-versus-404 policy for entries and circles (Q7 addendum, Q14).
+- Pact revision and the approval precondition (Q13, decided 2026-10-01). `Season` carries `pactRevision`, an integer that changes only when the approved content changes: `resetApprovals` bumps it (params edit, commitment add, edit or remove, member join or leave). Approving and withdrawing do not. `PUT /seasons/:seasonId/approval` takes a REQUIRED body `{ "expectedPactRevision": <integer >= 0> }`; `approvePact` returns `StaleSeason` (409, no details) when it differs from the stored revision. Check order: `SeasonNotFound`, `NotAMember`, `PactNotOpen`, `StaleSeason`, `CommitmentWeightsNotFull`. A missing, non-integer or negative value, or an unknown field, is a 422 `InvalidRequest` at the boundary (the `integer({ min })` combinator), never a 409. The `save(season, season.version)` guard is unchanged, so two concurrent approvals still end in 200 or 409 `ConcurrencyConflict`, and the loser retries with the same revision (approval does not change it). `season.version` was rejected as the precondition because approvals, withdrawals and joins bump it, so a version check would refuse harmless approvals. `withdrawApproval` has no precondition: withdrawing never closes a pact.
+- No-op edits (Q12, decided 2026-10-01; delivered in later slices). `editSeasonParams` with no change is a no-op: 200 with the unchanged season, no approval reset, no version or revision bump; the timezone is compared as the raw string (`"utc"` differs from `"UTC"`). `editCommitment` with identical weight, privacy and measure is also a no-op; the measure is compared with exact fractions and the weekdays as a set (order does not matter), because validation checks they are distinct and in 0..6 but does not sort them.
 
 ### Spike results
 
@@ -68,30 +69,32 @@ Either way only the shell, the import map and the deploy procedure change; `pack
 
 ### Config and gotchas
 
-- `supabase/config.toml` is minimal and local-only: the Data API schemas (without `pactjoy`), Postgres 17, the email OTP shape (6 digits, 1 hour: the design value, which is also the CLI default), `[functions.api]` and the placeholder OTP template. The repository does not push it to the hosted project (Q4). A boundary test pins the schemas, `verify_jwt = false`, the import map and the absence of service-role keys.
+- `supabase/config.toml` is minimal: the Data API schemas (without `pactjoy`), Postgres 17, the email OTP shape (6 digits, 1 hour: the design value, which is also the CLI default), `[functions.api]` and the placeholder OTP template. Since Q4 was decided, the hosted auth and API settings are applied from this file with `supabase config push`; the local file is the versioned source (never put secrets in it). A boundary test pins the schemas, `verify_jwt = false`, the import map and the absence of service-role keys.
 - The local signing key `supabase/signing_keys.json` is a secret and is gitignored. It is optional locally because the CLI default is already ES256.
 - A function worker that cannot connect to the database dies and answers an empty 503 without CORS headers; a browser reports it as a network error. Check the function logs, not the response.
 - The function reads secrets through `Deno.env`. Copy the pooler hostname into `API_DATABASE_URL` exactly as Supabase prints it.
 
-### Open questions
+### Decided questions
 
-Product questions for the owner. None is decided here; each has a recommendation in the SDD decision notes.
+The owner answered Q1 to Q15 on 2026-10-01, following the recommendations except Q3. "Decided" does not mean implemented; the work that remains is listed per answer.
 
-1. Q1: Account deletion or anonymization in this change? (`DELETE /me` is reserved and not routed.)
-2. Q2: Read-model queries for the PWA (get circle, get season, list habits)?
-3. Q3: Member display names?
-4. Q4: Adopt `supabase config push` for the hosted auth and API settings?
-5. Q5: Which CORS origins are allowed (today an env allow-list; empty allows none)?
-6. Q6: Open email OTP signup or invite-only?
-7. Q7: Status-code semantics (the whole table is provisional).
-8. Q8: Should an owner see their own private commitments in season responses?
-9. Q9: Are pact approvals (who and when) visible to every member, or only a count plus "you approved"?
-10. Q10: Does a member who left keep seeing the circle's member list?
-11. Q11: Expose the invite's `createdBy`?
-12. Q12: Should an empty or same-value season edit be a no-op instead of resetting approvals?
-13. Q13: Should pact approval carry an `expectedVersion` so a stale approval is rejected (`StaleSeason` 409)?
-14. Q14: Should a stranger on an existing entry id get 404 instead of 403 (existence disclosure; related to Q7)?
-15. Q15: Does "private" hide only the habit and measure, or also `weightPercent` and `points` (which reveal the completion fraction)?
+1. Q1: Account deletion or anonymization is a separate change (P2-5). `DELETE /me` stays reserved and not routed.
+2. Q2: PWA read models are a separate change, guided by the design batches (Today and Entry first). It also covers Q8.
+3. Q3: Display names are PER CIRCLE: each member picks a visible name when creating or joining a circle; there is no global profile. A separate change (name on `circle_members`, inputs, presenters, validation). Until then responses expose only identifiers.
+4. Q4: Adopt `supabase config push` for the hosted auth and API settings, from the versioned `supabase/config.toml`.
+5. Q5: CORS uses the `ALLOWED_ORIGINS` env allow-list with exact origins per environment (the current implementation).
+6. Q6: Email OTP signup stays open (`enable_signup = true`), relying on Supabase rate limits. Revisit before launch.
+7. Q7 and Q14: Keep 403 for non-members and non-owners of existing resources. Accepted risk: it reveals that an id exists, but ids are UUID v7. The idempotency status is also settled: `IdempotencyKeyReused` stays 422.
+8. Q8: The owner should see their own private commitments, which needs a viewer-aware season read model (tied to Q2). Until then season responses hide private commitments from everyone.
+9. Q9: Pact approvals (who and when) stay visible to every member (current behaviour).
+10. Q10: A member who left keeps read-only access to the circle's member list, consistent with read-only scores.
+11. Q11: Remove `createdBy` from the invite DTO (presenter change, pending).
+12. Q12: Same-value season and commitment edits are no-ops (see Decisions taken during implementation; slices PR2 and PR3).
+13. Q13: Pact approval carries `expectedPactRevision`; stale is 409 `StaleSeason` (see Decisions taken during implementation).
+14. Q14: see Q7.
+15. Q15: "Private" hides only the habit and the measure; existence, weight and points stay visible to other members (current behaviour).
+
+Also decided: a unique partial index on `circle_members(user_id) WHERE status = 'active'` (one active circle per user), in a new migration. The db adapter must map a race's 23505 `unique_violation` to a domain outcome (`AlreadyInActiveCircle` or `ConcurrencyConflict`, 409), otherwise it surfaces as a 500; a race test like `api-http-concurrency` covers it.
 
 ### Operational checklist (hosted Supabase, manual; the owner executes it)
 
@@ -105,6 +108,7 @@ Nothing here runs from CI or from the repository.
   - `API_JWT_ISSUER`: optional; defaults to `${SUPABASE_URL}/auth/v1`, which is right on hosted.
 - S0.2 (gate for C8, do this BEFORE treating the shell as done): `supabase functions deploy api --use-docker` first, then `--use-api`. Then `supabase functions download api` and check that the out-of-tree `packages/*/src` files, `postgres` and `jose` are in the bundle. Call the deployed function once to confirm the imports resolve at runtime. Record the result in the Spike results above; if the files are missing, choose between the fallbacks in "Deploy-bundling risk".
 - S0.3: smoke test with a real OTP-login token: `POST /api/circles` returns 201, an invalid token returns 401 with the envelope, a browser preflight from an allowed origin returns 204. Check the pooler under concurrency and the cold start once.
+- Q4: run `supabase config push` to apply `supabase/config.toml` (auth and API settings) to the linked hosted project, and review the diff it prints first.
 - Add the `db` and `deno` CI checks to branch protection.
 - If the deploy cannot resolve out-of-tree imports, apply fallback F1 or F2 (shell and import map only) and update this ADR.
 
@@ -140,7 +144,7 @@ Nothing here runs from CI or from the repository.
 
 - Swapping the runtime (for example to NestJS) replaces only the shell; the router, auth, validation and presenters move unchanged.
 - Auth, routing and error mapping are covered by Node tests, not only by type checks.
-- Each open product question maps to one place: Q5 is env, Q7 is one table, Q4 is a config decision and Q6 is a config flag (the `enable_signup = true` in `config.toml` is the design default pending Q6, and also the CLI default), Q1 is a reserved route, Q3 (display names) is a presenter field: responses expose only identifiers until the question is answered, and adding names later touches the presenter and the read model, not the router or auth.
+- Each product question maps to one place: Q5 is env, Q7 is one table, Q4 is `supabase config push`, Q6 is the `enable_signup` flag (`true`: decided open, also the CLI default), Q1 is a reserved route, and Q3 (display names, decided per circle but not implemented yet) is a presenter field: responses expose only identifiers until it lands, and adding names touches the presenter and the read model, not the router or auth.
 
 ### Negative
 

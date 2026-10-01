@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   array,
+  integer,
   literal,
   nullable,
   number,
@@ -177,5 +178,30 @@ describe("combinators", () => {
       issues: [{ path: "days", problem: "range" }],
     });
     expect(parse(s, { days: "x" }).ok).toBe(false);
+  });
+});
+
+describe("integer({min})", () => {
+  const s = object({ n: integer({ min: 0 }) });
+
+  it("accepts safe integers at or above min", () => {
+    for (const ok of [0, 1, 42, Number.MAX_SAFE_INTEGER]) {
+      expect(parse(s, { n: ok })).toEqual({ ok: true, value: { n: ok } });
+    }
+  });
+
+  it("rejects non-integers and non-numbers as type", () => {
+    for (const bad of [1.5, "1", null, true, Number.NaN, Number.POSITIVE_INFINITY, 2 ** 53]) {
+      expect(parse(s, { n: bad })).toEqual({ ok: false, issues: [{ path: "n", problem: "type" }] });
+    }
+  });
+
+  it("rejects integers below min as range", () => {
+    expect(parse(s, { n: -1 })).toEqual({ ok: false, issues: [{ path: "n", problem: "range" }] });
+    expect(parse(object({ n: integer({ min: 5 }) }), { n: 4 }).ok).toBe(false);
+  });
+
+  it("is required unless wrapped in optional", () => {
+    expect(parse(s, {})).toEqual({ ok: false, issues: [{ path: "n", problem: "required" }] });
   });
 });
