@@ -1,5 +1,5 @@
 import type { Result, UnitOfWork } from "@pactjoy/app";
-import type { Client, SqlExecutor } from "./client.ts";
+import type { BindMode, Client, SqlExecutor } from "./client.ts";
 import { isRetryable, mapError } from "./errors.ts";
 
 /**
@@ -44,14 +44,14 @@ const MAX_ATTEMPTS = 2;
  */
 export function createUnitOfWork<R>(
   begin: Client["begin"],
-  bind: (exec: SqlExecutor) => R,
+  bind: (exec: SqlExecutor, mode: BindMode) => R,
 ): UnitOfWork<R> {
   return {
     async transaction<T, E>(work: (repositories: R) => Promise<Result<T, E>>) {
       for (let attempt = 1; ; attempt++) {
         try {
           return await begin("isolation level read committed", async (tx) => {
-            const result = await work(bind(tx));
+            const result = await work(bind(tx, "write"));
             if (!result.ok) throw new RollbackSignal(result);
             return result;
           });
@@ -66,7 +66,7 @@ export function createUnitOfWork<R>(
     async read(work) {
       try {
         return await begin("isolation level repeatable read read only", async (tx) =>
-          work(bind(tx)),
+          work(bind(tx, "read")),
         );
       } catch (error) {
         throw mapError(error);
