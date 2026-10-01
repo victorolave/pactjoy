@@ -15,6 +15,9 @@ export interface JwksTokenVerifierOptions {
 
 type Reason = TokenRejection["reason"];
 
+/** Raised only when the key set cannot be fetched or read; the sole source of a 503. */
+class KeysUnavailable extends Error {}
+
 function reasonOf(error: unknown): Reason {
   if (error instanceof errors.JWTExpired) return "expired";
   if (error instanceof errors.JWTClaimValidationFailed) {
@@ -22,6 +25,7 @@ function reasonOf(error: unknown): Reason {
     if (error.claim === "aud") return "wrongAudience";
     if (error.claim === "role") return "notAuthenticated";
     if (error.claim === "sub") return "invalidSubject";
+    if (error.claim === "nbf") return "notYetValid";
     return "malformed";
   }
   if (error instanceof errors.JOSEAlgNotAllowed) return "unsupportedAlgorithm";
@@ -31,9 +35,9 @@ function reasonOf(error: unknown): Reason {
     error instanceof errors.JWKSMultipleMatchingKeys
   )
     return "invalidSignature";
-  // Unreadable token structure; everything else came from fetching the key set.
-  if (error instanceof errors.JWSInvalid || error instanceof errors.JWTInvalid) return "malformed";
-  return "keysUnavailable";
+  if (error instanceof KeysUnavailable) return "keysUnavailable";
+  // Anything else jose raises is about the token itself (bad structure, unsupported header).
+  return "malformed";
 }
 
 /**
@@ -49,11 +53,25 @@ export function createJwksTokenVerifier(options: JwksTokenVerifierOptions): Toke
     ...(options.fetch ? { [customFetch]: options.fetch as never } : {}),
   });
 
+  // Only a failed key fetch is an outage; a token naming no (or several) keys is the caller's fault.
+  const getKey: typeof keys = Object.assign(async (...args: Parameters<typeof keys>) => {
+    try {
+      return await keys(...args);
+    } catch (error) {
+      if (
+        error instanceof errors.JWKSNoMatchingKey ||
+        error instanceof errors.JWKSMultipleMatchingKeys
+      )
+        throw error;
+      throw new KeysUnavailable("key set unavailable", { cause: error });
+    }
+  }, keys);
+
   return {
     async verify(token) {
       let payload: JWTPayload;
       try {
-        ({ payload } = await jwtVerify(token, keys, {
+        ({ payload } = await jwtVerify(token, getKey, {
           algorithms: ["ES256", "RS256"],
           issuer: options.issuer,
           audience: "authenticated",
@@ -63,7 +81,10 @@ export function createJwksTokenVerifier(options: JwksTokenVerifierOptions): Toke
       } catch (error) {
         return err({ reason: reasonOf(error) });
       }
-      if (payload.role !== "authenticated" || payload.is_anonymous === true)
+      if (
+        payload.role !== "authenticated" ||
+        (payload.is_anonymous !== undefined && payload.is_anonymous !== false)
+      )
         return err({ reason: "notAuthenticated" });
       if (typeof payload.sub !== "string" || !UUID.test(payload.sub))
         return err({ reason: "invalidSubject" });

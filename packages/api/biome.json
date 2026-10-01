@@ -91,6 +91,14 @@
                     "message": "Import only package roots or the documented subpaths."
                   },
                   {
+                    "group": ["@pactjoy/app/testing", "@pactjoy/app/contracts"],
+                    "message": "@pactjoy/app/testing and @pactjoy/app/contracts are test-only: allowed in src/testing/** and test/** (see the overrides)."
+                  },
+                  {
+                    "group": ["**/testing/**", "**/testing"],
+                    "message": "Production src must not import from src/testing (test doubles); only src/testing/**, *.test.ts and test/** may."
+                  },
+                  {
                     "group": ["@pactjoy/db", "postgres", "npm:*", "jsr:*"],
                     "message": "Not allowed in packages/api (ADR-0011)."
                   }

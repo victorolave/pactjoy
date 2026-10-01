@@ -26,11 +26,12 @@ interface Claims {
   aud?: string;
   role?: string | undefined;
   sub?: string | undefined;
-  is_anonymous?: boolean;
+  is_anonymous?: unknown;
   exp?: number | string;
+  nbf?: number;
 }
 async function sign(key: Awaited<ReturnType<typeof makeKey>>, claims: Claims = {}) {
-  const { exp = "10m", sub = SUB, role, ...rest } = claims;
+  const { exp = "10m", sub = SUB, role, nbf, ...rest } = claims;
   const payload: Record<string, unknown> = {
     ...rest,
     ...("role" in claims ? { role } : { role: "authenticated" }),
@@ -41,6 +42,7 @@ async function sign(key: Awaited<ReturnType<typeof makeKey>>, claims: Claims = {
     .setAudience(claims.aud ?? "authenticated")
     .setIssuedAt()
     .setExpirationTime(exp);
+  if (nbf !== undefined) jwt.setNotBefore(nbf);
   if (claims.sub !== undefined || !("sub" in claims)) jwt.setSubject(sub);
   return jwt.sign(key.privateKey);
 }
@@ -116,7 +118,17 @@ describe("jose token verifier", () => {
     const { verifier } = setup(async () => jwksResponse(key));
     const now = Math.floor(Date.now() / 1000);
     expect(await reasonOf(verifier, await sign(key, { exp: now - 3600 }))).toBe("expired");
+    expect(await reasonOf(verifier, await sign(key, { exp: now - 31 }))).toBe("expired");
     expect(await reasonOf(verifier, await sign(key, { exp: now - 10 }))).toBe("accepted");
+  });
+
+  it("a future nbf is refused as notYetValid (beyond the 30 s tolerance)", async () => {
+    const key = await makeKey("ES256", "k1");
+    const { verifier } = setup(async () => jwksResponse(key));
+    const now = Math.floor(Date.now() / 1000);
+    expect(await reasonOf(verifier, await sign(key, { nbf: now + 3600 }))).toBe("notYetValid");
+    expect(await reasonOf(verifier, await sign(key, { nbf: now + 31 }))).toBe("notYetValid");
+    expect(await reasonOf(verifier, await sign(key, { nbf: now + 10 }))).toBe("accepted");
   });
 
   it("AU-S12: only role authenticated and non-anonymous users pass", async () => {
@@ -131,6 +143,21 @@ describe("jose token verifier", () => {
       "notAuthenticated",
     );
     expect(await reasonOf(verifier, await sign(key, { is_anonymous: false }))).toBe("accepted");
+    expect(await reasonOf(verifier, await sign(key, {}))).toBe("accepted");
+    for (const is_anonymous of ["true", "false", 1, 0, null, {}])
+      expect(
+        await reasonOf(verifier, await sign(key, { is_anonymous })),
+        String(is_anonymous),
+      ).toBe("notAuthenticated");
+  });
+
+  it("a token whose header jose cannot process is malformed (401), never keysUnavailable (503)", async () => {
+    const key = await makeKey("RS256", "k1");
+    const { verifier } = setup(async () => jwksResponse(key));
+    const b64 = (o: object) =>
+      btoa(JSON.stringify(o)).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
+    const crit = `${b64({ alg: "RS256", kid: "k1", crit: ["x"], x: 1 })}.${b64({ sub: SUB })}.AAAA`;
+    expect(await reasonOf(verifier, crit)).toBe("malformed");
   });
 
   it("the subject must be a canonical lowercase uuid", async () => {

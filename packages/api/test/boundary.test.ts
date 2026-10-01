@@ -57,6 +57,21 @@ describe("package boundary", () => {
     expect(importers).toEqual(["src/adapters/jose-token-verifier.ts"]);
   });
 
+  it("production src never imports test doubles (src/testing, @pactjoy/app/testing, contracts)", () => {
+    const offenders = sources(SRC)
+      .filter((file) => !rel(file).startsWith(join("src", "testing")))
+      .flatMap((file) => {
+        const text = readFileSync(file, "utf8");
+        const bad = [
+          ...relativeSpecifiers(text).filter((s) => /(^|\/)testing(\/|$)/.test(s)),
+          ...(importsModule(text, "@pactjoy/app/testing") ? ["@pactjoy/app/testing"] : []),
+          ...(importsModule(text, "@pactjoy/app/contracts") ? ["@pactjoy/app/contracts"] : []),
+        ];
+        return bad.map((specifier) => `${rel(file)}: ${specifier}`);
+      });
+    expect(offenders).toEqual([]);
+  });
+
   it("DE-S3: every relative import in src ends in .ts (ADR-0007)", () => {
     const offenders = sources(SRC).flatMap((file) =>
       relativeSpecifiers(readFileSync(file, "utf8"))
