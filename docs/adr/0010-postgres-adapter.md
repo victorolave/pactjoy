@@ -1,7 +1,7 @@
 # ADR-0010: Postgres adapter: postgres.js, portable SQL migrations, non-exposed schema, NO KEY UPDATE guards, real-Postgres tests
 
-- **Status:** Proposed (draft: the spike table is final, the rest is completed in the last slice of the change)
-- **Date:** 2026-09-30
+- **Status:** Accepted
+- **Date:** 2026-10-01
 - **Deciders:** Victor Olave
 
 ## Context
@@ -12,18 +12,36 @@
 
 - **Driver:** `postgres` (postgres.js), confined to `packages/db` and wrapped behind an internal `SqlExecutor` seam, so repositories write plain parameterized SQL. No ORM, no `supabase-js`. `prepare: false`, because the production URL is the Supavisor transaction pooler. `packages/db` exports only `createPostgresUnitOfWork` and its option types.
 - **Migrations:** plain SQL in `supabase/migrations` (`YYYYMMDDHHMMSS_name.sql`, forward-only). Production applies them with `supabase db push`; the test harness applies the same files in lexical order. No `auth.*`, triggers, functions or procedures (enforced by a scan in the test suite).
-- **Schema:** everything lives in schema `pactjoy`, which the Data API does not expose. RLS is enabled on every table with no policies, and all access is revoked from `public`, `anon` and `authenticated`. The service role key is never used; authorization lives in the use cases. Rollback on Supabase is `drop schema pactjoy cascade`.
+- **Schema and security model:** everything lives in schema `pactjoy`, which the Supabase Data API does not expose (nothing in `public`). Three layers, each tested from the catalog and by connecting as the roles (`packages/db/test/security.pg.test.ts`):
+  - `anon`, `authenticated` and `PUBLIC` have no `USAGE` on the schema (migration 000000);
+  - every table has RLS enabled and there are no policies, so a role that somehow got a grant would still see zero rows. A catalog scan fails any future table without RLS;
+  - migration 000500 revokes every privilege on all tables and sequences and sets default privileges so later tables are covered too.
+  The adapter connects with a dedicated database URL; the Supabase service-role key is never used and never committed (scan in the boundary test). Authorization lives in the use cases. Rollback on Supabase is `drop schema pactjoy cascade`.
 - **Transactions:** the Unit of Work is `sql.begin` at READ COMMITTED. `guardVersion` is an eager `SELECT version ... FOR NO KEY UPDATE` and never `FOR SHARE`:
   - it conflicts with any concurrent UPDATE or guard of the same row, so guard semantics are unchanged;
   - it does not block the `KEY SHARE` locks that foreign-key checks take, so `recordEntry` inserts are not serialized against season guards;
   - a later save of the same row in the same transaction takes the same lock mode, so there is no lock-upgrade deadlock;
   - consequence: saves must never update key columns. In Postgres a key column is any column of a primary key or of a non-partial unique index, whether or not anything references it. Updating one takes `FOR UPDATE`, an upgrade from the guard's `NO KEY UPDATE` that can deadlock against a concurrent FK `KEY SHARE` holder;
   - therefore the circle invite lives in a child table, `circle_invites` (`circle_id` primary key and FK to `circles` with RESTRICT, unique `code`, `created_at`, `expires_at`, `created_by`). Regenerating an invite updates that table, and a circle save never updates a key column of `circles`. The migration arrives with the circle repository (B4a), together with a regression test: a circle save with a regenerated invite racing a concurrent season insert must not deadlock.
+- **Season children and references:** foreign keys point only at aggregate roots and are all RESTRICT (`circle_members` and `seasons` to `circles`, `entries` to `seasons`); only a season's own children (`season_commitments`, `season_approvals`) cascade. `entries` has no foreign key to commitments or habits, because children are replaced wholesale on save and aggregates reference each other by id. `entries.insert_seq` and `seasons.insert_seq` (identity) give the insertion order the ports promise; `created_at` ties under a fixed clock.
+- **Reads:** `read()` runs `repeatable read read only`, so a season and its children load from one snapshot. `guardVersion` is a no-op there, as the port says.
+- **Error mapping:** `40P01` and `40001` are retried; a `23505` on a named key constraint (primary keys, `circle_invites` code, the entry idempotency key) becomes `ConcurrencyConflict` and is not retried. Everything else (other constraints, `25006`, `25P02`, `42P01`) is rethrown raw because it is a bug, not a race. Constraints are named explicitly in the migrations because the mapping keys on the names.
+- **Codecs:** the driver `types` parse timestamptz into exact `Instant` milliseconds with a strict parser, dates as raw strings and `int8` as `bigint`; `timestamp` without time zone throws. Values are bound as text with explicit casts. The season measure is versioned jsonb, `{ v: 1, ... }`, with fractions as `{ num, den }` decimal-integer strings (a JSON number loses precision beyond 2^53); decoding an unknown `v` or shape throws `MeasureCodecError`. The jsonb parameter is written as `$n::text::jsonb`, because postgres.js would otherwise `JSON.stringify` the already-serialized payload a second time.
+- **Ids:** `createUuidV7IdGenerator` in `packages/app` (RFC 9562, `crypto.getRandomValues`, portable). Ids are time-ordered across milliseconds only and nothing orders by id; the 48-bit timestamp would truncate above 2^48 ms, which `Instant` cannot reach.
 - **Retry:** at most 2 attempts in total, only for 40P01/40001 raised by Postgres. A version-mismatch `ConcurrencyConflict` is never retried. Rule: `work` has no external side effects (notifiers go after commit or through an outbox), because it may run twice.
 - **Expired invite codes:** the unique `code` also covers expired codes, while the in-memory adapter only rejects active collisions, and `generateUniqueInviteCode` only pre-checks active codes. Reusing an expired code therefore reaches `save()` and surfaces `ConcurrencyConflict` to the caller, and the client retries. Accepted as astronomically rare.
 - **Roles:** the migrations assume the `anon` and `authenticated` roles exist (Supabase provides them) and do not create them; there is no `DO` block. The test harness bootstraps both as `NOLOGIN` before migrating (tolerating a concurrent run that creates them first).
 - **Temporary stub:** the pause table is deferred to change A2 (`app-pause-workflow`). Until then a `PauseRequestReader` stub returns no pauses, so pause-aware scoring sees no pauses in production. Remove the stub when A2 lands.
-- **Tests:** real Postgres 17. Testcontainers locally; `TEST_DATABASE_URL` in CI, where the harness creates a fresh database on that server. A missing database fails the run, never skips it.
+- **Tests:** real Postgres 17. Testcontainers locally; in CI the `db` job runs a `postgres:17` service container and sets `TEST_DATABASE_URL`, where the harness creates a fresh database on that server (the `ci` job skips `@pactjoy/db`). A missing database fails the run, never skips it. The same adapter-neutral contract suites (`@pactjoy/app/contracts`) run against the in-memory adapters and Postgres.
+- **Composition:** `createPostgresUnitOfWork({ url, max?, connectTimeoutSeconds? })` is the only runtime export; connections open lazily and `end()` closes the pool.
+
+### Open items for change C (the `api` function)
+
+- Validate identifier formats at the API boundary: the invite code goes straight to `findByInviteCode`, so a lone surrogate would reach the driver as a bound parameter; the same for ids in request bodies (uuid format) and `clientRequestId`.
+- The error-to-HTTP mapping must cover every app error kind, including the newer ones (invalid why, category and note, the custom-label errors, frequency and weekday errors, precision errors, `IdempotencyKeyReused`, `EntryDeleted`, `InvalidClientRequestId`).
+- No `Promise.all` inside a transaction (one connection, statements are sequential).
+- Verify once against production what could not be tested locally: the hosted Supavisor, TLS and Edge cold starts. Use the pooler (6543, transaction mode) for the function and the direct URL for migrations (`supabase db push`).
+- The custom-label length counts UTF-16 units while the note limit counts code points; revisit only if it becomes user-facing.
 
 ### Spike results (2026-09-30, local Supabase CLI 2.119.0, edge-runtime 1.77.1 / Deno 2.1.4)
 
@@ -84,6 +102,7 @@ Both URL types ran the same scratch Edge Function, with `prepare: false` and the
 
 - Tests need Docker (or `TEST_DATABASE_URL`); test files run serially against one database.
 - Invite-code uniqueness is global, including expired codes.
+- FK checks take `KEY SHARE` on the parent row; `NO KEY UPDATE` guards do not block them, but saves must never update a key column of a guarded root (the invite lives in `circle_invites` for that reason).
 - Until A2, production scoring ignores pauses.
 
 ### Neutral

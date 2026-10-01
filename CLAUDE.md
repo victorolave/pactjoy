@@ -124,7 +124,7 @@ Full detail in the Mechanics page in Notion.
 
 1. ~~`packages/engine` + tests~~: done. Public API in `packages/engine/src/index.ts`; decisions in ADR-0004 to ADR-0006.
 2. ~~`packages/app` use cases~~: done (change `app-foundation`, S0–S9 merged 2026-09-30). The entry, circle and season ports document the contracts the Postgres adapter must meet. `packages/app` owns converting real time into `SeasonDay` (ADR-0004), the 48 h pause auto-approval and notifications. Next, in order:
-   - B: Postgres adapter and schema (`packages/db`).
+   - ~~B: Postgres adapter and schema (`packages/db`)~~: done (ADR-0010; migrations in `supabase/migrations`, tests against real Postgres).
    - C: the `api` function.
    - A2: pause workflow; it must wire `pauseGraceExtensionDays`, currently hard-coded to 0.
    - A3: social.
