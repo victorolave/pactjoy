@@ -1,0 +1,49 @@
+import { circleId, createCircle, generateInvite, renameCircle } from "@pactjoy/app";
+import { presentCircle, presentInvite } from "../presenters/circle.ts";
+import { uuid } from "../validation/formats.ts";
+import { object, string } from "../validation/schema.ts";
+import { type ApiDeps, type Route, toResult, validate } from "./support.ts";
+
+const circleParams = object({ circleId: uuid });
+const named = object({ name: string });
+const none = object({});
+
+export function circleRoutes(deps: ApiDeps): Route[] {
+  return [
+    {
+      method: "POST",
+      pattern: "/circles",
+      async handle(ctx) {
+        const input = validate(ctx, { params: none, body: named });
+        if (!input.ok) return input.result;
+        const result = await createCircle(deps, ctx.actor, { name: input.body.name });
+        return toResult(result, 201, (circle) => presentCircle(circle, ctx.actor));
+      },
+    },
+    {
+      method: "PATCH",
+      pattern: "/circles/:circleId",
+      async handle(ctx) {
+        const input = validate(ctx, { params: circleParams, body: named });
+        if (!input.ok) return input.result;
+        const result = await renameCircle(deps, ctx.actor, {
+          circleId: circleId(input.params.circleId),
+          name: input.body.name,
+        });
+        return toResult(result, 200, (circle) => presentCircle(circle, ctx.actor));
+      },
+    },
+    {
+      method: "POST",
+      pattern: "/circles/:circleId/invite",
+      async handle(ctx) {
+        const input = validate(ctx, { params: circleParams, body: none, emptyBody: "object" });
+        if (!input.ok) return input.result;
+        const result = await generateInvite(deps, ctx.actor, {
+          circleId: circleId(input.params.circleId),
+        });
+        return toResult(result, 201, presentInvite);
+      },
+    },
+  ];
+}
