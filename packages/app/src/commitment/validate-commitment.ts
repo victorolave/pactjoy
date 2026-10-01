@@ -116,6 +116,10 @@ function frequencyError(frequency: Frequency): ValidateCommitmentError | null {
       : { kind: "InvalidTimesPerWeek" };
   }
   const { weekdays } = frequency;
+  // The HTTP adapter builds this from arbitrary JSON, so the type can't be trusted.
+  if (!Array.isArray(weekdays)) {
+    return { kind: "InvalidWeekday" };
+  }
   if (weekdays.length === 0) {
     return { kind: "NoWeekdays" };
   }

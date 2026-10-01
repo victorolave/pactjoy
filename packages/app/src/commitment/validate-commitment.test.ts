@@ -390,6 +390,20 @@ describe("validateCommitment", () => {
       });
     }
 
+    it.each([undefined, null, "1,2", 3, { length: 2 }])(
+      "rejects non-array weekdays (%s) without throwing",
+      (weekdays) => {
+        expect(doneWith({ kind: "specificDays", weekdays })).toEqual({
+          ok: false,
+          error: { kind: "InvalidWeekday" },
+        });
+      },
+    );
+
+    it("reports an invalid weekday before a duplicate", () => {
+      expect(doneWith(days([1, 1, 9]))).toEqual({ ok: false, error: { kind: "InvalidWeekday" } });
+    });
+
     it("does not constrain a weeklyTotal schedule", () => {
       const result = validateCommitment({
         weightPercent: 20,
@@ -457,6 +471,13 @@ describe("validateCommitment", () => {
 
     it("accepts a label with surrounding spaces as long as it has visible text", () => {
       expect(withLabel(" a ").ok).toBe(true);
+    });
+
+    it("reports an over-long label before its invisible characters", () => {
+      expect(withLabel(`${"a".repeat(20)}\u0000`)).toEqual({
+        ok: false,
+        error: { kind: "CustomLabelTooLong" },
+      });
     });
 
     it("accepts a plain label with spaces and non-ASCII letters", () => {
