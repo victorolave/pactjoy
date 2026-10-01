@@ -36,8 +36,8 @@ function reasonOf(error: unknown): Reason {
   )
     return "invalidSignature";
   if (error instanceof KeysUnavailable) return "keysUnavailable";
-  // Anything else jose raises is about the token itself (bad structure, unsupported header).
-  return "malformed";
+  if (error instanceof errors.JOSEError) return "malformed"; // the token itself is bad
+  throw error; // not jose: a bug or environment fault, a 500 rather than a 401
 }
 
 /**
@@ -54,6 +54,7 @@ export function createJwksTokenVerifier(options: JwksTokenVerifierOptions): Toke
   });
 
   // Only a failed key fetch is an outage; a token naming no (or several) keys is the caller's fault.
+  // Object.assign freezes the key set's getters here; jwtVerify only calls the function.
   const getKey: typeof keys = Object.assign(async (...args: Parameters<typeof keys>) => {
     try {
       return await keys(...args);

@@ -1,5 +1,5 @@
 import { exportJWK, generateKeyPair, type JWK, SignJWT } from "jose";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createJwksTokenVerifier } from "../src/adapters/jose-token-verifier.ts";
 
 const ISSUER = "https://proj.example/auth/v1";
@@ -65,7 +65,15 @@ const reasonOf = async (v: ReturnType<typeof setup>["verifier"], token: string) 
   return r.ok ? "accepted" : r.error.reason;
 };
 
+const freezeClock = () => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-10-01T12:00:00Z"));
+  return Math.floor(Date.now() / 1000);
+};
+
 describe("jose token verifier", () => {
+  afterEach(() => vi.useRealTimers());
+
   it("AU-S7: accepts ES256 and RS256 tokens and yields the user id", async () => {
     const es = await makeKey("ES256", "es");
     const rs = await makeKey("RS256", "rs");
@@ -113,22 +121,55 @@ describe("jose token verifier", () => {
     expect(await reasonOf(verifier, await sign(key, { aud: "service" }))).toBe("wrongAudience");
   });
 
-  it("AU-S11: rejects expired tokens (30 s tolerance)", async () => {
+  it("AU-S11: rejects expired tokens (tolerance pinned at exactly 30 s)", async () => {
     const key = await makeKey("ES256", "k1");
     const { verifier } = setup(async () => jwksResponse(key));
-    const now = Math.floor(Date.now() / 1000);
-    expect(await reasonOf(verifier, await sign(key, { exp: now - 3600 }))).toBe("expired");
-    expect(await reasonOf(verifier, await sign(key, { exp: now - 31 }))).toBe("expired");
-    expect(await reasonOf(verifier, await sign(key, { exp: now - 10 }))).toBe("accepted");
+    const now = freezeClock();
+    expect(await reasonOf(verifier, await sign(key, { exp: now - 30 }))).toBe("expired");
+    expect(await reasonOf(verifier, await sign(key, { exp: now - 29 }))).toBe("accepted");
   });
 
-  it("a future nbf is refused as notYetValid (beyond the 30 s tolerance)", async () => {
+  it("a future nbf is refused as notYetValid beyond exactly 30 s", async () => {
     const key = await makeKey("ES256", "k1");
     const { verifier } = setup(async () => jwksResponse(key));
-    const now = Math.floor(Date.now() / 1000);
-    expect(await reasonOf(verifier, await sign(key, { nbf: now + 3600 }))).toBe("notYetValid");
+    const now = freezeClock();
     expect(await reasonOf(verifier, await sign(key, { nbf: now + 31 }))).toBe("notYetValid");
-    expect(await reasonOf(verifier, await sign(key, { nbf: now + 10 }))).toBe("accepted");
+    expect(await reasonOf(verifier, await sign(key, { nbf: now + 30 }))).toBe("accepted");
+  });
+
+  it("a token with no kid or a duplicated kid is invalidSignature, never keysUnavailable", async () => {
+    const one = await makeKey("ES256", "dup");
+    const two = await makeKey("ES256", "dup");
+    const { verifier } = setup(async () => jwksResponse(one, two));
+    const noKid = await new SignJWT({ role: "authenticated" })
+      .setProtectedHeader({ alg: "ES256" })
+      .setIssuer(ISSUER)
+      .setAudience("authenticated")
+      .setSubject(SUB)
+      .setExpirationTime("10m")
+      .sign(one.privateKey);
+    expect(await reasonOf(verifier, noKid)).toBe("invalidSignature");
+    expect(await reasonOf(verifier, await sign(one))).toBe("invalidSignature");
+  });
+
+  it("an unexpected non-jose failure is not a 401: it propagates to become a 500", async () => {
+    const key = await makeKey("ES256", "k1");
+    const token = await sign(key);
+    let armed = false;
+    const { verifier } = setup(async () => {
+      armed = true;
+      return jwksResponse(key);
+    });
+    const getTime = Date.prototype.getTime;
+    vi.spyOn(Date.prototype, "getTime").mockImplementation(function (this: Date) {
+      if (armed) throw new RangeError("invariant violated");
+      return getTime.call(this);
+    });
+    try {
+      await expect(verifier.verify(token)).rejects.toThrow("invariant violated");
+    } finally {
+      vi.restoreAllMocks();
+    }
   });
 
   it("AU-S12: only role authenticated and non-anonymous users pass", async () => {

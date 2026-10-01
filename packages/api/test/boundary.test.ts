@@ -27,6 +27,13 @@ const relativeSpecifiers = (text: string) =>
     (m) => m[1] ?? "",
   );
 
+const testDoubleImports = (text: string) => [
+  ...relativeSpecifiers(text).filter((s) => /(^|\/)testing(\/|$)/.test(s)),
+  ...(importsModule(text, "@pactjoy/api/testing") ? ["@pactjoy/api/testing"] : []),
+  ...(importsModule(text, "@pactjoy/app/testing") ? ["@pactjoy/app/testing"] : []),
+  ...(importsModule(text, "@pactjoy/app/contracts") ? ["@pactjoy/app/contracts"] : []),
+];
+
 describe("package boundary", () => {
   it("exports nothing yet: the public surface grows slice by slice", async () => {
     const index = await import("../src/index.ts");
@@ -57,16 +64,12 @@ describe("package boundary", () => {
     expect(importers).toEqual(["src/adapters/jose-token-verifier.ts"]);
   });
 
-  it("production src never imports test doubles (src/testing, @pactjoy/app/testing, contracts)", () => {
+  it("production src never imports test doubles (src/testing, @pactjoy/api/testing, @pactjoy/app/testing, contracts)", () => {
     const offenders = sources(SRC)
       .filter((file) => !rel(file).startsWith(join("src", "testing")))
       .flatMap((file) => {
         const text = readFileSync(file, "utf8");
-        const bad = [
-          ...relativeSpecifiers(text).filter((s) => /(^|\/)testing(\/|$)/.test(s)),
-          ...(importsModule(text, "@pactjoy/app/testing") ? ["@pactjoy/app/testing"] : []),
-          ...(importsModule(text, "@pactjoy/app/contracts") ? ["@pactjoy/app/contracts"] : []),
-        ];
+        const bad = testDoubleImports(text);
         return bad.map((specifier) => `${rel(file)}: ${specifier}`);
       });
     expect(offenders).toEqual([]);
@@ -92,6 +95,9 @@ describe("package boundary", () => {
       expect(importsModule(code, "jose"), code).toBe(true);
     for (const code of ['import x from "jose-other";', 'import x from "./jose.ts";'])
       expect(importsModule(code, "jose"), code).toBe(false);
+    expect(testDoubleImports('import { x } from "@pactjoy/api/testing";')).toEqual([
+      "@pactjoy/api/testing",
+    ]);
     expect(relativeSpecifiers('import a from "./a";\nexport * from "../b.ts";')).toEqual([
       "./a",
       "../b.ts",
