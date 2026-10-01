@@ -5,11 +5,13 @@ import { joinCircle } from "../circle/join-circle.ts";
 import { seasonId, userId } from "../shared/ids.ts";
 import { ok } from "../shared/result.ts";
 import { createTestApp } from "../testing/app-harness.ts";
+import { givenOpenPactWithOneApproval } from "../testing/pact-fixtures.ts";
 import { instant } from "../time/instant.ts";
 import { localDate } from "../time/local-date.ts";
 import type { TimeZone } from "../time/time-zone.port.ts";
 import { createSeason } from "./create-season.ts";
 import { editSeasonParams } from "./edit-season-params.ts";
+import type { Season } from "./season.ts";
 
 function actorFor(id: string) {
   return { userId: userId(id) };
@@ -225,5 +227,138 @@ describe("editSeasonParams", () => {
     const stored = await app.uow.read((repos) => repos.seasons.get(created.value.id));
     expect(stored?.timeZone).toBe("zone-late");
     expect(stored?.version).toBe(created.value.version);
+  });
+
+  describe("no-op detection (SS-18, PI-S8..S11)", () => {
+    async function givenApprovedSeason() {
+      const app = createTestApp({ now: NOW });
+      const { season } = await givenOpenPactWithOneApproval(app);
+      expect(season.approvals).toHaveLength(1);
+      return { app, season };
+    }
+
+    async function expectUntouched(app: ReturnType<typeof createTestApp>, before: Season) {
+      const stored = await app.uow.read((repos) => repos.seasons.get(before.id));
+      expect(stored).toEqual(before);
+    }
+
+    it("PI-S8: {} returns the unchanged season; approvals, version and pactRevision intact", async () => {
+      const { app, season } = await givenApprovedSeason();
+
+      const result = await editSeasonParams(app, actorFor("user-andrea"), { seasonId: season.id });
+
+      expect(result).toEqual({ ok: true, value: season });
+      await expectUntouched(app, season);
+    });
+
+    it("PI-S9: values equal to the stored ones are a no-op (no write)", async () => {
+      const { app, season } = await givenApprovedSeason();
+
+      const result = await editSeasonParams(app, actorFor("user-andrea"), {
+        seasonId: season.id,
+        timezone: season.timeZone,
+        startDate: season.nominalStart,
+        lengthWeeks: season.lengthWeeks,
+        reviewCadenceWeeks: season.reviewCadenceWeeks,
+      });
+
+      expect(result).toEqual({ ok: true, value: season });
+      await expectUntouched(app, season);
+    });
+
+    it.each([
+      ["lengthWeeks", { lengthWeeks: 12 as const }],
+      ["reviewCadenceWeeks", { reviewCadenceWeeks: 3 as const }],
+      ["startDate", { startDate: "2025-10-02" }],
+      ["timezone", { timezone: "Europe/Madrid" }],
+    ])(
+      "a change in %s alone is effective: resets approvals, bumps version and pactRevision",
+      async (_f, patch) => {
+        const { app, season } = await givenApprovedSeason();
+
+        const result = await editSeasonParams(app, actorFor("user-andrea"), {
+          seasonId: season.id,
+          ...patch,
+        });
+
+        expect(result.ok).toBe(true);
+        if (!result.ok) return;
+        expect(result.value.approvals).toEqual([]);
+        expect(result.value.version).toBe(season.version + 1);
+        expect(result.value.pactRevision).toBe(season.pactRevision + 1);
+      },
+    );
+
+    it("PI-S10: timezone 'utc' vs stored 'UTC' is compared as a raw string, so it is a change", async () => {
+      const app = createTestApp({ now: NOW });
+      const circle = await createCircle(app, actorFor("user-andrea"), { name: "Río Runners" });
+      if (!circle.ok) throw new Error("fixture setup failed");
+      const created = await createSeason(app, actorFor("user-andrea"), {
+        circleId: circle.value.id,
+        timezone: "UTC",
+        startDate: "2025-10-01",
+        lengthWeeks: 8,
+      });
+      if (!created.ok) throw new Error("fixture setup failed");
+
+      const result = await editSeasonParams(app, actorFor("user-andrea"), {
+        seasonId: created.value.id,
+        timezone: "utc",
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.value.timeZone).toBe("utc");
+      expect(result.value.version).toBe(created.value.version + 1);
+      expect(result.value.pactRevision).toBe(created.value.pactRevision + 1);
+    });
+
+    it("PI-S11: an invalid value still errors even when nothing else changes", async () => {
+      const { app, season } = await givenApprovedSeason();
+
+      const result = await editSeasonParams(app, actorFor("user-andrea"), {
+        seasonId: season.id,
+        lengthWeeks: 5 as unknown as 4,
+      });
+
+      expect(result).toEqual({ ok: false, error: { kind: "InvalidLengthWeeks" } });
+      await expectUntouched(app, season);
+    });
+
+    it("PI-S11: a no-op does not re-check the window when the stored startDate is now in the past", async () => {
+      const { app, season: fixture } = await givenApprovedSeason();
+      const past: Season = {
+        ...fixture,
+        nominalStart: localDate("2025-09-01"),
+        version: fixture.version + 1,
+      };
+      await app.uow.transaction(async (repos) => {
+        await repos.seasons.save(past, fixture.version);
+        return ok(undefined);
+      });
+
+      const result = await editSeasonParams(app, actorFor("user-andrea"), {
+        seasonId: past.id,
+        startDate: "2025-09-01",
+      });
+
+      expect(result).toEqual({ ok: true, value: past });
+      await expectUntouched(app, past);
+    });
+
+    it("PI-S11: a no-op on a closed pact is still PactNotOpen (state check first)", async () => {
+      const { app, season } = await givenApprovedSeason();
+      await app.uow.transaction(async (repos) => {
+        await repos.seasons.save(
+          { ...season, status: "active", version: season.version + 1 },
+          season.version,
+        );
+        return ok(undefined);
+      });
+
+      const result = await editSeasonParams(app, actorFor("user-andrea"), { seasonId: season.id });
+
+      expect(result).toEqual({ ok: false, error: { kind: "PactNotOpen" } });
+    });
   });
 });
