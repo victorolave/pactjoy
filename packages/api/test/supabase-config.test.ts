@@ -2,7 +2,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-// supabase/config.toml is deliberately minimal (only the deviations from the CLI defaults) and
+// supabase/config.toml is deliberately minimal (pinned values only; some restate CLI defaults) and
 // local-only: applying any of it to the hosted project is the owner's call (ADR-0011, Q4).
 const REPO_ROOT = resolve(import.meta.dirname, "..", "..", "..");
 const SUPABASE = join(REPO_ROOT, "supabase");
@@ -52,7 +52,8 @@ describe("supabase/config.toml", () => {
     expect(c[""]?.project_id).toBe('"pactjoy"');
     expect(c.db?.major_version).toBe("17");
     expect(c["auth.email"]?.otp_length).toBe("6");
-    expect(c["auth.email"]?.enable_signup).toBe("true");
+    // Q6 (open vs invite-only signup) is the owner's call: only the key shape is pinned.
+    expect(c["auth.email"]?.enable_signup).toMatch(/^(true|false)$/);
   });
 
   it("DE-S6: the Data API never exposes the pactjoy schema (ADR-0010)", () => {
@@ -100,6 +101,21 @@ describe("supabase/config.toml", () => {
 
   it("the local signing key is gitignored (it is a secret)", () => {
     expect(read(join(REPO_ROOT, ".gitignore"))).toMatch(/^supabase\/signing_keys\.json$/m);
+  });
+
+  it("config.toml stays within the subset the in-test TOML reader supports", () => {
+    const offenders = read(CONFIG)
+      .split("\n")
+      .filter((raw) => {
+        const line = raw.trim();
+        if (line === "" || line.startsWith("#") || /^\[[^\]]+\]$/.test(line)) return false;
+        const value = (/^[A-Za-z0-9_.-]+\s*=\s*(.*)$/.exec(line)?.[1] ?? "").trim();
+        const unbalanced = (value.match(/\[/g)?.length ?? 0) !== (value.match(/\]/g)?.length ?? 0);
+        const badQuotes = (value.match(/"/g)?.length ?? 0) % 2 !== 0 || value.includes('"""');
+        const inlineComment = value.replace(/"[^"]*"/g, "").includes("#");
+        return value === "" || unbalanced || badQuotes || inlineComment;
+      });
+    expect(offenders).toEqual([]);
   });
 
   it("the TOML reader and its list helper behave on the shapes used here", () => {
