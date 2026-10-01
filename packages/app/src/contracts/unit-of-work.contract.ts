@@ -1,18 +1,30 @@
 import { describe, expect, it } from "vitest";
+import type { Repositories } from "../ports/repositories.ts";
+import { ConcurrencyConflict } from "../shared/errors.ts";
+import { circleId } from "../shared/ids.ts";
 import { err, ok } from "../shared/result.ts";
 import { deferred } from "./deferred.ts";
-import { type ContractSubject, HABIT, type HabitRepositories } from "./fixtures.ts";
+import {
+  CIRCLE,
+  type ContractSubject,
+  HABIT,
+  type HabitRepositories,
+  SEASON,
+  seedCircleAndSeason,
+} from "./fixtures.ts";
 import { readHabit } from "./habit.contract.ts";
 
+type UowRepositories = HabitRepositories & Pick<Repositories, "circles" | "seasons">;
+const NEW_CIRCLE = { ...CIRCLE, id: circleId("00000000-0000-4000-8000-0000000000c9"), members: [] };
+
 /**
- * `UnitOfWork` contract over the habit repository (UW-S1..S3, S7, S28),
- * adapter-neutral. The multi-repository cases (UW-S4..S6) need circles and
- * seasons and arrive with them. A database factory MUST give a pool of >= 2
+ * `UnitOfWork` contract over the habit, circle and season repositories (UW-S1..S7,
+ * S28), adapter-neutral. A database factory MUST give a pool of >= 2
  * connections: UW-S7 reads while a transaction is still open.
  */
 export function describeUnitOfWorkContract(
   name: string,
-  factory: () => Promise<ContractSubject<HabitRepositories>>,
+  factory: () => Promise<ContractSubject<UowRepositories>>,
 ): void {
   describe(`UnitOfWork contract (${name})`, () => {
     it("commits the writes when work resolves ok, and returns its result", async () => {
@@ -67,6 +79,44 @@ export function describeUnitOfWorkContract(
       }
       expect(await tx).toEqual(ok(HABIT));
       expect(await readHabit(uow)).toEqual(HABIT);
+    });
+
+    const readBoth = (uow: UnitOfWorkOf, id = NEW_CIRCLE.id) =>
+      uow.read(async ({ circles, seasons }) => ({
+        circle: await circles.get(id),
+        season: await seasons.get(SEASON.id),
+      }));
+    type UnitOfWorkOf = ContractSubject<UowRepositories>["uow"];
+    const saveBoth = (uow: UnitOfWorkOf, outcome: "ok" | "err") =>
+      uow.transaction(async ({ circles, seasons }) => {
+        await circles.save(CIRCLE, null);
+        await seasons.save(SEASON, null);
+        return outcome === "ok" ? ok("done") : err("nope");
+      });
+
+    it("UW-S4: a circle and a season saved together are both rolled back on err", async () => {
+      const { uow } = await factory();
+      expect(await saveBoth(uow, "err")).toEqual(err("nope"));
+      expect(await readBoth(uow, CIRCLE.id)).toEqual({ circle: null, season: null });
+    });
+
+    it("UW-S5: a conflicting season save rejects and leaves the circle written before it unsaved", async () => {
+      const { uow } = await factory();
+      await seedCircleAndSeason(uow);
+      await expect(
+        uow.transaction(async ({ circles, seasons }) => {
+          await circles.save(NEW_CIRCLE, null);
+          await seasons.save(SEASON, null);
+          return ok(undefined);
+        }),
+      ).rejects.toBeInstanceOf(ConcurrencyConflict);
+      expect((await readBoth(uow)).circle).toBeNull();
+    });
+
+    it("UW-S6: on ok both persist together", async () => {
+      const { uow } = await factory();
+      expect(await saveBoth(uow, "ok")).toEqual(ok("done"));
+      expect(await readBoth(uow, CIRCLE.id)).toEqual({ circle: CIRCLE, season: SEASON });
     });
 
     it("read passes the value through and rejects when work throws", async () => {
