@@ -35,7 +35,6 @@ describe("package boundary", () => {
 
   it("AC-S2, AU-S16: src never touches the driver, Deno specifiers, the db package or secrets", () => {
     const forbidden: Array<[string, (text: string) => boolean]> = [
-      ["jose", (t) => importsModule(t, "jose")],
       ["postgres", (t) => importsModule(t, "postgres")],
       ["@pactjoy/db", (t) => importsModule(t, "@pactjoy/db")],
       ["npm: specifier", (t) => /["'`]npm:/.test(t)],
@@ -49,6 +48,13 @@ describe("package boundary", () => {
       return forbidden.filter(([, found]) => found(text)).map(([what]) => `${rel(file)}: ${what}`);
     });
     expect(offenders).toEqual([]);
+  });
+
+  it("AU-S16: jose is imported by src/adapters/jose-token-verifier.ts and nowhere else", () => {
+    const importers = sources(SRC)
+      .filter((file) => importsModule(readFileSync(file, "utf8"), "jose"))
+      .map(rel);
+    expect(importers).toEqual(["src/adapters/jose-token-verifier.ts"]);
   });
 
   it("DE-S3: every relative import in src ends in .ts (ADR-0007)", () => {

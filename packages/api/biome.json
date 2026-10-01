@@ -134,6 +134,30 @@
           }
         }
       }
+    },
+    {
+      "includes": ["test/jose-token-verifier.test.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@pactjoy/*/**", "!@pactjoy/app/testing", "!@pactjoy/app/contracts"],
+                    "message": "Import only package roots or the documented subpaths."
+                  },
+                  {
+                    "group": ["@pactjoy/db", "postgres", "npm:*", "jsr:*"],
+                    "message": "Not allowed in packages/api (ADR-0011)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
     }
   ]
 }
