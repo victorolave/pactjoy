@@ -8,6 +8,42 @@ import { APP_ERROR_STATUS, appErrorResult } from "../src/errors/status-map.ts";
 const KINDS = Object.keys(APP_ERROR_STATUS) as AppErrorKind[];
 const kindsWith = (status: number) => KINDS.filter((k) => APP_ERROR_STATUS[k] === status).sort();
 
+// Sub-unions already contained in the use case unions; not AppError members themselves.
+const SUB_UNIONS = new Set(["ValidateCommitmentError", "EntryValueError", "EntryWindowError"]);
+
+/** Every `*Error` name exported with `export type { ... }` from the app index, sorted. */
+function exportedErrorNames(index: string): string[] {
+  const names = [...index.matchAll(/export\s+type\s*\{([^}]*)\}/g)].flatMap((block) =>
+    (block[1] ?? "").split(",").map((spec) =>
+      spec
+        .trim()
+        .replace(/^type\s+/, "")
+        .split(/\s+as\s+/)
+        .pop(),
+    ),
+  );
+  return [...new Set(names.filter((n): n is string => !!n && /Error$/.test(n)))].sort();
+}
+
+const identifiers = (text: string) => [...text.matchAll(/[A-Za-z_]\w*/g)].map((m) => m[0]);
+
+/** Exported names missing from the `@pactjoy/app` import list and from the AppError union (exact, as sets). */
+function errorCoverageGaps(index: string, source: string) {
+  const expected = exportedErrorNames(index).filter((n) => !SUB_UNIONS.has(n));
+  const imported = new Set(
+    identifiers(
+      /import\s+type\s*\{([^}]*)\}\s*from\s*["']@pactjoy\/app["']/.exec(source)?.[1] ?? "",
+    ),
+  );
+  const members = new Set(
+    identifiers(/export\s+type\s+AppError\s*=([^;]*);/.exec(source)?.[1] ?? ""),
+  );
+  return {
+    imports: expected.filter((n) => !imported.has(n)),
+    union: expected.filter((n) => !members.has(n)),
+  };
+}
+
 describe("app error status map", () => {
   it("EM-S1..S5: 57 kinds, 33x422 4x403 6x404 13x409 1x410", () => {
     expect(KINDS).toHaveLength(57);
@@ -63,14 +99,37 @@ describe("app error status map", () => {
     expect([a, b]).toHaveLength(2);
   });
 
-  it("EM-S16: every *Error union exported by @pactjoy/app is covered (3 sub-unions allowlisted)", () => {
+  it("EM-S16: the *Error types of @pactjoy/app, the imports and the AppError union match exactly", () => {
     const index = readFileSync(resolve(import.meta.dirname, "../../app/src/index.ts"), "utf8");
-    const exported = [...index.matchAll(/\b([A-Z][A-Za-z]*Error)\b/g)].map((m) => m[1] ?? "");
-    const allow = new Set(["ValidateCommitmentError", "EntryValueError", "EntryWindowError"]);
     const source = readFileSync(resolve(import.meta.dirname, "../src/errors/app-error.ts"), "utf8");
-    const missing = [...new Set(exported)].filter((n) => !allow.has(n) && !source.includes(n));
-    expect(missing).toEqual([]);
-    expect(exported.length).toBeGreaterThanOrEqual(18);
+    expect(errorCoverageGaps(index, source)).toEqual({ imports: [], union: [] });
+    expect(exportedErrorNames(index).length).toBe(21);
+  });
+
+  it("EM-S16: the scan compares exact names, so a new CircleError is detected", () => {
+    const source = `import type { CreateCircleError, EntryError } from "@pactjoy/app";
+export type AppError = CreateCircleError | EntryError;`;
+    const index = `export type {
+  CreateCircleError,
+  type CircleError,
+  EntryError,
+  ValidateCommitmentError,
+} from "./x.ts";
+export type { Unrelated } from "./y.ts";`;
+    expect(exportedErrorNames(index)).toEqual([
+      "CircleError",
+      "CreateCircleError",
+      "EntryError",
+      "ValidateCommitmentError",
+    ]);
+    expect(errorCoverageGaps(index, source)).toEqual({
+      imports: ["CircleError"],
+      union: ["CircleError"],
+    });
+    const fixed = source
+      .replace("EntryError }", "EntryError, CircleError }")
+      .replace("| EntryError;", "| EntryError | CircleError;");
+    expect(errorCoverageGaps(index, fixed)).toEqual({ imports: [], union: [] });
   });
 });
 
