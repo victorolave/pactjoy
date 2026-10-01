@@ -16,6 +16,8 @@ export function createLazyHandler(
   build: () => Handler,
   deps: { readonly logger: Logger },
 ): Handler {
+  // The build is synchronous on purpose, so two concurrent first requests cannot both build.
+  // If it ever becomes async, memoize the promise instead of the result.
   let built: Handler | undefined;
   return async (request) => {
     if (built === undefined) {

@@ -135,6 +135,19 @@ describe("createLazyHandler (AC-S4)", () => {
     expect(attempts).toBe(2); // built handler is memoized after the successful retry
   });
 
+  it("a build failure whose message embeds a DSN does not log the password", async () => {
+    const lines: string[] = [];
+    const handler = createLazyHandler(
+      () => {
+        throw new Error("Invalid URL: 'postgres://u:PASS@h/db'");
+      },
+      { logger: createConsoleLogger((line) => lines.push(line)) },
+    );
+    expect((await handler(request("GET", "/nope"))).status).toBe(503);
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).not.toContain("PASS");
+  });
+
   it("a build failure never leaks the thrown message beyond 200 characters or its secrets", async () => {
     const lines: string[] = [];
     const handler = createLazyHandler(
@@ -200,6 +213,52 @@ describe("createConsoleLogger", () => {
     const parsed = JSON.parse(lines[0] ?? "{}") as Record<string, string>;
     expect(Object.keys(parsed).sort()).toEqual(["event", "level", "message"]);
     expect(parsed.message?.length).toBeLessThanOrEqual(201);
+  });
+
+  it("drops fields whose normalized name contains a sensitive word", () => {
+    const lines: string[] = [];
+    const logger = createConsoleLogger((line) => lines.push(line));
+    logger.error("x", {
+      authToken: "a",
+      invite_code: "b",
+      user_id: "c",
+      cookie: "d",
+      "set-cookie": "e",
+      refresh_token: "f",
+      DB_DSN: "g",
+      jwtClaims: "h",
+      requestId: "keep",
+    });
+    expect(JSON.parse(lines[0] ?? "{}")).toEqual({ level: "error", event: "x", requestId: "keep" });
+  });
+
+  it("masks bearer tokens and JWT-like strings in values", () => {
+    const lines: string[] = [];
+    const logger = createConsoleLogger((line) => lines.push(line));
+    logger.warn("x", { msg: "Bearer eyJhbGciOi.payload.sig", other: "see eyJabc.def.ghi here" });
+    expect(lines[0]).not.toContain("eyJ");
+    expect(lines[0]).toContain("Bearer ***");
+    logger.warn("y", { msg: "got Bearer opaque-token-123 from client" });
+    expect(lines[1]).not.toContain("opaque-token-123");
+  });
+
+  it("scrubs DSN credentials and bearer tokens out of an Error message", () => {
+    const lines: string[] = [];
+    const logger = createConsoleLogger((line) => lines.push(line));
+    logger.error("x", {
+      error: new Error("fail postgres://u:PASS@h/db Bearer eyJabc.def.ghi"),
+    });
+    expect(lines[0]).not.toContain("PASS");
+    expect(lines[0]).not.toContain("eyJabc");
+    expect(lines[0]).toContain("postgres://***@h/db");
+  });
+
+  it("scrubs before truncating: a secret straddling the 200-character cut is still removed", () => {
+    const lines: string[] = [];
+    const logger = createConsoleLogger((line) => lines.push(line));
+    logger.error("x", { message: `${"a".repeat(180)} postgres://u:PASSWORD123@h/db` });
+    // Truncating first would cut the "@" away and leave "PASSWOR" unmatched by the scrubber.
+    expect(lines[0]).not.toContain("PASS");
   });
 
   it("never throws, even for BigInt or circular fields", () => {

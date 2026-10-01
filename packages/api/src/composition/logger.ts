@@ -9,25 +9,40 @@ export interface Logger {
 
 const MAX_STRING = 200;
 
-/** Lower-cased field names that must never reach a log line (ADR-0011, design 6). */
-const SENSITIVE = new Set([
-  "authorization",
+/** Normalized (lower-case, `_`/`-` stripped) substrings: any key containing one is dropped. */
+const SENSITIVE_PARTS = [
   "token",
-  "accesstoken",
-  "body",
-  "note",
+  "auth",
+  "password",
+  "secret",
+  "cookie",
   "invitecode",
   "userid",
   "email",
   "databaseurl",
-  "api_database_url",
+  "connectionstring",
+  "dsn",
   "apikey",
-  "password",
-  "secret",
-  // Driver errors carry row data in these.
-  "detail",
-  "where",
-]);
+  "jwt",
+];
+
+/** Exact (normalized) names too generic for substring matching. Driver errors carry row data. */
+const SENSITIVE_EXACT = new Set(["body", "note", "detail", "where"]);
+
+const isSensitiveKey = (key: string): boolean => {
+  const normalized = key.toLowerCase().replace(/[_-]/g, "");
+  return SENSITIVE_EXACT.has(normalized) || SENSITIVE_PARTS.some((p) => normalized.includes(p));
+};
+
+/** Masks credentials that can hide inside free text (driver and URL errors echo them). */
+const scrub = (value: string): string =>
+  value
+    .replace(/([a-z][a-z0-9+.-]*:\/\/)[^\s/@'"]*@/gi, "$1***@")
+    .replace(/Bearer\s+\S+/gi, "Bearer ***")
+    .replace(/eyJ[\w-]*(?:\.[\w-]*){0,2}/g, "***");
+
+/** Scrubbing runs first: truncating first could cut a credential in half and defeat the patterns. */
+const sanitize = (value: string): string => truncate(scrub(value));
 
 const truncate = (value: string): string =>
   value.length > MAX_STRING ? `${value.slice(0, MAX_STRING)}…` : value;
@@ -35,11 +50,11 @@ const truncate = (value: string): string =>
 function safeJson(record: Record<string, unknown>): string {
   const seen = new WeakSet<object>();
   return JSON.stringify(record, function (this: unknown, key: string, value: unknown) {
-    if (key !== "" && SENSITIVE.has(key.toLowerCase())) return undefined;
+    if (key !== "" && isSensitiveKey(key)) return undefined;
     if (typeof value === "bigint") return value.toString();
-    if (typeof value === "string") return truncate(value);
+    if (typeof value === "string") return sanitize(value);
     if (value instanceof Error) {
-      return { name: value.name, message: truncate(value.message) };
+      return { name: value.name, message: sanitize(value.message) };
     }
     if (typeof value === "object" && value !== null) {
       if (seen.has(value)) return "[Circular]";
