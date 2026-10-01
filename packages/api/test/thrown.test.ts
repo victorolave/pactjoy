@@ -23,14 +23,14 @@ describe("thrown error mapping", () => {
     const gen = Object.assign(new Error("x"), { name: "InviteCodeGenerationFailed" });
     expect(map(gen, info)).toMatchObject({
       status: 500,
-      error: { code: "InviteCodeGenerationFailed" },
+      error: { code: "InviteCodeGenerationFailed", details: { requestId: "rid-1" } },
     });
   });
 
   it("EM-S11: InviteCodeGenerationFailed is 500 with its own code", () => {
     expect(map(new InviteCodeGenerationFailed(), info)).toMatchObject({
       status: 500,
-      error: { code: "InviteCodeGenerationFailed" },
+      error: { code: "InviteCodeGenerationFailed", details: { requestId: "rid-1" } },
     });
   });
 
