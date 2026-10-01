@@ -4,7 +4,7 @@
 
 **PactJoy**: a social habits app. Personal (hobby) project; if it works it could become a product, but that decision is not being made yet.
 
-Status: MVP specification and design are complete; stack chosen (2026-09-24). Phase 1 done (2026-09-27): `packages/engine` implements the full scoring engine and passes all 96 worked-example rows. Phase 2 in progress: `packages/app` use cases done (2026-09-30, change `app-foundation`, S0–S9). No database, API or UI yet.
+Status: MVP specification and design are complete; stack chosen (2026-09-24). Phase 1 done (2026-09-27): `packages/engine` implements the full scoring engine and passes all 96 worked-example rows. Phase 2 in progress: `packages/app` use cases done (2026-09-30, change `app-foundation`, S0–S9). Postgres adapter done in code (ADR-0010); no API or UI yet; hosted Supabase setup pending.
 
 The author works in Spanish: reply in Spanish. Code, commits and repository docs are in English.
 
@@ -124,7 +124,7 @@ Full detail in the Mechanics page in Notion.
 
 1. ~~`packages/engine` + tests~~: done. Public API in `packages/engine/src/index.ts`; decisions in ADR-0004 to ADR-0006.
 2. ~~`packages/app` use cases~~: done (change `app-foundation`, S0–S9 merged 2026-09-30). The entry, circle and season ports document the contracts the Postgres adapter must meet. `packages/app` owns converting real time into `SeasonDay` (ADR-0004), the 48 h pause auto-approval and notifications. Next, in order:
-   - ~~B: Postgres adapter and schema (`packages/db`)~~: done (ADR-0010; migrations in `supabase/migrations`, tests against real Postgres).
+   - B: Postgres adapter and schema (`packages/db`): done in code; hosted Supabase setup pending (ADR-0010 operational checklist). Migrations in `supabase/migrations`, tests against real Postgres.
    - C: the `api` function.
    - A2: pause workflow; it must wire `pauseGraceExtensionDays`, currently hard-coded to 0.
    - A3: social.

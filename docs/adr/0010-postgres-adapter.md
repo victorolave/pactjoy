@@ -12,11 +12,11 @@
 
 - **Driver:** `postgres` (postgres.js), confined to `packages/db` and wrapped behind an internal `SqlExecutor` seam, so repositories write plain parameterized SQL. No ORM, no `supabase-js`. `prepare: false`, because the production URL is the Supavisor transaction pooler. `packages/db` exports only `createPostgresUnitOfWork` and its option types.
 - **Migrations:** plain SQL in `supabase/migrations` (`YYYYMMDDHHMMSS_name.sql`, forward-only). Production applies them with `supabase db push`; the test harness applies the same files in lexical order. No `auth.*`, triggers, functions or procedures (enforced by a scan in the test suite).
-- **Schema and security model:** everything lives in schema `pactjoy`, which the Supabase Data API does not expose (nothing in `public`). Three layers, each tested from the catalog and by connecting as the roles (`packages/db/test/security.pg.test.ts`):
+- **Schema and security model:** everything lives in schema `pactjoy` and nothing in `public`. Keeping `pactjoy` out of the Supabase Data API exposed schemas is a MANUAL hosted setting (see the operational checklist); no file in the repository configures it (no `config.toml`). The protection that lives in the repository is the schema `USAGE` revoke plus RLS with no policies. Each layer is tested from the catalog and by connecting as the roles (`packages/db/test/security.pg.test.ts`):
   - `anon`, `authenticated` and `PUBLIC` have no `USAGE` on the schema (migration 000000);
-  - every table has RLS enabled and there are no policies, so a role that somehow got a grant would still see zero rows. A catalog scan fails any future table without RLS;
-  - migration 000500 revokes every privilege on all tables and sequences and sets default privileges so later tables are covered too.
-  The adapter connects with a dedicated database URL; the Supabase service-role key is never used and never committed (scan in the boundary test). Authorization lives in the use cases. Rollback on Supabase is `drop schema pactjoy cascade`.
+  - every table has RLS enabled and there are no policies, so a role that somehow got a grant would still see zero rows. A catalog scan fails any future table without RLS. The adapter's connection role owns the schema and its tables, so RLS does not protect against the adapter itself: authorization lives in the use cases;
+  - migration 000500 revokes every privilege on all tables and sequences and sets default privileges so later tables are covered too. Convention: Supabase grants new objects to `anon` and `authenticated` through a GLOBAL default ACL of the migrating role, and an in-schema `alter default privileges ... revoke` does not cancel it (verified on PG17). The migration therefore carries both a global and an in-schema revoke, and the harness simulates both grants before migrating, so deleting 000500 or its global revoke fails the tests.
+  The adapter connects with a dedicated database URL; the Supabase service-role key is never used and never committed (scan in the boundary test). Rollback on Supabase is `drop schema pactjoy cascade`.
 - **Transactions:** the Unit of Work is `sql.begin` at READ COMMITTED. `guardVersion` is an eager `SELECT version ... FOR NO KEY UPDATE` and never `FOR SHARE`:
   - it conflicts with any concurrent UPDATE or guard of the same row, so guard semantics are unchanged;
   - it does not block the `KEY SHARE` locks that foreign-key checks take, so `recordEntry` inserts are not serialized against season guards;
@@ -25,7 +25,7 @@
   - therefore the circle invite lives in a child table, `circle_invites` (`circle_id` primary key and FK to `circles` with RESTRICT, unique `code`, `created_at`, `expires_at`, `created_by`). Regenerating an invite updates that table, and a circle save never updates a key column of `circles`. The migration arrives with the circle repository (B4a), together with a regression test: a circle save with a regenerated invite racing a concurrent season insert must not deadlock.
 - **Season children and references:** foreign keys point only at aggregate roots and are all RESTRICT (`circle_members` and `seasons` to `circles`, `entries` to `seasons`); only a season's own children (`season_commitments`, `season_approvals`) cascade. `entries` has no foreign key to commitments or habits, because children are replaced wholesale on save and aggregates reference each other by id. `entries.insert_seq` and `seasons.insert_seq` (identity) give the insertion order the ports promise; `created_at` ties under a fixed clock.
 - **Reads:** `read()` runs `repeatable read read only`, so a season and its children load from one snapshot. `guardVersion` is a no-op there, as the port says.
-- **Error mapping:** `40P01` and `40001` are retried; a `23505` on a named key constraint (primary keys, `circle_invites` code, the entry idempotency key) becomes `ConcurrencyConflict` and is not retried. Everything else (other constraints, `25006`, `25P02`, `42P01`) is rethrown raw because it is a bug, not a race. Constraints are named explicitly in the migrations because the mapping keys on the names.
+- **Error mapping:** `40P01` and `40001` are retried; a `23505` on a named key constraint (primary keys, `circle_invites` code, the entry idempotency key) becomes `ConcurrencyConflict` and is not retried. After the retries are exhausted, `40P01` and `40001` also map to `ConcurrencyConflict`. A `23505` without a constraint name is rethrown raw. Everything else (other constraints, `25006`, `25P02`, `42P01`) is rethrown raw because it is a bug, not a race. Constraints are named explicitly in the migrations because the mapping keys on the names.
 - **Codecs:** the driver `types` parse timestamptz into exact `Instant` milliseconds with a strict parser, dates as raw strings and `int8` as `bigint`; `timestamp` without time zone throws. Values are bound as text with explicit casts. The season measure is versioned jsonb, `{ v: 1, ... }`, with fractions as `{ num, den }` decimal-integer strings (a JSON number loses precision beyond 2^53); decoding an unknown `v` or shape throws `MeasureCodecError`. The jsonb parameter is written as `$n::text::jsonb`, because postgres.js would otherwise `JSON.stringify` the already-serialized payload a second time.
 - **Ids:** `createUuidV7IdGenerator` in `packages/app` (RFC 9562, `crypto.getRandomValues`, portable). Ids are time-ordered across milliseconds only and nothing orders by id; the 48-bit timestamp would truncate above 2^48 ms, which `Instant` cannot reach.
 - **Retry:** at most 2 attempts in total, only for 40P01/40001 raised by Postgres. A version-mismatch `ConcurrencyConflict` is never retried. Rule: `work` has no external side effects (notifiers go after commit or through an outbox), because it may run twice.
@@ -41,7 +41,21 @@
 - The error-to-HTTP mapping must cover every app error kind, including the newer ones (invalid why, category and note, the custom-label errors, frequency and weekday errors, precision errors, `IdempotencyKeyReused`, `EntryDeleted`, `InvalidClientRequestId`).
 - No `Promise.all` inside a transaction (one connection, statements are sequential).
 - Verify once against production what could not be tested locally: the hosted Supavisor, TLS and Edge cold starts. Use the pooler (6543, transaction mode) for the function and the direct URL for migrations (`supabase db push`).
+- Add a CI or startup check of the Data API exposed schemas, so SS-S3 stops depending on a manual step.
+- Extend the SS-S9 and DC-S16 import scans to `supabase/functions` and Deno specifiers (`npm:`, `jsr:`, `deno.land/x/postgres`, backtick imports).
+- Decide whether to manage hosted settings with `supabase config push`.
 - The custom-label length counts UTF-16 units while the note limit counts code points; revisit only if it becomes user-facing.
+
+### Operational checklist (hosted Supabase, manual)
+
+- Data API exposed schemas: only `public` and `graphql_public`, or disable the Data API. `pactjoy` must not be listed.
+- Before `supabase db push`, check `pg_default_acl` for the migrating role.
+- After the push, verify:
+  - `has_schema_privilege('anon', 'pactjoy', 'USAGE')` is false (same for `authenticated`);
+  - `pg_policies` has 0 rows for schema `pactjoy`;
+  - no `pactjoy` table has RLS off (`pg_class.relrowsecurity`).
+- Use a dedicated database password or role for the adapter. Use the pooler URL (6543) at runtime and the direct URL for migrations. Never use the service-role key.
+- Add the `db` CI check to branch protection.
 
 ### Spike results (2026-09-30, local Supabase CLI 2.119.0, edge-runtime 1.77.1 / Deno 2.1.4)
 
