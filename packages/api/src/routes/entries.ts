@@ -4,7 +4,7 @@ import { presentRecordEntryResult } from "../presenters/entry.ts";
 import { entryValue } from "../validation/entry.ts";
 import { forDate, uuid } from "../validation/formats.ts";
 import { nullable, object, optional, string } from "../validation/schema.ts";
-import { type ApiDeps, type Route, resolveViewer, validate } from "./support.ts";
+import { type ApiDeps, type Route, validate } from "./support.ts";
 
 const seasonParams = object({ seasonId: uuid });
 // The idempotency key lives in the body (never the query or a header, UE-E-S16). The member is
@@ -31,11 +31,11 @@ export function entryRoutes(deps: ApiDeps): Route[] {
           commitmentId: commitmentId(input.body.commitmentId),
         });
         if (!result.ok) return appErrorResult(result.error);
-        // 201 for a new entry, 200 for an idempotent replay (T1).
-        const viewer = await resolveViewer(deps, ctx.actor);
+        // 201 for a new entry, 200 for an idempotent replay (T1). The viewer is the member the use
+        // case resolved in its own transaction, never `entry.memberId` and never a second read.
         return {
           status: result.value.replayed ? 200 : 201,
-          data: presentRecordEntryResult(result.value, viewer),
+          data: presentRecordEntryResult(result.value, result.value.memberId),
         };
       },
     },

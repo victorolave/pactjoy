@@ -31,3 +31,35 @@ export async function givenActiveSeason(measure: object = DONE) {
   await ctx.call("PUT", `/seasons/${seasonId}/approval`, "andrea");
   return { ...ctx, seasonId, commitmentId, path: `/seasons/${seasonId}/entries` };
 }
+
+/** Andrea owns the circle, Victor joins before the season; both commit and approve. */
+export async function givenTwoMemberSeason(measure: object = DONE) {
+  const ctx = setup();
+  const circle = await ctx.call("POST", "/circles", "andrea", { name: "Crew" });
+  const circleId: string = circle.json.data.id;
+  const invite = await ctx.call("POST", `/circles/${circleId}/invite`, "andrea");
+  await ctx.call("POST", "/circles/join", "victor", { inviteCode: invite.json.data.code });
+  const season = await ctx.call("POST", `/circles/${circleId}/seasons`, "andrea", {
+    timezone: "America/Bogota",
+    startDate: "2023-11-14",
+    lengthWeeks: 4,
+  });
+  const seasonId: string = season.json.data.id;
+  const commitmentIds: Record<"andrea" | "victor", string> = { andrea: "", victor: "" };
+  for (const who of ["andrea", "victor"] as const) {
+    const habit = await ctx.call("POST", "/habits", who, { name: `Run ${who}` });
+    const added = await ctx.call("POST", `/seasons/${seasonId}/commitments`, who, {
+      habitId: habit.json.data.id,
+      weightPercent: 100,
+      privacy: "visible",
+      measure,
+    });
+    const mine = added.json.data.commitments.find(
+      (c: { habitId?: string }) => c.habitId === habit.json.data.id,
+    );
+    commitmentIds[who] = mine.id;
+  }
+  await ctx.call("PUT", `/seasons/${seasonId}/approval`, "andrea");
+  await ctx.call("PUT", `/seasons/${seasonId}/approval`, "victor");
+  return { ...ctx, circleId, seasonId, commitmentIds, path: `/seasons/${seasonId}/entries` };
+}

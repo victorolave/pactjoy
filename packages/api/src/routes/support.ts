@@ -8,7 +8,6 @@ import type {
   TimeZone,
   UnitOfWork,
 } from "@pactjoy/app";
-import type { MemberId } from "@pactjoy/engine";
 import type { TokenVerifier } from "../auth/token-verifier.port.ts";
 import type { Logger } from "../composition/logger.ts";
 import { apiFailure } from "../errors/api-error.ts";
@@ -50,19 +49,6 @@ export function validate<P, B>(
   const body = parse(schemas.body, ctx.body, schemas.emptyBody ? { emptyBody: "object" } : {});
   if (!body.ok) return { ok: false, result: invalid(body.issues) };
   return { ok: true, params: params.value, body: body.value };
-}
-
-/**
- * The actor's own MemberId, read from the circle they are an active member of. It must NEVER
- * come from the entry being presented or from the request body: presenting an entry against
- * `entry.memberId` would make the ownership guard a tautology. Runs after the use case has
- * committed, so a miss means the member left in between: a bug-class 500, never a leak.
- */
-export async function resolveViewer(deps: ApiDeps, actor: Actor): Promise<MemberId> {
-  const circle = await deps.uow.read((repos) => repos.circles.findActiveByUser(actor.userId));
-  const member = circle?.members.find((m) => m.userId === actor.userId && m.status === "active");
-  if (!member) throw new Error("resolveViewer: the actor is no longer an active member");
-  return member.id;
 }
 
 /** Use-case Result to an API result: the app error through the C3b map, success presented. */

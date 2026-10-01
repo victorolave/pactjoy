@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { DONE_BODY, givenActiveSeason, MINUTES } from "./entries-fixture.ts";
+import { DONE_BODY, givenActiveSeason, givenTwoMemberSeason, MINUTES } from "./entries-fixture.ts";
+import { ANDREA, VICTOR } from "./harness.ts";
 
 describe("POST /seasons/:seasonId/entries (UE-E-S1..S6)", () => {
   it("S1: 201 replayed:false, no requestFingerprint, no userId", async () => {
@@ -18,33 +19,34 @@ describe("POST /seasons/:seasonId/entries (UE-E-S1..S6)", () => {
     expect(JSON.stringify(json)).not.toContain("aaaaaaaa-0000-4000-8000-000000000001");
   });
 
-  it("the viewer MemberId comes from a circle read, not from the entry (#5040)", async () => {
-    const { call, path, commitmentId, read, app } = await givenActiveSeason();
-    const reads = read.mock.calls.length;
-    const { json } = await call("POST", path, "andrea", { commitmentId, ...DONE_BODY });
-    expect(read.mock.calls.length).toBe(reads + 1);
-    const circle = await app.circles.findActiveByUser(
-      "aaaaaaaa-0000-4000-8000-000000000001" as never,
-    );
-    expect(json.data.entry.memberId).toBe(circle?.members[0]?.id);
+  it("the presented memberId is the acting member's, not the circle owner's (two members)", async () => {
+    const { call, path, commitmentIds, app, circleId } = await givenTwoMemberSeason();
+    const circle = await app.circles.get(circleId as never);
+    const memberOf = (user: string) => circle?.members.find((m) => m.userId === user)?.id;
+    const body = (who: "andrea" | "victor") => ({
+      commitmentId: commitmentIds[who],
+      ...DONE_BODY,
+    });
+
+    const victor = await call("POST", path, "victor", body("victor"));
+    const replay = await call("POST", path, "victor", body("victor"));
+    const andrea = await call("POST", path, "andrea", body("andrea"));
+
+    expect(victor.status).toBe(201);
+    expect(victor.json.data.entry.memberId).toBe(memberOf(VICTOR));
+    expect([replay.status, replay.json.data.entry.memberId]).toEqual([200, memberOf(VICTOR)]);
+    expect(andrea.json.data.entry.memberId).toBe(memberOf(ANDREA));
+    expect(memberOf(VICTOR)).not.toBe(memberOf(ANDREA));
   });
 
-  it("an entry that is not the viewer's own is never presented: 500 Internal, no note leaked", async () => {
-    const { call, path, commitmentId, read, app } = await givenActiveSeason();
-    const circle = await app.circles.findActiveByUser(
-      "aaaaaaaa-0000-4000-8000-000000000001" as never,
-    );
-    const other = { ...circle, members: [{ ...circle?.members[0], id: "m-someone-else" }] };
-    read.mockImplementationOnce(async (work) =>
-      work({ circles: { findActiveByUser: async () => other } } as never),
-    );
-    const { status, json } = await call("POST", path, "andrea", {
-      commitmentId,
+  it("a member who left gets 403 NotAMember, never a 500", async () => {
+    const { call, path, commitmentIds, circleId } = await givenTwoMemberSeason();
+    await call("POST", `/circles/${circleId}/leave`, "victor");
+    const { status, json } = await call("POST", path, "victor", {
+      commitmentId: commitmentIds.victor,
       ...DONE_BODY,
-      note: "private words",
     });
-    expect([status, json.error.code]).toEqual([500, "Internal"]);
-    expect(JSON.stringify(json)).not.toContain("private words");
+    expect([status, json.error.code]).toEqual([403, "NotAMember"]);
   });
 
   it("S2: the same request again is 200 replayed:true with the same entry id", async () => {
