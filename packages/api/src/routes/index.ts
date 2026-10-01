@@ -4,6 +4,7 @@ import { createThrownMapper } from "../errors/thrown.ts";
 import { createPipeline, type PipelineOptions } from "../http/pipeline.ts";
 import type { Handler } from "../http/types.ts";
 import { circleRoutes } from "./circles.ts";
+import { commitmentRoutes } from "./commitments.ts";
 import { habitRoutes } from "./habits.ts";
 import { seasonRoutes } from "./seasons.ts";
 import type { ApiDeps, Route } from "./support.ts";
@@ -16,6 +17,7 @@ const routeTable = (deps: ApiDeps): Route[] => [
   ...circleRoutes(deps),
   ...habitRoutes(deps),
   ...seasonRoutes(deps),
+  ...commitmentRoutes(deps),
 ];
 
 /** The whole API as a Web `Request` handler, built from ports only. */
