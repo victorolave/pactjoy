@@ -1,6 +1,6 @@
-# Minimal local Supabase config: only the deviations from the CLI defaults (ADR-0011).
+# Minimal local Supabase config: pinned values (some restate CLI defaults) (ADR-0011).
 # Local development only. Nothing here is applied to the hosted project by the repository;
-# `supabase config push` is deliberately not used (open question Q4).
+# `supabase config push` is not used until Q4 is decided.
 
 project_id = "pactjoy"
 
@@ -14,7 +14,7 @@ major_version = 17
 
 [auth]
 site_url = "http://localhost:5173"
-# Open signup is a product question (Q6); this flag is the single place to close it locally.
+# Open signup is a product question (Q6); this flag is the single place to close it locally (true is the design default and the CLI default).
 enable_signup = true
 
 [auth.email]

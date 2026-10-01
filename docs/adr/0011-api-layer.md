@@ -8,7 +8,7 @@
 
 `packages/app` exposes 18 use cases behind ports (ADR-0008) and `packages/db` implements them on Postgres (ADR-0010). The next step is the HTTP surface the PWA talks to, without letting Supabase or any other vendor leak into the domain or the use cases (CLAUDE.md, high decoupling). The runtime is a Supabase Edge Function (Deno), which has three consequences that shape the design: it cannot run NestJS, its import resolution for code outside the function directory is unverified, and a dead database connection can kill the worker instead of raising a catchable error.
 
-Product questions Q1 to Q8 (account deletion, read models, display names, `config push`, CORS origins, signup policy, status-code semantics, owner visibility of private commitments) are open. The design isolates each of them to one place so that answering them later changes a table or a flag, not the structure.
+Product questions Q1 to Q15 are open (see Open questions); the first eight cover account deletion, read models, display names, `config push`, CORS origins, signup policy, status-code semantics and owner visibility of private commitments. The design isolates each of them to one place so that answering them later changes a table or a flag, not the structure.
 
 ## Decision
 
@@ -57,21 +57,21 @@ Not yet verified, because they need the hosted project (ops steps S0.2 and S0.3 
 
 `deno.json` maps `@pactjoy/*` to `../../../packages/*/src`, which is OUTSIDE `supabase/functions`. Only `functions serve` was spiked. It is unknown whether `supabase functions deploy` (with `--use-api` or with Docker) bundles files outside the function directory. Until S0.2 confirms it with a real deploy followed by `functions download` (checking that the `packages/*/src` files are in the bundle), the shell is not proven deployable and C8 must not count as done (DE-R4). If the files are missing, the fallback options, not yet chosen, are:
 
-- a prebuild step that copies or bundles `packages/*/src` into `supabase/functions/_shared/` before deploy (F1);
+- a prebuild step that copies or bundles `packages/*/src` into `supabase/functions/_vendor/` before deploy (F1);
 - `deno bundle` into a single file inside the function directory, with a CI bundle step (F2).
 
 Either way only the shell, the import map and the deploy procedure change; `packages/*` do not.
 
 ### Why no lockfile
 
-`deno.json` sets `"lock": false`. The direct npm dependencies are exact-pinned in the import map (and a test checks them against `pnpm-lock.yaml`), and `postgres` and `jose` have no transitive dependencies. A `deno.lock` written by a newer Deno could break the older Deno in the Edge runtime. The cost is losing integrity hashes for those two packages.
+`deno.json` sets `"lock": false`. The direct npm dependencies are exact-pinned in the import map (and a test checks them against `pnpm-lock.yaml`), and `postgres` 3.4.9 and `jose` 6.2.12 declare no `dependencies`, `optionalDependencies` or `peerDependencies` in their `package.json` (verified in the installed pnpm store, 2026-10-01). Unverified hypothesis: a `deno.lock` written by a newer Deno could break the older Deno in the Edge runtime. The cost is losing integrity hashes for those two packages.
 
 ### Config and gotchas
 
-- `supabase/config.toml` is minimal and local-only: the Data API schemas (without `pactjoy`), Postgres 17, the email OTP shape (6 digits, 1 hour), `[functions.api]` and the placeholder OTP template. The repository does not push it to the hosted project (Q4). A boundary test pins the schemas, `verify_jwt = false`, the import map and the absence of service-role keys.
+- `supabase/config.toml` is minimal and local-only: the Data API schemas (without `pactjoy`), Postgres 17, the email OTP shape (6 digits, 1 hour: the design value, which is also the CLI default), `[functions.api]` and the placeholder OTP template. The repository does not push it to the hosted project (Q4). A boundary test pins the schemas, `verify_jwt = false`, the import map and the absence of service-role keys.
 - The local signing key `supabase/signing_keys.json` is a secret and is gitignored. It is optional locally because the CLI default is already ES256.
 - A function worker that cannot connect to the database dies and answers an empty 503 without CORS headers; a browser reports it as a network error. Check the function logs, not the response.
-- The function reads secrets through `Deno.env`. Copy the pooler hostname into `API_DATABASE_URL` exactly as Supabase prints it. If the connection fails with an invalid-hostname error, check for an underscore in the host: some DNS and TLS stacks reject it. This is a precaution carried over from the task notes, not something the spike reproduced.
+- The function reads secrets through `Deno.env`. Copy the pooler hostname into `API_DATABASE_URL` exactly as Supabase prints it.
 
 ### Open questions
 
@@ -97,7 +97,7 @@ Product questions for the owner. None is decided here; each has a recommendation
 
 Nothing here runs from CI or from the repository.
 
-- S0.2: set up the hosted project and link it (`supabase link`). Follow the ADR-0010 checklist for `db push`; `pactjoy` must not be in the Data API exposed schemas.
+- S0.0: prerequisites: set up the hosted project and link it (`supabase link`). Follow the ADR-0010 checklist for `db push`; `pactjoy` must not be in the Data API exposed schemas.
 - Auth: enable asymmetric JWT signing keys (the JWKS endpoint must serve ES256 or RS256), set the email OTP length to 6, put `{{ .Token }}` in the magic-link template, and configure SMTP through a provider API (port 465 or 2525; 25 and 587 are blocked).
 - Secrets (`supabase secrets set`), never in a file in the repository:
   - `API_DATABASE_URL`: the Supavisor transaction pooler URL (port 6543) of a dedicated database role, never the service-role key;
@@ -140,13 +140,13 @@ Nothing here runs from CI or from the repository.
 
 - Swapping the runtime (for example to NestJS) replaces only the shell; the router, auth, validation and presenters move unchanged.
 - Auth, routing and error mapping are covered by Node tests, not only by type checks.
-- Each open product question maps to one place: Q5 is env, Q7 is one table, Q4 and Q6 are config flags, Q1 is a reserved route, Q3 (display names) is a presenter field: responses expose only identifiers until the question is answered, and adding names later touches the presenter and the read model, not the router or auth.
+- Each open product question maps to one place: Q5 is env, Q7 is one table, Q4 is a config decision and Q6 is a config flag (the `enable_signup = true` in `config.toml` is the design default pending Q6, and also the CLI default), Q1 is a reserved route, Q3 (display names) is a presenter field: responses expose only identifiers until the question is answered, and adding names later touches the presenter and the read model, not the router or auth.
 
 ### Negative
 
 - Owners see their own private commitments as hidden in season responses until a viewer-aware read model exists (Q8).
 - The PWA has no read endpoints for circles, seasons or habits yet (Q2).
-- Local development cannot use the default HS256 keys; asymmetric keys are required (`supabase gen signing-key`).
+- Local development works with the CLI defaults (ES256 with a served JWKS, see the spike); a local signing key file (`supabase gen signing-key`) is optional. The hosted project needs asymmetric JWT signing keys enabled (ops checklist, S0.0).
 - A database outage at connect time is an empty 503 without CORS that the API cannot improve.
 
 ### Neutral
