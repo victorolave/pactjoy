@@ -7,6 +7,7 @@
  */
 
 export { describeCircleRepositoryContract } from "./circle.contract.ts";
+export { describeEntryRepositoryContract } from "./entry.contract.ts";
 export type { ContractSubject } from "./fixtures.ts";
 export {
   describeCircleGuardContract,
