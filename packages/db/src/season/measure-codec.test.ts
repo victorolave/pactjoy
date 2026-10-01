@@ -156,10 +156,19 @@ describe("measure codec corruption", () => {
   });
 
   it("throws on bad weekdays and bad times", () => {
-    for (const w of [[7], [-1], [1.5], "1", [1, 1]]) {
+    for (const w of [[7], [-1], [1.5], "1"]) {
       throws(doneWith({ kind: "specificDays", weekdays: w }));
     }
     for (const t of [0, "3", 1.5]) throws(doneWith({ kind: "timesPerWeek", times: t }));
+  });
+
+  it("accepts structurally valid input the app bounds forbid, and ignores extra keys", () => {
+    const m: Measure = {
+      unit: "done",
+      schedule: { period: "perSession", frequency: { kind: "specificDays", weekdays: [1, 1] } },
+    };
+    expect(decodeMeasure(viaJson(m))).toEqual(m);
+    expect(decodeMeasure({ ...(viaJson(m) as object), extra: 1 })).toEqual(m);
   });
 
   it("rejects a done payload with a weeklyTotal schedule", () => {

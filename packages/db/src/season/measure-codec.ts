@@ -10,20 +10,22 @@ import type {
 import { frac } from "@pactjoy/engine";
 
 /**
- * Versioned jsonb codec for a commitment `Measure` (SP-R5). Pure: no driver, no Node.
+ * Versioned jsonb codec for a commitment `Measure` (SP-R5).
  *
- * Stored shape, version 1:
+ * Stored shape v1:
  * - done:     `{ v: 1, unit: "done", schedule }`
  * - quantity: `{ v: 1, unit, customLabel, precision, target, schedule }`
  * - fractions are `{ num: "<int>", den: "<int>" }` decimal STRINGS, never JSON numbers
  *   (a number loses precision beyond 2^53, ADR-0004).
  *
- * Decoding rebuilds every fraction through the engine's `frac`, so the result is
- * branded. A stored fraction that is not already normalized is corruption.
+ * The codec checks STRUCTURE only. Business bounds (non-empty or unique weekdays,
+ * `times` <= 7, label characters) are owned by `validate-commitment` in the app.
+ * Unknown extra keys are ignored in v1. Fractions are rebuilt through the engine's
+ * `frac` (branded); a stored fraction that is not normalized is corruption.
  */
 export const MEASURE_CODEC_VERSION = 1;
 
-/** The stored payload is corrupt or from a version this code does not know. */
+/** Corrupt payload, or a version/variant this code does not know. */
 export class MeasureCodecError extends Error {
   override readonly name = "MeasureCodecError";
 }
@@ -174,10 +176,8 @@ function decodeSchedule(value: unknown): Schedule {
   }
   if (f.kind === "specificDays") {
     const days = f.weekdays;
-    if (!Array.isArray(days) || !days.every(isWeekday) || new Set(days).size !== days.length) {
-      throw new MeasureCodecError(
-        "measure: schedule.frequency.weekdays must be unique 0-6 integers",
-      );
+    if (!Array.isArray(days) || !days.every(isWeekday)) {
+      throw new MeasureCodecError("measure: schedule.frequency.weekdays must be 0-6 integers");
     }
     return schedule({ kind: "specificDays", weekdays: days });
   }
