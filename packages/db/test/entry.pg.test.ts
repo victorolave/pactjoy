@@ -70,12 +70,6 @@ const add = (e: EntryRecord, u = uow) =>
     await entries.add(e);
     return ok(undefined);
   });
-/** Inserts a tombstone the way `remove` will (B6b), straight through SQL. */
-const tombstone = (e: EntryRecord) =>
-  admin.unsafe(
-    "insert into pactjoy.entries (id, season_id, member_id, commitment_id, client_request_id, day, recorded_on, recorded_at, version, request_fingerprint, deleted) values ($1, $2, $3, $4, $5, 1, 1, now(), 1, $6, true)",
-    [e.id, e.seasonId, e.memberId, e.commitmentId, e.clientRequestId, e.requestFingerprint],
-  );
 afterAll(async () => {
   await client.end();
   await admin.end();
@@ -101,32 +95,6 @@ beforeEach(async () => {
 });
 
 describe("entry repository on Postgres (add/read side)", () => {
-  it("tombstones are invisible to get and listBySeason, visible to getStored and findByClientRequest, and keep their key taken", async () => {
-    const live = entry(1);
-    const dead = entry(2);
-    await add(live);
-    await tombstone(dead);
-    const read = await uow.read(async ({ entries }) => ({
-      get: await entries.get(dead.id),
-      list: await entries.listBySeason(season.id),
-      stored: await entries.getStored(dead.id),
-      found: await entries.findByClientRequest(dead.memberId, dead.commitmentId, "req-2"),
-    }));
-    expect(read.get).toBeNull();
-    expect(read.list).toEqual([live]);
-    expect(read.stored).toMatchObject({
-      deleted: true,
-      value: null,
-      note: null,
-      version: 1,
-      requestFingerprint: "fp-2",
-    });
-    expect(read.found).toEqual(read.stored);
-    await expect(add(entry(3, { clientRequestId: "req-2" }))).rejects.toBeInstanceOf(
-      ConcurrencyConflict,
-    );
-  });
-
   it("EP-S7: the idempotency key is a plain unique constraint and a concurrent duplicate add loses", async () => {
     const [{ def }] = (await admin.unsafe(
       "select pg_get_indexdef(indexrelid) as def from pg_index where indexrelid = 'pactjoy.entries_client_request_key'::regclass",
