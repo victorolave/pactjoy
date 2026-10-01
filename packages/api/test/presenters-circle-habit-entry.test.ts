@@ -121,8 +121,12 @@ describe("presenters: circle, habit, entry", () => {
       code: "AB3D7K",
       createdAt: ISO,
       expiresAt: "2023-11-14T22:13:21.123Z",
-      createdBy: "m1",
     });
+    expect(Object.keys(presentCircle(circle, { userId: ME }).invite ?? {}).sort()).toEqual([
+      "code",
+      "createdAt",
+      "expiresAt",
+    ]);
     expect(presentCircle(circle, { userId: OTHER }).invite).toBeNull();
     expect(presentCircle(circle, { userId: userId("u-stranger") }).invite).toBeNull();
   });

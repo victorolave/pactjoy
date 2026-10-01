@@ -21,6 +21,8 @@ describe("POST /circles/join (UE-C-S6..S8)", () => {
     expect(status).toBe(200);
     expect(json.data.members).toHaveLength(2);
     expect(json.data.invite.code).toBe(code); // the joiner is an active viewer, so the invite shows
+    expect(Object.keys(json.data.invite).sort()).toEqual(["code", "createdAt", "expiresAt"]);
+    expect(json.data.invite).not.toHaveProperty("createdBy");
     expect(json.data.members.filter((m: { isYou: boolean }) => m.isYou)).toHaveLength(1);
     expect(JSON.stringify(json)).not.toContain(VICTOR);
   });

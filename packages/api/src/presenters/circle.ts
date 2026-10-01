@@ -5,7 +5,6 @@ export interface InviteDto {
   readonly code: string;
   readonly createdAt: string;
   readonly expiresAt: string;
-  readonly createdBy: string;
 }
 
 export interface CircleDto {
@@ -29,7 +28,6 @@ export function presentInvite(invite: Invite): InviteDto {
     code: invite.code,
     createdAt: presentInstant(invite.createdAt),
     expiresAt: presentInstant(invite.expiresAt),
-    createdBy: invite.createdBy,
   };
 }
 

@@ -88,7 +88,7 @@ The owner answered Q1 to Q15 on 2026-10-01, following the recommendations except
 8. Q8: The owner should see their own private commitments, which needs a viewer-aware season read model (tied to Q2). Until then season responses hide private commitments from everyone.
 9. Q9: Pact approvals (who and when) stay visible to every member (current behaviour).
 10. Q10: A member who left keeps read-only access to the circle's member list, consistent with read-only scores.
-11. Q11: Remove `createdBy` from the invite DTO (presenter change, pending).
+11. Q11: Remove `createdBy` from the invite DTO (implemented).
 12. Q12: Same-value season and commitment edits are no-ops (see Decisions taken during implementation; slices PR2 and PR3).
 13. Q13: Pact approval carries `expectedPactRevision`; stale is 409 `StaleSeason` (see Decisions taken during implementation).
 14. Q14: see Q7.

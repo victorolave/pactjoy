@@ -137,6 +137,8 @@ describe("POST /circles/:circleId/invite (UE-C-S5)", () => {
     const first = await call("POST", path, "andrea");
     expect(first.status).toBe(201);
     expect(first.json.data.code).toMatch(CODE);
+    expect(Object.keys(first.json.data).sort()).toEqual(["code", "createdAt", "expiresAt"]);
+    expect(first.json.data).not.toHaveProperty("createdBy");
     const second = await call("POST", path, "andrea", {});
     expect([second.status, second.json.data.code === first.json.data.code]).toEqual([201, false]);
   });
