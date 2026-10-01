@@ -338,4 +338,180 @@ describe("validateCommitment", () => {
       expect(reach("custom", { precision: "decimal" })("0.5", "2.25").ok).toBe(true);
     });
   });
+  describe("frequency (user decision 2026-09-30)", () => {
+    const doneWith = (frequency: unknown) =>
+      validateCommitment({
+        weightPercent: 20,
+        measure: { unit: "done", frequency: frequency as never },
+      });
+    const quantityWith = (frequency: unknown) =>
+      validateCommitment({
+        weightPercent: 20,
+        measure: {
+          unit: "minutes",
+          direction: "reach",
+          minimum: "1",
+          ideal: "2",
+          schedule: { period: "perSession", frequency: frequency as never },
+        },
+      });
+    const times = (n: number) => ({ kind: "timesPerWeek", times: n });
+    const days = (weekdays: number[]) => ({ kind: "specificDays", weekdays });
+
+    for (const [name, run] of [
+      ["done", doneWith],
+      ["perSession quantity", quantityWith],
+    ] as const) {
+      describe(name, () => {
+        it.each([0, 8, -1, 1.5, Number.NaN])("rejects %s times per week", (n) => {
+          expect(run(times(n))).toEqual({ ok: false, error: { kind: "InvalidTimesPerWeek" } });
+        });
+
+        it.each([1, 7])("accepts %s times per week", (n) => {
+          expect(run(times(n)).ok).toBe(true);
+        });
+
+        it("rejects an empty weekday list", () => {
+          expect(run(days([]))).toEqual({ ok: false, error: { kind: "NoWeekdays" } });
+        });
+
+        it("rejects a repeated weekday", () => {
+          expect(run(days([1, 1]))).toEqual({ ok: false, error: { kind: "DuplicateWeekday" } });
+        });
+
+        it.each([-1, 7, 1.5])("rejects weekday %s", (d) => {
+          expect(run(days([0, d]))).toEqual({ ok: false, error: { kind: "InvalidWeekday" } });
+        });
+
+        it("accepts weekdays 0 and 6 and the full week", () => {
+          expect(run(days([0, 6])).ok).toBe(true);
+          expect(run(days([0, 1, 2, 3, 4, 5, 6])).ok).toBe(true);
+        });
+      });
+    }
+
+    it.each([undefined, null, "1,2", 3, { length: 2 }])(
+      "rejects non-array weekdays (%s) without throwing",
+      (weekdays) => {
+        expect(doneWith({ kind: "specificDays", weekdays })).toEqual({
+          ok: false,
+          error: { kind: "InvalidWeekday" },
+        });
+      },
+    );
+
+    it("reports an invalid weekday before a duplicate", () => {
+      expect(doneWith(days([1, 1, 9]))).toEqual({ ok: false, error: { kind: "InvalidWeekday" } });
+    });
+
+    it("does not constrain a weeklyTotal schedule", () => {
+      const result = validateCommitment({
+        weightPercent: 20,
+        measure: {
+          unit: "minutes",
+          direction: "reach",
+          minimum: "1",
+          ideal: "2",
+          schedule: { period: "weeklyTotal" },
+        },
+      });
+      expect(result.ok).toBe(true);
+    });
+  });
+
+  describe("custom label invisible characters (user decision 2026-09-30)", () => {
+    const withLabel = (customLabel: string) =>
+      validateCommitment({
+        weightPercent: 20,
+        measure: {
+          unit: "custom",
+          customLabel,
+          direction: "reach",
+          minimum: "1",
+          ideal: "2",
+          schedule: { period: "weeklyTotal" },
+        },
+      });
+
+    it.each([
+      ["NUL", "a\u0000b"],
+      ["newline", "a\nb"],
+      ["tab", "a\tb"],
+      ["US (0x1f)", "a\u001fb"],
+      ["DEL", "a\u007fb"],
+      ["C1 control", "a\u0085b"],
+      ["zero-width space", "a\u200bb"],
+      ["zero-width non-joiner", "a\u200cb"],
+      ["zero-width joiner", "a\u200db"],
+      ["BOM", "a\ufeffb"],
+      ["bidi override", "a\u202eb"],
+      ["line separator", "a\u2028b"],
+      ["paragraph separator", "a\u2029b"],
+    ])("rejects a label containing %s", (_name, label) => {
+      expect(withLabel(label)).toEqual({
+        ok: false,
+        error: { kind: "CustomLabelHasInvisibleCharacters" },
+      });
+    });
+
+    it.each([
+      ["empty", ""],
+      ["spaces", "   "],
+      ["tab-free unicode spaces", "\u00a0\u3000"],
+    ])("rejects a blank label (%s)", (_name, label) => {
+      expect(withLabel(label)).toEqual({ ok: false, error: { kind: "CustomLabelBlank" } });
+    });
+
+    it("reports invisible characters before blankness", () => {
+      expect(withLabel("  \n  ")).toEqual({
+        ok: false,
+        error: { kind: "CustomLabelHasInvisibleCharacters" },
+      });
+    });
+
+    it("accepts a label with surrounding spaces as long as it has visible text", () => {
+      expect(withLabel(" a ").ok).toBe(true);
+    });
+
+    describe("zero width joiner (U+200D)", () => {
+      it.each([
+        ["woman running + km", "\u{1F3C3}\u200D\u2640\uFE0F km"],
+        ["family", "\u{1F468}\u200D\u{1F469}\u200D\u{1F467}"],
+        ["rainbow flag", "\u{1F3F3}\uFE0F\u200D\u{1F308}"],
+        ["man running, skin tone", "\u{1F3C3}\u{1F3FD}\u200D\u2642\uFE0F"],
+      ])("accepts a ZWJ that joins two emoji (%s)", (_name, label) => {
+        expect(withLabel(label).ok).toBe(true);
+      });
+
+      it.each([
+        ["between letters", "a\u200Db"],
+        ["alone", "\u200D"],
+        ["trailing after text", "km\u200D"],
+        ["leading", "\u200D\u{1F3C3}"],
+        ["trailing after emoji", "\u{1F3C3}\u200D"],
+        ["emoji then letter", "\u{1F3C3}\u200Da"],
+        ["two in a row", "\u{1F3C3}\u200D\u200D\u2640"],
+      ])("rejects a ZWJ that does not join two emoji (%s)", (_name, label) => {
+        expect(withLabel(label)).toEqual({
+          ok: false,
+          error: { kind: "CustomLabelHasInvisibleCharacters" },
+        });
+      });
+
+      it("still rejects other format characters next to emoji", () => {
+        expect(withLabel("\u{1F3C3}\u200B\u2640").ok).toBe(false);
+      });
+    });
+
+    it("reports an over-long label before its invisible characters", () => {
+      expect(withLabel(`${"a".repeat(20)}\u0000`)).toEqual({
+        ok: false,
+        error: { kind: "CustomLabelTooLong" },
+      });
+    });
+
+    it("accepts a plain label with spaces and non-ASCII letters", () => {
+      expect(withLabel("vasos de agua ñ").ok).toBe(true);
+    });
+  });
 });

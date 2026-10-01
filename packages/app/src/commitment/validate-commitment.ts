@@ -69,6 +69,12 @@ export type ValidateCommitmentError =
   | { readonly kind: "MinimumExceedsIdeal" }
   | { readonly kind: "IdealExceedsTolerance" }
   | { readonly kind: "CustomLabelTooLong" }
+  | { readonly kind: "CustomLabelHasInvisibleCharacters" }
+  | { readonly kind: "CustomLabelBlank" }
+  | { readonly kind: "InvalidTimesPerWeek" }
+  | { readonly kind: "NoWeekdays" }
+  | { readonly kind: "DuplicateWeekday" }
+  | { readonly kind: "InvalidWeekday" }
   | { readonly kind: "InvalidPrecision" }
   | { readonly kind: "PrecisionNotApplicable" };
 
@@ -86,6 +92,60 @@ const PRECISIONS: readonly QuantityPrecision[] = ["integer", "decimal"];
 const AT_MOST_TWO_DECIMALS = /^\d+(\.\d{1,2})?$/;
 
 const WHOLE_NUMBER = /^\d+$/;
+
+// Characters a reader cannot see or that break layout: control (Cc, NUL included:
+// Postgres jsonb rejects it), format (Cf: zero-width, BOM, bidi overrides) and
+// line/paragraph separators (Zl, Zp). Other circle members see the label, so
+// invisible characters would enable spoofing.
+const INVISIBLE_CHARACTER = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u;
+
+// A ZWJ (U+200D, a Cf) is allowed ONLY when it glues two emoji together (so
+// composed emoji such as a running woman, a family or a rainbow flag survive): the
+// preceding emoji may carry U+FE0F and/or a skin-tone modifier (U+1F3FB..F), and
+// another emoji must follow. Lookarounds don't consume, so chains of joins work.
+const EMOJI_JOINER =
+  /(?<=\p{Extended_Pictographic}[️\u{1F3FB}-\u{1F3FF}]*)‍(?=\p{Extended_Pictographic})/gu;
+
+function hasInvisibleCharacter(label: string): boolean {
+  return INVISIBLE_CHARACTER.test(label.replace(EMOJI_JOINER, ""));
+}
+
+const MIN_TIMES_PER_WEEK = 1;
+const MAX_TIMES_PER_WEEK = 7;
+const MAX_WEEKDAY = 6;
+
+/**
+ * User decision 2026-09-30: `timesPerWeek` is an integer 1..7;
+ * `specificDays` is a non-empty list of distinct integer weekdays 0..6
+ * (Monday = 0). Returns the error to report, or `null` when valid.
+ */
+function frequencyError(frequency: Frequency): ValidateCommitmentError | null {
+  if (frequency.kind === "timesPerWeek") {
+    const { times } = frequency;
+    return Number.isInteger(times) && times >= MIN_TIMES_PER_WEEK && times <= MAX_TIMES_PER_WEEK
+      ? null
+      : { kind: "InvalidTimesPerWeek" };
+  }
+  const { weekdays } = frequency;
+  // The HTTP adapter builds this from arbitrary JSON, so the type can't be trusted.
+  if (!Array.isArray(weekdays)) {
+    return { kind: "InvalidWeekday" };
+  }
+  if (weekdays.length === 0) {
+    return { kind: "NoWeekdays" };
+  }
+  if (!weekdays.every((day) => Number.isInteger(day) && day >= 0 && day <= MAX_WEEKDAY)) {
+    return { kind: "InvalidWeekday" };
+  }
+  if (new Set(weekdays).size !== weekdays.length) {
+    return { kind: "DuplicateWeekday" };
+  }
+  return null;
+}
+
+function scheduleError(schedule: Schedule): ValidateCommitmentError | null {
+  return schedule.period === "perSession" ? frequencyError(schedule.frequency) : null;
+}
 
 /**
  * Parses one threshold. On an integer-precision unit only plain digits are
@@ -143,6 +203,10 @@ export function validateCommitment(
 
   const { measure } = input;
   if (measure.unit === "done") {
+    const invalidFrequency = frequencyError(measure.frequency);
+    if (invalidFrequency) {
+      return err(invalidFrequency);
+    }
     return ok({
       unit: "done",
       schedule: { period: "perSession", frequency: measure.frequency },
@@ -151,6 +215,17 @@ export function validateCommitment(
 
   if (measure.customLabel != null && measure.customLabel.length > MAX_CUSTOM_LABEL_LENGTH) {
     return err({ kind: "CustomLabelTooLong" });
+  }
+  if (measure.customLabel != null && hasInvisibleCharacter(measure.customLabel)) {
+    return err({ kind: "CustomLabelHasInvisibleCharacters" });
+  }
+  // `null`/absent means "no label" and is untouched; a supplied label must show something.
+  if (measure.customLabel != null && measure.customLabel.trim() === "") {
+    return err({ kind: "CustomLabelBlank" });
+  }
+  const invalidSchedule = scheduleError(measure.schedule);
+  if (invalidSchedule) {
+    return err(invalidSchedule);
   }
 
   // `precision` only means something for `custom` units (a built-in unit's
