@@ -9,8 +9,7 @@ import {
   memberId,
   userId,
 } from "@pactjoy/app";
-import type { SqlExecutor } from "../client.ts";
-import type { BindMode } from "../unit-of-work.ts";
+import type { BindMode, SqlExecutor } from "../client.ts";
 
 interface CircleRow {
   id: string;
@@ -47,12 +46,14 @@ export function createPgCircleRepository(exec: SqlExecutor, mode: BindMode): Cir
   const preWrite = new Map<string, number | null>();
 
   /**
-   * Torn reads are safe: the three queries run at READ COMMITTED inside a write
+   * Torn reads: the three queries run at READ COMMITTED inside a write
    * transaction, so a concurrent commit between them can mix members of one
-   * version with a root of another. But the root is read FIRST, so any such
-   * commit bumped the version past the one we hold: a `save` (version-checked
-   * UPDATE) and a `guardVersion` (locked, compared) both reject it. Nothing
-   * built from a torn aggregate can commit. `read()` is one snapshot anyway.
+   * version with a root of another. The root is read FIRST, so such a commit
+   * bumped the version past the one we hold: any transaction that guards or
+   * saves this circle cannot commit (version-checked UPDATE, locked guard).
+   * A use case that reads a circle without guarding or saving it gets no such
+   * protection. This relies on every save bumping `version`. `read()` is one
+   * snapshot, so it never tears.
    */
   async function load(row: CircleRow | undefined): Promise<Circle | null> {
     if (!row) return null;

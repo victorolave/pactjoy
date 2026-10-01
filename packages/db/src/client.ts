@@ -14,6 +14,9 @@ export interface SqlExecutor {
   ): Promise<{ rows: Row[]; rowCount: number }>;
 }
 
+/** `write` inside `transaction`, `read` inside `read`: a guard is a no-op in the latter (the port says so). */
+export type BindMode = "write" | "read";
+
 /**
  * The only isolation levels the adapter uses: writes at READ COMMITTED, reads
  * as a single REPEATABLE READ snapshot. A closed union, because the value is

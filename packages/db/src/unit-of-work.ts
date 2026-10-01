@@ -1,5 +1,5 @@
 import type { Result, UnitOfWork } from "@pactjoy/app";
-import type { Client, SqlExecutor } from "./client.ts";
+import type { BindMode, Client, SqlExecutor } from "./client.ts";
 import { isRetryable, mapError } from "./errors.ts";
 
 /**
@@ -10,9 +10,6 @@ import { isRetryable, mapError } from "./errors.ts";
 class RollbackSignal {
   constructor(readonly result: Result<never, unknown>) {}
 }
-
-/** `write` inside `transaction`, `read` inside `read`: a guard is a no-op in the latter (the port says so). */
-export type BindMode = "write" | "read";
 
 /** The original run plus one re-run; see `createUnitOfWork`. */
 const MAX_ATTEMPTS = 2;

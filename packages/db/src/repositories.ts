@@ -1,8 +1,7 @@
 import type { Repositories } from "@pactjoy/app";
 import { createPgCircleRepository } from "./circle/pg-circle-repository.ts";
-import type { SqlExecutor } from "./client.ts";
+import type { BindMode, SqlExecutor } from "./client.ts";
 import { createPgHabitRepository } from "./habit/pg-habit-repository.ts";
-import type { BindMode } from "./unit-of-work.ts";
 
 /** The repositories this adapter has so far; each slice adds its own. */
 export type PgRepositories = Pick<Repositories, "habits" | "circles">;

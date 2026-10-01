@@ -1,8 +1,8 @@
 import { ConcurrencyConflict, err, type Habit, habitId, instant, ok, userId } from "@pactjoy/app";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { createClient } from "../src/client.ts";
+import { type BindMode, createClient } from "../src/client.ts";
 import { bindRepositories } from "../src/repositories.ts";
-import { type BindMode, createUnitOfWork } from "../src/unit-of-work.ts";
+import { createUnitOfWork } from "../src/unit-of-work.ts";
 import { connect, databaseUrl, truncateAll } from "./db.ts";
 
 const habit = (n: number): Habit => ({
