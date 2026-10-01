@@ -17,7 +17,7 @@ import {
 } from "@pactjoy/app";
 import { afterAll, describe, expect, it } from "vitest";
 import { createClient } from "../src/client.ts";
-import { createPostgresUnitOfWork } from "../src/index.ts";
+import { createPostgresUnitOfWork, isDatabaseUnavailable } from "../src/index.ts";
 import { connect, databaseUrl } from "./db.ts";
 import { createFreshDatabase } from "./migrate.ts";
 
@@ -149,10 +149,30 @@ describe("createPostgresUnitOfWork", () => {
       expect(Date.now() - started).toBeLessThan(3000);
       expect(failure).toBeInstanceOf(Error);
       expect(failure).not.toBeInstanceOf(ConcurrencyConflict);
+      expect(isDatabaseUnavailable(failure)).toBe(true);
     } finally {
       await dead.end();
       for (const socket of sockets) socket.destroy();
       await new Promise((resolve) => silent.close(resolve));
+    }
+  });
+
+  it("a refused port surfaces as a real error the predicate recognizes", async () => {
+    const probe = createServer();
+    await new Promise<void>((resolve) => probe.listen(0, "127.0.0.1", resolve));
+    const { port } = probe.address() as AddressInfo;
+    await new Promise((resolve) => probe.close(resolve));
+    const refused = createPostgresUnitOfWork({
+      url: `postgres://u:p@127.0.0.1:${port}/none`,
+      connectTimeoutSeconds: 1,
+    });
+    try {
+      const failure = await refused.read(async () => 1).catch((error: unknown) => error);
+      expect(failure).toBeInstanceOf(Error);
+      expect((failure as { code?: unknown }).code).toBe("ECONNREFUSED");
+      expect(isDatabaseUnavailable(failure)).toBe(true);
+    } finally {
+      await refused.end();
     }
   });
 

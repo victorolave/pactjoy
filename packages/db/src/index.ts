@@ -3,9 +3,11 @@ import { createClient } from "./client.ts";
 import { bindRepositories } from "./repositories.ts";
 import { createUnitOfWork } from "./unit-of-work.ts";
 
+export { isDatabaseUnavailable } from "./unavailable.ts";
+
 /**
  * Public API of `@pactjoy/db` (`exports: "."` in `package.json`): ONLY this
- * factory and its two types. No driver type, repository or codec leaves the
+ * factory, its two types and the isDatabaseUnavailable predicate. No driver type, repository or codec leaves the
  * package, so replacing Postgres means writing another adapter, not touching
  * callers (high decoupling, ADR-0010).
  */
