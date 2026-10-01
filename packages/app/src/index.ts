@@ -11,6 +11,7 @@ export { createIntlTimeZone } from "./adapters/intl-time-zone.ts";
 export { createSystemClock } from "./adapters/system-clock.ts";
 export type { CircleRepository } from "./circle/circle.repository.ts";
 export type { Circle, Invite, Member } from "./circle/circle.ts";
+export { memberId } from "./circle/circle.ts";
 export type {
   CreateCircleDeps,
   CreateCircleError,
@@ -24,6 +25,7 @@ export type {
 } from "./circle/generate-invite.ts";
 export { generateInvite } from "./circle/generate-invite.ts";
 export type { InviteCode } from "./circle/invite-code.ts";
+export { inviteCode } from "./circle/invite-code.ts";
 export type { JoinCircleDeps, JoinCircleError, JoinCircleInput } from "./circle/join-circle.ts";
 export { joinCircle } from "./circle/join-circle.ts";
 export type { LeaveCircleDeps, LeaveCircleError, LeaveCircleInput } from "./circle/leave-circle.ts";

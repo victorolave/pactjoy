@@ -1,4 +1,5 @@
 import {
+  describeCircleRepositoryContract,
   describeHabitRepositoryContract,
   describeUnitOfWorkContract,
 } from "@pactjoy/app/contracts";
@@ -23,5 +24,6 @@ async function postgres() {
   return { uow: createUnitOfWork(client.begin, bindRepositories) };
 }
 
+describeCircleRepositoryContract("postgres", postgres);
 describeHabitRepositoryContract("postgres", postgres);
 describeUnitOfWorkContract("postgres", postgres);

@@ -6,6 +6,7 @@
  * suite with a factory returning a fresh `{ uow }` over an empty store.
  */
 
+export { describeCircleRepositoryContract } from "./circle.contract.ts";
 export type { ContractSubject } from "./fixtures.ts";
 export {
   describeCircleGuardContract,
