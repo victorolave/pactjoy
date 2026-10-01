@@ -18,7 +18,7 @@
           "options": {
             "patterns": [
               {
-                "group": ["@pactjoy/*/**", "!@pactjoy/app/contracts"],
+                "group": ["@pactjoy/*/**"],
                 "message": "Import only package roots (their public index.ts) or the documented subpaths: deep imports leak internals and break the high-decoupling boundary (CLAUDE.md, ADR-0008)."
               },
               {
@@ -42,6 +42,23 @@
         "rules": {
           "correctness": {
             "noNodejsModules": "off"
+          },
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@pactjoy/*/**", "!@pactjoy/app/contracts"],
+                    "message": "Import only package roots or the documented subpaths (@pactjoy/app/contracts is allowed in tests only)."
+                  },
+                  {
+                    "group": ["npm:*", "jsr:*"],
+                    "message": "Deno-specific specifiers are not portable (ADR-0007/ADR-0008)."
+                  }
+                ]
+              }
+            }
           }
         }
       }
