@@ -169,6 +169,7 @@ describe("createPostgresUnitOfWork", () => {
     try {
       const failure = await refused.read(async () => 1).catch((error: unknown) => error);
       expect(failure).toBeInstanceOf(Error);
+      expect((failure as { code?: unknown }).code).toBe("ECONNREFUSED");
       expect(isDatabaseUnavailable(failure)).toBe(true);
     } finally {
       await refused.end();
