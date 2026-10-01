@@ -1,10 +1,12 @@
-import type {
-  CommitmentId,
-  MemberId,
-  PerSessionSchedule,
-  QuantityUnit,
-  Schedule,
-  Target,
+import {
+  type CommitmentId,
+  eq,
+  type Frequency,
+  type MemberId,
+  type PerSessionSchedule,
+  type QuantityUnit,
+  type Schedule,
+  type Target,
 } from "@pactjoy/engine";
 import type { HabitId } from "../shared/ids.ts";
 
@@ -55,6 +57,44 @@ export type Measure =
       readonly target: Target;
       readonly schedule: Schedule;
     };
+
+function frequenciesEqual(a: Frequency, b: Frequency): boolean {
+  if (a.kind === "timesPerWeek") return b.kind === "timesPerWeek" && a.times === b.times;
+  if (b.kind !== "specificDays") return false;
+  // A SET compare: validation checks distinct 0..6 but does not sort.
+  const days = new Set<number>(a.weekdays);
+  return days.size === b.weekdays.length && b.weekdays.every((day) => days.has(day));
+}
+
+function schedulesEqual(a: Schedule, b: Schedule): boolean {
+  if (a.period === "weeklyTotal") return b.period === "weeklyTotal";
+  return b.period === "perSession" && frequenciesEqual(a.frequency, b.frequency);
+}
+
+function targetsEqual(a: Target, b: Target): boolean {
+  if (a.direction === "reach") {
+    return b.direction === "reach" && eq(a.minimum, b.minimum) && eq(a.ideal, b.ideal);
+  }
+  return b.direction === "limit" && eq(a.ideal, b.ideal) && eq(a.tolerance, b.tolerance);
+}
+
+/**
+ * Whether two measures are the same measurement (SS-13). Pure: thresholds
+ * use the engine's exact-fraction `eq` (never object identity or floats)
+ * and `specificDays` weekdays compare as a set, so a reordering of the same
+ * days is equal. `editCommitment` uses it to detect a no-op edit.
+ */
+export function measuresEqual(a: Measure, b: Measure): boolean {
+  if (a.unit === "done") return b.unit === "done" && schedulesEqual(a.schedule, b.schedule);
+  if (b.unit === "done") return false;
+  return (
+    a.unit === b.unit &&
+    a.customLabel === b.customLabel &&
+    a.precision === b.precision &&
+    targetsEqual(a.target, b.target) &&
+    schedulesEqual(a.schedule, b.schedule)
+  );
+}
 
 /**
  * How a member works a habit during one season (Compromiso, design D6/D12).
