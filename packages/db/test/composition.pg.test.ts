@@ -48,6 +48,23 @@ describe("createPostgresUnitOfWork", () => {
     expect(names).toEqual(["circles", "entries", "habits", "pauses", "seasons"]);
   });
 
+  it("DC-S2: end() closes the pool, leaving no backend connection for it", async () => {
+    const name = `dc-s2-${ids.next()}`;
+    const url = new URL(databaseUrl());
+    url.searchParams.set("application_name", name);
+    const pooled = createPostgresUnitOfWork({ url: url.toString(), max: 3 });
+    const backends = async () =>
+      Number(
+        (
+          await admin`select count(*)::int as n from pg_stat_activity where application_name = ${name}`
+        )[0]?.n,
+      );
+    await Promise.all([1, 2, 3].map(() => pooled.read(async () => 1)));
+    expect(await backends()).toBeGreaterThan(0);
+    await pooled.end();
+    expect(await backends()).toBe(0);
+  });
+
   it("DC-S3/S10: createCircle and createHabit succeed with v7 ids that uuid columns accept", async () => {
     const circle = must(await createCircle({ uow, ids, clock }, andrea, { name: "Rio Runners" }));
     const habit = must(await createHabit({ uow, ids, clock }, andrea, { name: "Run" }));
