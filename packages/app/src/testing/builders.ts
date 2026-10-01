@@ -98,6 +98,7 @@ export interface SeasonFixtureOptions {
   readonly commitments?: readonly CommitmentRecord[];
   readonly approvals?: readonly PactApproval[];
   readonly pactClosedAt?: Instant | null;
+  readonly pactRevision?: number;
   readonly createdAt?: Instant;
   readonly version?: number;
 }
@@ -120,6 +121,7 @@ export function seasonFixture(options: SeasonFixtureOptions): Season {
     commitments: options.commitments ?? [],
     approvals: options.approvals ?? [],
     pactClosedAt: options.pactClosedAt ?? null,
+    pactRevision: options.pactRevision ?? 0,
     createdAt: options.createdAt ?? DEFAULT_INSTANT,
     version: options.version ?? 0,
   };

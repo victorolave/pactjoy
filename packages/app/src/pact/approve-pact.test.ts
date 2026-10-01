@@ -109,6 +109,24 @@ describe("approvePact", () => {
     expect(third.value.approvals).toHaveLength(3);
   });
 
+  it("PI-2: approving, and the approval that closes the pact, leave pactRevision unchanged", async () => {
+    const app = utcTestApp();
+    const { season, memberActorIds } = await seasonWithFullyWeightedMembers(app, 2);
+
+    const first = await approvePact(app, actorFor(memberActorIds[0] as string), {
+      seasonId: season.id,
+    });
+    const closing = await approvePact(app, actorFor(memberActorIds[1] as string), {
+      seasonId: season.id,
+    });
+
+    expect(first.ok && closing.ok).toBe(true);
+    if (!first.ok || !closing.ok) return;
+    expect(first.value.pactRevision).toBe(season.pactRevision);
+    expect(closing.value.status).toBe("active");
+    expect(closing.value.pactRevision).toBe(season.pactRevision);
+  });
+
   it("new PA-11 (B4): a solo circle's single member closes their own pact", async () => {
     const app = utcTestApp();
     const { season, memberActorIds } = await seasonWithFullyWeightedMembers(app, 1);

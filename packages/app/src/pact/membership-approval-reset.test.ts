@@ -35,6 +35,7 @@ describe("approval resets when membership changes (PA-5, PA-6)", () => {
     const stored = await storedSeason(app, season.id);
     expect(stored.approvals).toEqual([]);
     expect(stored.status).toBe("pactOpen");
+    expect(stored.pactRevision).toBe(season.pactRevision + 1);
   });
 
   it("PA-6: a non-approving member leaving discards their commitments and resets every approval", async () => {
@@ -47,6 +48,7 @@ describe("approval resets when membership changes (PA-5, PA-6)", () => {
     const stored = await storedSeason(app, season.id);
     expect(stored.approvals).toEqual([]);
     expect(stored.commitments).toHaveLength(1);
+    expect(stored.pactRevision).toBe(season.pactRevision + 1);
     expect(stored.commitments.every((c) => c.habitId === habitId("habit-user-andrea"))).toBe(true);
   });
 
@@ -74,6 +76,7 @@ describe("approval resets when membership changes (PA-5, PA-6)", () => {
     expect(left.ok).toBe(true);
     const stored = await storedSeason(app, season.id);
     expect(stored.status).toBe("active");
+    expect(stored.pactRevision).toBe(season.pactRevision);
     expect(stored.approvals).toHaveLength(2);
     expect(stored.commitments).toHaveLength(2);
   });

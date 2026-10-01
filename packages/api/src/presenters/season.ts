@@ -31,6 +31,7 @@ export interface SeasonDto {
   readonly pactClosedAt: string | null;
   readonly createdAt: string;
   readonly version: number;
+  readonly pactRevision: number;
   readonly commitments: readonly CommitmentDto[];
 }
 
@@ -82,6 +83,7 @@ export function presentSeason(season: Season): SeasonDto {
     pactClosedAt: presentInstantOrNull(season.pactClosedAt),
     createdAt: presentInstant(season.createdAt),
     version: season.version,
+    pactRevision: season.pactRevision,
     commitments: season.commitments.map(
       (commitment): CommitmentDto =>
         commitment.privacy === "visible"

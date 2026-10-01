@@ -57,6 +57,7 @@ describe("withdrawApproval", () => {
     if (!result.ok) return;
     expect(result.value.approvals).toHaveLength(0);
     expect(result.value.status).toBe("pactOpen");
+    expect(result.value.pactRevision).toBe(season.pactRevision);
   });
 
   it("PA-4: withdrawing after the pact has already closed is rejected", async () => {
