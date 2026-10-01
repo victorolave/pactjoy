@@ -35,9 +35,16 @@ const testDoubleImports = (text: string) => [
 ];
 
 describe("package boundary", () => {
-  it("exports nothing yet: the public surface grows slice by slice", async () => {
+  it("the public surface is exactly the design's runtime exports (ADR-0011)", async () => {
     const index = await import("../src/index.ts");
-    expect(Object.keys(index)).toEqual([]);
+    expect(Object.keys(index).sort()).toEqual([
+      "createApi",
+      "createConsoleLogger",
+      "createJwksTokenVerifier",
+      "createLazyHandler",
+      "describeEnvError",
+      "loadApiEnv",
+    ]);
   });
 
   it("AC-S2, AU-S16: src never touches the driver, Deno specifiers, the db package or secrets", () => {
