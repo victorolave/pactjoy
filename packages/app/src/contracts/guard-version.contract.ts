@@ -25,6 +25,8 @@ interface GuardTarget<R> {
   guardMissing(repos: R): Promise<void>;
   /** Saves version 1 over the seeded version 0. */
   bump(repos: R): Promise<void>;
+  /** Inserts a NEW aggregate (version 0), then guards it at version 0, in the caller's transaction. */
+  insertThenGuard(repos: R): Promise<void>;
 }
 
 const CIRCLE_TARGET: GuardTarget<CircleRepositories> = {
@@ -39,6 +41,11 @@ const CIRCLE_TARGET: GuardTarget<CircleRepositories> = {
   guard: (r, v) => r.circles.guardVersion(CIRCLE.id, v),
   guardMissing: (r) => r.circles.guardVersion(circleId("00000000-0000-4000-8000-0000000000ff"), 0),
   bump: (r) => r.circles.save({ ...CIRCLE, version: 1 }, 0),
+  insertThenGuard: async (r) => {
+    const fresh = { ...CIRCLE, id: circleId("00000000-0000-4000-8000-0000000000c9"), members: [] };
+    await r.circles.save(fresh, null);
+    await r.circles.guardVersion(fresh.id, 0);
+  },
 };
 
 const SEASON_TARGET: GuardTarget<GuardRepositories> = {
@@ -48,6 +55,11 @@ const SEASON_TARGET: GuardTarget<GuardRepositories> = {
   guard: (r, v) => r.seasons.guardVersion(SEASON.id, v),
   guardMissing: (r) => r.seasons.guardVersion(seasonId("00000000-0000-4000-8000-0000000000ff"), 0),
   bump: (r) => r.seasons.save({ ...SEASON, version: 1 }, 0),
+  insertThenGuard: async (r) => {
+    const fresh = { ...SEASON, id: seasonId("00000000-0000-4000-8000-0000000000e9") };
+    await r.seasons.save(fresh, null);
+    await r.seasons.guardVersion(fresh.id, 0);
+  },
 };
 
 /**
@@ -137,6 +149,15 @@ function defineGuardCases<R>(
       return ok(undefined);
     });
     expect(await versionOf(uow)).toBe(1);
+  });
+
+  it("rejects a guard on an aggregate this transaction inserted: there is no earlier version to read", async () => {
+    const uow = await setup();
+    const outcome = uow.transaction(async (r) => {
+      await target.insertThenGuard(r);
+      return ok(undefined);
+    });
+    await expect(outcome).rejects.toBeInstanceOf(ConcurrencyConflict);
   });
 
   it("rejects a stale guard once a concurrent transaction committed a newer version", async () => {

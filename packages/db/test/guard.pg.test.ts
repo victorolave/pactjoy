@@ -112,8 +112,9 @@ describe("circle guardVersion on Postgres", () => {
       }
     } finally {
       a.gate.resolve();
-      await a.tx;
+      await Promise.allSettled([a.tx]);
     }
+    await a.tx;
     await within(
       admin.unsafe("select 1 from pactjoy.circles where id = $1 for update nowait", [C.id]),
     );
@@ -131,8 +132,9 @@ describe("circle guardVersion on Postgres", () => {
       );
     } finally {
       a.gate.resolve();
-      await a.tx;
+      await Promise.allSettled([a.tx]);
     }
+    await a.tx;
   });
 
   it("UW-S9: a stale or missing row fails at the guard call itself", async () => {
@@ -155,13 +157,6 @@ describe("circle guardVersion on Postgres", () => {
       });
     await expect(guardAfterSave(1)).rejects.toBeInstanceOf(ConcurrencyConflict); // the NEW version is not the read-set
     await expect(guardAfterSave(7)).rejects.toBeInstanceOf(ConcurrencyConflict);
-    const other = { ...C, id: circleId(uuid(0xc2)), members: [memberOf(2)] };
-    const insertedHere = uow.transaction(async ({ circles }) => {
-      await circles.save(other, null);
-      await circles.guardVersion(other.id, 0); // inserted here: there was no pre-write version to match
-      return ok(undefined);
-    });
-    await expect(insertedHere).rejects.toBeInstanceOf(ConcurrencyConflict);
   });
 
   it("UW-S10: the guard SQL is FOR NO KEY UPDATE and no statement ever says FOR SHARE", async () => {
