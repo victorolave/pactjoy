@@ -13,6 +13,9 @@ afterAll(async () => {
   await admin.end();
 });
 
+/** Bounded repetitions of each race: overlap is timing-dependent, the invariants are not. */
+const ITERATIONS = 20;
+
 const statuses = (responses: { status: number }[]) => responses.map((r) => r.status).sort();
 
 /** u1 owns a circle with a pact-open season; returns the ids. */
@@ -43,13 +46,14 @@ async function commit(seasonId: string, who: string) {
 }
 
 describe("HTTP over Postgres: concurrency", () => {
-  it("AC-S10: 10 concurrent requests on a pool of 3 all complete", async () => {
+  it("AC-S10: 30 concurrent requests on a pool of 3 all complete and the pool stays usable", async () => {
     const { seasonId } = await openSeason();
     await commit(seasonId, "u1"); // a participant, so the own-score route resolves a member
-    const reads = Array.from({ length: 10 }, (_, i) =>
+    const reads = Array.from({ length: 30 }, (_, i) =>
       call("GET", i % 2 ? `/seasons/${seasonId}/standings` : `/seasons/${seasonId}/score`, "u1"),
     );
-    expect(statuses(await Promise.all(reads))).toEqual(Array(10).fill(200));
+    expect(statuses(await Promise.all(reads))).toEqual(Array(30).fill(200));
+    expect((await call("GET", `/seasons/${seasonId}/score`, "u1")).status).toBe(200);
   });
 
   it("UE-C-S10: two joins for the last seat leave one 200 and one refusal, never a 500", async () => {
@@ -71,34 +75,58 @@ describe("HTTP over Postgres: concurrency", () => {
     expect(["CircleFull", "ConcurrencyConflict"]).toContain(refusal?.json.error.code);
   });
 
-  it("UE-S-S11: two concurrent season edits never produce a 500", async () => {
-    const { seasonId } = await openSeason();
-    const race = await Promise.all(
-      [6, 8].map((lengthWeeks) => call("PATCH", `/seasons/${seasonId}`, "u1", { lengthWeeks })),
-    );
-    expect(race.map((r) => r.status).every((s) => s === 200 || s === 409)).toBe(true);
-    expect(race.some((r) => r.status === 200)).toBe(true);
-    for (const lost of race.filter((r) => r.status === 409))
-      expect(lost.json.error.code).toBe("ConcurrencyConflict");
+  it("UE-S-S11: concurrent season edits never produce a 500, and the stored state matches the 200s", async () => {
+    let sawConflict = false;
+    for (let i = 0; i < ITERATIONS; i++) {
+      await truncateAll(admin);
+      const { seasonId } = await openSeason();
+      const [before] = await admin`select version from pactjoy.seasons where id = ${seasonId}`;
+      const sent = [6, 8];
+      const race = await Promise.all(
+        sent.map((lengthWeeks) => call("PATCH", `/seasons/${seasonId}`, "u1", { lengthWeeks })),
+      );
+      expect(race.map((r) => r.status).every((s) => s === 200 || s === 409)).toBe(true);
+      for (const lost of race.filter((r) => r.status === 409)) {
+        sawConflict = true;
+        expect(lost.json.error.code).toBe("ConcurrencyConflict");
+      }
+      const winners = race.flatMap((r, k) => (r.status === 200 ? [sent[k]] : []));
+      expect(winners.length).toBeGreaterThanOrEqual(1);
+      const [after] =
+        await admin`select length_weeks, version from pactjoy.seasons where id = ${seasonId}`;
+      // The stored value is one a 200 acknowledged, and every 200 advanced the version once.
+      expect(winners).toContain(after?.length_weeks);
+      expect(after?.version).toBe((before?.version as number) + winners.length);
+    }
+    process.stderr.write(`UE-S-S11: 409 observed in ${ITERATIONS} iterations: ${sawConflict}\n`);
   });
 
-  it("UE-P-S5: two members approving at once each get 200 or 409, and a retry closes the pact", async () => {
-    const { circleId, seasonId } = await openSeason();
-    const invite = await call("POST", `/circles/${circleId}/invite`, "u1");
-    await call("POST", "/circles/join", "u2", { inviteCode: invite.json.data.code });
-    await commit(seasonId, "u1");
-    await commit(seasonId, "u2");
+  it("UE-P-S5: members approving at once each get 200 or 409, both approvals are stored and the pact closes", async () => {
+    let sawConflict = false;
+    for (let i = 0; i < ITERATIONS; i++) {
+      await truncateAll(admin);
+      const { circleId, seasonId } = await openSeason();
+      const invite = await call("POST", `/circles/${circleId}/invite`, "u1");
+      await call("POST", "/circles/join", "u2", { inviteCode: invite.json.data.code });
+      await commit(seasonId, "u1");
+      await commit(seasonId, "u2");
 
-    const race = await Promise.all(
-      ["u1", "u2"].map((who) => call("PUT", `/seasons/${seasonId}/approval`, who)),
-    );
-    expect(race.map((r) => r.status).every((s) => s === 200 || s === 409)).toBe(true);
-    // A loser retries (its 409 is the signal to do so); it must now succeed.
-    const losers = ["u1", "u2"].filter((_, i) => race[i]?.status === 409);
-    for (const who of losers)
-      expect((await call("PUT", `/seasons/${seasonId}/approval`, who)).status).toBe(200);
-    const [season] = await admin`select status from pactjoy.seasons where id = ${seasonId}`;
-    expect(season?.status).toBe("active");
+      const race = await Promise.all(
+        ["u1", "u2"].map((who) => call("PUT", `/seasons/${seasonId}/approval`, who)),
+      );
+      expect(race.map((r) => r.status).every((s) => s === 200 || s === 409)).toBe(true);
+      // A loser retries (its 409 is the signal to do so); it must now succeed.
+      const losers = ["u1", "u2"].filter((_, k) => race[k]?.status === 409);
+      if (losers.length > 0) sawConflict = true;
+      for (const who of losers)
+        expect((await call("PUT", `/seasons/${seasonId}/approval`, who)).status).toBe(200);
+      const [season] = await admin`select status from pactjoy.seasons where id = ${seasonId}`;
+      expect(season?.status).toBe("active");
+      const [approvals] =
+        await admin`select count(distinct member_id)::int as n from pactjoy.season_approvals where season_id = ${seasonId}`;
+      expect(approvals?.n).toBe(2);
+    }
+    process.stderr.write(`UE-P-S5: 409 observed in ${ITERATIONS} iterations: ${sawConflict}\n`);
   });
 
   it("UE-E-S7: two identical concurrent recordEntry calls store one entry and never fail with 500", async () => {
