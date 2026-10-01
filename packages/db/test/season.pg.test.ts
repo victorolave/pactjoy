@@ -71,16 +71,10 @@ const within = <T>(promise: Promise<T>, ms: number) =>
   ]);
 
 describe("season repository on Postgres (read/write side)", () => {
-  it("guardVersion and delete fail loudly until B5b-ii, never as a silent no-op", async () => {
+  it("guardVersion fails loudly until it lands, never as a silent no-op", async () => {
     await expect(
       uow.transaction(async ({ seasons }) => {
         await seasons.guardVersion(season.id, 0);
-        return ok(undefined);
-      }),
-    ).rejects.toThrow("not implemented (B5b-ii)");
-    await expect(
-      uow.transaction(async ({ seasons }) => {
-        await seasons.delete(season.id, 0);
         return ok(undefined);
       }),
     ).rejects.toThrow("not implemented (B5b-ii)");

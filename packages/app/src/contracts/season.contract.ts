@@ -227,5 +227,43 @@ export function describeSeasonRepositoryContract(
       expect(await latest()).toBeNull();
       expect((await latest(OTHER_CIRCLE.id))?.id).toBe(season(1).id);
     });
+
+    const deleteSeason = (uow: Uow, n: number, expected: number) =>
+      uow.transaction(async ({ seasons }) => {
+        await seasons.delete(season(n).id, expected);
+        return ok(undefined);
+      });
+
+    it("SP-S11: once the latest season is deleted, the previous one is returned", async () => {
+      const { uow, latest } = await subject();
+      await saveSeason(uow, season(1), null);
+      await saveSeason(uow, season(2), null);
+      await deleteSeason(uow, 2, 0);
+      expect((await latest())?.id).toBe(season(1).id);
+    });
+
+    it("SP-S12: delete at the stored version removes the season", async () => {
+      const { uow, get } = await subject();
+      await saveSeason(
+        uow,
+        season(1, { commitments: commitments(2), approvals: approvals(1) }),
+        null,
+      );
+      await saveSeason(uow, season(1, { version: 2 }), 0);
+      await deleteSeason(uow, 1, 2);
+      expect(await get()).toBeNull();
+    });
+
+    it("SP-S13: delete at a stale version conflicts and keeps the season", async () => {
+      const { uow, get } = await subject();
+      await saveSeason(uow, season(1, { version: 2 }), null);
+      await expect(deleteSeason(uow, 1, 1)).rejects.toBeInstanceOf(ConcurrencyConflict);
+      expect((await get())?.version).toBe(2);
+    });
+
+    it("SP-S14: delete of a missing season conflicts", async () => {
+      const { uow } = await subject();
+      await expect(deleteSeason(uow, 1, 0)).rejects.toBeInstanceOf(ConcurrencyConflict);
+    });
   });
 }

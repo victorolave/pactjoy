@@ -141,8 +141,13 @@ export function createPgSeasonRepository(exec: SqlExecutor): SeasonRepository {
     async guardVersion() {
       throw new Error("PgSeasonRepository.guardVersion: not implemented (B5b-ii)");
     },
-    async delete() {
-      throw new Error("PgSeasonRepository.delete: not implemented (B5b-ii)");
+    /** Version-checked. The commitments and approvals go with it (ON DELETE CASCADE); entries will RESTRICT it. */
+    async delete(id, expectedVersion) {
+      const { rowCount } = await exec.query(
+        "delete from pactjoy.seasons where id = $1 and version = $2",
+        [id, expectedVersion],
+      );
+      if (rowCount === 0) throw new ConcurrencyConflict();
     },
 
     async save(season, expectedVersion) {
