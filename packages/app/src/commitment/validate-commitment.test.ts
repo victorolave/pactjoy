@@ -434,7 +434,6 @@ describe("validateCommitment", () => {
       });
 
     it.each([
-      ["NUL", "a\u0000b"],
       ["newline", "a\nb"],
       ["tab", "a\tb"],
       ["US (0x1f)", "a\u001fb"],
@@ -466,7 +465,8 @@ describe("validateCommitment", () => {
       ["high", "a\uD83Db"],
       ["low", "a\uDE00b"],
       ["trailing high", "km\uD83D"],
-    ])("rejects a label with a lone %s surrogate (well-formed text)", (_name, label) => {
+      ["NUL (unstorable, reported before the invisible-character rule)", "a\u0000b"],
+    ])("rejects a label with a lone %s surrogate (storable text)", (_name, label) => {
       expect(withLabel(label)).toEqual({ ok: false, error: { kind: "CustomLabelMalformed" } });
       expect(withLabel("km \u{1F3C3}").ok).toBe(true);
     });

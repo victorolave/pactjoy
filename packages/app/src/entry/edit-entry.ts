@@ -9,7 +9,7 @@ import {
   type EntryRecord,
   type EntryValueInput,
   exceedsNoteLimit,
-  isWellFormedNote,
+  isStorableNote,
   normalizeNote,
   requestFingerprint,
 } from "./entry.ts";
@@ -69,7 +69,7 @@ export async function editEntry(
       return value;
     }
     const note = normalizeNote(input.note);
-    if (!isWellFormedNote(note)) {
+    if (!isStorableNote(note)) {
       return err({ kind: "InvalidNote" });
     }
     if (exceedsNoteLimit(note)) {

@@ -172,7 +172,7 @@ describe("recordEntry: recording", () => {
     ).toEqual({ ok: false, error: { kind: "NoteTooLong" } });
   });
 
-  it("rejects a note with a lone surrogate (well-formed text), keeping a well-formed emoji", async () => {
+  it("rejects a note with a lone surrogate (storable text), keeping a well-formed emoji", async () => {
     const app = newApp();
     const given = await givenActiveSeason(app, PER_DAY_REACH);
 
@@ -185,6 +185,13 @@ describe("recordEntry: recording", () => {
         app,
         given.andrea,
         input(given, { note: "\uDE00 bien", clientRequestId: "r2" }),
+      ),
+    ).toEqual({ ok: false, error: { kind: "InvalidNote" } });
+    expect(
+      await recordEntry(
+        app,
+        given.andrea,
+        input(given, { note: "bien \u0000", clientRequestId: "r4" }),
       ),
     ).toEqual({ ok: false, error: { kind: "InvalidNote" } });
     const ok = await recordEntry(
@@ -586,6 +593,20 @@ describe("recordEntry: idempotency (T1, ER-16)", () => {
     expect(
       (await recordEntry(app, given.andrea, input(given, { clientRequestId: exact }))).ok,
     ).toBe(true);
+  });
+
+  it.each([
+    ["NUL", "k\u0000"],
+    ["lone high surrogate", "k\uD83D"],
+    ["lone low surrogate", "\uDE00k"],
+  ])("rejects a clientRequestId with %s as malformed, recording nothing", async (_n, key) => {
+    const app = newApp();
+    const given = await givenActiveSeason(app, PER_DAY_REACH);
+
+    expect(await recordEntry(app, given.andrea, input(given, { clientRequestId: key }))).toEqual({
+      ok: false,
+      error: { kind: "InvalidClientRequestId", reason: "malformed" },
+    });
   });
 
   it("scopes the key to (member, commitment): another actor or commitment is not a replay", async () => {

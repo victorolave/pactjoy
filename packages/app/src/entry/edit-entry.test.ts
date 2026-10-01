@@ -246,13 +246,14 @@ describe("editEntry: the new value", () => {
     expect(exact.ok).toBe(true);
   });
 
-  it("rejects a note with a lone surrogate (well-formed text), leaving the entry untouched", async () => {
+  it("rejects a note with a lone surrogate (storable text), leaving the entry untouched", async () => {
     const { app, given, entry } = await givenRecordedEntry(PER_DAY_REACH, 5);
     const now = localInstant(dayOf(5));
     const invalid = { ok: false, error: { kind: "InvalidNote" } };
 
     expect(await edit(app, now, given.andrea, entry, { note: "bien \uD83D" })).toEqual(invalid);
     expect(await edit(app, now, given.andrea, entry, { note: "\uDE00 bien" })).toEqual(invalid);
+    expect(await edit(app, now, given.andrea, entry, { note: "bien \u0000" })).toEqual(invalid);
     expect(await stored(app, entry)).toEqual(entry);
     expect((await edit(app, now, given.andrea, entry, { note: "bien 😀" })).ok).toBe(true);
   });

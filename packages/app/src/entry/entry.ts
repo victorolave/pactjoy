@@ -1,6 +1,6 @@
 import type { CommitmentId, Fraction, MemberId, SeasonDay } from "@pactjoy/engine";
 import type { EntryId, SeasonId } from "../shared/ids.ts";
-import { isWellFormed } from "../shared/well-formed.ts";
+import { isStorableText } from "../shared/storable-text.ts";
 import type { Instant } from "../time/instant.ts";
 
 /**
@@ -92,9 +92,9 @@ export function requestFingerprint(value: EntryValue, note: string | null): stri
   return JSON.stringify([value.kind, quantity, normalizeNote(note)]);
 }
 
-/** Whether `note` is well-formed UTF-16 (no lone surrogates); `null` is. */
-export function isWellFormedNote(note: string | null): boolean {
-  return note === null || isWellFormed(note);
+/** Whether `note` is storable text (well-formed, no NUL); `null` is. */
+export function isStorableNote(note: string | null): boolean {
+  return note === null || isStorableText(note);
 }
 
 /** An empty note is no note: stored, fingerprinted and compared as `null`. Any other text is kept as typed. */
