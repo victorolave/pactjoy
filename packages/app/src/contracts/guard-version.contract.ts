@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import type { Repositories } from "../ports/repositories.ts";
+import type { UnitOfWork } from "../ports/unit-of-work.ts";
 import { ConcurrencyConflict } from "../shared/errors.ts";
 import { circleId, seasonId } from "../shared/ids.ts";
 import { ok } from "../shared/result.ts";
@@ -11,20 +13,27 @@ import {
   seedCircleAndSeason,
 } from "./fixtures.ts";
 
-type Subject = ContractSubject<GuardRepositories>;
-type SubjectFactory = () => Promise<Subject>;
+type CircleRepositories = Pick<Repositories, "circles">;
 
 /** The one aggregate a guard suite exercises, seen only through the repositories. */
-interface GuardTarget {
-  get(repos: GuardRepositories): Promise<unknown>;
-  version(repos: GuardRepositories): Promise<number | undefined>;
-  guard(repos: GuardRepositories, expectedVersion: number): Promise<void>;
-  guardMissing(repos: GuardRepositories): Promise<void>;
+interface GuardTarget<R> {
+  /** Saves the aggregate (and its parents) at version 0. */
+  seed(uow: UnitOfWork<R>): Promise<void>;
+  get(repos: R): Promise<unknown>;
+  version(repos: R): Promise<number | undefined>;
+  guard(repos: R, expectedVersion: number): Promise<void>;
+  guardMissing(repos: R): Promise<void>;
   /** Saves version 1 over the seeded version 0. */
-  bump(repos: GuardRepositories): Promise<void>;
+  bump(repos: R): Promise<void>;
 }
 
-const CIRCLE_TARGET: GuardTarget = {
+const CIRCLE_TARGET: GuardTarget<CircleRepositories> = {
+  seed: async (uow) => {
+    await uow.transaction(async (r) => {
+      await r.circles.save(CIRCLE, null);
+      return ok(undefined);
+    });
+  },
   get: (r) => r.circles.get(CIRCLE.id),
   version: async (r) => (await r.circles.get(CIRCLE.id))?.version,
   guard: (r, v) => r.circles.guardVersion(CIRCLE.id, v),
@@ -32,7 +41,8 @@ const CIRCLE_TARGET: GuardTarget = {
   bump: (r) => r.circles.save({ ...CIRCLE, version: 1 }, 0),
 };
 
-const SEASON_TARGET: GuardTarget = {
+const SEASON_TARGET: GuardTarget<GuardRepositories> = {
+  seed: seedCircleAndSeason,
   get: (r) => r.seasons.get(SEASON.id),
   version: async (r) => (await r.seasons.get(SEASON.id))?.version,
   guard: (r, v) => r.seasons.guardVersion(SEASON.id, v),
@@ -64,14 +74,18 @@ async function drain(release: Deferred, ...pending: Promise<unknown>[]): Promise
   await Promise.allSettled(pending);
 }
 
-function defineGuardCases(factory: SubjectFactory, target: GuardTarget): void {
-  async function setup(): Promise<Subject["uow"]> {
+function defineGuardCases<R>(
+  factory: () => Promise<ContractSubject<R>>,
+  target: GuardTarget<R>,
+): void {
+  type Uow = UnitOfWork<R>;
+  async function setup(): Promise<Uow> {
     const { uow } = await factory();
-    await seedCircleAndSeason(uow);
+    await target.seed(uow);
     return uow;
   }
-  const versionOf = (uow: Subject["uow"]) => uow.read((r) => target.version(r));
-  const bumpInTransaction = (uow: Subject["uow"]) =>
+  const versionOf = (uow: Uow) => uow.read((r) => target.version(r));
+  const bumpInTransaction = (uow: Uow) =>
     uow.transaction(async (r) => {
       await target.bump(r);
       return ok(undefined);
@@ -223,12 +237,18 @@ function defineGuardCases(factory: SubjectFactory, target: GuardTarget): void {
   });
 }
 
-export function describeCircleGuardContract(name: string, factory: SubjectFactory): void {
+export function describeCircleGuardContract(
+  name: string,
+  factory: () => Promise<ContractSubject<CircleRepositories>>,
+): void {
   describe(`${name} circle repository: guardVersion`, () =>
     defineGuardCases(factory, CIRCLE_TARGET));
 }
 
-export function describeSeasonGuardContract(name: string, factory: SubjectFactory): void {
+export function describeSeasonGuardContract(
+  name: string,
+  factory: () => Promise<ContractSubject<GuardRepositories>>,
+): void {
   describe(`${name} season repository: guardVersion`, () =>
     defineGuardCases(factory, SEASON_TARGET));
 }

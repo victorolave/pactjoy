@@ -2,7 +2,7 @@ import { ConcurrencyConflict, err, type Habit, habitId, instant, ok, userId } fr
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { createClient } from "../src/client.ts";
 import { bindRepositories } from "../src/repositories.ts";
-import { createUnitOfWork } from "../src/unit-of-work.ts";
+import { type BindMode, createUnitOfWork } from "../src/unit-of-work.ts";
 import { connect, databaseUrl, truncateAll } from "./db.ts";
 
 const habit = (n: number): Habit => ({
@@ -20,8 +20,8 @@ const [A, B] = [habit(1), habit(2)] as const;
 const client = createClient({ url: databaseUrl(), max: 4 });
 const admin = connect(databaseUrl());
 // `exec` exposes the transaction's own executor, to ask Postgres about itself.
-const bind = (exec: Parameters<typeof bindRepositories>[0]) => ({
-  ...bindRepositories(exec),
+const bind = (exec: Parameters<typeof bindRepositories>[0], mode: BindMode) => ({
+  ...bindRepositories(exec, mode),
   exec,
 });
 const uow = createUnitOfWork(client.begin, bind);

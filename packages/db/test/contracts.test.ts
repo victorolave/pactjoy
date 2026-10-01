@@ -1,4 +1,5 @@
 import {
+  describeCircleGuardContract,
   describeCircleRepositoryContract,
   describeHabitRepositoryContract,
   describeUnitOfWorkContract,
@@ -25,5 +26,6 @@ async function postgres() {
 }
 
 describeCircleRepositoryContract("postgres", postgres);
+describeCircleGuardContract("postgres", postgres);
 describeHabitRepositoryContract("postgres", postgres);
 describeUnitOfWorkContract("postgres", postgres);

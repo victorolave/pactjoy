@@ -10,6 +10,7 @@ import {
   userId,
 } from "@pactjoy/app";
 import type { SqlExecutor } from "../client.ts";
+import type { BindMode } from "../unit-of-work.ts";
 
 interface CircleRow {
   id: string;
@@ -37,7 +38,22 @@ const isoOrNull = (at: Instant | null) => (at === null ? null : iso(at));
 
 const CIRCLE_COLUMNS = "c.id, c.name, c.created_at, c.archived_at, c.version";
 
-export function createPgCircleRepository(exec: SqlExecutor): CircleRepository {
+/**
+ * One instance per transaction (see `bindRepositories`), so `preWrite` is that
+ * transaction's own map: circle id -> the version it had BEFORE this transaction
+ * first wrote it (`null` = inserted here, so there was nothing to guard).
+ */
+export function createPgCircleRepository(exec: SqlExecutor, mode: BindMode): CircleRepository {
+  const preWrite = new Map<string, number | null>();
+
+  /**
+   * Torn reads are safe: the three queries run at READ COMMITTED inside a write
+   * transaction, so a concurrent commit between them can mix members of one
+   * version with a root of another. But the root is read FIRST, so any such
+   * commit bumped the version past the one we hold: a `save` (version-checked
+   * UPDATE) and a `guardVersion` (locked, compared) both reject it. Nothing
+   * built from a torn aggregate can commit. `read()` is one snapshot anyway.
+   */
   async function load(row: CircleRow | undefined): Promise<Circle | null> {
     if (!row) return null;
     const members = await exec.query<MemberRow>(
@@ -95,12 +111,29 @@ export function createPgCircleRepository(exec: SqlExecutor): CircleRepository {
         [user],
       ),
 
-    async guardVersion() {
-      // A silent no-op would break the port (D5), so fail loudly until B4b.
-      throw new Error("CircleRepository.guardVersion is not implemented yet (B4b)");
+    /**
+     * Eager read-set guard. `FOR NO KEY UPDATE`, never FOR SHARE (two guards
+     * upgrading to a write deadlock) and not FOR UPDATE (it would block the
+     * KEY SHARE an FK check takes, e.g. a season insert). The lock lasts to
+     * COMMIT, so the check is atomic with it. A circle this transaction already
+     * wrote is compared against its pre-write version: the row is locked and
+     * its stored version is already ours.
+     */
+    async guardVersion(id, expectedVersion) {
+      if (mode === "read") return;
+      if (preWrite.has(id)) {
+        if (preWrite.get(id) !== expectedVersion) throw new ConcurrencyConflict();
+        return;
+      }
+      const { rows } = await exec.query<{ version: number }>(
+        "select version from pactjoy.circles where id = $1 for no key update",
+        [id],
+      );
+      if (rows[0]?.version !== expectedVersion) throw new ConcurrencyConflict();
     },
 
     async save(circle, expectedVersion) {
+      const first = !preWrite.has(circle.id);
       const root = [circle.id, circle.name, iso(circle.createdAt), isoOrNull(circle.archivedAt)];
       if (expectedVersion === null) {
         // A duplicate id raises 23505 on circles_pkey, which the unit of work maps to ConcurrencyConflict.
@@ -108,6 +141,7 @@ export function createPgCircleRepository(exec: SqlExecutor): CircleRepository {
           "insert into pactjoy.circles (id, name, created_at, archived_at, version) values ($1, $2, $3::timestamptz, $4::timestamptz, $5)",
           [...root, circle.version],
         );
+        if (first) preWrite.set(circle.id, null);
       } else {
         // Only mutable columns are SET: `id` is a key column (never SET, ADR-0010) and `created_at` never changes.
         const { rowCount } = await exec.query(
@@ -115,6 +149,7 @@ export function createPgCircleRepository(exec: SqlExecutor): CircleRepository {
           [circle.id, circle.name, isoOrNull(circle.archivedAt), circle.version, expectedVersion],
         );
         if (rowCount === 0) throw new ConcurrencyConflict();
+        if (first) preWrite.set(circle.id, expectedVersion);
         await exec.query("delete from pactjoy.circle_members where circle_id = $1", [circle.id]);
         await exec.query("delete from pactjoy.circle_invites where circle_id = $1", [circle.id]);
       }
