@@ -137,10 +137,26 @@ describe("GET /seasons/:seasonId/score (UE-E-S11)", () => {
     const seen = await ctx.call("GET", `/seasons/${seasonId}/members/${victor}/score`, "andrea");
     expect(seen.status).toBe(200);
     expect(seen.json.data.commitments.map((x: { kind: string }) => x.kind)).toEqual(["hidden"]);
+    expect(Object.keys(seen.json.data.commitments[0]).sort()).toEqual([
+      "commitmentId",
+      "kind",
+      "points",
+      "weightPercent",
+    ]);
     expect(JSON.stringify(seen.json)).not.toContain("Secret");
     expect(keysDeep(seen.json).has("habitId")).toBe(false);
     const own = await ctx.call("GET", `/seasons/${seasonId}/score`, "victor");
     expect(own.json.data.commitments.map((x: { kind: string }) => x.kind)).toEqual(["detail"]);
+  });
+
+  it("a member who left keeps read-only access to score and standings", async () => {
+    const { call, circleId, seasonId } = await givenScored();
+    const left = await call("POST", `/circles/${circleId}/leave`, "victor");
+    expect(left.status).toBe(200);
+    const score = await call("GET", `/seasons/${seasonId}/score`, "victor");
+    expect(score.status).toBe(200);
+    const standings = await call("GET", `/seasons/${seasonId}/standings`, "victor");
+    expect(standings.status).toBe(200);
   });
 
   it("notStarted while the season has not begun (UE-E-S12)", async () => {
