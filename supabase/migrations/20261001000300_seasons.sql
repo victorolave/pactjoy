@@ -16,6 +16,13 @@
 -- with the season; the season itself is RESTRICTed by its circle (and, later,
 -- by its entries).
 --
+-- `season_commitments.member_id` and `habit_id` have NO foreign keys on purpose:
+-- child rows are replaced wholesale on every save (delete + insert), and
+-- referential integrity is owned by the aggregate and the use cases (decision
+-- #4954), not by the database. `id` is unique across seasons; as child rows are
+-- only ever deleted and inserted, never UPDATEd, this does not touch the
+-- key-column rule above.
+--
 -- Business ranges (length, cadence, weights) stay in TypeScript; only
 -- representational CHECKs live here. Every constraint is named.
 -- RLS is on with NO policies.
@@ -48,7 +55,8 @@ create table pactjoy.season_commitments (
   weight_percent smallint not null,
   privacy text not null constraint season_commitments_privacy_check check (privacy in ('visible', 'private')),
   measure jsonb not null,
-  constraint season_commitments_pkey primary key (season_id, position)
+  constraint season_commitments_pkey primary key (season_id, position),
+  constraint season_commitments_id_key unique (id)
 );
 
 create table pactjoy.season_approvals (
