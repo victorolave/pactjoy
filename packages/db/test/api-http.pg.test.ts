@@ -1,22 +1,12 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { createHttpOverPostgres, TODAY } from "./api-http.ts";
+import { createHttpOverPostgres, DAILY, TODAY } from "./api-http.ts";
 import { connect, databaseUrl, truncateAll } from "./db.ts";
-
-const DAILY = {
-  unit: "minutes",
-  direction: "reach",
-  minimum: "10",
-  ideal: "30",
-  schedule: {
-    period: "perSession",
-    frequency: { kind: "specificDays", weekdays: [0, 1, 2, 3, 4, 5, 6] },
-  },
-};
 
 const api = createHttpOverPostgres();
 const admin = connect(databaseUrl());
 beforeEach(() => truncateAll(admin));
 afterAll(async () => {
+  await truncateAll(admin); // leave the shared database clean for the next file
   await api.end();
   await admin.end();
 });

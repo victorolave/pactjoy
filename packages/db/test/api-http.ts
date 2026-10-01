@@ -18,6 +18,18 @@ export const USERS = Array.from({ length: 8 }, (_, i) =>
 /** Token `u1`..`u8` authenticates as the matching user. */
 export const tokens = Object.fromEntries(USERS.map((u, i) => [`u${i + 1}`, u]));
 
+/** A measure that scores every day of the week, so an entry made today counts at once. */
+export const DAILY = {
+  unit: "minutes",
+  direction: "reach",
+  minimum: "10",
+  ideal: "30",
+  schedule: {
+    period: "perSession",
+    frequency: { kind: "specificDays", weekdays: [0, 1, 2, 3, 4, 5, 6] },
+  },
+};
+
 /** The real handler (fake token verifier) over the migrated Postgres, with a pool of `max`. */
 export function createHttpOverPostgres(max = 3) {
   const clock = { now: () => NOW };
