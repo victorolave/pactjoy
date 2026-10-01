@@ -1,11 +1,12 @@
 import type { Repositories } from "@pactjoy/app";
 import { createPgCircleRepository } from "./circle/pg-circle-repository.ts";
 import type { BindMode, SqlExecutor } from "./client.ts";
+import { createPgEntryRepository } from "./entry/pg-entry-repository.ts";
 import { createPgHabitRepository } from "./habit/pg-habit-repository.ts";
 import { createPgSeasonRepository } from "./season/pg-season-repository.ts";
 
 /** The repositories this adapter has so far; each slice adds its own. */
-export type PgRepositories = Pick<Repositories, "habits" | "circles" | "seasons">;
+export type PgRepositories = Pick<Repositories, "habits" | "circles" | "seasons" | "entries">;
 
 /**
  * Fresh repositories closed over ONE transaction's executor. Nothing is shared
@@ -16,5 +17,6 @@ export function bindRepositories(exec: SqlExecutor, mode: BindMode): PgRepositor
     habits: createPgHabitRepository(exec),
     circles: createPgCircleRepository(exec, mode),
     seasons: createPgSeasonRepository(exec, mode),
+    entries: createPgEntryRepository(exec),
   };
 }

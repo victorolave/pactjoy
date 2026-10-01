@@ -74,7 +74,13 @@ export type {
 } from "./entry/edit-entry.ts";
 export { editEntry } from "./entry/edit-entry.ts";
 export type { EntryRepository } from "./entry/entry.repository.ts";
-export type { EntryRecord, EntryValue, EntryValueInput } from "./entry/entry.ts";
+export type {
+  EntryRecord,
+  EntryTombstone,
+  EntryValue,
+  EntryValueInput,
+  StoredEntry,
+} from "./entry/entry.ts";
 export type { EntryValueError } from "./entry/entry-value.ts";
 export type { EntryWindowError } from "./entry/entry-window.ts";
 export type {
