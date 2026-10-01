@@ -79,6 +79,15 @@ describe("auth guard", () => {
     expect(seen.size).toBe(1);
   });
 
+  it("correlates the rejection log with the request id when the pipeline supplies one", async () => {
+    const { authenticate, logger } = setup();
+    await authenticate(request("Bearer nope"), { requestId: "req-1" });
+    expect(logger.warn).toHaveBeenCalledWith("auth.rejected", {
+      reason: "invalidSignature",
+      requestId: "req-1",
+    });
+  });
+
   it("AU-S5: an unknown token is rejected by the fake verifier as invalidSignature", async () => {
     const { authenticate, logger } = setup();
     expect((await authenticate(request("Bearer nope"))).ok).toBe(false);
