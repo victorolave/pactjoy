@@ -23,7 +23,7 @@ export default defineConfig({
       },
       {
         // Tests that need the migrated Postgres. Files share one database and
-        // truncate between tests (design section 5), so they run one at a time.
+        // run one at a time; test/isolation.ts truncates before every test (design section 5).
         extends: true,
         test: {
           name: "db",
@@ -31,6 +31,7 @@ export default defineConfig({
           exclude: UNIT_ONLY_IN_TEST_DIR,
           globalSetup: "./test/global-setup.ts",
           fileParallelism: false,
+          setupFiles: ["./test/isolation.ts"],
         },
       },
     ],

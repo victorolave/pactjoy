@@ -1,9 +1,9 @@
 import { ConcurrencyConflict, type Habit, habitId, instant, ok, userId } from "@pactjoy/app";
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
 import { createClient } from "../src/client.ts";
 import { bindRepositories } from "../src/repositories.ts";
 import { createUnitOfWork } from "../src/unit-of-work.ts";
-import { connect, databaseUrl, truncateAll } from "./db.ts";
+import { connect, databaseUrl } from "./db.ts";
 
 const HABIT: Habit = {
   id: habitId("00000000-0000-4000-8000-0000000000d1"),
@@ -23,7 +23,6 @@ afterAll(async () => {
   await client.end();
   await admin.end();
 });
-beforeEach(() => truncateAll(admin));
 
 const save = (habit: Habit, expected: number | null) =>
   uow.transaction(async ({ habits }) => {

@@ -7,11 +7,11 @@ import {
   type UnitOfWork,
   userId,
 } from "@pactjoy/app";
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
 import { createClient } from "../src/client.ts";
 import { bindRepositories } from "../src/repositories.ts";
 import { createUnitOfWork } from "../src/unit-of-work.ts";
-import { connect, databaseUrl, truncateAll } from "./db.ts";
+import { connect, databaseUrl } from "./db.ts";
 
 const client = createClient({ url: databaseUrl(), max: 2 });
 const admin = connect(databaseUrl());
@@ -21,7 +21,6 @@ afterAll(async () => {
   await client.end();
   await admin.end();
 });
-beforeEach(() => truncateAll(admin));
 
 const actor: Actor = { userId: userId("00000000-0000-4000-8000-0000000000b1") };
 const ids: IdGenerator = { next: () => "00000000-0000-4000-8000-0000000000d1" };

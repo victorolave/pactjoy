@@ -14,7 +14,7 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { createClient, type SqlExecutor } from "../src/client.ts";
 import { bindRepositories } from "../src/repositories.ts";
 import { createUnitOfWork } from "../src/unit-of-work.ts";
-import { connect, databaseUrl, truncateAll } from "./db.ts";
+import { connect, databaseUrl } from "./db.ts";
 
 const uuid = (n: number) => `00000000-0000-4000-8000-${n.toString(16).padStart(12, "0")}`;
 const T0 = instant(1_700_000_000_000);
@@ -69,7 +69,6 @@ afterAll(async () => {
   await admin.end();
 });
 beforeEach(async () => {
-  await truncateAll(admin);
   await uow.transaction(async ({ circles, seasons }) => {
     await circles.save(CIRCLE, null);
     await seasons.save(S, null);

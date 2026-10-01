@@ -15,10 +15,10 @@ import {
   recordEntry,
   userId,
 } from "@pactjoy/app";
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
 import { createClient } from "../src/client.ts";
 import { createPostgresUnitOfWork } from "../src/index.ts";
-import { connect, databaseUrl, truncateAll } from "./db.ts";
+import { connect, databaseUrl } from "./db.ts";
 import { createFreshDatabase } from "./migrate.ts";
 
 const UUID_V7 = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -35,7 +35,6 @@ const must = <T, E>(result: { ok: true; value: T } | { ok: false; error: E }): T
   return result.value;
 };
 
-beforeEach(() => truncateAll(admin));
 afterAll(async () => {
   await uow.end();
   await admin.end();
