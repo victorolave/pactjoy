@@ -1,6 +1,7 @@
+import { deleteEntry, entryId } from "@pactjoy/app";
 import { describe, expect, it } from "vitest";
 import { DONE_BODY, givenActiveSeason, MINUTES } from "./entries-fixture.ts";
-import { UNKNOWN_CIRCLE, VICTOR } from "./harness.ts";
+import { ANDREA, UNKNOWN_CIRCLE, VICTOR } from "./harness.ts";
 
 describe("POST /seasons/:seasonId/entries: app errors (UE-E-S3, S5, S6)", () => {
   it("S3: the same clientRequestId with another note is 422 IdempotencyKeyReused", async () => {
@@ -107,5 +108,36 @@ describe("POST /seasons/:seasonId/entries: app errors (UE-E-S3, S5, S6)", () => 
       ...DONE_BODY,
     });
     expect([inactive.status, inactive.json.error.code]).toEqual([409, "SeasonNotActive"]);
+  });
+
+  it("S4: replaying the key of a deleted entry is 409 EntryDeleted and nothing is recreated", async () => {
+    const ctx = await givenActiveSeason();
+    const body = { commitmentId: ctx.commitmentId, ...DONE_BODY };
+    const first = await ctx.call("POST", ctx.path, "andrea", body);
+    const deleted = await deleteEntry(
+      ctx.app,
+      { userId: ANDREA },
+      { entryId: entryId(first.json.data.entry.id) },
+    );
+    expect(deleted.ok).toBe(true);
+    const again = await ctx.call("POST", ctx.path, "andrea", body);
+    expect([again.status, again.json.error.code]).toEqual([409, "EntryDeleted"]);
+    const rows = await ctx.app.entries.listBySeason(ctx.seasonId as never);
+    expect(rows).toHaveLength(0);
+  });
+
+  it("T1: a replay after its window closed is still 200 with the original entry", async () => {
+    const ctx = await givenActiveSeason();
+    const body = { commitmentId: ctx.commitmentId, ...DONE_BODY };
+    const first = await ctx.call("POST", ctx.path, "andrea", body);
+    const season = await ctx.app.seasons.get(ctx.seasonId as never);
+    if (!season) throw new Error("fixture setup failed");
+    // Started 44 days ago: the entry's day-0 window is long closed.
+    const old = { ...season, actualStart: "2023-10-01" as never, version: 99 };
+    await ctx.app.seasons.save(old, season.version);
+    const again = await ctx.call("POST", ctx.path, "andrea", body);
+    expect(again.status).toBe(200);
+    expect(again.json.data.replayed).toBe(true);
+    expect(again.json.data.entry.id).toBe(first.json.data.entry.id);
   });
 });
