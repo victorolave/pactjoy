@@ -473,6 +473,36 @@ describe("validateCommitment", () => {
       expect(withLabel(" a ").ok).toBe(true);
     });
 
+    describe("zero width joiner (U+200D)", () => {
+      it.each([
+        ["woman running + km", "\u{1F3C3}\u200D\u2640\uFE0F km"],
+        ["family", "\u{1F468}\u200D\u{1F469}\u200D\u{1F467}"],
+        ["rainbow flag", "\u{1F3F3}\uFE0F\u200D\u{1F308}"],
+        ["man running, skin tone", "\u{1F3C3}\u{1F3FD}\u200D\u2642\uFE0F"],
+      ])("accepts a ZWJ that joins two emoji (%s)", (_name, label) => {
+        expect(withLabel(label).ok).toBe(true);
+      });
+
+      it.each([
+        ["between letters", "a\u200Db"],
+        ["alone", "\u200D"],
+        ["trailing after text", "km\u200D"],
+        ["leading", "\u200D\u{1F3C3}"],
+        ["trailing after emoji", "\u{1F3C3}\u200D"],
+        ["emoji then letter", "\u{1F3C3}\u200Da"],
+        ["two in a row", "\u{1F3C3}\u200D\u200D\u2640"],
+      ])("rejects a ZWJ that does not join two emoji (%s)", (_name, label) => {
+        expect(withLabel(label)).toEqual({
+          ok: false,
+          error: { kind: "CustomLabelHasInvisibleCharacters" },
+        });
+      });
+
+      it("still rejects other format characters next to emoji", () => {
+        expect(withLabel("\u{1F3C3}\u200B\u2640").ok).toBe(false);
+      });
+    });
+
     it("reports an over-long label before its invisible characters", () => {
       expect(withLabel(`${"a".repeat(20)}\u0000`)).toEqual({
         ok: false,

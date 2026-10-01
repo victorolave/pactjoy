@@ -99,6 +99,17 @@ const WHOLE_NUMBER = /^\d+$/;
 // invisible characters would enable spoofing.
 const INVISIBLE_CHARACTER = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u;
 
+// A ZWJ (U+200D, a Cf) is allowed ONLY when it glues two emoji together (so
+// composed emoji such as a running woman, a family or a rainbow flag survive): the
+// preceding emoji may carry U+FE0F and/or a skin-tone modifier (U+1F3FB..F), and
+// another emoji must follow. Lookarounds don't consume, so chains of joins work.
+const EMOJI_JOINER =
+  /(?<=\p{Extended_Pictographic}[️\u{1F3FB}-\u{1F3FF}]*)‍(?=\p{Extended_Pictographic})/gu;
+
+function hasInvisibleCharacter(label: string): boolean {
+  return INVISIBLE_CHARACTER.test(label.replace(EMOJI_JOINER, ""));
+}
+
 const MIN_TIMES_PER_WEEK = 1;
 const MAX_TIMES_PER_WEEK = 7;
 const MAX_WEEKDAY = 6;
@@ -205,7 +216,7 @@ export function validateCommitment(
   if (measure.customLabel != null && measure.customLabel.length > MAX_CUSTOM_LABEL_LENGTH) {
     return err({ kind: "CustomLabelTooLong" });
   }
-  if (measure.customLabel != null && INVISIBLE_CHARACTER.test(measure.customLabel)) {
+  if (measure.customLabel != null && hasInvisibleCharacter(measure.customLabel)) {
     return err({ kind: "CustomLabelHasInvisibleCharacters" });
   }
   // `null`/absent means "no label" and is untouched; a supplied label must show something.
