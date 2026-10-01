@@ -49,8 +49,8 @@
               "options": {
                 "patterns": [
                   {
-                    "group": ["@pactjoy/*/**", "!@pactjoy/app/contracts"],
-                    "message": "Import only package roots or the documented subpaths (@pactjoy/app/contracts is allowed in tests only)."
+                    "group": ["@pactjoy/*/**", "!@pactjoy/app/contracts", "!@pactjoy/api/testing"],
+                    "message": "Import only package roots or the documented subpaths (@pactjoy/app/contracts and @pactjoy/api/testing are allowed in tests only)."
                   },
                   {
                     "group": ["npm:*", "jsr:*"],
