@@ -1,0 +1,26 @@
+{
+  "name": "@pactjoy/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "HTTP API layer over the use cases of @pactjoy/app: router, auth guard, validation, error mapping and presenters. Standard TS/ESM over Web Request/Response; the Supabase Edge shell lives in supabase/functions/api.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "biome lint .",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@pactjoy/app": "workspace:*",
+    "@pactjoy/engine": "workspace:*",
+    "jose": "^6.2.12"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "fast-check": "^4.10.2",
+    "vitest": "^5.0.1"
+  }
+}
