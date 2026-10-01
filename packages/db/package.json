@@ -19,6 +19,7 @@
     "postgres": "^3.4.7"
   },
   "devDependencies": {
+    "@pactjoy/api": "workspace:*",
     "@testcontainers/postgresql": "^11.0.0",
     "@types/node": "^24.0.0",
     "fast-check": "^4.10.2",

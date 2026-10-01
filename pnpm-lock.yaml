@@ -65,6 +65,9 @@ importers:
         specifier: ^3.4.7
         version: 3.4.9
     devDependencies:
+      '@pactjoy/api':
+        specifier: workspace:*
+        version: link:../api
       '@testcontainers/postgresql':
         specifier: ^11.0.0
         version: 11.14.0
