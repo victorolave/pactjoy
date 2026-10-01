@@ -5,7 +5,8 @@
   "type": "module",
   "description": "HTTP API layer over the use cases of @pactjoy/app: router, auth guard, validation, error mapping and presenters. Standard TS/ESM over Web Request/Response; the Supabase Edge shell lives in supabase/functions/api.",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./testing": "./src/testing/index.ts"
   },
   "scripts": {
     "lint": "biome lint .",
