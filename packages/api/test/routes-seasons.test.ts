@@ -115,6 +115,27 @@ describe("PATCH /seasons/:seasonId (UE-S-S4)", () => {
     });
   });
 
+  it("PI-S8: PATCH {} is a no-op: 200, approvals kept, version and pactRevision unchanged", async () => {
+    const { app, call, id } = await givenSeason();
+    const season = await app.seasons.get(seasonId(id));
+    const member = (await app.circles.get(season?.circleId as never))?.members[0];
+    if (!season || !member) throw new Error("fixture setup failed");
+    const approved = {
+      ...season,
+      approvals: [{ memberId: member.id, approvedAt: app.clock.now() }],
+      version: season.version + 1,
+    };
+    await app.seasons.save(approved, season.version);
+
+    const { status, json } = await call("PATCH", `/seasons/${id}`, "andrea", {});
+
+    expect(status).toBe(200);
+    expect(json.data.approvals).toHaveLength(1);
+    expect(json.data.version).toBe(approved.version);
+    expect(json.data.pactRevision).toBe(approved.pactRevision);
+    expect(await app.seasons.get(seasonId(id))).toEqual(approved);
+  });
+
   it("200 edits startDate and timezone (visible as nominalStart and timeZone in the DTO)", async () => {
     const { call, id } = await givenSeason();
     const { status, json } = await call("PATCH", `/seasons/${id}`, "andrea", {

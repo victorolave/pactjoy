@@ -54,7 +54,9 @@ export type EditSeasonParamsError =
  * -- no owner/admin role (A4), same as `rename-circle.ts`.
  *
  * Editing resets all pact approvals (B2, PA-2): members approved the
- * previous parameters, not these.
+ * previous parameters, not these. An edit that changes nothing (`{}` or
+ * values equal to the stored ones) is a no-op: the unchanged season is
+ * returned with no write, reset or version/pactRevision bump (SS-18).
  */
 export async function editSeasonParams(
   deps: EditSeasonParamsDeps,
@@ -100,6 +102,21 @@ export async function editSeasonParams(
       }
     }
 
+    // No-op (SS-18, PI-S8..S11): every effective value already equals the
+    // stored one. Runs after validation (invalid input still errors) and
+    // before the window re-check (a no-op never fails the window). The
+    // timezone is compared as a raw string, so "utc" vs "UTC" is a change.
+    const lengthWeeks = input.lengthWeeks ?? season.lengthWeeks;
+    const reviewCadenceWeeks = input.reviewCadenceWeeks ?? season.reviewCadenceWeeks;
+    if (
+      timeZone === season.timeZone &&
+      nominalStart === season.nominalStart &&
+      lengthWeeks === season.lengthWeeks &&
+      reviewCadenceWeeks === season.reviewCadenceWeeks
+    ) {
+      return ok(season);
+    }
+
     // Re-validate the A6 window whenever `startDate` OR `timezone` changes
     // -- a new zone changes what "today" means for the SAME nominalStart
     // (SC-6), so it can push an unedited start date out of the window just
@@ -121,8 +138,8 @@ export async function editSeasonParams(
       ...resetApprovals(season),
       timeZone,
       nominalStart,
-      lengthWeeks: input.lengthWeeks ?? season.lengthWeeks,
-      reviewCadenceWeeks: input.reviewCadenceWeeks ?? season.reviewCadenceWeeks,
+      lengthWeeks,
+      reviewCadenceWeeks,
       version: season.version + 1,
     };
     await repos.seasons.save(updated, season.version);
