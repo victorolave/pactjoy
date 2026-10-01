@@ -7,7 +7,7 @@ import type { Season } from "../season/season.ts";
 import type { Actor } from "../shared/actor.ts";
 import type { SeasonId } from "../shared/ids.ts";
 import { err, ok, type Result } from "../shared/result.ts";
-import type { CommitmentRecord } from "./commitment.ts";
+import { type CommitmentRecord, measuresEqual } from "./commitment.ts";
 import {
   type MeasureInput,
   type ValidateCommitmentError,
@@ -44,7 +44,9 @@ export type EditCommitmentError =
  * `Season.commitments` is replaced in place and saved under the season's
  * own optimistic `version` (D5).
  *
- * Editing a commitment resets all pact approvals (SS-13, PA-2).
+ * Editing a commitment resets all pact approvals (SS-13, PA-2), unless
+ * weight, privacy and measure are all identical to the stored values: then
+ * the unchanged season is returned with no save, reset or bump.
  */
 export async function editCommitment(
   deps: EditCommitmentDeps,
@@ -81,6 +83,15 @@ export async function editCommitment(
     });
     if (!validated.ok) {
       return validated;
+    }
+
+    // Nothing effectively changes: no write, no approval reset, no bump (SS-13).
+    if (
+      existing.weightPercent === input.weightPercent &&
+      existing.privacy === input.privacy &&
+      measuresEqual(existing.measure, validated.value)
+    ) {
+      return ok(season);
     }
 
     const updatedCommitment: CommitmentRecord = {

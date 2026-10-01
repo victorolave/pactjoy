@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createCircle } from "../circle/create-circle.ts";
 import { generateInvite } from "../circle/generate-invite.ts";
 import { joinCircle } from "../circle/join-circle.ts";
@@ -7,6 +7,7 @@ import { ConcurrencyConflict } from "../shared/errors.ts";
 import { habitId, userId } from "../shared/ids.ts";
 import { ok } from "../shared/result.ts";
 import { createTestApp } from "../testing/app-harness.ts";
+import { givenOpenPactWithOneApproval, storedSeason } from "../testing/pact-fixtures.ts";
 import { instant } from "../time/instant.ts";
 import { addCommitment } from "./add-commitment.ts";
 import { commitmentId } from "./commitment.ts";
@@ -38,6 +39,135 @@ async function seasonWithCommitment(app: ReturnType<typeof createTestApp>) {
   if (!added.ok) throw new Error("fixture setup failed");
   return { circle: circle.value, season: added.value, commitment: added.value.commitments[0] };
 }
+
+describe("editCommitment no-op (SS-13, PI-S12..S14)", () => {
+  const DONE_3 = { unit: "done" as const, frequency: { kind: "timesPerWeek" as const, times: 3 } };
+  const MINUTES = (minimum: string, ideal: string) => ({
+    unit: "minutes" as const,
+    direction: "reach" as const,
+    minimum,
+    ideal,
+    schedule: { period: "weeklyTotal" as const },
+  });
+
+  it("PI-S12: an identical edit returns the unchanged season: no save, approvals, version and pactRevision intact", async () => {
+    const app = createTestApp({ now: NOW });
+    const { season, andrea } = await givenOpenPactWithOneApproval(app);
+    const mine = season.commitments[0];
+    if (!mine) throw new Error("fixture setup failed");
+    const save = vi.spyOn(app.seasons, "save");
+
+    const result = await editCommitment(app, andrea, {
+      seasonId: season.id,
+      commitmentId: mine.id,
+      weightPercent: mine.weightPercent,
+      privacy: mine.privacy,
+      measure: DONE_3,
+    });
+
+    expect(result).toEqual({ ok: true, value: season });
+    expect(save).not.toHaveBeenCalled();
+    const stored = await storedSeason(app, season.id);
+    expect(stored.approvals).toHaveLength(1);
+    expect(stored.version).toBe(season.version);
+    expect(stored.pactRevision).toBe(season.pactRevision);
+  });
+
+  it("PI-S13: a measure equal in value but written differently is a no-op; a different threshold resets and bumps", async () => {
+    const app = createTestApp({ now: NOW });
+    const { season, andrea } = await givenOpenPactWithOneApproval(app);
+    const mine = season.commitments[0];
+    if (!mine) throw new Error("fixture setup failed");
+    const base = { seasonId: season.id, commitmentId: mine.id, weightPercent: 100 } as const;
+    const first = await editCommitment(app, andrea, {
+      ...base,
+      privacy: "visible",
+      measure: MINUTES("10", "30"),
+    });
+    if (!first.ok) throw new Error("fixture setup failed");
+    const repeated = await editCommitment(app, andrea, {
+      ...base,
+      privacy: "visible",
+      measure: MINUTES("10.0", "30.00"),
+    });
+    expect(repeated).toEqual({ ok: true, value: first.value });
+    expect((await storedSeason(app, season.id)).version).toBe(first.value.version);
+
+    const changed = await editCommitment(app, andrea, {
+      ...base,
+      privacy: "visible",
+      measure: MINUTES("10", "31"),
+    });
+
+    expect(changed.ok).toBe(true);
+    if (!changed.ok) return;
+    expect(changed.value.version).toBe(first.value.version + 1);
+    expect(changed.value.pactRevision).toBe(first.value.pactRevision + 1);
+  });
+
+  it.each([
+    { field: "weight", change: { weightPercent: 50, privacy: "visible" } },
+    { field: "privacy", change: { weightPercent: 100, privacy: "private" } },
+  ] as const)(
+    "a change in $field alone is still effective: resets approvals and bumps",
+    async ({ change }) => {
+      const app = createTestApp({ now: NOW });
+      const { season, andrea } = await givenOpenPactWithOneApproval(app);
+      const mine = season.commitments[0];
+      if (!mine) throw new Error("fixture setup failed");
+      expect({ weightPercent: mine.weightPercent, privacy: mine.privacy }).toEqual({
+        weightPercent: 100,
+        privacy: "visible",
+      });
+
+      const result = await editCommitment(app, andrea, {
+        seasonId: season.id,
+        commitmentId: mine.id,
+        ...change,
+        measure: DONE_3,
+      });
+
+      expect(result.ok).toBe(true);
+      const stored = await storedSeason(app, season.id);
+      expect(stored.approvals).toEqual([]);
+      expect(stored.pactRevision).toBe(season.pactRevision + 1);
+    },
+  );
+
+  it("PI-S14: a non-owner's identical edit is NotOwner, not a silent no-op", async () => {
+    const app = createTestApp({ now: NOW });
+    const { season, victor } = await givenOpenPactWithOneApproval(app);
+    const andreas = season.commitments[0];
+    if (!andreas) throw new Error("fixture setup failed");
+
+    const result = await editCommitment(app, victor, {
+      seasonId: season.id,
+      commitmentId: andreas.id,
+      weightPercent: andreas.weightPercent,
+      privacy: andreas.privacy,
+      measure: DONE_3,
+    });
+
+    expect(result).toEqual({ ok: false, error: { kind: "NotOwner" } });
+  });
+
+  it("an identical edit still fails validation first when the input is invalid", async () => {
+    const app = createTestApp({ now: NOW });
+    const { season, andrea } = await givenOpenPactWithOneApproval(app);
+    const mine = season.commitments[0];
+    if (!mine) throw new Error("fixture setup failed");
+
+    const result = await editCommitment(app, andrea, {
+      seasonId: season.id,
+      commitmentId: mine.id,
+      weightPercent: 7,
+      privacy: mine.privacy,
+      measure: DONE_3,
+    });
+
+    expect(result.ok).toBe(false);
+  });
+});
 
 describe("editCommitment", () => {
   it("a commitment's habitId is not editable: a stray habitId in the input is ignored (2026-09-30)", async () => {

@@ -56,6 +56,19 @@ describe("PUT /seasons/:seasonId/commitments/:commitmentId (UE-S-S9)", () => {
     expect(JSON.stringify(json)).not.toContain("aaaaaaaa-0000-4000-8000-000000000001");
   });
 
+  it("200 no-op: an identical edit returns the unchanged season, version and pactRevision intact (PI-S12)", async () => {
+    const { call, path, seasonId, app } = await givenCommitment();
+    const before = await app.seasons.get(seasonId as never);
+    const same = { weightPercent: 100, privacy: "visible", measure: DONE };
+
+    const { status, json } = await call("PUT", path, "andrea", same);
+
+    expect(status).toBe(200);
+    expect(json.data.version).toBe(before?.version);
+    expect(json.data.pactRevision).toBe(before?.pactRevision);
+    expect(await app.seasons.get(seasonId as never)).toEqual(before);
+  });
+
   it("passes privacy through: editing to private hides it for everyone (Q2 default)", async () => {
     const { call, path } = await givenCommitment();
     const { json } = await call("PUT", path, "andrea", { ...EDIT, privacy: "private" });
