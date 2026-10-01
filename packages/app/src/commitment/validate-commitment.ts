@@ -69,7 +69,7 @@ export type ValidateCommitmentError =
   | { readonly kind: "MinimumExceedsIdeal" }
   | { readonly kind: "IdealExceedsTolerance" }
   | { readonly kind: "CustomLabelTooLong" }
-  | { readonly kind: "CustomLabelHasControlCharacters" }
+  | { readonly kind: "CustomLabelHasInvisibleCharacters" }
   | { readonly kind: "InvalidTimesPerWeek" }
   | { readonly kind: "NoWeekdays" }
   | { readonly kind: "DuplicateWeekday" }
@@ -92,9 +92,11 @@ const AT_MOST_TWO_DECIMALS = /^\d+(\.\d{1,2})?$/;
 
 const WHOLE_NUMBER = /^\d+$/;
 
-// Any Unicode control character (C0, DEL, C1), NUL included: Postgres jsonb
-// rejects NUL, and no other control character belongs in a unit label.
-const CONTROL_CHARACTER = /\p{Cc}/u;
+// Characters a reader cannot see or that break layout: control (Cc, NUL included:
+// Postgres jsonb rejects it), format (Cf: zero-width, BOM, bidi overrides) and
+// line/paragraph separators (Zl, Zp). Other circle members see the label, so
+// invisible characters would enable spoofing.
+const INVISIBLE_CHARACTER = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u;
 
 const MIN_TIMES_PER_WEEK = 1;
 const MAX_TIMES_PER_WEEK = 7;
@@ -198,8 +200,8 @@ export function validateCommitment(
   if (measure.customLabel != null && measure.customLabel.length > MAX_CUSTOM_LABEL_LENGTH) {
     return err({ kind: "CustomLabelTooLong" });
   }
-  if (measure.customLabel != null && CONTROL_CHARACTER.test(measure.customLabel)) {
-    return err({ kind: "CustomLabelHasControlCharacters" });
+  if (measure.customLabel != null && INVISIBLE_CHARACTER.test(measure.customLabel)) {
+    return err({ kind: "CustomLabelHasInvisibleCharacters" });
   }
   const invalidSchedule = scheduleError(measure.schedule);
   if (invalidSchedule) {

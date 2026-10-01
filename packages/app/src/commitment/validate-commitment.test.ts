@@ -405,7 +405,7 @@ describe("validateCommitment", () => {
     });
   });
 
-  describe("custom label control characters (user decision 2026-09-30)", () => {
+  describe("custom label invisible characters (user decision 2026-09-30)", () => {
     const withLabel = (customLabel: string) =>
       validateCommitment({
         weightPercent: 20,
@@ -426,10 +426,17 @@ describe("validateCommitment", () => {
       ["US (0x1f)", "a\u001fb"],
       ["DEL", "a\u007fb"],
       ["C1 control", "a\u0085b"],
+      ["zero-width space", "a\u200bb"],
+      ["zero-width non-joiner", "a\u200cb"],
+      ["zero-width joiner", "a\u200db"],
+      ["BOM", "a\ufeffb"],
+      ["bidi override", "a\u202eb"],
+      ["line separator", "a\u2028b"],
+      ["paragraph separator", "a\u2029b"],
     ])("rejects a label containing %s", (_name, label) => {
       expect(withLabel(label)).toEqual({
         ok: false,
-        error: { kind: "CustomLabelHasControlCharacters" },
+        error: { kind: "CustomLabelHasInvisibleCharacters" },
       });
     });
 
