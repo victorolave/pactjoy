@@ -18,7 +18,7 @@
           "options": {
             "patterns": [
               {
-                "group": ["@pactjoy/*/**"],
+                "group": ["@pactjoy/*/**", "!@pactjoy/app/contracts"],
                 "message": "Import only package roots (their public index.ts) or the documented subpaths: deep imports leak internals and break the high-decoupling boundary (CLAUDE.md, ADR-0008)."
               },
               {
