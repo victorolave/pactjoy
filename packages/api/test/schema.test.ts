@@ -62,12 +62,43 @@ describe("object schema", () => {
     });
   });
 
-  it("rejects non-objects at the top level and treats an empty body as {}", () => {
+  it("rejects non-objects at the top level", () => {
     for (const bad of [null, [], "x", 1, true]) {
       expect(parse(habit, bad)).toEqual({ ok: false, issues: [{ path: "", problem: "type" }] });
     }
-    expect(parse(object({}), undefined)).toEqual({ ok: true, value: {} });
-    expect(parse(habit, undefined).ok).toBe(false);
+  });
+
+  it("an undefined body is a required issue at the root unless emptyBody is opted in", () => {
+    const required = { ok: false, issues: [{ path: "", problem: "required" }] };
+    expect(parse(object({}), undefined)).toEqual(required);
+    expect(parse(habit, undefined)).toEqual(required);
+    expect(parse(object({}), undefined, { emptyBody: "object" })).toEqual({ ok: true, value: {} });
+    expect(parse(object({ note: optional(string) }), undefined, { emptyBody: "object" })).toEqual({
+      ok: true,
+      value: {},
+    });
+    // opt-in still validates: required fields are reported against the implied {}
+    expect(parse(habit, undefined, { emptyBody: "object" })).toEqual({
+      ok: false,
+      issues: [
+        { path: "name", problem: "required" },
+        { path: "weight", problem: "required" },
+      ],
+    });
+  });
+
+  it("rejects a nested __proto__ in an object and in an array element", () => {
+    const nested = JSON.parse('{"inner":{"name":"a","weight":1,"__proto__":{"x":1}}}');
+    expect(parse(object({ inner: habit }), nested)).toEqual({
+      ok: false,
+      issues: [{ path: "inner.__proto__", problem: "unknownField" }],
+    });
+    const list = JSON.parse('{"items":[{"name":"a","weight":1,"__proto__":{"x":1}}]}');
+    expect(parse(object({ items: array(habit, 3) }), list)).toEqual({
+      ok: false,
+      issues: [{ path: "items.0.__proto__", problem: "unknownField" }],
+    });
+    expect(({} as Record<string, unknown>).x).toBeUndefined();
   });
 
   it("orders issues by schema field order, then unknown fields in input order (RV-S26)", () => {
@@ -115,6 +146,23 @@ describe("combinators", () => {
     const s = object({ note: nullable(string) });
     expect(parse(s, { note: null })).toEqual({ ok: true, value: { note: null } });
     expect(parse(s, {}).ok).toBe(false);
+  });
+
+  it("nullable(optional(x)) keeps the field optional and accepts null", () => {
+    const s = object({ note: nullable(optional(string)) });
+    expect(parse(s, {})).toEqual({ ok: true, value: {} });
+    expect(parse(s, { note: null })).toEqual({ ok: true, value: { note: null } });
+    expect(parse(s, { note: "n" })).toEqual({ ok: true, value: { note: "n" } });
+    expect(parse(s, { note: 1 }).ok).toBe(false);
+  });
+
+  it("array rejects sparse holes as invalid elements", () => {
+    // biome-ignore lint/suspicious/noSparseArray: the hole is the point
+    const holey = [1, , 3];
+    expect(parse(object({ d: array(number, 5) }), { d: holey })).toEqual({
+      ok: false,
+      issues: [{ path: "d.1", problem: "type" }],
+    });
   });
 
   it("array validates elements with indexed paths and a max length", () => {

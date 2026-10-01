@@ -58,8 +58,14 @@ export const optional = <T>(inner: Schema<T>): OptionalSchema<T> => ({
   optional: true,
 });
 
-export const nullable = <T>(inner: Schema<T>): Schema<T | null> =>
-  schema((v, path, sink) => (v === null ? null : inner.check(v, path, sink)));
+/** `null` is accepted; the optional flag of `inner` is preserved (`nullable(optional(x))` may be absent). */
+export function nullable<T>(inner: OptionalSchema<T>): OptionalSchema<T | null>;
+export function nullable<T>(inner: Schema<T>): Schema<T | null>;
+export function nullable<T>(inner: Schema<T>): Schema<T | null> {
+  const check: Check<T | null> = (v, path, sink) =>
+    v === null ? null : inner.check(v, path, sink);
+  return inner.optional ? { check, optional: true } : { check };
+}
 
 export const array = <T>(item: Schema<T>, maxItems: number): Schema<T[]> =>
   schema((v, path, sink) => {
@@ -67,11 +73,12 @@ export const array = <T>(item: Schema<T>, maxItems: number): Schema<T[]> =>
     if (v.length > maxItems) return fail(sink, path, "range");
     const out: T[] = [];
     let bad = false;
-    v.forEach((element, i) => {
-      const r = item.check(element, join(path, i), sink);
+    // Total loop (not forEach): a sparse array's holes are visited as `undefined`.
+    for (let i = 0; i < v.length; i++) {
+      const r = item.check(v[i], join(path, i), sink);
       if (r === INVALID) bad = true;
       else out.push(r);
-    });
+    }
     return bad ? INVALID : out;
   });
 
@@ -109,9 +116,22 @@ export const object = <S extends Shape>(shape: S): Schema<ObjectOf<S>> =>
     return bad ? INVALID : (out as ObjectOf<S>);
   });
 
-/** Runs a schema. `undefined` (an empty body) is read as `{}` at the root. */
-export function parse<T>(root: Schema<T>, input: unknown): Parsed<T> {
+export interface ParseOptions {
+  /** Reads an `undefined` root (no body) as `{}`. Opt-in: only routes whose body may be omitted use it. */
+  readonly emptyBody?: "object";
+}
+
+/**
+ * Runs a schema. By default an `undefined` root (no body) is a `required` issue at path `""`, so a
+ * route with required fields never sees a missing body as valid. Route slices whose body is entirely
+ * optional pass `{ emptyBody: "object" }` explicitly; do not make it the default.
+ */
+export function parse<T>(root: Schema<T>, input: unknown, options: ParseOptions = {}): Parsed<T> {
   const sink: Sink = [];
+  if (input === undefined && options.emptyBody !== "object") {
+    fail(sink, "", "required");
+    return { ok: false, issues: sink };
+  }
   const value = root.check(input === undefined ? {} : input, "", sink);
   return value === INVALID ? { ok: false, issues: sink } : { ok: true, value };
 }
