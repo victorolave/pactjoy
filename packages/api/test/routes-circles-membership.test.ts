@@ -1,3 +1,5 @@
+import { seasonId } from "@pactjoy/app";
+import { seasonFixture } from "@pactjoy/app/testing";
 import { describe, expect, it, vi } from "vitest";
 import { ANDREA, setup, UNKNOWN_CIRCLE, VICTOR } from "./harness.ts";
 
@@ -14,24 +16,27 @@ describe("POST /circles/join (UE-C-S6..S8)", () => {
   it("S6: 200 joins with the code in the body; lowercase and padded codes are accepted", async () => {
     const { call, code } = await givenInvitedCircle();
     const { status, json } = await call("POST", "/circles/join", "victor", {
-      code: ` ${code.toLowerCase()} `,
+      inviteCode: ` ${code.toLowerCase()} `,
     });
     expect(status).toBe(200);
     expect(json.data.members).toHaveLength(2);
+    expect(json.data.invite.code).toBe(code); // the joiner is an active viewer, so the invite shows
     expect(json.data.members.filter((m: { isYou: boolean }) => m.isYou)).toHaveLength(1);
     expect(JSON.stringify(json)).not.toContain(VICTOR);
   });
 
   it("S7: 404 InviteNotFound for a well-formed code nobody owns", async () => {
     const { call } = await givenInvitedCircle();
-    const { status, json } = await call("POST", "/circles/join", "victor", { code: "AAAAAA" });
+    const { status, json } = await call("POST", "/circles/join", "victor", {
+      inviteCode: "AAAAAA",
+    });
     expect([status, json.error.code]).toEqual([404, "InviteNotFound"]);
   });
 
   it("S8: 409 AlreadyInActiveCircle for a member of another circle", async () => {
     const { call, code } = await givenInvitedCircle();
     await call("POST", "/circles", "victor", { name: "Mine" });
-    const { status, json } = await call("POST", "/circles/join", "victor", { code });
+    const { status, json } = await call("POST", "/circles/join", "victor", { inviteCode: code });
     expect([status, json.error.code]).toEqual([409, "AlreadyInActiveCircle"]);
   });
 
@@ -43,7 +48,7 @@ describe("POST /circles/join (UE-C-S6..S8)", () => {
       { ...circle, invite: { ...circle.invite, expiresAt: app.clock.now() }, version: 9 },
       circle.version,
     );
-    const { status, json } = await call("POST", "/circles/join", "victor", { code });
+    const { status, json } = await call("POST", "/circles/join", "victor", { inviteCode: code });
     expect([status, json.error.code]).toEqual([410, "InviteExpired"]);
   });
 
@@ -61,8 +66,31 @@ describe("POST /circles/join (UE-C-S6..S8)", () => {
       { ...circle, members: [...circle.members, ...fillers], version: 9 },
       circle.version,
     );
-    const { status, json } = await call("POST", "/circles/join", "victor", { code });
+    const { status, json } = await call("POST", "/circles/join", "victor", { inviteCode: code });
     expect([status, json.error.code]).toEqual([409, "CircleFull"]);
+  });
+
+  it("S6 (UE-C-S6): 409 SeasonNotJoinable while the circle has an active season", async () => {
+    const { app, call, circleId, code } = await givenInvitedCircle();
+    await app.seasons.save(
+      seasonFixture({
+        id: seasonId("cccccccc-0000-4000-8000-000000000001"),
+        circleId: circleId as never,
+        status: "active",
+      }),
+      null,
+    );
+    const { status, json } = await call("POST", "/circles/join", "victor", { inviteCode: code });
+    expect([status, json.error.code]).toEqual([409, "SeasonNotJoinable"]);
+  });
+
+  it("422 unknownField: the legacy `code` field is no longer accepted", async () => {
+    const { call, transaction } = await givenInvitedCircle();
+    transaction.mockClear();
+    const { status, json } = await call("POST", "/circles/join", "victor", { code: "AAAAAA" });
+    expect([status, json.error.code]).toEqual([422, "InvalidRequest"]);
+    expect(json.error.details.issues).toContainEqual({ path: "code", problem: "unknownField" });
+    expect(transaction).not.toHaveBeenCalled();
   });
 
   it("409 CircleArchived for an archived circle", async () => {
@@ -70,17 +98,17 @@ describe("POST /circles/join (UE-C-S6..S8)", () => {
     const circle = await app.circles.get(circleId as never);
     if (!circle) throw new Error("fixture setup failed");
     await app.circles.save({ ...circle, archivedAt: app.clock.now(), version: 9 }, circle.version);
-    const { status, json } = await call("POST", "/circles/join", "victor", { code });
+    const { status, json } = await call("POST", "/circles/join", "victor", { inviteCode: code });
     expect([status, json.error.code]).toEqual([409, "CircleArchived"]);
   });
 
   it.each([
-    ["wrong length", { code: "ABC" }, "format"],
-    ["ambiguous characters (0 O 1 I L)", { code: "AB0O1I" }, "format"],
-    ["oversized", { code: "A".repeat(65) }, "format"],
-    ["not a string", { code: 123456 }, "type"],
+    ["wrong length", { inviteCode: "ABC" }, "format"],
+    ["ambiguous characters (0 O 1 I L)", { inviteCode: "AB0O1I" }, "format"],
+    ["oversized", { inviteCode: "A".repeat(65) }, "format"],
+    ["not a string", { inviteCode: 123456 }, "type"],
     ["missing", {}, "required"],
-    ["unknown field", { code: "AAAAAA", circleId: UNKNOWN_CIRCLE }, "unknownField"],
+    ["unknown field", { inviteCode: "AAAAAA", circleId: UNKNOWN_CIRCLE }, "unknownField"],
     ["no body", undefined, "required"],
   ])(
     "RV-S18..S20: 422 InvalidRequest on %s; the invite lookup never runs",
@@ -101,7 +129,7 @@ describe("POST /circles/join (UE-C-S6..S8)", () => {
 describe("POST /circles/:circleId/leave", () => {
   it("200 marks the caller as left; again gives 403 NotAMember; unknown circle 404", async () => {
     const { call, circleId, code } = await givenInvitedCircle();
-    await call("POST", "/circles/join", "victor", { code });
+    await call("POST", "/circles/join", "victor", { inviteCode: code });
     const left = await call("POST", `/circles/${circleId}/leave`, "victor");
     expect(left.status).toBe(200);
     expect(left.json.data.members.find((m: { isYou: boolean }) => m.isYou).status).toBe("left");
@@ -133,7 +161,7 @@ describe("POST /circles/:circleId/leave", () => {
 
 describe("authentication", () => {
   it.each([
-    ["/circles/join", { code: "AAAAAA" }],
+    ["/circles/join", { inviteCode: "AAAAAA" }],
     [`/circles/${UNKNOWN_CIRCLE}/leave`, undefined],
   ])("401 without a token: POST %s", async (path, body) => {
     const { call, transaction } = setup();

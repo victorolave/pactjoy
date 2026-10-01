@@ -14,7 +14,7 @@ import { type ApiDeps, type Route, toResult, validate } from "./support.ts";
 const circleParams = object({ circleId: uuid });
 const named = object({ name: string });
 const none = object({});
-const joinBody = object({ code: inviteCode });
+const joinBody = object({ inviteCode });
 
 export function circleRoutes(deps: ApiDeps): Route[] {
   return [
@@ -60,7 +60,7 @@ export function circleRoutes(deps: ApiDeps): Route[] {
         const input = validate(ctx, { params: none, body: joinBody });
         if (!input.ok) return input.result;
         // The raw code is passed on: the app normalizes it. It lives in the body, never the URL.
-        const result = await joinCircle(deps, ctx.actor, { inviteCode: input.body.code });
+        const result = await joinCircle(deps, ctx.actor, { inviteCode: input.body.inviteCode });
         return toResult(result, 200, (circle) => presentCircle(circle, ctx.actor));
       },
     },
