@@ -265,5 +265,28 @@ export function describeSeasonRepositoryContract(
       const { uow } = await subject();
       await expect(deleteSeason(uow, 1, 0)).rejects.toBeInstanceOf(ConcurrencyConflict);
     });
+
+    it("SP-S29: insert then delete in one transaction leaves nothing", async () => {
+      const { uow, get } = await subject();
+      await uow.transaction(async ({ seasons }) => {
+        await seasons.save(season(1), null);
+        await seasons.delete(season(1).id, 0);
+        return ok(undefined);
+      });
+      expect(await get()).toBeNull();
+    });
+
+    it("SP-S30: a guard after deleting in the same transaction conflicts", async () => {
+      const { uow, get } = await subject();
+      await saveSeason(uow, season(1), null);
+      await expect(
+        uow.transaction(async ({ seasons }) => {
+          await seasons.delete(season(1).id, 0);
+          await seasons.guardVersion(season(1).id, 0);
+          return ok(undefined);
+        }),
+      ).rejects.toBeInstanceOf(ConcurrencyConflict);
+      expect((await get())?.version).toBe(0);
+    });
   });
 }

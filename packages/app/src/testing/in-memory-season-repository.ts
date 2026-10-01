@@ -115,6 +115,8 @@ export function createInMemorySeasonRepository(): InMemorySeasonRepository {
         },
 
         async guardVersion(id: SeasonId, expectedVersion: number): Promise<void> {
+          // Deleted earlier in this transaction: no row, so the guard conflicts (as on Postgres).
+          if (staged.get(id)?.season === null) throw new ConcurrencyConflict();
           guards.set(id, expectedVersion);
         },
 
@@ -123,6 +125,14 @@ export function createInMemorySeasonRepository(): InMemorySeasonRepository {
         },
 
         async delete(id: SeasonId, expectedVersion: number): Promise<void> {
+          const earlier = staged.get(id);
+          if (earlier) {
+            // Already staged here: check against this transaction's own view and keep the
+            // version the store must still have at commit (null for a row inserted here).
+            if (view(id)?.version !== expectedVersion) throw new ConcurrencyConflict();
+            staged.set(id, { season: null, expectedVersion: earlier.expectedVersion });
+            return;
+          }
           staged.set(id, { season: null, expectedVersion });
         },
       };

@@ -160,7 +160,8 @@ export function createPgSeasonRepository(exec: SqlExecutor, mode: BindMode): Sea
       );
       if (rows[0]?.version !== expectedVersion) throw new ConcurrencyConflict();
     },
-    /** Version-checked. The commitments and approvals go with it (ON DELETE CASCADE); entries will RESTRICT it. */
+    /** Version-checked. The commitments and approvals go with it (ON DELETE CASCADE); entries will RESTRICT it.
+     * Deliberately leaves `preWrite` alone: a later re-insert of the same id after a delete is not guarded. */
     async delete(id, expectedVersion) {
       const { rowCount } = await exec.query(
         "delete from pactjoy.seasons where id = $1 and version = $2",
