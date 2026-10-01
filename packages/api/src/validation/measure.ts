@@ -2,7 +2,6 @@ import type { MeasureInput } from "@pactjoy/app";
 import type { Frequency, Schedule } from "@pactjoy/engine";
 import {
   array,
-  fail,
   literal,
   nullable,
   number,
@@ -12,6 +11,7 @@ import {
   type Schema,
   schema,
   string,
+  tagged,
 } from "./schema.ts";
 
 /**
@@ -19,17 +19,6 @@ import {
  * so decimals stay exact (a JSON number is a type issue, D10). Types the app re-checks at
  * runtime (weekday range, precision, times) are narrowed by cast, as in the season routes.
  */
-
-/** Picks the variant by the string at `key`; an absent/unknown tag is an `enum` issue at that key. */
-const tagged = <T>(key: string, variants: Record<string, Schema<unknown>>): Schema<T> =>
-  schema((v, path, sink) => {
-    const at = path === "" ? key : `${path}.${key}`;
-    if (typeof v !== "object" || v === null || Array.isArray(v)) return fail(sink, path, "type");
-    const tag = Object.hasOwn(v, key) ? (v as Record<string, unknown>)[key] : undefined;
-    const variant = typeof tag === "string" && Object.hasOwn(variants, tag) ? variants[tag] : null;
-    if (!variant) return fail(sink, at, tag === undefined ? "required" : "enum");
-    return variant.check(v, path, sink) as T;
-  });
 
 const frequency = tagged<Frequency>("kind", {
   timesPerWeek: object({ kind: literal("timesPerWeek"), times: number }),

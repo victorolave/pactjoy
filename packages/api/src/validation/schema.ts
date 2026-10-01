@@ -52,6 +52,17 @@ export const oneOf = <const L extends string>(allowed: readonly L[]): Schema<L> 
       : fail(sink, path, "enum"),
   );
 
+/** Picks the variant by the string at `key`; an absent/unknown tag is an `enum` issue at that key. */
+export const tagged = <T>(key: string, variants: Record<string, Schema<unknown>>): Schema<T> =>
+  schema((v, path, sink) => {
+    const at = path === "" ? key : `${path}.${key}`;
+    if (typeof v !== "object" || v === null || Array.isArray(v)) return fail(sink, path, "type");
+    const tag = Object.hasOwn(v, key) ? (v as Record<string, unknown>)[key] : undefined;
+    const variant = typeof tag === "string" && Object.hasOwn(variants, tag) ? variants[tag] : null;
+    if (!variant) return fail(sink, at, tag === undefined ? "required" : "enum");
+    return variant.check(v, path, sink) as T;
+  });
+
 /** The field may be absent; when absent it is OMITTED from the output (exactOptionalPropertyTypes). */
 export const optional = <T>(inner: Schema<T>): OptionalSchema<T> => ({
   check: inner.check,
