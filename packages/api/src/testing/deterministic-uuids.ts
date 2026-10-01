@@ -7,7 +7,7 @@ export function createDeterministicUuidGenerator(): IdGenerator {
     clock: { now: () => instant(0) },
     fill: (bytes) => {
       counter += 1;
-      new DataView(bytes.buffer).setUint32(12, counter);
+      new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).setUint32(12, counter);
     },
   });
 }

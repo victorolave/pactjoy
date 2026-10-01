@@ -32,7 +32,10 @@ export interface EntryDto {
  * Never emits `requestFingerprint` (it embeds the value and the note). The
  * note is emitted raw, so the presenter enforces that the entry is the
  * viewer's own: a foreign entry throws (a plain Error, surfaced as a 500) and
- * is never served. `visibleNote` becomes mandatory the day an endpoint returns
+ * is never served. This is an invariant guard, not an authorization check:
+ * routes must resolve the viewer's MemberId from the use-case result or a
+ * repository read, NEVER from `entry.memberId` (that makes it a tautology).
+ * `visibleNote` becomes mandatory the day an endpoint returns
  * other members' entries (ADR-0011).
  */
 export function presentEntry(entry: StoredEntry, viewer: MemberId): EntryDto {
