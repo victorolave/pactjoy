@@ -101,6 +101,16 @@ describe("forDate", () => {
     expect(parse(dateS, { v: "2026-02-28" })).toEqual({ ok: true, value: { v: "2026-02-28" } });
   });
 
+  it("rejects 2100-02-29 (2100 is not a leap year) and pre-1970 dates", () => {
+    for (const b of ["2100-02-29", "1969-12-31", "1969-06-15"]) {
+      expect(parse(dateS, { v: b })).toEqual({
+        ok: false,
+        issues: [{ path: "v", problem: "format" }],
+      });
+    }
+    expect(parse(dateS, { v: "2000-02-29" }).ok).toBe(true);
+  });
+
   it("rejects impossible, malformed and non-string dates with format", () => {
     for (const b of ["2026-02-30", "2026-13-01", "26-01-01", "", "2026-1-1", "tomorrow"]) {
       expect(parse(dateS, { v: b })).toEqual({
