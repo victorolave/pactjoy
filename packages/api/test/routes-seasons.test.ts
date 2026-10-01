@@ -115,6 +115,27 @@ describe("PATCH /seasons/:seasonId (UE-S-S4)", () => {
     });
   });
 
+  it("200 edits startDate and timezone (visible as nominalStart and timeZone in the DTO)", async () => {
+    const { call, id } = await givenSeason();
+    const { status, json } = await call("PATCH", `/seasons/${id}`, "andrea", {
+      startDate: "2023-11-20",
+      timezone: "America/New_York",
+    });
+    expect(status).toBe(200);
+    expect(json.data).toMatchObject({
+      id,
+      nominalStart: "2023-11-20",
+      timeZone: "America/New_York",
+      lengthWeeks: 4,
+    });
+  });
+
+  it.each([4.5, -4])("422 on a non-valid lengthWeeks %s", async (lengthWeeks) => {
+    const { call, id } = await givenSeason();
+    const { status } = await call("PATCH", `/seasons/${id}`, "andrea", { lengthWeeks });
+    expect(status).toBe(422);
+  });
+
   it("409 PactNotOpen once the pact is closed", async () => {
     const { app, call, id } = await givenSeason();
     const season = await app.seasons.get(seasonId(id));
