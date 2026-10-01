@@ -29,6 +29,8 @@ export function createUuidV7IdGenerator(options: UuidV7Options = {}): IdGenerato
       const bytes = new Uint8Array(16);
       fill(bytes);
       const ms = clock.now();
+      // Only the low 48 bits of `ms` are written: a timestamp above 2^48 ms (year
+      // 10889) would be truncated. Theoretical, since `Instant` cannot reach it.
       const high = Math.floor(ms / TWO_POW_32);
       const low = ms % TWO_POW_32;
       bytes[0] = (high >>> 8) & 0xff;

@@ -1,3 +1,5 @@
+import type { AddressInfo, Socket } from "node:net";
+import { createServer } from "node:net";
 import {
   addCommitment,
   approvePact,
@@ -14,6 +16,7 @@ import {
   userId,
 } from "@pactjoy/app";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { createClient } from "../src/client.ts";
 import { createPostgresUnitOfWork } from "../src/index.ts";
 import { connect, databaseUrl, truncateAll } from "./db.ts";
 import { createFreshDatabase } from "./migrate.ts";
@@ -93,10 +96,19 @@ describe("createPostgresUnitOfWork", () => {
   });
 
   it("DC-S4: runs on a driver with prepared statements disabled (transaction-pooler safe)", async () => {
-    const [row] = await admin.unsafe("select current_setting('server_version_num')::int as v");
-    expect(row?.v).toBeGreaterThanOrEqual(170000);
-    // Re-using one tiny pool for many transactions would fail with
-    // "prepared statement already exists" if prepare were on.
+    // The adapter's own client, one connection: a prepared statement would stay
+    // visible in this session's pg_prepared_statements (it is per session).
+    const client = createClient({ url: databaseUrl(), max: 1 });
+    try {
+      const prepared = await client.begin("isolation level read committed", async (tx) => {
+        await tx.query("select $1::int as n", [1]);
+        await tx.query("select $1::int as n", [1]);
+        return (await tx.query("select count(*)::int as n from pg_prepared_statements", [])).rows;
+      });
+      expect(prepared).toEqual([{ n: 0 }]);
+    } finally {
+      await client.end();
+    }
     const single = createPostgresUnitOfWork({ url: databaseUrl(), max: 1 });
     try {
       for (let i = 0; i < 3; i++)
@@ -106,17 +118,25 @@ describe("createPostgresUnitOfWork", () => {
     }
   });
 
-  it("DC-S5: an unreachable database rejects with a plain Error, not ConcurrencyConflict", async () => {
+  it("DC-S5: a database that accepts the socket but never answers hits the connect timeout", async () => {
+    const sockets: Socket[] = [];
+    const silent = createServer((socket) => void sockets.push(socket));
+    await new Promise<void>((resolve) => silent.listen(0, "127.0.0.1", resolve));
+    const { port } = silent.address() as AddressInfo;
     const dead = createPostgresUnitOfWork({
-      url: "postgres://u:p@127.0.0.1:1/none",
-      connectTimeoutSeconds: 2,
+      url: `postgres://u:p@127.0.0.1:${port}/none`,
+      connectTimeoutSeconds: 1,
     });
     try {
+      const started = Date.now();
       const failure = await dead.read(async () => 1).catch((error: unknown) => error);
+      expect(Date.now() - started).toBeLessThan(3000);
       expect(failure).toBeInstanceOf(Error);
       expect(failure).not.toBeInstanceOf(ConcurrencyConflict);
     } finally {
       await dead.end();
+      for (const socket of sockets) socket.destroy();
+      await new Promise((resolve) => silent.close(resolve));
     }
   });
 
