@@ -42,7 +42,7 @@ export type EditEntryError =
 
 export interface EditEntryResult {
   readonly entry: EntryRecord;
-  /** The actor's own member id, from the transaction that edited (the viewer for presenting). */
+  /** The actor's own member id, from the transaction that edited (the acting member). */
   readonly memberId: MemberId;
 }
 

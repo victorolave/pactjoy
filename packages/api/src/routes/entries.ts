@@ -1,6 +1,6 @@
-import { commitmentId, recordEntry, seasonId } from "@pactjoy/app";
+import { commitmentId, deleteEntry, editEntry, entryId, recordEntry, seasonId } from "@pactjoy/app";
 import { appErrorResult } from "../errors/status-map.ts";
-import { presentRecordEntryResult } from "../presenters/entry.ts";
+import { presentEditEntryResult, presentRecordEntryResult } from "../presenters/entry.ts";
 import { entryValue } from "../validation/entry.ts";
 import { forDate, uuid } from "../validation/formats.ts";
 import { nullable, object, optional, string } from "../validation/schema.ts";
@@ -16,6 +16,12 @@ const recordBody = object({
   note: nullable(optional(string)),
   clientRequestId: string,
 });
+
+const entryParams = object({ entryId: uuid });
+// Both fields are required (`note: null` clears it), so nothing is silently kept or dropped. The
+// day, the key and the member are not editable: any other field is an unknownField.
+const none = object({});
+const editBody = object({ value: entryValue, note: nullable(string) });
 
 export function entryRoutes(deps: ApiDeps): Route[] {
   return [
@@ -37,6 +43,33 @@ export function entryRoutes(deps: ApiDeps): Route[] {
           status: result.value.replayed ? 200 : 201,
           data: presentRecordEntryResult(result.value, result.value.memberId),
         };
+      },
+    },
+    {
+      method: "PUT",
+      pattern: "/entries/:entryId",
+      async handle(ctx) {
+        const input = validate(ctx, { params: entryParams, body: editBody });
+        if (!input.ok) return input.result;
+        const result = await editEntry(deps, ctx.actor, {
+          ...input.body,
+          entryId: entryId(input.params.entryId),
+        });
+        if (!result.ok) return appErrorResult(result.error);
+        return { status: 200, data: presentEditEntryResult(result.value, result.value.memberId) };
+      },
+    },
+    {
+      method: "DELETE",
+      pattern: "/entries/:entryId",
+      async handle(ctx) {
+        const input = validate(ctx, { params: entryParams, body: none, emptyBody: "object" });
+        if (!input.ok) return input.result;
+        const result = await deleteEntry(deps, ctx.actor, {
+          entryId: entryId(input.params.entryId),
+        });
+        // Nothing to present: the uniform envelope carries `data: null` (a repeat delete is a 200 too).
+        return result.ok ? { status: 200, data: null } : appErrorResult(result.error);
       },
     },
   ];
