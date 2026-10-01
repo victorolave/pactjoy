@@ -1,0 +1,47 @@
+import type {
+  AddCommitmentError,
+  ApprovePactError,
+  CreateCircleError,
+  CreateHabitError,
+  CreateSeasonError,
+  DeleteEntryError,
+  EditCommitmentError,
+  EditEntryError,
+  EditSeasonParamsError,
+  GenerateInviteError,
+  JoinCircleError,
+  LeaveCircleError,
+  MemberScoreError,
+  RecordEntryError,
+  RemoveCommitmentError,
+  RenameCircleError,
+  StandingsError,
+  WithdrawApprovalError,
+} from "@pactjoy/app";
+
+/**
+ * Every error a use case can return, from the 18 `*Error` unions the app exports. The
+ * sub-unions (ValidateCommitmentError, EntryValueError, EntryWindowError) are already
+ * members of these. A new use case must be added here (a boundary test scans the app index).
+ */
+export type AppError =
+  | CreateCircleError
+  | RenameCircleError
+  | GenerateInviteError
+  | JoinCircleError
+  | LeaveCircleError
+  | CreateHabitError
+  | CreateSeasonError
+  | EditSeasonParamsError
+  | AddCommitmentError
+  | EditCommitmentError
+  | RemoveCommitmentError
+  | ApprovePactError
+  | WithdrawApprovalError
+  | RecordEntryError
+  | EditEntryError
+  | DeleteEntryError
+  | MemberScoreError
+  | StandingsError;
+
+export type AppErrorKind = AppError["kind"];
