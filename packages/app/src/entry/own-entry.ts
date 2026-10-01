@@ -1,3 +1,4 @@
+import type { MemberId } from "@pactjoy/engine";
 import type { Circle } from "../circle/circle.ts";
 import { findActiveMember } from "../circle/circle.ts";
 import type { CommitmentRecord } from "../commitment/commitment.ts";
@@ -28,6 +29,8 @@ export interface OwnEntryContext {
   readonly season: Season;
   readonly circle: Circle;
   readonly commitment: CommitmentRecord;
+  /** The actor's own member id, resolved in the same transaction (== `entry.memberId`). */
+  readonly memberId: MemberId;
 }
 
 /**
@@ -85,5 +88,5 @@ export async function loadMutableEntry(
     // B7: the real extension source arrives with change A2 (app-pause-workflow).
     pauseGraceExtensionDays: 0,
   });
-  return closed ? err(closed) : ok({ entry, season, circle, commitment });
+  return closed ? err(closed) : ok({ entry, season, circle, commitment, memberId: member.id });
 }

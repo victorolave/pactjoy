@@ -128,7 +128,7 @@ describe("presenters: circle, habit, entry", () => {
   });
 
   it("PR-S1/S4/S12: entry has exact decimal value, replayed flag, no requestFingerprint", () => {
-    const dto = presentRecordEntryResult({ entry, replayed: true }, ME_MEMBER);
+    const dto = presentRecordEntryResult({ entry, replayed: true, memberId: ME_MEMBER }, ME_MEMBER);
     expect(dto.replayed).toBe(true);
     expect(dto.entry.value).toEqual({ kind: "quantity", value: "7.5" });
     expect(dto.entry.note).toBe("secret note");
@@ -142,9 +142,13 @@ describe("presenters: circle, habit, entry", () => {
   it("PR-S4: a foreign entry is never presented (note would leak)", () => {
     const foreign = memberId("m-other");
     expect(() => presentEntry(entry, foreign)).toThrow(/not the viewer's own/);
-    expect(() => presentRecordEntryResult({ entry, replayed: false }, foreign)).toThrow();
-    expect(() => presentEditEntryResult({ entry }, foreign)).toThrow();
-    expect(presentEditEntryResult({ entry }, ME_MEMBER).entry.note).toBe("secret note");
+    expect(() =>
+      presentRecordEntryResult({ entry, replayed: false, memberId: ME_MEMBER }, foreign),
+    ).toThrow();
+    expect(() => presentEditEntryResult({ entry, memberId: ME_MEMBER }, foreign)).toThrow();
+    expect(presentEditEntryResult({ entry, memberId: ME_MEMBER }, ME_MEMBER).entry.note).toBe(
+      "secret note",
+    );
   });
 
   it("entry variants: done, missed and tombstone", () => {
@@ -168,7 +172,7 @@ describe("presenters: circle, habit, entry", () => {
       presentCircle(circle, { userId: ME }),
       presentInvite(invite),
       presentHabit(habit),
-      presentRecordEntryResult({ entry, replayed: false }, ME_MEMBER),
+      presentRecordEntryResult({ entry, replayed: false, memberId: ME_MEMBER }, ME_MEMBER),
       presentEntry(tombstone, ME_MEMBER),
     ];
     for (const out of outputs) {

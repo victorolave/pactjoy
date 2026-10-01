@@ -1,3 +1,4 @@
+import type { MemberId } from "@pactjoy/engine";
 import type { Repositories } from "../ports/repositories.ts";
 import type { UnitOfWork } from "../ports/unit-of-work.ts";
 import type { Actor } from "../shared/actor.ts";
@@ -41,6 +42,8 @@ export type EditEntryError =
 
 export interface EditEntryResult {
   readonly entry: EntryRecord;
+  /** The actor's own member id, from the transaction that edited (the viewer for presenting). */
+  readonly memberId: MemberId;
 }
 
 /**
@@ -62,7 +65,7 @@ export async function editEntry(
     if (!loaded.ok) {
       return loaded;
     }
-    const { entry, season, circle, commitment } = loaded.value;
+    const { entry, season, circle, commitment, memberId } = loaded.value;
 
     const value = validateEntryValue(commitment.measure, input.value);
     if (!value.ok) {
@@ -79,7 +82,7 @@ export async function editEntry(
     // Nothing changes: no write, no version bump, no editedAt. Like a pure
     // replay it is not guarded either, unrelated bumps must not conflict.
     if (requestFingerprint(value.value, note) === requestFingerprint(entry.value, entry.note)) {
-      return ok({ entry });
+      return ok({ entry, memberId });
     }
 
     await repos.circles.guardVersion(circle.id, circle.version);
@@ -93,6 +96,6 @@ export async function editEntry(
       version: entry.version + 1,
     };
     await repos.entries.replace(edited, entry.version);
-    return ok({ entry: edited });
+    return ok({ entry: edited, memberId });
   });
 }

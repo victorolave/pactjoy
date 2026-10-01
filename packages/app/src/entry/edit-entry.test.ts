@@ -52,7 +52,10 @@ describe("editEntry: editing", () => {
       editedAt: at,
       version: 1,
     };
-    expect(result).toEqual({ ok: true, value: { entry: expected } });
+    expect(result).toEqual({
+      ok: true,
+      value: { entry: expected, memberId: "member-andrea" },
+    });
     expect(await stored(app, entry)).toEqual(expected);
   });
 
@@ -114,7 +117,7 @@ describe("editEntry: editing", () => {
 
     const result = await edit(app, localInstant(dayOf(6)), given.andrea, entry, same);
 
-    expect(result).toEqual({ ok: true, value: { entry } });
+    expect(result).toEqual({ ok: true, value: { entry, memberId: "member-andrea" } });
     expect(await stored(app, entry)).toEqual(entry);
   });
 
