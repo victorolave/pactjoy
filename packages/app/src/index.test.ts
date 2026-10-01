@@ -18,6 +18,7 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "createIntlTimeZone",
   "createSeason",
   "createSystemClock",
+  "createUuidV7IdGenerator",
   "deleteEntry",
   "editCommitment",
   "editEntry",
