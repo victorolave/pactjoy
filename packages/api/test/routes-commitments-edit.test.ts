@@ -33,6 +33,18 @@ async function givenCommitment() {
   return { ...ctx, seasonId, commitmentId, path, habitId: habit.json.data.id as string };
 }
 
+/** Adds Victor as an active member of the season's circle (a second member who is not the owner). */
+async function joinVictor({ app, seasonId }: Awaited<ReturnType<typeof givenCommitment>>) {
+  const season = await app.seasons.get(seasonId as never);
+  const circle = await app.circles.get(season?.circleId as never);
+  if (!season || !circle) throw new Error("fixture setup failed");
+  const joined = { userId: VICTOR, id: "m-victor", status: "active", joinedAt: app.clock.now() };
+  await app.circles.save(
+    { ...circle, members: [...circle.members, joined as never], version: 9 },
+    circle.version,
+  );
+}
+
 describe("PUT /seasons/:seasonId/commitments/:commitmentId (UE-S-S9)", () => {
   it("200 replaces weight, privacy and measure; the habit stays", async () => {
     const { call, path, habitId } = await givenCommitment();
@@ -70,16 +82,9 @@ describe("PUT /seasons/:seasonId/commitments/:commitmentId (UE-S-S9)", () => {
   });
 
   it("403 NotOwner when another active member edits it", async () => {
-    const { app, call, path, seasonId } = await givenCommitment();
-    const season = await app.seasons.get(seasonId as never);
-    const circle = await app.circles.get(season?.circleId as never);
-    if (!season || !circle) throw new Error("fixture setup failed");
-    const joined = { userId: VICTOR, id: "m-victor", status: "active", joinedAt: app.clock.now() };
-    await app.circles.save(
-      { ...circle, members: [...circle.members, joined as never], version: 9 },
-      circle.version,
-    );
-    const { status, json } = await call("PUT", path, "victor", EDIT);
+    const ctx = await givenCommitment();
+    await joinVictor(ctx);
+    const { status, json } = await ctx.call("PUT", ctx.path, "victor", EDIT);
     expect([status, json.error.code]).toEqual([403, "NotOwner"]);
   });
 
@@ -146,6 +151,24 @@ describe("DELETE /seasons/:seasonId/commitments/:commitmentId (UE-S-S10)", () =>
     await app.seasons.save({ ...season, status: "active", version: 9 }, season.version);
     const closed = await call("DELETE", path, "andrea");
     expect([closed.status, closed.json.error.code]).toEqual([409, "PactNotOpen"]);
+  });
+
+  it("403 NotOwner when another active member removes it, and it stays", async () => {
+    const ctx = await givenCommitment();
+    await joinVictor(ctx);
+    const { status, json } = await ctx.call("DELETE", ctx.path, "victor");
+    expect([status, json.error.code]).toEqual([403, "NotOwner"]);
+    const season = await ctx.app.seasons.get(ctx.seasonId as never);
+    expect(season?.commitments).toHaveLength(1);
+  });
+
+  it("422 bodyNotAllowed on a DELETE with any body (the HTTP layer rejects it before the schema)", async () => {
+    const { call, path, transaction } = await givenCommitment();
+    transaction.mockClear();
+    const { status, json } = await call("DELETE", path, "andrea", { x: 1 });
+    expect([status, json.error.code]).toEqual([422, "InvalidRequest"]);
+    expect(json.error.details).toEqual({ reason: "bodyNotAllowed" });
+    expect(transaction).not.toHaveBeenCalled();
   });
 
   it.each([
