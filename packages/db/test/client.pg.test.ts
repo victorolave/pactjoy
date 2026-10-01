@@ -42,6 +42,25 @@ describe("createClient against Postgres", () => {
     expect(row).toEqual({ n: 9007199254740993n, d: "2026-02-28" });
   });
 
+  it("fails loudly on a timestamp (without time zone) value instead of guessing", async () => {
+    await expect(select("select '2026-09-30 16:49:48'::timestamp as t")).rejects.toThrow(
+      /timestamp/i,
+    );
+  });
+
+  it("runs under the two allowed isolation levels", async () => {
+    for (const [isolation, expected] of [
+      ["isolation level read committed", "read committed"],
+      ["isolation level repeatable read read only", "repeatable read"],
+    ] as const) {
+      const rows = await client.begin(
+        isolation,
+        async (tx) => (await tx.query("show transaction_isolation", [])).rows,
+      );
+      expect(rows[0]).toEqual({ transaction_isolation: expected });
+    }
+  });
+
   it("rolls back when the work throws, and surfaces the driver's code and constraint_name", async () => {
     const error = await client
       .begin("isolation level read committed", async (tx) => {

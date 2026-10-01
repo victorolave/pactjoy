@@ -1,5 +1,30 @@
 import { describe, expect, it, vi } from "vitest";
-import { clientOptions, executorOver } from "./client.ts";
+import { clientOptions, createClient, executorOver } from "./client.ts";
+
+describe("createClient isolation whitelist", () => {
+  it("rejects any isolation string outside the allowed literals before touching the database", async () => {
+    const client = createClient({ url: "postgres://nobody@127.0.0.1:1/none" });
+    const work = vi.fn(async () => {});
+
+    for (const isolation of [
+      "isolation level serializable",
+      "isolation level read committed; drop schema pactjoy cascade",
+      "",
+    ]) {
+      await expect(client.begin(isolation as never, work)).rejects.toThrow(/isolation/i);
+    }
+    expect(work).not.toHaveBeenCalled();
+  });
+});
+
+describe("timestamp without time zone", () => {
+  it("has a throwing parser registered on OID 1114", () => {
+    const { types } = clientOptions({});
+
+    expect(types.timestamp).toMatchObject({ to: 1114, from: [1114] });
+    expect(() => types.timestamp.parse("2026-09-30 16:49:48")).toThrow(/timestamp/i);
+  });
+});
 
 describe("clientOptions", () => {
   it("DC-R2: turns prepared statements off (transaction poolers break them)", () => {
