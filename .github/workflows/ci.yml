@@ -77,3 +77,21 @@ jobs:
 
       - name: Test @pactjoy/db against the Postgres service
         run: pnpm turbo run test --filter=@pactjoy/db
+
+  deno:
+    # Type-checks the Supabase Edge Function shell (supabase/functions/api) under Deno. It resolves
+    # the monorepo packages through its own deno.json import map, so no pnpm install is needed.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          # The Edge Runtime's Deno line (ADR-0011).
+          deno-version: 2.1.x
+
+      - name: Type-check the Edge Function
+        run: deno check --config supabase/functions/api/deno.json supabase/functions/api/index.ts
