@@ -69,7 +69,7 @@ Either way only the shell, the import map and the deploy procedure change; `pack
 
 ### Config and gotchas
 
-- `supabase/config.toml` is minimal and local-only: the Data API schemas (without `pactjoy`), Postgres 17, the email OTP shape (6 digits, 1 hour: the design value, which is also the CLI default), `[functions.api]` and the placeholder OTP template. Since Q4 was decided, the hosted auth and API settings are applied from this file with `supabase config push`; the local file is the versioned source (never put secrets in it). A boundary test pins the schemas, `verify_jwt = false`, the import map and the absence of service-role keys.
+- `supabase/config.toml` is minimal: the Data API schemas (without `pactjoy`), Postgres 17, the email OTP shape (6 digits, 1 hour: the design value, which is also the CLI default), `[functions.api]` and the placeholder OTP template. Since Q4 was decided, the hosted auth and API settings are applied from this file with `supabase config push`; the local file is the versioned source (never put secrets in it). A boundary test pins the schemas, `verify_jwt = false`, the import map and the absence of service-role keys.
 - The local signing key `supabase/signing_keys.json` is a secret and is gitignored. It is optional locally because the CLI default is already ES256.
 - A function worker that cannot connect to the database dies and answers an empty 503 without CORS headers; a browser reports it as a network error. Check the function logs, not the response.
 - The function reads secrets through `Deno.env`. Copy the pooler hostname into `API_DATABASE_URL` exactly as Supabase prints it.
@@ -144,7 +144,7 @@ Nothing here runs from CI or from the repository.
 
 - Swapping the runtime (for example to NestJS) replaces only the shell; the router, auth, validation and presenters move unchanged.
 - Auth, routing and error mapping are covered by Node tests, not only by type checks.
-- Each open product question maps to one place: Q5 is env, Q7 is one table, Q4 is a config decision and Q6 is a config flag (the `enable_signup = true` in `config.toml` is the design default pending Q6, and also the CLI default), Q1 is a reserved route, Q3 (display names) is a presenter field: responses expose only identifiers until the question is answered, and adding names later touches the presenter and the read model, not the router or auth.
+- Each product question maps to one place: Q5 is env, Q7 is one table, Q4 is `supabase config push`, Q6 is the `enable_signup` flag (`true`: decided open, also the CLI default), Q1 is a reserved route, and Q3 (display names, decided per circle but not implemented yet) is a presenter field: responses expose only identifiers until it lands, and adding names touches the presenter and the read model, not the router or auth.
 
 ### Negative
 
