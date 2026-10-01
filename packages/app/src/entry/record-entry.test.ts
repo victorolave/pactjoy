@@ -172,6 +172,29 @@ describe("recordEntry: recording", () => {
     ).toEqual({ ok: false, error: { kind: "NoteTooLong" } });
   });
 
+  it("rejects a note with a lone surrogate (well-formed text), keeping a well-formed emoji", async () => {
+    const app = newApp();
+    const given = await givenActiveSeason(app, PER_DAY_REACH);
+
+    expect(await recordEntry(app, given.andrea, input(given, { note: "bien \uD83D" }))).toEqual({
+      ok: false,
+      error: { kind: "InvalidNote" },
+    });
+    expect(
+      await recordEntry(
+        app,
+        given.andrea,
+        input(given, { note: "\uDE00 bien", clientRequestId: "r2" }),
+      ),
+    ).toEqual({ ok: false, error: { kind: "InvalidNote" } });
+    const ok = await recordEntry(
+      app,
+      given.andrea,
+      input(given, { note: "bien 😀", clientRequestId: "r3" }),
+    );
+    expect(ok.ok).toBe(true);
+  });
+
   it("ER-22: rejects a note over 280 characters (B6) and accepts exactly 280", async () => {
     const app = newApp();
     const given = await givenActiveSeason(app, PER_DAY_REACH);

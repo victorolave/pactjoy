@@ -462,6 +462,29 @@ describe("validateCommitment", () => {
       expect(withLabel(label)).toEqual({ ok: false, error: { kind: "CustomLabelBlank" } });
     });
 
+    it.each([
+      ["high", "a\uD83Db"],
+      ["low", "a\uDE00b"],
+      ["trailing high", "km\uD83D"],
+    ])("rejects a label with a lone %s surrogate (well-formed text)", (_name, label) => {
+      expect(withLabel(label)).toEqual({ ok: false, error: { kind: "CustomLabelMalformed" } });
+      expect(withLabel("km \u{1F3C3}").ok).toBe(true);
+    });
+
+    it("reports malformed text before invisible characters", () => {
+      expect(withLabel("a\u0000\uD83D")).toEqual({
+        ok: false,
+        error: { kind: "CustomLabelMalformed" },
+      });
+    });
+
+    it("reports an over-long label before malformed text", () => {
+      expect(withLabel(`${"a".repeat(20)}\uD83D`)).toEqual({
+        ok: false,
+        error: { kind: "CustomLabelTooLong" },
+      });
+    });
+
     it("reports invisible characters before blankness", () => {
       expect(withLabel("  \n  ")).toEqual({
         ok: false,

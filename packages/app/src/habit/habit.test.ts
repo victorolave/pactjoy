@@ -55,6 +55,51 @@ describe("buildHabit", () => {
     expect(result).toEqual({ ok: false, error: { kind: "InvalidName" } });
   });
 
+  it.each([
+    ["high", "\uD83D"],
+    ["low", "\uDE00"],
+    ["reversed pair", "\uDE00\uD83D"],
+  ])("rejects a name with a lone %s surrogate (well-formed text)", (_n, bad) => {
+    const result = buildHabit({
+      id: habitId("habit-1"),
+      ownerId: userId("user-andrea"),
+      name: `Co${bad}rrer`,
+      now: NOW,
+    });
+
+    expect(result).toEqual({ ok: false, error: { kind: "InvalidName" } });
+  });
+
+  it("rejects a why with a lone surrogate, and keeps a well-formed emoji", () => {
+    const base = {
+      id: habitId("habit-1"),
+      ownerId: userId("user-andrea"),
+      name: "Correr",
+      now: NOW,
+    };
+
+    expect(buildHabit({ ...base, why: "energ\uD83Dia" })).toEqual({
+      ok: false,
+      error: { kind: "InvalidWhy" },
+    });
+    expect(buildHabit({ ...base, why: "energía 😀" }).ok).toBe(true);
+  });
+
+  it("rejects a category with a lone surrogate, and keeps a well-formed emoji", () => {
+    const base = {
+      id: habitId("habit-1"),
+      ownerId: userId("user-andrea"),
+      name: "Correr",
+      now: NOW,
+    };
+
+    expect(buildHabit({ ...base, category: "Sal\uDE00ud" })).toEqual({
+      ok: false,
+      error: { kind: "InvalidCategory" },
+    });
+    expect(buildHabit({ ...base, category: "Salud 😀" }).ok).toBe(true);
+  });
+
   it("rejects a category longer than 40 characters (decided 2026-09-30)", () => {
     const result = buildHabit({
       id: habitId("habit-1"),

@@ -42,6 +42,21 @@ describe("buildCircle", () => {
 
     expect(result).toEqual({ ok: false, error: { kind: "InvalidName" } });
   });
+
+  it("rejects a name with a lone surrogate (well-formed text), keeping a well-formed emoji", () => {
+    const build = (name: string) =>
+      buildCircle({
+        id: circleId("circle-1"),
+        name,
+        creatorId: memberId("member-1"),
+        creatorUserId: userId("user-andrea"),
+        now: NOW,
+      });
+
+    expect(build("Los \uD83D")).toEqual({ ok: false, error: { kind: "InvalidName" } });
+    expect(build("\uDE00 Los")).toEqual({ ok: false, error: { kind: "InvalidName" } });
+    expect(build("Los 😀").ok).toBe(true);
+  });
 });
 
 describe("activeMembers / findActiveMember", () => {
