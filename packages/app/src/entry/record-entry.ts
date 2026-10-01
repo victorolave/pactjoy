@@ -15,6 +15,7 @@ import {
   type EntryRecord,
   type EntryValueInput,
   exceedsNoteLimit,
+  isWellFormedNote,
   MAX_CLIENT_REQUEST_ID_LENGTH,
   normalizeNote,
   requestFingerprint,
@@ -48,6 +49,7 @@ export type RecordEntryError =
   | { readonly kind: "SeasonNotActive" }
   | { readonly kind: "BeforeSeasonStart" }
   | { readonly kind: "NoteTooLong" }
+  | { readonly kind: "InvalidNote" }
   | { readonly kind: "IdempotencyKeyReused" }
   | { readonly kind: "EntryDeleted" }
   | { readonly kind: "InvalidClientRequestId"; readonly reason: "empty" | "tooLong" }
@@ -186,6 +188,9 @@ export async function recordEntry(
         return value;
       }
       const note = normalizeNote(input.note);
+      if (!isWellFormedNote(note)) {
+        return err({ kind: "InvalidNote" });
+      }
       if (exceedsNoteLimit(note)) {
         return err({ kind: "NoteTooLong" });
       }

@@ -8,6 +8,7 @@ import {
   parseDecimal,
 } from "@pactjoy/engine";
 import { err, ok, type Result } from "../shared/result.ts";
+import { isWellFormed } from "../shared/well-formed.ts";
 import {
   MAX_CUSTOM_LABEL_LENGTH,
   MAX_INTEGER_DIGITS,
@@ -107,7 +108,8 @@ const EMOJI_JOINER =
   /(?<=\p{Extended_Pictographic}[️\u{1F3FB}-\u{1F3FF}]*)‍(?=\p{Extended_Pictographic})/gu;
 
 function hasInvisibleCharacter(label: string): boolean {
-  return INVISIBLE_CHARACTER.test(label.replace(EMOJI_JOINER, ""));
+  // A lone surrogate is malformed text, reported with the same error (no new kind).
+  return !isWellFormed(label) || INVISIBLE_CHARACTER.test(label.replace(EMOJI_JOINER, ""));
 }
 
 const MIN_TIMES_PER_WEEK = 1;

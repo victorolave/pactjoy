@@ -462,6 +462,18 @@ describe("validateCommitment", () => {
       expect(withLabel(label)).toEqual({ ok: false, error: { kind: "CustomLabelBlank" } });
     });
 
+    it.each([
+      ["high", "a\uD83Db"],
+      ["low", "a\uDE00b"],
+      ["trailing high", "km\uD83D"],
+    ])("rejects a label with a lone %s surrogate (well-formed text)", (_name, label) => {
+      expect(withLabel(label)).toEqual({
+        ok: false,
+        error: { kind: "CustomLabelHasInvisibleCharacters" },
+      });
+      expect(withLabel("km \u{1F3C3}").ok).toBe(true);
+    });
+
     it("reports invisible characters before blankness", () => {
       expect(withLabel("  \n  ")).toEqual({
         ok: false,

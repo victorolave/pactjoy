@@ -9,6 +9,7 @@ import {
   type EntryRecord,
   type EntryValueInput,
   exceedsNoteLimit,
+  isWellFormedNote,
   normalizeNote,
   requestFingerprint,
 } from "./entry.ts";
@@ -32,7 +33,11 @@ export interface EditEntryInput {
   readonly note: string | null;
 }
 
-export type EditEntryError = OwnEntryError | EntryValueError | { readonly kind: "NoteTooLong" };
+export type EditEntryError =
+  | OwnEntryError
+  | EntryValueError
+  | { readonly kind: "NoteTooLong" }
+  | { readonly kind: "InvalidNote" };
 
 export interface EditEntryResult {
   readonly entry: EntryRecord;
@@ -64,6 +69,9 @@ export async function editEntry(
       return value;
     }
     const note = normalizeNote(input.note);
+    if (!isWellFormedNote(note)) {
+      return err({ kind: "InvalidNote" });
+    }
     if (exceedsNoteLimit(note)) {
       return err({ kind: "NoteTooLong" });
     }

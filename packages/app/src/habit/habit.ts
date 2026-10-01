@@ -1,5 +1,6 @@
 import type { HabitId, UserId } from "../shared/ids.ts";
 import { err, ok, type Result } from "../shared/result.ts";
+import { isWellFormed } from "../shared/well-formed.ts";
 import type { Instant } from "../time/instant.ts";
 
 /**
@@ -25,6 +26,8 @@ export const MAX_CATEGORY_LENGTH = 40;
 
 export type BuildHabitError =
   | { readonly kind: "InvalidName" }
+  | { readonly kind: "InvalidWhy" }
+  | { readonly kind: "InvalidCategory" }
   | { readonly kind: "CategoryTooLong" };
 
 export interface BuildHabitInput {
@@ -49,11 +52,19 @@ function trimmedOrNull(value: string | null | undefined): string | null {
  */
 export function buildHabit(input: BuildHabitInput): Result<Habit, BuildHabitError> {
   const name = input.name.trim();
-  if (name.length === 0) {
+  if (name.length === 0 || !isWellFormed(name)) {
     return err({ kind: "InvalidName" });
   }
 
+  const why = trimmedOrNull(input.why);
+  if (why !== null && !isWellFormed(why)) {
+    return err({ kind: "InvalidWhy" });
+  }
+
   const category = trimmedOrNull(input.category);
+  if (category !== null && !isWellFormed(category)) {
+    return err({ kind: "InvalidCategory" });
+  }
   if (category !== null && category.length > MAX_CATEGORY_LENGTH) {
     return err({ kind: "CategoryTooLong" });
   }
@@ -62,7 +73,7 @@ export function buildHabit(input: BuildHabitInput): Result<Habit, BuildHabitErro
     id: input.id,
     ownerId: input.ownerId,
     name,
-    why: trimmedOrNull(input.why),
+    why,
     category,
     createdAt: input.now,
     version: 0,
