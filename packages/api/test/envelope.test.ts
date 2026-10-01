@@ -36,12 +36,18 @@ describe("respond", () => {
     });
   });
 
-  it("falls back to a 500 Internal envelope when serialization fails", async () => {
+  it("lets serialization failures throw so the pipeline can add the requestId", () => {
     const cyclic: Record<string, unknown> = {};
     cyclic["self"] = cyclic;
-    const res = respond({ status: 200, data: cyclic });
-    expect(res.status).toBe(500);
-    expect(await res.json()).toEqual({ error: { code: "Internal", message: "Internal" } });
+    expect(() => respond({ status: 200, data: cyclic })).toThrow();
+  });
+
+  it("a BigInt in data throws (only details gets the replacer)", () => {
+    expect(() => respond({ status: 200, data: { n: 1n } })).toThrow();
+  });
+
+  it("data: undefined is normalized to null", async () => {
+    expect(await respond({ status: 200, data: undefined }).json()).toEqual({ data: null });
   });
 
   it("merges extra headers without letting them override the fixed ones", () => {
