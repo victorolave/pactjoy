@@ -36,7 +36,8 @@ export interface Client {
 
 export interface ClientOptions {
   url: string;
-  max?: number;
+  max?: number | undefined;
+  connectTimeoutSeconds?: number | undefined;
 }
 
 // Parse-only. Every value is bound as a string with an explicit cast
@@ -52,9 +53,13 @@ const identity = (value: unknown) => String(value);
  * parser that throws: we store only timestamptz, so a future `timestamp`
  * column must fail loudly rather than be read in the process time zone.
  */
-export function clientOptions({ max }: { max?: number | undefined }) {
+export function clientOptions({
+  max,
+  connectTimeoutSeconds,
+}: Pick<ClientOptions, "max" | "connectTimeoutSeconds">) {
   return {
     ...(max === undefined ? {} : { max }),
+    ...(connectTimeoutSeconds === undefined ? {} : { connect_timeout: connectTimeoutSeconds }),
     prepare: false,
     onnotice: (): void => {},
     types: {
@@ -93,8 +98,8 @@ export function executorOver(tx: { unsafe: Unsafe }): SqlExecutor {
   };
 }
 
-export function createClient({ url, max }: ClientOptions): Client {
-  const sql = postgres(url, clientOptions({ max }));
+export function createClient({ url, ...options }: ClientOptions): Client {
+  const sql = postgres(url, clientOptions(options));
   return {
     begin: async <T>(isolation: Isolation, work: (tx: SqlExecutor) => Promise<T>) => {
       if (!ISOLATIONS.includes(isolation)) {
