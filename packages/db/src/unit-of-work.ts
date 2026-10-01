@@ -24,14 +24,16 @@ const MAX_ATTEMPTS = 2;
  * in a new transaction, at most MAX_ATTEMPTS in total; the last failure is then
  * mapped to ConcurrencyConflict. A version-mismatch ConcurrencyConflict, a
  * 23505, an `{ ok: false }` Result and any other error are never retried:
- * the loser must lose.
+ * the loser must lose. A 40001/40P01 raised at COMMIT also triggers the
+ * re-run, even though `work` had already returned ok.
  *
  * `read` is one REPEATABLE READ READ ONLY snapshot, so a multi-query load
  * never tears. A write inside it fails with 25006, rethrown raw (a caller
  * bug). It is not retried: it holds no locks and the caller can read again.
  *
  * Rules for `work`:
- * - It may run twice, so it must have NO external side effects (notifications
+ * - It may run twice, even after it returned ok (a failed COMMIT re-runs it),
+ *   so it must have NO external side effects (notifications
  *   go after commit or through an outbox) and must re-read everything through
  *   the repositories it is given: nothing is carried over between attempts.
  * - It must not swallow a database error. After one, Postgres holds the

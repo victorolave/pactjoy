@@ -1,4 +1,4 @@
-import { ConcurrencyConflict, type Habit, habitId, instant, ok, userId } from "@pactjoy/app";
+import { ConcurrencyConflict, err, type Habit, habitId, instant, ok, userId } from "@pactjoy/app";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { createClient } from "../src/client.ts";
 import { bindRepositories } from "../src/repositories.ts";
@@ -44,11 +44,19 @@ function deferred() {
 }
 
 /** Rejects instead of hanging forever, so a stuck lock fails the test. */
-const within = <T>(promise: Promise<T>, ms: number) =>
-  Promise.race([
-    promise,
-    new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timed out")), ms)),
-  ]);
+async function within<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error("timed out")), ms);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 describe("isolation levels", () => {
   it("UW-S11: transaction runs at read committed", async () => {
@@ -94,23 +102,37 @@ describe("isolation levels", () => {
 });
 
 describe("connection hygiene", () => {
-  it("UW-S30: with max=1, ten failing transactions and reads leak no connection", async () => {
+  it("UW-S30: with max=1, failures, err Results, reads and a retry leak no connection", async () => {
     const single = createClient({ url: databaseUrl(), max: 1 });
     const one = createUnitOfWork(single.begin, bindRepositories);
+    // Every step is bounded: a leaked connection fails the test instead of hanging it.
+    const step = <T>(promise: Promise<T>) => within(promise, 5_000);
     try {
-      for (let i = 0; i < 5; i++) {
-        await one
-          .transaction(async () => {
-            throw new Error("boom");
-          })
-          .catch(() => undefined);
-        await one.read(async ({ habits }) => habits.save(A, null)).catch(() => undefined);
+      for (let i = 0; i < 3; i++) {
+        await step(
+          one
+            .transaction(async () => {
+              throw new Error("boom");
+            })
+            .catch(() => undefined),
+        );
+        await step(one.read(async ({ habits }) => habits.save(A, null)).catch(() => undefined));
+        await step(one.transaction(async () => err("nope")));
       }
 
-      const after = await within(
-        one.transaction(async ({ habits }) => ok(await habits.get(A.id))),
-        5_000,
+      // 40P01 once, then ok: the first attempt's connection is released before the re-run.
+      let runs = 0;
+      const retried = await step(
+        one.transaction(async ({ habits }) => {
+          runs += 1;
+          if (runs === 1) throw Object.assign(new Error("deadlock"), { code: "40P01" });
+          return ok(await habits.get(A.id));
+        }),
       );
+      expect(retried).toEqual(ok(null));
+      expect(runs).toBe(2);
+
+      const after = await step(one.transaction(async ({ habits }) => ok(await habits.get(A.id))));
       expect(after).toEqual(ok(null));
     } finally {
       await single.end();
