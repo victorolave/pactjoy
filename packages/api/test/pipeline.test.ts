@@ -5,13 +5,19 @@ import type { ApiResult } from "../src/http/types.ts";
 const ORIGIN = "https://app.example";
 const ok = (data: unknown): ApiResult => ({ status: 200, data });
 
-function setup(overrides: { authenticate?: () => Promise<unknown> } = {}) {
+function setup(
+  overrides: {
+    authenticate?: (...args: never[]) => Promise<unknown>;
+    onError?: (e: unknown, info: { requestId: string }) => ApiResult | undefined;
+  } = {},
+) {
   const handle = vi.fn(async (ctx: { actor: string; params: unknown; body: unknown }) =>
     ok({ actor: ctx.actor, params: ctx.params, body: ctx.body }),
   );
   const routes: PipelineRoute<string>[] = [
     { method: "POST", pattern: "/habits", handle },
     { method: "GET", pattern: "/seasons/:seasonId/standings", handle },
+    { method: "PATCH", pattern: "/habits/:habitId", handle },
   ];
   const authenticate = vi.fn(
     overrides.authenticate ??
@@ -30,6 +36,7 @@ function setup(overrides: { authenticate?: () => Promise<unknown> } = {}) {
     routes,
     authenticate: authenticate as never,
     options: { basePath: "/api", allowedOrigins: [ORIGIN], maxBodyBytes: 256 },
+    ...(overrides.onError ? { onError: overrides.onError } : {}),
   });
   return { handler, handle, authenticate };
 }
@@ -161,5 +168,90 @@ describe("createPipeline", () => {
       headers: { "x-request-id": "not a uuid" },
     });
     expect(b.headers.get("x-request-id")).not.toBe("not a uuid");
+  });
+
+  it("authenticate receives the requestId and the matched route", async () => {
+    const { handler, authenticate } = setup();
+    const res = await call(handler, "POST", "/api/habits", { headers: GOOD, body: "{}" });
+    expect(authenticate).toHaveBeenCalledTimes(1);
+    const [, info] = authenticate.mock.calls[0] as unknown as [
+      Request,
+      { requestId: string; route: { method: string; pattern: string } },
+    ];
+    expect(info.requestId).toBe(res.headers.get("x-request-id"));
+    expect(info.route).toMatchObject({ method: "POST", pattern: "/habits" });
+  });
+
+  it("onError maps a thrown error and receives the requestId; undefined keeps the default", async () => {
+    const seen: unknown[] = [];
+    const { handler, handle } = setup({
+      onError: (e, info) => {
+        seen.push(e, info.requestId);
+        return e instanceof RangeError
+          ? { status: 503, error: { code: "ServiceUnavailable", message: "ServiceUnavailable" } }
+          : undefined;
+      },
+    });
+    handle.mockRejectedValueOnce(new RangeError("x"));
+    const mapped = await call(handler, "POST", "/api/habits", { headers: GOOD });
+    expect(mapped.status).toBe(503);
+    expect(seen[1]).toBe(mapped.headers.get("x-request-id"));
+    handle.mockRejectedValueOnce(new Error("other"));
+    const fallback = await call(handler, "POST", "/api/habits", { headers: GOOD });
+    expect(fallback.status).toBe(500);
+    expect((await fallback.json()).error.details.requestId).toBe(
+      fallback.headers.get("x-request-id"),
+    );
+  });
+
+  it("a throwing onError still ends in the default 500", async () => {
+    const { handler, handle } = setup({
+      onError: () => {
+        throw new Error("hook broke");
+      },
+    });
+    handle.mockRejectedValueOnce(new Error("boom"));
+    const res = await call(handler, "POST", "/api/habits", { headers: GOOD });
+    expect(res.status).toBe(500);
+    expect((await res.json()).error.code).toBe("Internal");
+  });
+
+  it("a BigInt in data becomes a 500 with the requestId; in details it becomes a string", async () => {
+    const { handler, handle } = setup();
+    handle.mockResolvedValueOnce({ status: 200, data: { n: 1n } });
+    const bad = await call(handler, "POST", "/api/habits", { headers: GOOD });
+    expect(bad.status).toBe(500);
+    expect((await bad.json()).error.details.requestId).toBe(bad.headers.get("x-request-id"));
+    handle.mockResolvedValueOnce({
+      status: 422,
+      error: { code: "X", message: "X", details: { n: 10n ** 20n } },
+    });
+    const good = await call(handler, "POST", "/api/habits", { headers: GOOD });
+    expect(good.status).toBe(422);
+    expect((await good.json()).error.details).toEqual({ n: "100000000000000000000" });
+  });
+
+  it("the method is uppercased for routing; HEAD on a GET route is 405 by design", async () => {
+    const { handler } = setup();
+    const lower = await call(handler, "patch", "/api/habits/h1", { headers: GOOD, body: "{}" });
+    expect(lower.status).toBe(200);
+    const head = await call(handler, "HEAD", "/api/seasons/s/standings", { headers: GOOD });
+    expect(head.status).toBe(405);
+    expect(head.headers.get("allow")).toBe("GET");
+  });
+
+  it("validates basePath and maxBodyBytes at construction", () => {
+    const make = (options: Partial<Parameters<typeof createPipeline>[0]["options"]>) => () =>
+      createPipeline<string>({
+        routes: [],
+        authenticate: (async () => ({ ok: true, actor: "u" })) as never,
+        options: { basePath: "/api", allowedOrigins: [], ...options },
+      });
+    expect(make({})).not.toThrow();
+    for (const basePath of ["/api/", "api", "/"]) expect(make({ basePath })).toThrow();
+    for (const maxBodyBytes of [0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(make({ maxBodyBytes })).toThrow();
+    }
+    expect(make({ maxBodyBytes: 1 })).not.toThrow();
   });
 });

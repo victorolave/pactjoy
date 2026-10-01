@@ -18,6 +18,7 @@ export interface PipelineRoute<A> extends RouteSpec {
 /** Injected by the composition (C2): a verified actor, or the response to send. */
 export type Authenticate<A> = (
   request: Request,
+  info: { readonly requestId: string; readonly route: PipelineRoute<A> },
 ) => Promise<
   | { readonly ok: true; readonly actor: A }
   | { readonly ok: false; readonly result: ApiResult; readonly headers?: HeadersInit }
@@ -28,6 +29,12 @@ export interface PipelineOptions {
   readonly allowedOrigins: readonly string[];
   readonly maxBodyBytes?: number;
 }
+
+/**
+ * Seam for thrown-error mapping and logging (C3b, C7d). Return a result to
+ * answer with it, or undefined for the default 500 `Internal` with the requestId.
+ */
+export type OnError = (e: unknown, info: { readonly requestId: string }) => ApiResult | undefined;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
@@ -44,8 +51,18 @@ export function createPipeline<A>(deps: {
   readonly routes: readonly PipelineRoute<A>[];
   readonly authenticate: Authenticate<A>;
   readonly options: PipelineOptions;
+  readonly onError?: OnError;
 }): Handler {
-  const { routes, authenticate, options } = deps;
+  const { routes, authenticate, options, onError } = deps;
+  if (options.basePath !== "" && !/^\/.*[^/]$/.test(options.basePath)) {
+    throw new Error(`basePath must start with "/" and not end with "/": ${options.basePath}`);
+  }
+  if (
+    options.maxBodyBytes !== undefined &&
+    !(Number.isSafeInteger(options.maxBodyBytes) && options.maxBodyBytes > 0)
+  ) {
+    throw new Error(`maxBodyBytes must be a positive integer: ${options.maxBodyBytes}`);
+  }
   const router = createRouter(routes);
   const cors = createCors(options.allowedOrigins);
   const maxBytes = options.maxBodyBytes ?? DEFAULT_MAX_BODY_BYTES;
@@ -60,20 +77,23 @@ export function createPipeline<A>(deps: {
       return response;
     };
 
+    const method = request.method.toUpperCase();
     try {
+      // Deviation from the design order (preflight first): the base path is checked first,
+      // so a request outside it never gets CORS handling. Intended; do not reorder.
       const path = stripBasePath(new URL(request.url).pathname, options.basePath);
       if (path === null) return finish(failure(404, "RouteNotFound"));
-      if (request.method === "OPTIONS") {
+      if (method === "OPTIONS") {
         const response = cors.preflight(request);
         response.headers.set("X-Request-Id", requestId);
         return response;
       }
-      const match = router.match(request.method, path);
+      const match = router.match(method, path);
       if (match.kind === "notFound") return finish(failure(404, "RouteNotFound"));
       if (match.kind === "methodNotAllowed") {
         return finish(failure(405, "MethodNotAllowed"), { Allow: match.allow.join(", ") });
       }
-      const auth = await authenticate(request);
+      const auth = await authenticate(request, { requestId, route: match.route });
       if (!auth.ok) return finish(auth.result, auth.headers);
       const body = await readJsonBody(request, maxBytes);
       if (!body.ok) return finish(body.result);
@@ -85,8 +105,13 @@ export function createPipeline<A>(deps: {
           requestId,
         }),
       );
-    } catch {
-      return finish(failure(500, "Internal", { requestId }));
+    } catch (e) {
+      const fallback = failure(500, "Internal", { requestId });
+      try {
+        return finish(onError?.(e, { requestId }) ?? fallback);
+      } catch {
+        return finish(fallback);
+      }
     }
   };
 }
