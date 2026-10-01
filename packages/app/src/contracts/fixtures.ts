@@ -1,9 +1,9 @@
 import { memberId } from "../circle/circle.ts";
 import type { Repositories } from "../ports/repositories.ts";
 import type { UnitOfWork } from "../ports/unit-of-work.ts";
-import { circleId, seasonId, userId } from "../shared/ids.ts";
+import { circleId, habitId, seasonId, userId } from "../shared/ids.ts";
 import { ok } from "../shared/result.ts";
-import { circleFixture, memberFixture, seasonFixture } from "../testing/builders.ts";
+import { circleFixture, habitFixture, memberFixture, seasonFixture } from "../testing/builders.ts";
 
 /**
  * What every contract suite needs from an adapter. Suites drive it ONLY
@@ -39,6 +39,13 @@ export const CIRCLE = circleFixture({
 export const SEASON = seasonFixture({
   id: seasonId("00000000-0000-4000-8000-0000000000e1"),
   circleId: CIRCLE.id,
+});
+
+export type HabitRepositories = Pick<Repositories, "habits">;
+
+export const HABIT = habitFixture({
+  id: habitId("00000000-0000-4000-8000-0000000000d1"),
+  ownerId: userId("00000000-0000-4000-8000-0000000000b1"),
 });
 
 /** Saves the circle, then the season, in one transaction: parents first, for the foreign keys. */
