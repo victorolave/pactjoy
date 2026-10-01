@@ -42,6 +42,13 @@ export const number: Schema<number> = schema((v, path, sink) =>
   typeof v === "number" && Number.isFinite(v) ? v : fail(sink, path, "type"),
 );
 
+/** A safe integer at or above `min`: a non-integer or non-number is `type`, a smaller integer is `range`. */
+export const integer = (options: { readonly min: number }): Schema<number> =>
+  schema((v, path, sink) => {
+    if (typeof v !== "number" || !Number.isSafeInteger(v)) return fail(sink, path, "type");
+    return v >= options.min ? v : fail(sink, path, "range");
+  });
+
 export const literal = <const L extends string>(expected: L): Schema<L> =>
   schema((v, path, sink) => (v === expected ? expected : fail(sink, path, "enum")));
 
