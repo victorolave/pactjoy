@@ -1,4 +1,5 @@
 import { createTestApp } from "../testing/app-harness.ts";
+import { describeCircleRepositoryContract } from "./circle.contract.ts";
 import {
   describeCircleGuardContract,
   describeSeasonGuardContract,
@@ -8,6 +9,7 @@ import { describeUnitOfWorkContract } from "./unit-of-work.contract.ts";
 
 const inMemory = async () => ({ uow: createTestApp().uow });
 
+describeCircleRepositoryContract("in-memory", inMemory);
 describeCircleGuardContract("in-memory", inMemory);
 describeSeasonGuardContract("in-memory", inMemory);
 describeHabitRepositoryContract("in-memory", inMemory);
