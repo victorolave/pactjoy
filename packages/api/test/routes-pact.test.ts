@@ -4,7 +4,7 @@ import { setup, UNKNOWN_CIRCLE, VICTOR } from "./harness.ts";
 const DONE = { unit: "done", frequency: { kind: "timesPerWeek", times: 3 } };
 const NOWHERE = `/seasons/${UNKNOWN_CIRCLE}/approval`;
 
-async function givenSeason(weightPercent = 100) {
+async function givenSeason(weightPercent = 100, privacy = "visible") {
   const ctx = setup();
   const circle = await ctx.call("POST", "/circles", "andrea", { name: "Crew" });
   const season = await ctx.call("POST", `/circles/${circle.json.data.id}/seasons`, "andrea", {
@@ -17,7 +17,7 @@ async function givenSeason(weightPercent = 100) {
   await ctx.call("POST", `/seasons/${seasonId}/commitments`, "andrea", {
     habitId: habit.json.data.id,
     weightPercent,
-    privacy: "visible",
+    privacy,
     measure: DONE,
   });
   return { ...ctx, seasonId, path: `/seasons/${seasonId}/approval` };
@@ -58,6 +58,14 @@ describe("PUT /seasons/:seasonId/approval (UE-P-S1..S3)", () => {
     expect(status).toBe(200);
     expect(json.data.status).toBe("pactOpen");
     expect(json.data.approvals).toHaveLength(1);
+  });
+
+  it("S1: a private commitment is presented as hidden, with no detail", async () => {
+    const { call, path } = await givenSeason(100, "private");
+    const { json } = await call("PUT", path, "andrea");
+    expect(json.data.commitments).toHaveLength(1);
+    expect(json.data.commitments[0].kind).toBe("hidden");
+    expect(JSON.stringify(json.data.commitments)).not.toContain("timesPerWeek");
   });
 
   it("RV-S3: accepts an empty body and {}, rejects a body field with no repository call", async () => {
@@ -115,6 +123,7 @@ describe("DELETE /seasons/:seasonId/approval (UE-P-S4)", () => {
   it("maps 409 PactAlreadyClosed, 404 SeasonNotFound, 403 NotAMember", async () => {
     const { call, path } = await givenSeason();
     await call("PUT", path, "andrea");
+    // Closed pact: DELETE answers PactAlreadyClosed, whereas PUT answers PactNotOpen (app contract).
     const closed = await call("DELETE", path, "andrea");
     expect([closed.status, closed.json.error.code]).toEqual([409, "PactAlreadyClosed"]);
     const missing = await call("DELETE", NOWHERE, "andrea");
