@@ -23,3 +23,16 @@ export async function queryOne<T = Record<string, unknown>>(url: string, text: s
     await sql.end();
   }
 }
+
+/**
+ * Empties every table of `schema` in ONE statement (RESTART IDENTITY), so each
+ * test starts from a clean store. Tables are discovered, never listed, so a
+ * new migration needs no change here; files run serially (design section 5).
+ */
+export async function truncateAll(sql: Sql, schema = "pactjoy"): Promise<void> {
+  const [row] = await sql.unsafe(
+    "select string_agg(format('%I.%I', schemaname, tablename), ', ') as tables from pg_tables where schemaname = $1",
+    [schema],
+  );
+  if (row?.tables) await sql.unsafe(`truncate ${row.tables} restart identity`);
+}
