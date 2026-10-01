@@ -70,6 +70,7 @@ export type ValidateCommitmentError =
   | { readonly kind: "IdealExceedsTolerance" }
   | { readonly kind: "CustomLabelTooLong" }
   | { readonly kind: "CustomLabelHasInvisibleCharacters" }
+  | { readonly kind: "CustomLabelBlank" }
   | { readonly kind: "InvalidTimesPerWeek" }
   | { readonly kind: "NoWeekdays" }
   | { readonly kind: "DuplicateWeekday" }
@@ -202,6 +203,10 @@ export function validateCommitment(
   }
   if (measure.customLabel != null && INVISIBLE_CHARACTER.test(measure.customLabel)) {
     return err({ kind: "CustomLabelHasInvisibleCharacters" });
+  }
+  // `null`/absent means "no label" and is untouched; a supplied label must show something.
+  if (measure.customLabel != null && measure.customLabel.trim() === "") {
+    return err({ kind: "CustomLabelBlank" });
   }
   const invalidSchedule = scheduleError(measure.schedule);
   if (invalidSchedule) {

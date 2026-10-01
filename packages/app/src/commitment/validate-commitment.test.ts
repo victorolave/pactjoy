@@ -440,6 +440,25 @@ describe("validateCommitment", () => {
       });
     });
 
+    it.each([
+      ["empty", ""],
+      ["spaces", "   "],
+      ["tab-free unicode spaces", "\u00a0\u3000"],
+    ])("rejects a blank label (%s)", (_name, label) => {
+      expect(withLabel(label)).toEqual({ ok: false, error: { kind: "CustomLabelBlank" } });
+    });
+
+    it("reports invisible characters before blankness", () => {
+      expect(withLabel("\u200b")).toEqual({
+        ok: false,
+        error: { kind: "CustomLabelHasInvisibleCharacters" },
+      });
+    });
+
+    it("accepts a label with surrounding spaces as long as it has visible text", () => {
+      expect(withLabel(" a ").ok).toBe(true);
+    });
+
     it("accepts a plain label with spaces and non-ASCII letters", () => {
       expect(withLabel("vasos de agua ñ").ok).toBe(true);
     });
