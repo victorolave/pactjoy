@@ -463,7 +463,7 @@ describe("validateCommitment", () => {
     });
 
     it("reports invisible characters before blankness", () => {
-      expect(withLabel("\u200b")).toEqual({
+      expect(withLabel("  \n  ")).toEqual({
         ok: false,
         error: { kind: "CustomLabelHasInvisibleCharacters" },
       });
