@@ -17,10 +17,11 @@ async function givenRecorded() {
 
 describe("DELETE /entries/:entryId (UE-E-S10)", () => {
   it("S10: 200 {data:null}, the entry is gone, and a second delete is 200 again", async () => {
-    const { call, url, app, seasonId } = await givenRecorded();
+    const { call, url, app, seasonId, id } = await givenRecorded();
     const first = await call("DELETE", url, "andrea");
     expect([first.status, first.json]).toEqual([200, { data: null }]);
     expect(await app.entries.listBySeason(seasonId as never)).toHaveLength(0);
+    expect(await app.entries.getStored(id as never)).toMatchObject({ deleted: true });
     const second = await call("DELETE", url, "andrea");
     expect([second.status, second.json]).toEqual([200, { data: null }]);
   });
@@ -45,8 +46,8 @@ describe("DELETE /entries/:entryId (UE-E-S10)", () => {
       expect([path, res.status, res.json.error.code]).toEqual([path, 422, "InvalidRequest"]);
     }
     const withBody = await call("DELETE", `/entries/${UNKNOWN_CIRCLE}`, "andrea", { x: 1 });
-    expect(withBody.status).toBeGreaterThanOrEqual(400);
-    expect(withBody.status).toBeLessThan(500);
+    expect([withBody.status, withBody.json.error.code]).toEqual([422, "InvalidRequest"]);
+    expect(withBody.json.error.details).toEqual({ reason: "bodyNotAllowed" });
     expect(transaction.mock.calls.length).toBe(before);
   });
 
@@ -61,6 +62,7 @@ describe("DELETE /entries/:entryId (UE-E-S10)", () => {
 
     const season = await ctx.app.seasons.get(ctx.seasonId as never);
     if (!season) throw new Error("fixture setup failed");
+    // version 99 is arbitrary: any value differing from season.version proves the stored copy was replaced (the save is guarded by the expected version).
     const old = { ...season, actualStart: "2023-10-01" as never, version: 99 };
     await ctx.app.seasons.save(old, season.version);
     const closed = await ctx.call("DELETE", ctx.url, "andrea");

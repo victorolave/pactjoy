@@ -61,7 +61,7 @@ export interface RecordEntryResult {
   readonly entry: EntryRecord;
   /** `true` when `clientRequestId` had already been recorded and the original entry is returned (T1). */
   readonly replayed: boolean;
-  /** The actor's own member id, from the transaction that recorded or replayed (the viewer for presenting). */
+  /** The actor's own member id, from the transaction that recorded or replayed (the acting member). */
   readonly memberId: MemberId;
 }
 
