@@ -10,7 +10,11 @@ export interface HabitDto {
   readonly version: number;
 }
 
-/** `ownerId` is omitted: a habit is only ever returned to its owner. */
+/**
+ * `ownerId` is omitted: a habit is only ever returned to its owner.
+ * `why` is OWNER-ONLY (private motivation). Any future cross-member habit
+ * view must use a separate presenter that drops `why`.
+ */
 export function presentHabit(habit: Habit): HabitDto {
   return {
     id: habit.id,

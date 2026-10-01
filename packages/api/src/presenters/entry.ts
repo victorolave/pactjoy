@@ -4,6 +4,7 @@ import {
   type StoredEntry,
   toDecimalString,
 } from "@pactjoy/app";
+import type { MemberId } from "@pactjoy/engine";
 import { presentInstant, presentInstantOrNull } from "./time.ts";
 
 export type EntryValueDto =
@@ -29,11 +30,15 @@ export interface EntryDto {
 
 /**
  * Never emits `requestFingerprint` (it embeds the value and the note). The
- * note is emitted raw because every entry the API returns is the ACTOR's own
- * (ownership is enforced by the use cases); `visibleNote` becomes mandatory
- * the day an endpoint returns other members' entries (ADR-0011).
+ * note is emitted raw, so the presenter enforces that the entry is the
+ * viewer's own: a foreign entry throws (a plain Error, surfaced as a 500) and
+ * is never served. `visibleNote` becomes mandatory the day an endpoint returns
+ * other members' entries (ADR-0011).
  */
-export function presentEntry(entry: StoredEntry): EntryDto {
+export function presentEntry(entry: StoredEntry, viewer: MemberId): EntryDto {
+  if (entry.memberId !== viewer) {
+    throw new Error("presentEntry: refusing to present an entry that is not the viewer's own");
+  }
   const value = entry.value;
   return {
     id: entry.id,
@@ -57,13 +62,19 @@ export function presentEntry(entry: StoredEntry): EntryDto {
   };
 }
 
-export function presentRecordEntryResult(result: RecordEntryResult): {
+export function presentRecordEntryResult(
+  result: RecordEntryResult,
+  actor: MemberId,
+): {
   readonly entry: EntryDto;
   readonly replayed: boolean;
 } {
-  return { entry: presentEntry(result.entry), replayed: result.replayed };
+  return { entry: presentEntry(result.entry, actor), replayed: result.replayed };
 }
 
-export function presentEditEntryResult(result: EditEntryResult): { readonly entry: EntryDto } {
-  return { entry: presentEntry(result.entry) };
+export function presentEditEntryResult(
+  result: EditEntryResult,
+  actor: MemberId,
+): { readonly entry: EntryDto } {
+  return { entry: presentEntry(result.entry, actor) };
 }

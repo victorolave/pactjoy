@@ -14,11 +14,16 @@ import {
 import { type CommitmentId, parseDecimal, seasonDay } from "@pactjoy/engine";
 import { describe, expect, it } from "vitest";
 import { presentCircle, presentInvite } from "../src/presenters/circle.ts";
-import { presentEntry, presentRecordEntryResult } from "../src/presenters/entry.ts";
+import {
+  presentEditEntryResult,
+  presentEntry,
+  presentRecordEntryResult,
+} from "../src/presenters/entry.ts";
 import { presentHabit } from "../src/presenters/habit.ts";
 import { presentInstant } from "../src/presenters/time.ts";
 
 const ME = userId("u-me");
+const ME_MEMBER = memberId("m1");
 const OTHER = userId("u-other");
 const T = instant(1_700_000_000_123);
 const ISO = "2023-11-14T22:13:20.123Z";
@@ -94,7 +99,7 @@ describe("presenters: circle, habit, entry", () => {
     expect(dto.createdAt).toBe(ISO);
     expect(dto.members[0]?.joinedAt).toBe(ISO);
     expect(dto.members[1]?.leftAt).toBe("1970-01-01T00:00:00.000Z");
-    expect(presentEntry(entry).recordedAt).toBe(ISO);
+    expect(presentEntry(entry, ME_MEMBER).recordedAt).toBe(ISO);
     expect(presentHabit(habit).createdAt).toBe(ISO);
   });
 
@@ -123,7 +128,7 @@ describe("presenters: circle, habit, entry", () => {
   });
 
   it("PR-S1/S4/S12: entry has exact decimal value, replayed flag, no requestFingerprint", () => {
-    const dto = presentRecordEntryResult({ entry, replayed: true });
+    const dto = presentRecordEntryResult({ entry, replayed: true }, ME_MEMBER);
     expect(dto.replayed).toBe(true);
     expect(dto.entry.value).toEqual({ kind: "quantity", value: "7.5" });
     expect(dto.entry.note).toBe("secret note");
@@ -134,12 +139,28 @@ describe("presenters: circle, habit, entry", () => {
     expect(JSON.stringify({ ...dto.entry, note: null })).not.toContain("secret note");
   });
 
+  it("PR-S4: a foreign entry is never presented (note would leak)", () => {
+    const foreign = memberId("m-other");
+    expect(() => presentEntry(entry, foreign)).toThrow(/not the viewer's own/);
+    expect(() => presentRecordEntryResult({ entry, replayed: false }, foreign)).toThrow();
+    expect(() => presentEditEntryResult({ entry }, foreign)).toThrow();
+    expect(presentEditEntryResult({ entry }, ME_MEMBER).entry.note).toBe("secret note");
+  });
+
   it("entry variants: done, missed and tombstone", () => {
-    expect(presentEntry({ ...entry, value: { kind: "done" } }).value).toEqual({ kind: "done" });
-    expect(presentEntry({ ...entry, value: { kind: "missed" }, note: null }).value).toEqual({
+    expect(presentEntry({ ...entry, value: { kind: "done" } }, ME_MEMBER).value).toEqual({
+      kind: "done",
+    });
+    expect(
+      presentEntry({ ...entry, value: { kind: "missed" }, note: null }, ME_MEMBER).value,
+    ).toEqual({
       kind: "missed",
     });
-    expect(presentEntry(tombstone)).toMatchObject({ value: null, note: null, deleted: true });
+    expect(presentEntry(tombstone, ME_MEMBER)).toMatchObject({
+      value: null,
+      note: null,
+      deleted: true,
+    });
   });
 
   it("PR-S14/S16: round-trips through JSON without loss and is pure", () => {
@@ -147,8 +168,8 @@ describe("presenters: circle, habit, entry", () => {
       presentCircle(circle, { userId: ME }),
       presentInvite(invite),
       presentHabit(habit),
-      presentRecordEntryResult({ entry, replayed: false }),
-      presentEntry(tombstone),
+      presentRecordEntryResult({ entry, replayed: false }, ME_MEMBER),
+      presentEntry(tombstone, ME_MEMBER),
     ];
     for (const out of outputs) {
       walk(out);
