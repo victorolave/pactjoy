@@ -16,6 +16,13 @@ class RollbackSignal {
  * COMMITTED. `bind` builds the repositories for that transaction's executor.
  * Failures raised by Postgres are mapped (`mapError`); anything `work` throws
  * itself comes back unchanged. No retry and no snapshot `read` yet (B3b).
+ *
+ * Rules for `work`:
+ * - It must not swallow a database error. After one, Postgres holds the
+ *   transaction in 25P02 and a COMMIT silently becomes a ROLLBACK, while the
+ *   caller would see `{ ok: true }`. Let the error propagate.
+ * - It must not call `uow.transaction` again: the nested call takes a second
+ *   connection and deadlocks the pool when `max` is 1.
  */
 export function createUnitOfWork<R>(
   begin: Client["begin"],
@@ -35,7 +42,9 @@ export function createUnitOfWork<R>(
       }
     },
 
-    // Placeholder until B3b: a REPEATABLE READ, READ ONLY snapshot.
+    // TODO(B3b): this must run at "isolation level repeatable read read only"
+    // and wrap errors with `mapError` (40001 is possible at that level). Until
+    // then it is READ COMMITTED, so a write inside `read` succeeds.
     read: (work) => begin("isolation level read committed", async (tx) => work(bind(tx))),
   };
 }
