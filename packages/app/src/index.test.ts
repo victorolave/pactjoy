@@ -32,6 +32,8 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "joinCircle",
   "leaveCircle",
   "localDate",
+  "isReviewCadenceWeeks",
+  "isSeasonLengthWeeks",
   "localDateOfSeasonDay",
   "memberId",
   "memberScore",

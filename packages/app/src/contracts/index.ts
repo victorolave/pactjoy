@@ -13,4 +13,5 @@ export {
   describeSeasonGuardContract,
 } from "./guard-version.contract.ts";
 export { describeHabitRepositoryContract } from "./habit.contract.ts";
+export { describeSeasonRepositoryContract } from "./season.contract.ts";
 export { describeUnitOfWorkContract } from "./unit-of-work.contract.ts";
