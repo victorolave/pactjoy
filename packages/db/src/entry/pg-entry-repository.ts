@@ -1,4 +1,5 @@
 import {
+  ConcurrencyConflict,
   commitmentId,
   type EntryRecord,
   type EntryRepository,
@@ -33,6 +34,24 @@ interface EntryRow {
 
 const COLUMNS =
   "id, season_id, member_id, commitment_id, client_request_id, day, recorded_on, recorded_at, edited_at, version, request_fingerprint, deleted, value_kind, value_num, value_den, note";
+
+/** What an edit must never change: the UPDATE does not touch these, so a difference is a caller bug. */
+const IMMUTABLE: Record<
+  Exclude<keyof EntryRecord, "value" | "note" | "editedAt" | "version">,
+  true
+> = {
+  id: true,
+  seasonId: true,
+  memberId: true,
+  commitmentId: true,
+  day: true,
+  recordedOn: true,
+  recordedAt: true,
+  clientRequestId: true,
+  requestFingerprint: true,
+  deleted: true,
+};
+const IMMUTABLE_FIELDS = Object.keys(IMMUTABLE) as (keyof typeof IMMUTABLE)[];
 
 const iso = (at: Instant) => new Date(at).toISOString();
 
@@ -74,6 +93,10 @@ function toStored(row: EntryRow): StoredEntry {
  * A duplicate id or idempotency key raises 23505 on `entries_pkey` /
  * `entries_client_request_key`, mapped to ConcurrencyConflict by the unit of
  * work. The unique key is not partial, so a tombstone keeps its key taken.
+ * `replace` and `remove` are one UPDATE each, guarded by `version` and
+ * `not deleted`; the affected-row count decides ConcurrencyConflict. The
+ * order of `insert_seq` (and so of `listBySeason`) follows insert order, not
+ * commit order: two concurrent adds may commit in either order.
  */
 export function createPgEntryRepository(exec: SqlExecutor): EntryRepository {
   const stored = async (where: string, params: unknown[]) =>
@@ -123,7 +146,44 @@ export function createPgEntryRepository(exec: SqlExecutor): EntryRepository {
         ],
       );
     },
-    replace: () => Promise.reject(new Error("EntryRepository.replace: not implemented (B6b)")),
-    remove: () => Promise.reject(new Error("EntryRepository.remove: not implemented (B6b)")),
+
+    async replace(next, expectedVersion) {
+      // Needs no read, so it fails before the UPDATE: nothing is written even
+      // if a caller swallows the error and commits.
+      if (next.version !== expectedVersion + 1) {
+        throw new Error("EntryRepository.replace: next.version must be expectedVersion + 1");
+      }
+      const quantity = next.value.kind === "quantity" ? next.value.value : null;
+      // Writes `expected + 1`, not `next.version`, which is validated above.
+      const { rows } = await exec.query<EntryRow>(
+        `update pactjoy.entries set value_kind = $3, value_num = $4::int8, value_den = $5::int8, note = $6, edited_at = $7::timestamptz, version = version + 1 where id = $1 and version = $2 and not deleted returning ${COLUMNS}`,
+        [
+          next.id,
+          expectedVersion,
+          next.value.kind,
+          quantity === null ? null : quantity.num.toString(),
+          quantity === null ? null : quantity.den.toString(),
+          next.note,
+          next.editedAt === null ? null : iso(next.editedAt),
+        ],
+      );
+      const [row] = rows;
+      if (!row) throw new ConcurrencyConflict();
+      const current = toStored(row);
+      for (const field of IMMUTABLE_FIELDS) {
+        // The transaction is rolled back by the thrown error, undoing the write.
+        if (current[field] !== next[field]) {
+          throw new Error(`EntryRepository.replace: immutable field "${field}" changed`);
+        }
+      }
+    },
+
+    async remove(id, expectedVersion) {
+      const { rows } = await exec.query(
+        "update pactjoy.entries set deleted = true, value_kind = null, value_num = null, value_den = null, note = null, version = version + 1 where id = $1 and version = $2 and not deleted returning id",
+        [id, expectedVersion],
+      );
+      if (rows.length === 0) throw new ConcurrencyConflict();
+    },
   };
 }

@@ -168,7 +168,7 @@ export function createInMemoryEntryRepository(): InMemoryEntryRepository {
             entry.deleted
               ? entry
               : removed.has(entry.id)
-                ? tombstone(entry)
+                ? tombstone(replaced.get(entry.id)?.next ?? entry)
                 : (replaced.get(entry.id)?.next ?? entry),
           ),
           ...staged,
@@ -177,7 +177,7 @@ export function createInMemoryEntryRepository(): InMemoryEntryRepository {
 
       function stillAt(id: EntryId, expectedVersion: number): boolean {
         const current = store.find((entry) => entry.id === id);
-        return current?.version === expectedVersion;
+        return current !== undefined && !current.deleted && current.version === expectedVersion;
       }
 
       const repository: EntryRepository = {
@@ -216,7 +216,14 @@ export function createInMemoryEntryRepository(): InMemoryEntryRepository {
         },
 
         async remove(id: EntryId, expectedVersion: number): Promise<void> {
-          removed.set(id, expectedVersion);
+          // A staged replace already moved the entry on, as the UPDATE does on
+          // Postgres; anything else is still checked in validate() against the
+          // version first read from the store.
+          const staged = replaced.get(id);
+          if (staged && staged.next.version !== expectedVersion) {
+            throw new ConcurrencyConflict();
+          }
+          removed.set(id, staged?.expectedVersion ?? expectedVersion);
         },
       };
 
