@@ -23,9 +23,77 @@ Status: this ADR is a draft. Every item below is a proposal until the slices tha
 - Proposed: **Composition.** `createApi(deps, options)` takes ports only and reads no environment. `createLazyHandler` builds once per isolate and memoizes; a failed build answers 503 and is retried on the next request. `loadApiEnv` reads configuration through an injected getter. Building opens no connection.
 - Proposed: **Database-unavailable gotcha.** A connect failure (DNS, refused) kills the Edge worker and surfaces as an empty 503 with no CORS headers, which a browser sees as a network error. Catchable failures go through an injected `isUnavailable` predicate exported by `@pactjoy/db`, so no SQLSTATE knowledge lives in the API. Clients retry; `recordEntry` is safe through `clientRequestId` and the other writes are guarded by versions.
 
+### Decisions taken during implementation
+
+- Proposed: **Entry use cases return `memberId`.** `RecordEntryResult` and `EditEntryResult` carry the acting member's id, taken from the in-transaction member, and the API presents the entry with it. The earlier post-commit lookup was removed: it left a window where the entry was committed but the client got a 500, and the retry then got a 403 because `NotAMember` runs before the idempotent replay.
+- Proposed: **Join body field.** `POST /circles/join` takes `{ "inviteCode": "..." }`. The code never appears in the URL or in logs.
+- Proposed: **Logging policy.** One line per request from the pipeline: `requestId`, method, route pattern only (never the raw path), status, `durationMs` and error code. Thrown 500 and 503 errors are logged through a scrubbing logger:
+  - an error that carries a string `code` logs only `{ name, code }` and no message;
+  - other messages are scrubbed before truncating (`scheme://user:pass@` becomes `scheme://***@`, `Bearer` values and JWT-like strings are masked);
+  - values under sensitive keys are redacted (matched on the normalized key name: token, auth, password, secret, cookie, invite code, user id, email, database URL, connection string, DSN, API key, jwt);
+  - the Authorization header, bodies, notes, invite codes and environment values are never logged.
+- Left OPEN, with the current behaviour kept: the stale-approval policy (Q13) and the 403-versus-404 policy for entries and circles (Q7 addendum, Q14).
+
 ### Spike results
 
-To be filled by slice C8 after the import spike (S0): the real pathname prefix for `serve` and `deploy`, local `SUPABASE_URL` against the token `iss`, out-of-tree import resolution on deploy, and whether `import_map` accepts `deno.json`.
+Local spike S0.1 (2026-10-01; Supabase CLI 2.119.0, edge-runtime 1.77.1, Deno 2.1.4):
+
+| Check | Result |
+| --- | --- |
+| Out-of-tree imports through a `deno.json` import map with relative paths to `packages/*/src/index.ts` | Work with no package restructuring and no `node_modules`; `.ts` extension imports are fine. `deno check` passes on a clean copy. |
+| `import_map` in `config.toml` accepts `deno.json` | Yes (`[functions.api] import_map = "./functions/api/deno.json"`). |
+| `verify_jwt = false` | Works; the function receives the request and verifies the token itself. |
+| Real pathname prefix under `serve` | `/api`, so `basePath` is `/api`. A bare `/functions/v1/api` is a 404 from the router. |
+| `SUPABASE_URL` inside the runtime against the token `iss` | They differ (`iss` is `http://127.0.0.1:54321/auth/v1`), so locally `API_JWT_ISSUER` MUST be set; without it every token is a 401 `wrongIssuer`. |
+| Local signing keys | The CLI default is already ES256 and the JWKS is served; no key file is needed locally. |
+| End to end | ES256 token: `POST /circles` gives 201 against local Postgres, a second one 409 `AlreadyInActiveCircle`. |
+| CORS | The local Kong gateway adds `Access-Control-Allow-Origin: *`, so local runs do not prove the allow-list. |
+| `deno.json` | Needs `"lock": false`, otherwise `deno check` writes a `deno.lock`. Versions are pinned in the map instead. |
+| Database URL from the container | `host.docker.internal:54322`. |
+
+Not yet verified, because they need the hosted project (ops steps S0.2 and S0.3 below): out-of-tree import resolution on `functions deploy --use-api`, the bundle contents through `functions download`, the real prefix on the hosted gateway, the Supavisor transaction pooler under pool `max=3`, TLS and cold start. If the hosted bundle fails to resolve the imports, fall back to F1 or F2 above; only the shell and the import map change.
+
+### Config and gotchas
+
+- `supabase/config.toml` is minimal and local-only: the Data API schemas (without `pactjoy`), Postgres 17, the email OTP shape (6 digits, 1 hour), `[functions.api]` and the placeholder OTP template. The repository does not push it to the hosted project (Q4). A boundary test pins the schemas, `verify_jwt = false`, the import map and the absence of service-role keys.
+- The local signing key `supabase/signing_keys.json` is a secret and is gitignored. It is optional locally because the CLI default is already ES256.
+- A function worker that cannot connect to the database dies and answers an empty 503 without CORS headers; a browser reports it as a network error. Check the function logs, not the response.
+- The function reads secrets through `Deno.env`. Copy the pooler hostname into `API_DATABASE_URL` exactly as Supabase prints it. If the connection fails with an invalid-hostname error, check for an underscore in the host: some DNS and TLS stacks reject it. This is a precaution carried over from the task notes, not something the spike reproduced.
+
+### Open questions
+
+Product questions for the owner. None is decided here; each has a recommendation in the SDD decision notes.
+
+1. Q1: Account deletion or anonymization in this change? (`DELETE /me` is reserved and not routed.)
+2. Q2: Read-model queries for the PWA (get circle, get season, list habits)?
+3. Q3: Member display names?
+4. Q4: Adopt `supabase config push` for the hosted auth and API settings?
+5. Q5: Which CORS origins are allowed (today an env allow-list; empty allows none)?
+6. Q6: Open email OTP signup or invite-only?
+7. Q7: Status-code semantics (the whole table is provisional).
+8. Q8: Should an owner see their own private commitments in season responses?
+9. Q9: Are pact approvals (who and when) visible to every member, or only a count plus "you approved"?
+10. Q10: Does a member who left keep seeing the circle's member list?
+11. Q11: Expose the invite's `createdBy`?
+12. Q12: Should an empty or same-value season edit be a no-op instead of resetting approvals?
+13. Q13: Should pact approval carry an `expectedVersion` so a stale approval is rejected (`StaleSeason` 409)?
+14. Q14: Should a stranger on an existing entry id get 404 instead of 403 (existence disclosure; related to Q7)?
+15. Q15: Does "private" hide only the habit and measure, or also `weightPercent` and `points` (which reveal the completion fraction)?
+
+### Operational checklist (hosted Supabase, manual; the owner executes it)
+
+Nothing here runs from CI or from the repository.
+
+- S0.2: set up the hosted project and link it (`supabase link`). Follow the ADR-0010 checklist for `db push`; `pactjoy` must not be in the Data API exposed schemas.
+- Auth: enable asymmetric JWT signing keys (the JWKS endpoint must serve ES256 or RS256), set the email OTP length to 6, put `{{ .Token }}` in the magic-link template, and configure SMTP through a provider API (port 465 or 2525; 25 and 587 are blocked).
+- Secrets (`supabase secrets set`), never in a file in the repository:
+  - `API_DATABASE_URL`: the Supavisor transaction pooler URL (port 6543) of a dedicated database role, never the service-role key;
+  - `ALLOWED_ORIGINS`: comma-separated exact origins (for example the PWA origin); empty allows no browser origin;
+  - `API_JWT_ISSUER`: optional; defaults to `${SUPABASE_URL}/auth/v1`, which is right on hosted.
+- S0.2: `supabase functions deploy api --use-docker` first, then `--use-api`. Download the deployed bundle (`supabase functions download api`) and check that `@pactjoy/*` sources and `postgres`/`jose` resolved. Record the result in the Spike results above.
+- S0.3: smoke test with a real OTP-login token: `POST /api/circles` returns 201, an invalid token returns 401 with the envelope, a browser preflight from an allowed origin returns 204. Check the pooler under concurrency and the cold start once.
+- Add the `db` and `deno` CI checks to branch protection.
+- If the deploy cannot resolve out-of-tree imports, apply fallback F1 or F2 (shell and import map only) and update this ADR.
 
 ## Alternatives considered
 
