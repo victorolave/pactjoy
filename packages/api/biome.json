@@ -22,7 +22,15 @@
               "window": "packages/api runs on a server runtime: no browser globals.",
               "document": "packages/api runs on a server runtime: no browser globals.",
               "localStorage": "packages/api runs on a server runtime: no browser globals.",
-              "navigator": "packages/api runs on a server runtime: no browser globals."
+              "navigator": "packages/api runs on a server runtime: no browser globals.",
+              "location": "packages/api runs on a server runtime: no browser globals.",
+              "self": "packages/api runs on a server runtime: no browser globals.",
+              "sessionStorage": "packages/api runs on a server runtime: no browser globals.",
+              "alert": "packages/api runs on a server runtime: no browser globals.",
+              "XMLHttpRequest": "packages/api runs on a server runtime: no browser globals.",
+              "Buffer": "packages/api is standard TypeScript/ESM: Node globals are not portable (ADR-0011).",
+              "require": "packages/api is standard TypeScript/ESM: no CommonJS (ADR-0011).",
+              "__dirname": "packages/api is standard TypeScript/ESM: Node globals are not portable (ADR-0011)."
             }
           }
         },
@@ -31,8 +39,16 @@
           "options": {
             "patterns": [
               {
-                "group": ["@pactjoy/*/**", "!@pactjoy/app/testing"],
-                "message": "Import only package roots or the documented subpaths (@pactjoy/app/testing is allowed in src/testing and tests only, see the overrides)."
+                "group": ["@pactjoy/*/**"],
+                "message": "Import only package roots or the documented subpaths."
+              },
+              {
+                "group": ["@pactjoy/app/testing", "@pactjoy/app/contracts"],
+                "message": "@pactjoy/app/testing and @pactjoy/app/contracts are test-only: allowed in src/testing/** and test/** (see the overrides)."
+              },
+              {
+                "group": ["**/testing/**", "**/testing"],
+                "message": "Production src must not import from src/testing (test doubles); only src/testing/**, *.test.ts and test/** may."
               },
               {
                 "group": ["@pactjoy/db"],
@@ -95,7 +111,7 @@
               "options": {
                 "patterns": [
                   {
-                    "group": ["@pactjoy/*/**", "!@pactjoy/app/testing"],
+                    "group": ["@pactjoy/*/**", "!@pactjoy/app/testing", "!@pactjoy/app/contracts"],
                     "message": "Import only package roots or the documented subpaths."
                   },
                   {
