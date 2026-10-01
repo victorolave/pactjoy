@@ -15,6 +15,6 @@ export function bindRepositories(exec: SqlExecutor, mode: BindMode): PgRepositor
   return {
     habits: createPgHabitRepository(exec),
     circles: createPgCircleRepository(exec, mode),
-    seasons: createPgSeasonRepository(exec),
+    seasons: createPgSeasonRepository(exec, mode),
   };
 }

@@ -2,6 +2,7 @@ import {
   describeCircleGuardContract,
   describeCircleRepositoryContract,
   describeHabitRepositoryContract,
+  describeSeasonGuardContract,
   describeSeasonRepositoryContract,
   describeUnitOfWorkContract,
 } from "@pactjoy/app/contracts";
@@ -28,6 +29,7 @@ async function postgres() {
 
 describeCircleRepositoryContract("postgres", postgres);
 describeCircleGuardContract("postgres", postgres);
+describeSeasonGuardContract("postgres", postgres);
 describeHabitRepositoryContract("postgres", postgres);
 describeSeasonRepositoryContract("postgres", postgres);
 describeUnitOfWorkContract("postgres", postgres);

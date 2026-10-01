@@ -17,7 +17,7 @@ import {
   seasonId,
   timeZoneId,
 } from "@pactjoy/app";
-import type { SqlExecutor } from "../client.ts";
+import type { BindMode, SqlExecutor } from "../client.ts";
 import { decodeMeasure, encodeMeasure } from "./measure-codec.ts";
 
 interface SeasonRow {
@@ -61,11 +61,14 @@ function placeholders(rows: number, width: number, casts: Record<number, string>
 }
 
 /**
- * One instance per transaction (see `bindRepositories`). `guardVersion` and
- * `delete` arrive in B5b-ii and fail loudly until then: a silent no-op would
- * let a use case believe it had a lock or had deleted a season.
+ * One instance per transaction (see `bindRepositories`), so `preWrite` is that
+ * transaction's own map: season id -> the version it had BEFORE this
+ * transaction first wrote it (`null` = inserted here, so there was nothing to
+ * guard). Same scheme as the circle repository.
  */
-export function createPgSeasonRepository(exec: SqlExecutor): SeasonRepository {
+export function createPgSeasonRepository(exec: SqlExecutor, mode: BindMode): SeasonRepository {
+  const preWrite = new Map<string, number | null>();
+
   /**
    * Torn reads: the three queries run at READ COMMITTED inside a write
    * transaction, so a concurrent commit between them can mix children of one
@@ -138,8 +141,24 @@ export function createPgSeasonRepository(exec: SqlExecutor): SeasonRepository {
     findLatestByCircle: (circle) =>
       one("where circle_id = $1 order by insert_seq desc limit 1", [circle]),
 
-    async guardVersion() {
-      throw new Error("PgSeasonRepository.guardVersion: not implemented (B5b-ii)");
+    /**
+     * Eager read-set guard: `FOR NO KEY UPDATE`, never FOR SHARE (two guards
+     * upgrading to a write deadlock) and not FOR UPDATE (it would block the KEY
+     * SHARE of an entry insert's FK check). The lock lasts to COMMIT, so the
+     * check is atomic with it. A season this transaction already wrote is
+     * compared against its pre-write version. A missing row always conflicts.
+     */
+    async guardVersion(id, expectedVersion) {
+      if (mode === "read") return;
+      if (preWrite.has(id)) {
+        if (preWrite.get(id) !== expectedVersion) throw new ConcurrencyConflict();
+        return;
+      }
+      const { rows } = await exec.query<{ version: number }>(
+        "select version from pactjoy.seasons where id = $1 for no key update",
+        [id],
+      );
+      if (rows[0]?.version !== expectedVersion) throw new ConcurrencyConflict();
     },
     /** Version-checked. The commitments and approvals go with it (ON DELETE CASCADE); entries will RESTRICT it. */
     async delete(id, expectedVersion) {
@@ -151,6 +170,7 @@ export function createPgSeasonRepository(exec: SqlExecutor): SeasonRepository {
     },
 
     async save(season, expectedVersion) {
+      const first = !preWrite.has(season.id);
       if (expectedVersion === null) {
         // `insert_seq` is generated. A duplicate id raises 23505 on seasons_pkey, mapped to ConcurrencyConflict.
         await exec.query(
@@ -169,6 +189,7 @@ export function createPgSeasonRepository(exec: SqlExecutor): SeasonRepository {
             season.version,
           ],
         );
+        if (first) preWrite.set(season.id, null);
       } else {
         // Only mutable columns are SET: never `id`, `circle_id` or `insert_seq` (key columns, ADR-0010), nor `created_at`.
         const { rowCount } = await exec.query(
@@ -187,6 +208,7 @@ export function createPgSeasonRepository(exec: SqlExecutor): SeasonRepository {
           ],
         );
         if (rowCount === 0) throw new ConcurrencyConflict();
+        if (first) preWrite.set(season.id, expectedVersion);
         await exec.query("delete from pactjoy.season_commitments where season_id = $1", [
           season.id,
         ]);
