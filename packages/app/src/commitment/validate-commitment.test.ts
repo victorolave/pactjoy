@@ -338,4 +338,103 @@ describe("validateCommitment", () => {
       expect(reach("custom", { precision: "decimal" })("0.5", "2.25").ok).toBe(true);
     });
   });
+  describe("frequency (user decision 2026-09-30)", () => {
+    const doneWith = (frequency: unknown) =>
+      validateCommitment({
+        weightPercent: 20,
+        measure: { unit: "done", frequency: frequency as never },
+      });
+    const quantityWith = (frequency: unknown) =>
+      validateCommitment({
+        weightPercent: 20,
+        measure: {
+          unit: "minutes",
+          direction: "reach",
+          minimum: "1",
+          ideal: "2",
+          schedule: { period: "perSession", frequency: frequency as never },
+        },
+      });
+    const times = (n: number) => ({ kind: "timesPerWeek", times: n });
+    const days = (weekdays: number[]) => ({ kind: "specificDays", weekdays });
+
+    for (const [name, run] of [
+      ["done", doneWith],
+      ["perSession quantity", quantityWith],
+    ] as const) {
+      describe(name, () => {
+        it.each([0, 8, -1, 1.5, Number.NaN])("rejects %s times per week", (n) => {
+          expect(run(times(n))).toEqual({ ok: false, error: { kind: "InvalidTimesPerWeek" } });
+        });
+
+        it.each([1, 7])("accepts %s times per week", (n) => {
+          expect(run(times(n)).ok).toBe(true);
+        });
+
+        it("rejects an empty weekday list", () => {
+          expect(run(days([]))).toEqual({ ok: false, error: { kind: "NoWeekdays" } });
+        });
+
+        it("rejects a repeated weekday", () => {
+          expect(run(days([1, 1]))).toEqual({ ok: false, error: { kind: "DuplicateWeekday" } });
+        });
+
+        it.each([-1, 7, 1.5])("rejects weekday %s", (d) => {
+          expect(run(days([0, d]))).toEqual({ ok: false, error: { kind: "InvalidWeekday" } });
+        });
+
+        it("accepts weekdays 0 and 6 and the full week", () => {
+          expect(run(days([0, 6])).ok).toBe(true);
+          expect(run(days([0, 1, 2, 3, 4, 5, 6])).ok).toBe(true);
+        });
+      });
+    }
+
+    it("does not constrain a weeklyTotal schedule", () => {
+      const result = validateCommitment({
+        weightPercent: 20,
+        measure: {
+          unit: "minutes",
+          direction: "reach",
+          minimum: "1",
+          ideal: "2",
+          schedule: { period: "weeklyTotal" },
+        },
+      });
+      expect(result.ok).toBe(true);
+    });
+  });
+
+  describe("custom label control characters (user decision 2026-09-30)", () => {
+    const withLabel = (customLabel: string) =>
+      validateCommitment({
+        weightPercent: 20,
+        measure: {
+          unit: "custom",
+          customLabel,
+          direction: "reach",
+          minimum: "1",
+          ideal: "2",
+          schedule: { period: "weeklyTotal" },
+        },
+      });
+
+    it.each([
+      ["NUL", "a\u0000b"],
+      ["newline", "a\nb"],
+      ["tab", "a\tb"],
+      ["US (0x1f)", "a\u001fb"],
+      ["DEL", "a\u007fb"],
+      ["C1 control", "a\u0085b"],
+    ])("rejects a label containing %s", (_name, label) => {
+      expect(withLabel(label)).toEqual({
+        ok: false,
+        error: { kind: "CustomLabelHasControlCharacters" },
+      });
+    });
+
+    it("accepts a plain label with spaces and non-ASCII letters", () => {
+      expect(withLabel("vasos de agua ñ").ok).toBe(true);
+    });
+  });
 });
