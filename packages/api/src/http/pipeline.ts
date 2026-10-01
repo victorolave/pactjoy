@@ -110,6 +110,7 @@ export function createPipeline<A>(deps: {
       if (method === "OPTIONS") {
         const response = cors.preflight(request);
         response.headers.set("X-Request-Id", requestId);
+        route = "preflight";
         logLine(response.status);
         return response;
       }

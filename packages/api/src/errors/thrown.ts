@@ -36,7 +36,8 @@ export function createThrownMapper(
         error: {
           name: e instanceof Error ? e.name : typeof e,
           ...(typeof code === "string" ? { code } : {}),
-          ...(e instanceof Error ? { message: e.message } : {}),
+          // A coded error (pg SQLSTATE, driver code) may echo user input in its message.
+          ...(e instanceof Error && typeof code !== "string" ? { message: e.message } : {}),
         },
       });
     } catch {
@@ -46,6 +47,7 @@ export function createThrownMapper(
   return (e, { requestId }) => {
     if (is(e, ConcurrencyConflict, "ConcurrencyConflict")) return apiFailure("ConcurrencyConflict");
     if (is(e, InviteCodeGenerationFailed, "InviteCodeGenerationFailed")) {
+      record(e, requestId);
       return apiFailure("InviteCodeGenerationFailed", { requestId });
     }
     if (safe(isUnavailable, e)) {

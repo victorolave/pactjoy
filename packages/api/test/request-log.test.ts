@@ -1,10 +1,15 @@
+import { userId } from "@pactjoy/app";
+import { createTestApp } from "@pactjoy/app/testing";
 import { describe, expect, it, vi } from "vitest";
 import { createConsoleLogger } from "../src/composition/logger.ts";
 import { createThrownMapper } from "../src/errors/thrown.ts";
 import { createPipeline } from "../src/http/pipeline.ts";
 import type { ApiResult } from "../src/http/types.ts";
+import { createApi } from "../src/routes/index.ts";
+import { createDeterministicUuidGenerator, createFakeTokenVerifier } from "../src/testing/index.ts";
 
 const RID = "11111111-2222-4333-8444-555555555555";
+const ANDREA_ID = "aaaaaaaa-0000-4000-8000-000000000001";
 const SECRET_TOKEN = "super-secret-token";
 
 function setup(
@@ -89,6 +94,21 @@ describe("request log line (SF3)", () => {
     expect(JSON.stringify(info.mock.calls)).not.toContain("nothing-secret");
   });
 
+  it("a preflight logs the line with route preflight", async () => {
+    const { handler, info } = setup();
+    await handler(
+      new Request("http://x/api/habits/h", {
+        method: "OPTIONS",
+        headers: {
+          "x-request-id": RID,
+          origin: "http://o",
+          "access-control-request-method": "GET",
+        },
+      }),
+    );
+    expect(info.mock.calls[0]?.[1]).toMatchObject({ method: "OPTIONS", route: "preflight" });
+  });
+
   it("422 from the body stage logs the line with its code", async () => {
     const info = vi.fn();
     const handler = createPipeline<string>({
@@ -128,7 +148,7 @@ describe("request log line (SF3)", () => {
 });
 
 describe("thrown-error log (SF2)", () => {
-  it("logs name, code and message of a 500 through the logger, body unchanged", async () => {
+  it("logs name and code (not the message) of a coded 500 through the logger, body unchanged", async () => {
     const { handler, error } = setup(async () => {
       throw Object.assign(new Error("db exploded"), { code: "XX000" });
     });
@@ -138,7 +158,7 @@ describe("thrown-error log (SF2)", () => {
     });
     expect(error).toHaveBeenCalledWith("request.failed", {
       requestId: RID,
-      error: { name: "Error", code: "XX000", message: "db exploded" },
+      error: { name: "Error", code: "XX000" },
     });
   });
 
@@ -164,5 +184,70 @@ describe("thrown-error log (SF2)", () => {
     logger.info("request", { requestId: "r" });
     expect(lines[0]).not.toContain("pw@");
     expect(JSON.parse(lines[1] ?? "")).toMatchObject({ level: "info", event: "request" });
+  });
+});
+
+describe("full pipeline logging (createApi)", () => {
+  const build = (error: () => void) => {
+    const app = createTestApp();
+    const boom = new RangeError("pg down");
+    const uow = {
+      read: async () => {
+        throw boom;
+      },
+      transaction: async () => {
+        throw boom;
+      },
+    } as unknown as typeof app.uow;
+    return createApi(
+      {
+        uow,
+        clock: app.clock,
+        timeZone: app.timeZone,
+        ids: createDeterministicUuidGenerator(),
+        random: app.random,
+        tokenVerifier: createFakeTokenVerifier({ andrea: userId(ANDREA_ID) }),
+        logger: { info: vi.fn(), warn: vi.fn(), error },
+        isUnavailable: (e) => e === boom,
+      },
+      { basePath: "/api", allowedOrigins: [] },
+    );
+  };
+  const get = (h: ReturnType<typeof build>) =>
+    h(
+      new Request("http://x/api/circles", {
+        method: "POST",
+        headers: { authorization: "Bearer andrea", "content-type": "application/json" },
+        body: JSON.stringify({ name: "c" }),
+      }),
+    );
+
+  it("the 503 path is logged through createApi", async () => {
+    const error = vi.fn();
+    const res = await get(build(error));
+    expect(res.status).toBe(503);
+    expect(error).toHaveBeenCalledTimes(1);
+    expect(error.mock.calls[0]?.[0]).toBe("request.failed");
+  });
+
+  it("a throwing error logger does not change the 500 response", async () => {
+    const { handler, error } = setup(async () => {
+      throw new Error("boom");
+    });
+    error.mockImplementation(() => {
+      throw new Error("sink down");
+    });
+    const res = await handler(req("/api/habits/h"));
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({
+      error: { code: "Internal", message: "Internal", details: { requestId: RID } },
+    });
+  });
+
+  it("a throwing error logger keeps the 503 a 503", async () => {
+    const error = vi.fn(() => {
+      throw new Error("sink down");
+    });
+    expect((await get(build(error))).status).toBe(503);
   });
 });
