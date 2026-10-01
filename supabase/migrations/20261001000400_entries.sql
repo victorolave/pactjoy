@@ -11,7 +11,8 @@
 -- of a season are replaced wholesale on every save) nor to a member.
 --
 -- `insert_seq` is the insertion order `listBySeason` relies on, because
--- `recorded_at` can tie. An entry edit never updates a key column of this table.
+-- `recorded_at` can tie. It follows INSERT order, not commit order: two concurrent
+-- transactions can commit in the opposite order to their sequence values. An entry edit never updates a key column of this table.
 --
 -- A quantity is an exact fraction: `value_num` / `value_den`, both bigint, never
 -- a float or numeric. Only representational CHECKs live here. Every constraint
