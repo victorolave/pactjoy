@@ -21,7 +21,7 @@ export function setup() {
       ids: createDeterministicUuidGenerator(),
       random: app.random,
       tokenVerifier: createFakeTokenVerifier({ andrea: ANDREA, victor: VICTOR }),
-      logger: { warn: () => undefined, error: () => undefined },
+      logger: { info: () => undefined, warn: () => undefined, error: () => undefined },
     },
     { basePath: "/api", allowedOrigins: [] },
   );
