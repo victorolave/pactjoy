@@ -172,7 +172,7 @@ describe("recordEntry: recording", () => {
     ).toEqual({ ok: false, error: { kind: "NoteTooLong" } });
   });
 
-  it("rejects a note over 280 characters (B6) and accepts exactly 280", async () => {
+  it("ER-22: rejects a note over 280 characters (B6) and accepts exactly 280", async () => {
     const app = newApp();
     const given = await givenActiveSeason(app, PER_DAY_REACH);
 

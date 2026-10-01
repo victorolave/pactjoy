@@ -117,7 +117,7 @@ describe("standings: ranking by points, recomputed on every call", () => {
 describe("standings: eligibility", () => {
   // Engine rule Q3 (kept by decision, 2026-09-30): a member who left is excluded from the
   // rows and from the rank count.
-  it("SQ-4/SQ-5: a leaver is not ranked, the full rows and the count still come back (T2), and the leaver can still read", async () => {
+  it("CM-14, SQ-4/SQ-5: a leaver is not ranked, the full rows and the count still come back (T2), and the leaver can still read", async () => {
     const { given, ask, victorLeaves } = await setup();
     await victorLeaves();
     const onlyAndrea = {
