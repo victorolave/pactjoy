@@ -8,6 +8,7 @@ import { commitmentRoutes } from "./commitments.ts";
 import { entryRoutes } from "./entries.ts";
 import { habitRoutes } from "./habits.ts";
 import { pactRoutes } from "./pact.ts";
+import { scoreRoutes } from "./scores.ts";
 import { seasonRoutes } from "./seasons.ts";
 import type { ApiDeps, Route } from "./support.ts";
 
@@ -22,6 +23,7 @@ const routeTable = (deps: ApiDeps): Route[] => [
   ...commitmentRoutes(deps),
   ...pactRoutes(deps),
   ...entryRoutes(deps),
+  ...scoreRoutes(deps),
 ];
 
 /** The whole API as a Web `Request` handler, built from ports only. */
