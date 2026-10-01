@@ -146,7 +146,11 @@ export type {
   SeasonLengthWeeks,
   SeasonStatus,
 } from "./season/season.ts";
-export { reviewCadenceForLength } from "./season/season.ts";
+export {
+  isReviewCadenceWeeks,
+  isSeasonLengthWeeks,
+  reviewCadenceForLength,
+} from "./season/season.ts";
 export type { Actor } from "./shared/actor.ts";
 export { ConcurrencyConflict, InviteCodeGenerationFailed } from "./shared/errors.ts";
 export type { CircleId, EntryId, HabitId, SeasonId, UserId } from "./shared/ids.ts";
