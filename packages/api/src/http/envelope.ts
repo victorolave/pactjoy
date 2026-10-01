@@ -28,6 +28,9 @@ export function respond(result: ApiResult, extraHeaders: HeadersInit = {}): Resp
         }
       : { data: result.data === undefined ? null : result.data };
   const headers = new Headers(extraHeaders);
+  if ("error" in result && result.headers) {
+    for (const [name, value] of Object.entries(result.headers)) headers.set(name, value);
+  }
   for (const [name, value] of Object.entries(FIXED_HEADERS)) headers.set(name, value);
   return new Response(JSON.stringify(body), { status: result.status, headers });
 }
