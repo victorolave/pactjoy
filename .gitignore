@@ -20,6 +20,8 @@ coverage/
 # Supabase local state
 supabase/.branches/
 supabase/.temp/
+# Local asymmetric JWT signing key (a SECRET; generate with `supabase gen signing-key`)
+supabase/signing_keys.json
 
 # Deploy tools
 .vercel/

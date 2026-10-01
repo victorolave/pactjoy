@@ -110,3 +110,44 @@ describe("own entries only (UE-E-S15)", () => {
     expect(JSON.stringify(own.json)).not.toContain(ANDREA);
   });
 });
+
+describe("notes only for the actor's own entries (PR-S5..S7)", () => {
+  it("PR-S5..S7: no route serves Victor's note to Andrea, record to standings, season and circle", async () => {
+    const { call, path, commitmentIds, circleId, seasonId } = await givenTwoMemberSeason();
+    const victor = await call("POST", path, "victor", {
+      commitmentId: commitmentIds.victor,
+      value: { kind: "done" },
+      note: "victor-distinctive-note",
+      clientRequestId: "req-v",
+    });
+    expect(victor.json.data.entry.note).toBe("victor-distinctive-note"); // his own view has it
+    const victorMember: string = victor.json.data.entry.memberId;
+    const mine = await call("POST", path, "andrea", {
+      commitmentId: commitmentIds.andrea,
+      value: { kind: "done" },
+      note: "andrea-own-note",
+      clientRequestId: "req-a",
+    });
+    const responses = [
+      mine,
+      await call("PUT", `/entries/${mine.json.data.entry.id}`, "andrea", {
+        value: { kind: "done" },
+        note: "andrea-edited",
+      }),
+      await call("GET", `/seasons/${seasonId}/score`, "andrea"),
+      await call("GET", `/seasons/${seasonId}/members/${victorMember}/score`, "andrea"),
+      await call("GET", `/seasons/${seasonId}/standings`, "andrea"),
+      await call("PATCH", `/seasons/${seasonId}`, "andrea", { lengthWeeks: 6 }),
+      await call("PATCH", `/circles/${circleId}`, "andrea", { name: "Renamed" }),
+      await call("PUT", `/entries/${victor.json.data.entry.id}`, "andrea", {
+        value: { kind: "done" },
+        note: null,
+      }),
+    ];
+    for (const res of responses) {
+      expect(JSON.stringify(res.json)).not.toContain("victor-distinctive-note");
+    }
+    expect(responses[2]?.status).toBe(200); // the scoring routes really answered
+    expect(responses[4]?.status).toBe(200);
+  });
+});

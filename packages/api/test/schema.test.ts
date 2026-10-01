@@ -52,7 +52,7 @@ describe("object schema", () => {
     expect(({} as Record<string, unknown>).polluted).toBeUndefined();
   });
 
-  it("reports missing required fields and wrong types", () => {
+  it("reports missing required fields and wrong types (RV-S11)", () => {
     expect(parse(habit, { weight: "x" })).toEqual({
       ok: false,
       issues: [

@@ -115,7 +115,7 @@ describe("POST /seasons/:seasonId/commitments (UE-S-S5)", () => {
     ["no body", NOWHERE, undefined, ""],
     ["non-uuid habitId", NOWHERE, { ...OK, habitId: "x" }, "habitId"],
     ["weightPercent as string", NOWHERE, { ...OK, weightPercent: "50" }, "weightPercent"],
-    ["privacy out of the enum", NOWHERE, { ...OK, privacy: "public" }, "privacy"],
+    ["privacy out of the enum (RV-S13)", NOWHERE, { ...OK, privacy: "public" }, "privacy"],
     ["unknown top-level field", NOWHERE, { ...OK, status: "x" }, "status"],
     ["minimum as a number (RV-S12)", NOWHERE, nested({ ...REACH, minimum: 5 }), "measure.minimum"],
     [

@@ -15,6 +15,24 @@ describe("POST /seasons/:seasonId/entries: app errors (UE-E-S3, S5, S6)", () => 
     expect([status, json.error.code]).toEqual([422, "IdempotencyKeyReused"]);
   });
 
+  it.each([
+    ["empty", "", "empty"],
+    ["129 characters", "k".repeat(129), "tooLong"],
+    ["a NUL character", "a\u0000b", "malformed"],
+  ])(
+    "RV-S21: clientRequestId %s is 422 InvalidClientRequestId (%s)",
+    async (_label, key, reason) => {
+      const { call, path, commitmentId } = await givenActiveSeason();
+      const { status, json } = await call("POST", path, "andrea", {
+        commitmentId,
+        value: { kind: "done" },
+        clientRequestId: key,
+      });
+      expect([status, json.error.code]).toEqual([422, "InvalidClientRequestId"]);
+      expect(json.error.details.reason).toBe(reason);
+    },
+  );
+
   it("S6: ValueKindMismatch, InvalidQuantity and NoteTooLong map to 422", async () => {
     const { call, path, commitmentId } = await givenActiveSeason(MINUTES);
     const send = (value: object, extra: object = {}) =>
