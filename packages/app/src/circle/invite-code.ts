@@ -40,6 +40,17 @@ export function normalizeInviteCode(value: string): string {
   return value.trim().toUpperCase();
 }
 
+/**
+ * True when `value`, once normalized (trim + uppercase, like a join), is
+ * exactly {@link CODE_LENGTH} characters of the safe alphabet. Lets a
+ * boundary reject malformed codes without a lookup; same alphabet and
+ * length as {@link generateInviteCode}.
+ */
+export function isInviteCodeFormat(value: string): boolean {
+  const code = normalizeInviteCode(value);
+  return code.length === CODE_LENGTH && [...code].every((char) => SAFE_ALPHABET.includes(char));
+}
+
 /** Test-only escape hatch to plant a known, fixed code in a fixture (bypasses {@link generateInviteCode}). */
 export function inviteCode(value: string): InviteCode {
   return value as InviteCode;

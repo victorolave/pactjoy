@@ -7,6 +7,7 @@
  * the separate `./testing` subpath (`src/testing/index.ts`), never here.
  */
 
+export { createCryptoRandomSource } from "./adapters/crypto-random-source.ts";
 export { createIntlTimeZone } from "./adapters/intl-time-zone.ts";
 export { createSystemClock } from "./adapters/system-clock.ts";
 export { createUuidV7IdGenerator } from "./adapters/uuid-v7-id-generator.ts";
@@ -26,7 +27,7 @@ export type {
 } from "./circle/generate-invite.ts";
 export { generateInvite } from "./circle/generate-invite.ts";
 export type { InviteCode } from "./circle/invite-code.ts";
-export { inviteCode } from "./circle/invite-code.ts";
+export { inviteCode, isInviteCodeFormat } from "./circle/invite-code.ts";
 export type { JoinCircleDeps, JoinCircleError, JoinCircleInput } from "./circle/join-circle.ts";
 export { joinCircle } from "./circle/join-circle.ts";
 export type { LeaveCircleDeps, LeaveCircleError, LeaveCircleInput } from "./circle/leave-circle.ts";
@@ -159,6 +160,7 @@ export {
   reviewCadenceForLength,
 } from "./season/season.ts";
 export type { Actor } from "./shared/actor.ts";
+export { toDecimalString } from "./shared/decimal.ts";
 export { ConcurrencyConflict, InviteCodeGenerationFailed } from "./shared/errors.ts";
 export type { CircleId, EntryId, HabitId, SeasonId, UserId } from "./shared/ids.ts";
 export { circleId, entryId, habitId, seasonId, userId } from "./shared/ids.ts";
