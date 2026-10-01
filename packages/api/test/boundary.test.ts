@@ -1,0 +1,79 @@
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { join, relative, resolve } from "node:path";
+import { describe, expect, it } from "vitest";
+
+const API_ROOT = resolve(import.meta.dirname, "..");
+const SRC = join(API_ROOT, "src");
+
+function sources(dir: string): string[] {
+  return readdirSync(dir).flatMap((name) => {
+    const path = join(dir, name);
+    if (statSync(path).isDirectory()) return sources(path);
+    return /\.(ts|tsx|mts)$/.test(name) ? [path] : [];
+  });
+}
+
+const rel = (file: string) => relative(API_ROOT, file);
+
+// Static, side-effect, dynamic and CommonJS imports of a bare specifier or its subpaths.
+const importsModule = (text: string, name: string) =>
+  new RegExp(`(?:\\bfrom|\\bimport|\\brequire)\\s*\\(?\\s*["'\`]${name}(?:/[^"'\`]*)?["'\`]`).test(
+    text,
+  );
+
+// Relative specifiers in static and dynamic imports and re-exports.
+const relativeSpecifiers = (text: string) =>
+  [...text.matchAll(/(?:\bfrom|\bimport)\s*\(?\s*["'`](\.{1,2}\/[^"'`]*)["'`]/g)].map(
+    (m) => m[1] ?? "",
+  );
+
+describe("package boundary", () => {
+  it("exports nothing yet: the public surface grows slice by slice", async () => {
+    const index = await import("../src/index.ts");
+    expect(Object.keys(index)).toEqual([]);
+  });
+
+  it("AC-S2, AU-S16: src never touches the driver, Deno specifiers, the db package or secrets", () => {
+    const forbidden: Array<[string, (text: string) => boolean]> = [
+      ["jose", (t) => importsModule(t, "jose")],
+      ["postgres", (t) => importsModule(t, "postgres")],
+      ["@pactjoy/db", (t) => importsModule(t, "@pactjoy/db")],
+      ["npm: specifier", (t) => /["'`]npm:/.test(t)],
+      ["jsr: specifier", (t) => /["'`]jsr:/.test(t)],
+      ["node: specifier", (t) => /["'`]node:/.test(t)],
+      ["Deno global", (t) => /\bDeno\./.test(t)],
+      ["service role", (t) => /service[_-]?role/i.test(t)],
+    ];
+    const offenders = sources(SRC).flatMap((file) => {
+      const text = readFileSync(file, "utf8");
+      return forbidden.filter(([, found]) => found(text)).map(([what]) => `${rel(file)}: ${what}`);
+    });
+    expect(offenders).toEqual([]);
+  });
+
+  it("DE-S3: every relative import in src ends in .ts (ADR-0007)", () => {
+    const offenders = sources(SRC).flatMap((file) =>
+      relativeSpecifiers(readFileSync(file, "utf8"))
+        .filter((specifier) => !specifier.endsWith(".ts"))
+        .map((specifier) => `${rel(file)}: ${specifier}`),
+    );
+    expect(offenders).toEqual([]);
+  });
+
+  it("the scanners themselves catch every import form", () => {
+    for (const code of [
+      'import { x } from "jose";',
+      'import "jose/jwks";',
+      'const m = await import("jose");',
+      "const m = await import(`jose`);",
+      'const m = require("jose");',
+    ])
+      expect(importsModule(code, "jose"), code).toBe(true);
+    for (const code of ['import x from "jose-other";', 'import x from "./jose.ts";'])
+      expect(importsModule(code, "jose"), code).toBe(false);
+    expect(relativeSpecifiers('import a from "./a";\nexport * from "../b.ts";')).toEqual([
+      "./a",
+      "../b.ts",
+    ]);
+  });
+});
