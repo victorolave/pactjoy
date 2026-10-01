@@ -9,6 +9,7 @@
 
 export { createIntlTimeZone } from "./adapters/intl-time-zone.ts";
 export { createSystemClock } from "./adapters/system-clock.ts";
+export { createUuidV7IdGenerator } from "./adapters/uuid-v7-id-generator.ts";
 export type { CircleRepository } from "./circle/circle.repository.ts";
 export type { Circle, Invite, Member } from "./circle/circle.ts";
 export { memberId } from "./circle/circle.ts";

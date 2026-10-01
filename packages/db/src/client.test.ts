@@ -29,6 +29,8 @@ describe("timestamp without time zone", () => {
 describe("clientOptions", () => {
   it("DC-R2: turns prepared statements off (transaction poolers break them)", () => {
     expect(clientOptions({ max: 3 })).toMatchObject({ prepare: false, max: 3 });
+    expect(clientOptions({ connectTimeoutSeconds: 2 })).toMatchObject({ connect_timeout: 2 });
+    expect(clientOptions({})).not.toHaveProperty("connect_timeout");
   });
 
   it("wires the codecs onto the OIDs of timestamptz, date and int8", () => {
