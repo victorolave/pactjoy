@@ -35,6 +35,24 @@ describe("loadApiEnv", () => {
     }
   });
 
+  it("API_DATABASE_URL must be a postgres(ql) URL; the error names the variable, never the value", () => {
+    for (const bad of [
+      "postgres://user:p@ss:word@@@:notaport/db",
+      "not a url with hunter2",
+      "https://u:hunter2@h/db",
+      "mysql://u:hunter2@h:3306/db",
+    ]) {
+      const error = failure({ ...BASE, API_DATABASE_URL: bad });
+      expect(error).toEqual({ missing: [], invalid: ["API_DATABASE_URL"] });
+      expect(JSON.stringify(error)).not.toContain("hunter2");
+      expect(describeEnvError(error)).not.toMatch(/hunter2|p@ss/);
+      expect(describeEnvError(error)).toContain("API_DATABASE_URL");
+    }
+    for (const good of ["postgres://u:secret@h:6543/db", "postgresql://u:secret@h/db"]) {
+      expect(load({ ...BASE, API_DATABASE_URL: good }).ok).toBe(true);
+    }
+  });
+
   it("reports every missing required variable at once", () => {
     expect(failure({})).toEqual({ missing: ["API_DATABASE_URL", "SUPABASE_URL"], invalid: [] });
   });

@@ -26,6 +26,15 @@ const isHttpUrl = (value: string): boolean => {
   }
 };
 
+const isPostgresUrl = (value: string): boolean => {
+  try {
+    const protocol = new URL(value).protocol;
+    return protocol === "postgres:" || protocol === "postgresql:";
+  } catch {
+    return false;
+  }
+};
+
 /** A base URL gets paths appended, so a query or fragment would corrupt every derived URL. */
 const isBaseUrl = (value: string): boolean => {
   if (!isHttpUrl(value)) return false;
@@ -56,6 +65,7 @@ export function loadApiEnv(get: (name: string) => string | undefined): Result<Ap
 
   const databaseUrl = read("API_DATABASE_URL");
   if (databaseUrl === undefined) missing.push("API_DATABASE_URL");
+  else if (!isPostgresUrl(databaseUrl)) invalid.push("API_DATABASE_URL");
 
   const rawSupabase = read("SUPABASE_URL");
   let supabaseUrl: string | undefined;

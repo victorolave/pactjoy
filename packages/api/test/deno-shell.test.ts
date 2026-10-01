@@ -17,12 +17,19 @@ describe("Deno shell (supabase/functions/api)", () => {
   it("DE-S2: the entry is composition only: no routing, no Response, at most 40 code lines", () => {
     const text = read(ENTRY);
     expect(codeLines(text).length).toBeLessThanOrEqual(40);
-    expect(text).not.toMatch(/\bswitch\b|\bpathname\b|new Response\b/);
-    expect(text).toContain("Deno.serve(");
+    const code = codeLines(text).join("\n");
+    expect(code).not.toMatch(/\bswitch\b|\bpathname\b|new Response\b/);
+    expect(code).toContain("Deno.serve(");
   });
 
   it("DE-S3: the entry imports only @pactjoy/* packages (vendors go through the import map)", () => {
-    const specifiers = [...read(ENTRY).matchAll(/\bfrom\s+["']([^"']+)["']/g)].map((m) => m[1]);
+    // static `from "x"`, side-effect `import "x"` and dynamic `import("x")`
+    const code = codeLines(read(ENTRY)).join("\n");
+    const specifiers = [
+      ...code.matchAll(/\bfrom\s+["']([^"']+)["']/g),
+      ...code.matchAll(/\bimport\s+["']([^"']+)["']/g),
+      ...code.matchAll(/\bimport\s*\(\s*["']([^"']+)["']/g),
+    ].map((m) => m[1]);
     expect(specifiers.length).toBeGreaterThan(0);
     expect(specifiers.filter((s) => !s?.startsWith("@pactjoy/"))).toEqual([]);
   });
