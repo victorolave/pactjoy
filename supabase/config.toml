@@ -1,6 +1,6 @@
 # Minimal local Supabase config: pinned values (some restate CLI defaults) (ADR-0011).
-# Local development only. Nothing here is applied to the hosted project by the repository;
-# `supabase config push` is not used until Q4 is decided.
+# Versioned source for the hosted auth and API settings: the owner applies it with
+# `supabase config push` (Q4, decided). The repository never pushes it from CI. No secrets here.
 
 project_id = "pactjoy"
 

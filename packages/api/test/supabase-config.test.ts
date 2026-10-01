@@ -3,7 +3,7 @@ import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 // supabase/config.toml is deliberately minimal (pinned values only; some restate CLI defaults) and
-// local-only: applying any of it to the hosted project is the owner's call (ADR-0011, Q4).
+// the owner applies it to the hosted project with `supabase config push` (ADR-0011, Q4).
 const REPO_ROOT = resolve(import.meta.dirname, "..", "..", "..");
 const SUPABASE = join(REPO_ROOT, "supabase");
 const CONFIG = join(SUPABASE, "config.toml");
