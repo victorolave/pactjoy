@@ -25,7 +25,7 @@
 
 import type { Season, SeasonDay } from "../calendar/season-calendar.ts";
 import { seasonDay } from "../calendar/season-calendar.ts";
-import type { Commitment } from "../commitment/commitment.ts";
+import type { Commitment, Target } from "../commitment/commitment.ts";
 import { targetOf } from "../commitment/commitment.ts";
 import type { Entry } from "../entry/entry.ts";
 import type { GraceDeadlineFor } from "../entry/grace-period.ts";
@@ -140,12 +140,31 @@ function excludedStatus(
 }
 
 /**
- * One commitment's one week, pause-aware. `pauses` and `entries` must
- * already be scoped to this commitment (same convention as `weekEntries`
- * elsewhere). `options.season` is REQUIRED for every schedule kind — it
- * resolves `specificDays`' scheduled weekdays into days, AND it's the
- * default source of the D9 pause cap (`seasonPauseCap`) for every kind,
- * including `timesPerWeek`/`weeklyTotal`, which otherwise ignore it.
+ * The shared plan behind one commitment's one week: the status/sessions
+ * ({@link PauseAwareWeekResult}) plus the figures a read model needs and
+ * that only this computation knows — the exclusion sets, the effective
+ * (prorated) target and the active scheduled days. The ONLY place D4-D8
+ * are composed: {@link pauseAwareWeekSessions} (scoring) and
+ * `week/week-progress.ts` (Today) both consume it, neither re-derives it.
+ */
+export interface WeekPlan {
+  readonly result: PauseAwareWeekResult;
+  readonly paused: ReadonlySet<SeasonDay>;
+  readonly onHold: ReadonlySet<SeasonDay>;
+  /** D6/D7: the `weeklyTotal` target prorated by active days; the commitment's own target otherwise. */
+  readonly target: Target;
+  /** `specificDays` only: the scheduled days NOT excluded, in weekday order. Empty for every other kind. */
+  readonly activeScheduledDays: readonly SeasonDay[];
+}
+
+/**
+ * One commitment's one week, pause-aware, with its supporting figures.
+ * `pauses` and `entries` must already be scoped to this commitment (same
+ * convention as `weekEntries` elsewhere). `options.season` is REQUIRED for
+ * every schedule kind — it resolves `specificDays`' scheduled weekdays into
+ * days, AND it's the default source of the D9 pause cap (`seasonPauseCap`)
+ * for every kind, including `timesPerWeek`/`weeklyTotal`, which otherwise
+ * ignore it.
  *
  * P-A (decision round 3, engine-authored): a `specificDays` scheduled day
  * that falls on a paused or on-hold day drops out of the week's
@@ -155,14 +174,14 @@ function excludedStatus(
  * excluded, the whole week reports `excludedStatus` (P-C decides paused vs
  * onHold) instead of scoring zero opportunities.
  */
-export function pauseAwareWeekSessions(
+export function planWeek(
   commitment: Commitment,
   week: number,
   pauses: readonly PauseRequest[],
   entries: readonly Entry[],
   today: SeasonDay,
   options: { readonly season: Season; readonly pauseCap?: number },
-): PauseAwareWeekResult {
+): WeekPlan {
   const weekStart = week * DAYS_PER_WEEK;
   const weekDays: readonly SeasonDay[] = Array.from({ length: DAYS_PER_WEEK }, (_, i) =>
     seasonDay(weekStart + i),
@@ -179,28 +198,36 @@ export function pauseAwareWeekSessions(
   // D8: an entry recorded on a paused OR on-hold day never reaches the underlying dispatcher.
   const eligible = entries.filter((entry) => !excluded(entry.day));
   const target = commitment.unit === "done" ? targetOf(commitment) : commitment.target;
+  const plan = (
+    result: PauseAwareWeekResult,
+    effectiveTarget: Target = target,
+    activeScheduledDays: readonly SeasonDay[] = [],
+  ): WeekPlan => ({ result, paused, onHold, target: effectiveTarget, activeScheduledDays });
 
   if (commitment.schedule.period === "weeklyTotal") {
     const prorated =
       target.direction === "reach"
         ? prorateReachTarget(target, activeDays)
         : prorateLimitTarget(target, activeDays);
-    if (prorated === null) return excludedStatus(paused, onHold, weekDays);
+    if (prorated === null) return plan(excludedStatus(paused, onHold, weekDays));
     const deadlineFor: GraceDeadlineFor = (end) =>
       rejectionExtendedDeadline(pauses, weekStart, end, graceDeadline(end));
-    return {
-      status: "scored",
-      sessions: [weeklyTotalResult(prorated, week, eligible, deadlineFor)],
-    };
+    return plan(
+      { status: "scored", sessions: [weeklyTotalResult(prorated, week, eligible, deadlineFor)] },
+      prorated,
+    );
   }
 
   const { frequency } = commitment.schedule;
   if (frequency.kind === "timesPerWeek") {
     const n = prorateSessionCount(frequency.times, activeDays);
-    if (n === null) return excludedStatus(paused, onHold, weekDays);
+    if (n === null) return plan(excludedStatus(paused, onHold, weekDays));
     const deadlineFor: GraceDeadlineFor = (day) =>
       rejectionExtendedDeadline(pauses, day, day, graceDeadline(day));
-    return { status: "scored", sessions: timesPerWeekSessions(target, n, eligible, deadlineFor) };
+    return plan({
+      status: "scored",
+      sessions: timesPerWeekSessions(target, n, eligible, deadlineFor),
+    });
   }
 
   // frequency.kind === "specificDays"
@@ -211,9 +238,28 @@ export function pauseAwareWeekSessions(
     const day = dayForWeekday(options.season, week, weekday);
     return !excluded(day);
   });
-  if (activeWeekdays.length === 0) return excludedStatus(paused, onHold, scheduledDays);
-  return {
-    status: "scored",
-    sessions: specificDaysSessions(target, options.season, week, activeWeekdays, eligible),
-  };
+  if (activeWeekdays.length === 0) return plan(excludedStatus(paused, onHold, scheduledDays));
+  return plan(
+    {
+      status: "scored",
+      sessions: specificDaysSessions(target, options.season, week, activeWeekdays, eligible),
+    },
+    target,
+    scheduledDays.filter((day) => !excluded(day)),
+  );
+}
+
+/**
+ * One commitment's one week, pause-aware: {@link planWeek}'s status and
+ * sessions, nothing else — the scoring path (`scoring/member-score.ts`).
+ */
+export function pauseAwareWeekSessions(
+  commitment: Commitment,
+  week: number,
+  pauses: readonly PauseRequest[],
+  entries: readonly Entry[],
+  today: SeasonDay,
+  options: { readonly season: Season; readonly pauseCap?: number },
+): PauseAwareWeekResult {
+  return planWeek(commitment, week, pauses, entries, today, options).result;
 }

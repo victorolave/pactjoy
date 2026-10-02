@@ -40,6 +40,11 @@
  * - `weekOf`: the season week (0-based) a day falls in, so the app's
  *   week-bound entry window reuses the engine's week rule instead of
  *   duplicating it.
+ * - `weekProgress` + `WeekProgress`/`WeekProgressInput`/`WeekSlot`/
+ *   `WeekExclusions`: Today's per-week state (status, prorated target,
+ *   sessions done, value, `specificDays` slots) without re-implementing
+ *   D4-D8 in the app. It shares the scoring path's internal `planWeek`, so
+ *   it cannot disagree with `scoreMember`; `planWeek` stays internal.
  * - `graceDeadline`: the single source of the "end of the next day" grace
  *   boundary (`sdd/app-foundation/spec/season-clock` SC-5/SC-7) -- the app
  *   must reuse this instead of duplicating `GRACE_DAYS`.
@@ -105,3 +110,10 @@ export { scoreMember } from "./scoring/member-score.ts";
 export type { Streak } from "./scoring/streak.ts";
 export type { MemberId, StandingsParticipant, StandingsRow } from "./standings/standings.ts";
 export { rankStandings } from "./standings/standings.ts";
+export type {
+  WeekExclusions,
+  WeekProgress,
+  WeekProgressInput,
+  WeekSlot,
+} from "./week/week-progress.ts";
+export { weekProgress } from "./week/week-progress.ts";
