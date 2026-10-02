@@ -1,5 +1,5 @@
 import { approvePact, seasonId, withdrawApproval } from "@pactjoy/app";
-import { presentSeason } from "../presenters/season.ts";
+import { presentSeasonWithoutViewer } from "../presenters/season.ts";
 import { uuid } from "../validation/formats.ts";
 import { integer, object } from "../validation/schema.ts";
 import { type ApiDeps, type Route, toResult, validate } from "./support.ts";
@@ -24,7 +24,7 @@ export function pactRoutes(deps: ApiDeps): Route[] {
           seasonId: seasonId(input.params.seasonId),
           expectedPactRevision: input.body.expectedPactRevision,
         });
-        return toResult(result, 200, presentSeason);
+        return toResult(result, 200, presentSeasonWithoutViewer);
       },
     },
     {
@@ -36,7 +36,7 @@ export function pactRoutes(deps: ApiDeps): Route[] {
         const result = await withdrawApproval(deps, ctx.actor, {
           seasonId: seasonId(input.params.seasonId),
         });
-        return toResult(result, 200, presentSeason);
+        return toResult(result, 200, presentSeasonWithoutViewer);
       },
     },
   ];

@@ -5,14 +5,16 @@ import {
   type ReviewCadenceWeeks,
   type SeasonLengthWeeks,
   seasonId,
+  seasonView,
 } from "@pactjoy/app";
-import { presentSeason } from "../presenters/season.ts";
+import { presentSeason, presentSeasonWithoutViewer } from "../presenters/season.ts";
 import { uuid } from "../validation/formats.ts";
 import { number, object, optional, string } from "../validation/schema.ts";
 import { type ApiDeps, type Route, toResult, validate } from "./support.ts";
 
 const circleParams = object({ circleId: uuid });
 const seasonParams = object({ seasonId: uuid });
+const none = object({});
 
 // Only the TYPE is checked here: the app owns every domain rule (zone, date window, 4/6/8/12
 // weeks, cadence). The numbers are narrowed by cast because the app re-checks them at runtime.
@@ -50,7 +52,21 @@ export function seasonRoutes(deps: ApiDeps): Route[] {
             ? {}
             : { reviewCadenceWeeks: asCadence(reviewCadenceWeeks) }),
         });
-        return toResult(result, 201, presentSeason);
+        return toResult(result, 201, presentSeasonWithoutViewer);
+      },
+    },
+    {
+      // One `uow.read` inside the use case resolves the season AND the viewer, so the projection
+      // knows who is asking without a second round trip. A GET never carries a body.
+      method: "GET",
+      pattern: "/seasons/:seasonId",
+      async handle(ctx) {
+        const input = validate(ctx, { params: seasonParams, body: none, emptyBody: "object" });
+        if (!input.ok) return input.result;
+        const result = await seasonView(deps, ctx.actor, {
+          seasonId: seasonId(input.params.seasonId),
+        });
+        return toResult(result, 200, ({ season, viewerId }) => presentSeason(season, viewerId));
       },
     },
     {
@@ -69,7 +85,7 @@ export function seasonRoutes(deps: ApiDeps): Route[] {
             ? {}
             : { reviewCadenceWeeks: asCadence(reviewCadenceWeeks) }),
         });
-        return toResult(result, 200, presentSeason);
+        return toResult(result, 200, presentSeasonWithoutViewer);
       },
     },
   ];
