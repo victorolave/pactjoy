@@ -27,7 +27,7 @@ describe("approval resets when membership changes (PA-5, PA-6)", () => {
     const joined = await joinCircle(
       app,
       { userId: userId("user-carla") },
-      joinCircleInput(invite.value.code),
+      joinCircleInput(invite.value.code, "Carla"),
     );
 
     expect(joined.ok).toBe(true);
@@ -108,7 +108,7 @@ describe("approval resets when membership changes (PA-5, PA-6)", () => {
     const joined = await joinCircle(
       app,
       { userId: userId("user-carla") },
-      joinCircleInput(invite.value.code),
+      joinCircleInput(invite.value.code, "Carla"),
     );
     expect(joined).toEqual({ ok: false, error: { kind: "CircleArchived" } });
   });

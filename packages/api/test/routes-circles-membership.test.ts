@@ -59,6 +59,15 @@ describe("POST /circles/join (UE-C-S6..S8)", () => {
     },
   );
 
+  it("UE-C-S12: 409 DisplayNameTaken for a name an active member holds, in any case", async () => {
+    const { call, code } = await givenInvitedCircle(); // the creator is "Creator"
+    const { status, json } = await call("POST", "/circles/join", "victor", {
+      inviteCode: code,
+      displayName: " cREATOR ",
+    });
+    expect([status, json.error.code]).toEqual([409, "DisplayNameTaken"]);
+  });
+
   it("S7: 404 InviteNotFound for a well-formed code nobody owns", async () => {
     const { call } = await givenInvitedCircle();
     const { status, json } = await call(
