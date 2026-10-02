@@ -223,7 +223,7 @@ describe("GET /seasons/:seasonId/score (UE-E-S11)", () => {
 });
 
 describe("GET /seasons/:seasonId/standings (UE-E-S11..S14)", () => {
-  it("ranked rows with member ids and points only, count equals rows", async () => {
+  it("ranked rows with member ids, display names and points only, count equals rows", async () => {
     const { call, seasonId, memberOf } = await givenScored();
     const res = await call("GET", `/seasons/${seasonId}/standings`, "andrea");
     expect(res.status).toBe(200);
@@ -235,7 +235,10 @@ describe("GET /seasons/:seasonId/standings (UE-E-S11..S14)", () => {
       memberOf("andrea"),
     ]);
     expect(rows.map((r: { rank: number }) => r.rank)).toEqual([1, 2]);
-    expect(Object.keys(rows[0]).sort()).toEqual(["memberId", "points", "rank"]);
+    expect(Object.keys(rows[0]).sort()).toEqual(["displayName", "memberId", "points", "rank"]);
+    expect(rows.every((r: { displayName: unknown }) => typeof r.displayName === "string")).toBe(
+      true,
+    );
     expect(JSON.stringify(res.json)).not.toContain("private words");
   });
 

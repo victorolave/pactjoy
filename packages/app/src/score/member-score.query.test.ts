@@ -53,6 +53,7 @@ async function record(
 const SCORED_ANDREA_ZERO = {
   kind: "scored",
   memberId: ANDREA,
+  displayName: "Andrea",
   points: 0,
   consistency: null,
   idealCompletion: null,
@@ -123,6 +124,17 @@ describe("memberScore: whose score, and when", () => {
     expect(await ask(given.victor, { memberId: ANDREA })).toMatchObject({
       value: { memberId: ANDREA, points: 36 },
     });
+  });
+
+  it("SQ-11: both scopes carry the target's displayName, privacy projection unchanged", async () => {
+    const { given, ask } = await setup();
+
+    const own = await ask(given.andrea);
+    const others = await ask(given.victor, { memberId: ANDREA });
+
+    expect(own).toMatchObject({ value: { scope: "own", displayName: "Andrea" } });
+    expect(others).toMatchObject({ value: { scope: "others", displayName: "Andrea" } });
+    expect(others.ok && "consistency" in others.value).toBe(false);
   });
 
   it("reports notStarted while the pact is still open", async () => {

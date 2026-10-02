@@ -65,11 +65,23 @@ describe("standings: ranking by points, recomputed on every call", () => {
         kind: "ranked",
         eligibleParticipantCount: 2,
         rows: [
-          { memberId: ANDREA, rank: 1, points: 36 },
-          { memberId: VICTOR, rank: 2, points: 0 },
+          { memberId: ANDREA, displayName: "Andrea", rank: 1, points: 36 },
+          { memberId: VICTOR, displayName: "Victor", rank: 2, points: 0 },
         ],
       },
     });
+  });
+
+  it("SQ-10: every row carries the member's displayName, never a userId", async () => {
+    const { given, ask } = await setup();
+
+    const result = await ask(given.andrea);
+
+    expect(result).toMatchObject({
+      ok: true,
+      value: { rows: [{ displayName: "Andrea" }, { displayName: "Victor" }] },
+    });
+    expect(JSON.stringify(result)).not.toContain("user-");
   });
 
   it("gives tied members the same rank", async () => {
