@@ -1,5 +1,6 @@
 import type { MemberId } from "@pactjoy/engine";
 import { displayPercent, displayPoints, type MemberScore, scoreMember } from "@pactjoy/engine";
+import type { Member } from "../circle/circle.ts";
 import type { Actor } from "../shared/actor.ts";
 import type { SeasonId } from "../shared/ids.ts";
 import { err, ok, type Result } from "../shared/result.ts";
@@ -8,7 +9,9 @@ import {
   isParticipant,
   loadScoreContext,
   type ScoreContextError,
+  type ScoreData,
   type ScoreQueryDeps,
+  type StartedScoreContext,
 } from "./score-context.ts";
 import { toScoreInput } from "./score-input.ts";
 
@@ -81,6 +84,36 @@ function toView(
 }
 
 /**
+ * The scoring core of {@link memberScore}: synchronous, over data the caller
+ * already loaded, so it composes inside any `uow.read` (SQ-R10). `target` is
+ * the member whose score is shown; `started.viewer` decides the shape.
+ */
+export function memberScoreView(
+  started: StartedScoreContext,
+  data: ScoreData,
+  target: Member,
+): MemberScoreView {
+  const { season, viewer, start } = started;
+  const score = scoreMember(
+    toScoreInput({
+      season,
+      actualStart: start.actualStart,
+      memberId: target.id,
+      entries: data.entries,
+      pauses: data.pauses,
+      today: start.today,
+    }),
+  );
+  const records = season.commitments.filter((commitment) => commitment.memberId === target.id);
+  const commitments = records.map((record) => {
+    const scored = score.commitments.find((entry) => entry.commitmentId === record.id);
+    if (!scored) throw new Error(`engine returned no score for commitment ${record.id}`);
+    return projectCommitment(record, scored, viewer.id);
+  });
+  return toView(target, score, commitments, target.id === viewer.id);
+}
+
+/**
  * A circle member's score for a season (SQ-6, SQ-7, SQ-8). Always recomputed
  * from Entries through the engine on every call -- nothing is cached or
  * stored (P2-2) -- with pauses read through the read-only port. The season
@@ -110,21 +143,6 @@ export async function memberScore(
     }
     const entries = await repos.entries.listBySeason(season.id);
     const pauses = await repos.pauses.listBySeason(season.id);
-    const scoreInput = toScoreInput({
-      season,
-      actualStart: start.actualStart,
-      memberId: target.id,
-      entries,
-      pauses,
-      today: start.today,
-    });
-    const score = scoreMember(scoreInput);
-    const records = season.commitments.filter((commitment) => commitment.memberId === target.id);
-    const commitments = records.map((record) => {
-      const scored = score.commitments.find((entry) => entry.commitmentId === record.id);
-      if (!scored) throw new Error(`engine returned no score for commitment ${record.id}`);
-      return projectCommitment(record, scored, viewer.id);
-    });
-    return ok(toView(target, score, commitments, target.id === viewer.id));
+    return ok(memberScoreView({ ...context.value, start }, { entries, pauses }, target));
   });
 }

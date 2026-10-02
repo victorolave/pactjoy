@@ -1,5 +1,7 @@
 import type { MemberId, SeasonDay } from "@pactjoy/engine";
 import type { Circle, Member } from "../circle/circle.ts";
+import type { EntryRecord } from "../entry/entry.ts";
+import type { MemberPauseRequest } from "../pause/pause-request.repository.ts";
 import type { Repositories } from "../ports/repositories.ts";
 import type { Season } from "../season/season.ts";
 import type { Actor } from "../shared/actor.ts";
@@ -40,17 +42,28 @@ export function isParticipant(season: Season, memberId: MemberId): boolean {
   return season.commitments.some((commitment) => commitment.memberId === memberId);
 }
 
-export async function loadScoreContext(
-  deps: ScoreQueryDeps,
-  repos: Repositories,
+/** A `ScoreContext` whose season has started: `start` is guaranteed. */
+export type StartedScoreContext = ScoreContext & {
+  readonly start: NonNullable<ScoreContext["start"]>;
+};
+
+/** What the engine needs besides the season: loaded once, then shared by every core. */
+export interface ScoreData {
+  readonly entries: readonly EntryRecord[];
+  readonly pauses: readonly MemberPauseRequest[];
+}
+
+/**
+ * The synchronous core of `loadScoreContext`: resolves the viewer and "today"
+ * from an already-loaded season and circle, so a caller that composes several
+ * reads inside ONE `uow.read` can reuse it without a nested read.
+ */
+export function scoreContextOf(
+  deps: Pick<ScoreQueryDeps, "clock" | "timeZone">,
+  season: Season,
+  circle: Circle | null,
   actor: Actor,
-  seasonId: SeasonId,
-): Promise<Result<ScoreContext, ScoreContextError>> {
-  const season = await repos.seasons.get(seasonId);
-  if (!season) {
-    return err({ kind: "SeasonNotFound" });
-  }
-  const circle = await repos.circles.get(season.circleId);
+): Result<ScoreContext, { readonly kind: "NotAMember" }> {
   // Read-only access: any active member, plus participants of the season even after
   // they left the circle or the circle was archived (2026-09-30 decision).
   const viewer = circle?.members.find(
@@ -75,4 +88,18 @@ export async function loadScoreContext(
     start:
       today.kind === "beforeStart" ? null : { actualStart: season.actualStart, today: today.day },
   });
+}
+
+export async function loadScoreContext(
+  deps: ScoreQueryDeps,
+  repos: Repositories,
+  actor: Actor,
+  seasonId: SeasonId,
+): Promise<Result<ScoreContext, ScoreContextError>> {
+  const season = await repos.seasons.get(seasonId);
+  if (!season) {
+    return err({ kind: "SeasonNotFound" });
+  }
+  const circle = await repos.circles.get(season.circleId);
+  return scoreContextOf(deps, season, circle, actor);
 }
