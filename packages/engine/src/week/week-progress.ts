@@ -32,7 +32,12 @@ export interface WeekProgressInput {
   readonly today: SeasonDay;
 }
 
-/** One active scheduled day of a `specificDays` week. */
+/**
+ * One active scheduled day of a `specificDays` week. `value` is what the
+ * scoring path counted for this slot, which may come from a make-up entry
+ * logged on a different day (the `specificDays` make-up rule): `value !== null`
+ * does NOT mean something was logged on `day`.
+ */
 export interface WeekSlot {
   readonly day: SeasonDay;
   readonly value: Fraction | null;
