@@ -7,7 +7,7 @@ import { ConcurrencyConflict } from "../shared/errors.ts";
 import { habitId, userId } from "../shared/ids.ts";
 import { ok } from "../shared/result.ts";
 import { createTestApp } from "../testing/app-harness.ts";
-import { createCircleInput } from "../testing/circle-inputs.ts";
+import { createCircleInput, joinCircleInput } from "../testing/circle-inputs.ts";
 import { givenOpenPactWithOneApproval, storedSeason } from "../testing/pact-fixtures.ts";
 import { instant } from "../time/instant.ts";
 import { addCommitment } from "./add-commitment.ts";
@@ -233,9 +233,11 @@ describe("editCommitment", () => {
     if (!commitment) throw new Error("fixture setup failed");
     const invite = await generateInvite(app, actorFor("user-andrea"), { circleId: circle.id });
     if (!invite.ok) throw new Error("fixture setup failed");
-    const joined = await joinCircle(app, actorFor("user-victor"), {
-      inviteCode: invite.value.code,
-    });
+    const joined = await joinCircle(
+      app,
+      actorFor("user-victor"),
+      joinCircleInput(invite.value.code),
+    );
     if (!joined.ok) throw new Error("fixture setup failed");
 
     const result = await editCommitment(app, actorFor("user-victor"), {

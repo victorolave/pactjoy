@@ -3,6 +3,7 @@ import type { CircleId, UserId } from "../shared/ids.ts";
 import { err, ok, type Result } from "../shared/result.ts";
 import { isStorableText } from "../shared/storable-text.ts";
 import type { Instant } from "../time/instant.ts";
+import { normalizeDisplayName } from "./display-name.ts";
 import type { InviteCode } from "./invite-code.ts";
 
 /**
@@ -14,6 +15,8 @@ import type { InviteCode } from "./invite-code.ts";
 export interface Member {
   readonly id: MemberId;
   readonly userId: UserId;
+  /** Chosen per circle (DN-R1), stored trimmed; unique among active members (DN-R3). */
+  readonly displayName: string;
   readonly status: "active" | "left";
   readonly joinedAt: Instant;
   readonly leftAt: Instant | null;
@@ -51,7 +54,9 @@ export interface Circle {
 
 export const MAX_MEMBERS = 6;
 
-export type BuildCircleError = { readonly kind: "InvalidName" };
+export type BuildCircleError =
+  | { readonly kind: "InvalidName" }
+  | { readonly kind: "InvalidDisplayName" };
 
 /**
  * `MemberId`'s brand has no exported constructor in `@pactjoy/engine`
@@ -70,6 +75,7 @@ export interface BuildCircleInput {
   readonly name: string;
   readonly creatorId: MemberId;
   readonly creatorUserId: UserId;
+  readonly creatorDisplayName: string;
   readonly now: Instant;
 }
 
@@ -84,6 +90,10 @@ export function buildCircle(input: BuildCircleInput): Result<Circle, BuildCircle
   if (name.length === 0 || !isStorableText(name)) {
     return err({ kind: "InvalidName" });
   }
+  const creatorDisplayName = normalizeDisplayName(input.creatorDisplayName);
+  if (creatorDisplayName === null) {
+    return err({ kind: "InvalidDisplayName" });
+  }
 
   return ok({
     id: input.id,
@@ -92,6 +102,7 @@ export function buildCircle(input: BuildCircleInput): Result<Circle, BuildCircle
       {
         id: input.creatorId,
         userId: input.creatorUserId,
+        displayName: creatorDisplayName,
         status: "active",
         joinedAt: input.now,
         leftAt: null,

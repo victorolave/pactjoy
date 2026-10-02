@@ -3,10 +3,12 @@ import { createCircleBody, joinCircleBody } from "../src/testing/index.ts";
 
 describe("circle body helpers", () => {
   it("createCircleBody builds the POST /circles body from a circle name", () => {
-    expect(createCircleBody("Crew")).toEqual({ name: "Crew" });
+    expect(createCircleBody("Crew")).toEqual({ name: "Crew", displayName: "Creator" });
+    expect(createCircleBody("Crew", "Ana").displayName).toBe("Ana");
   });
 
   it("joinCircleBody builds the POST /circles/join body from an invite code", () => {
-    expect(joinCircleBody("ABCDEF")).toEqual({ inviteCode: "ABCDEF" });
+    expect(joinCircleBody("ABCDEF")).toEqual({ inviteCode: "ABCDEF", displayName: "Joiner" });
+    expect(joinCircleBody("ABCDEF", "Vic").displayName).toBe("Vic");
   });
 });

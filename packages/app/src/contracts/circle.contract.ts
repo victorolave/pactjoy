@@ -66,6 +66,32 @@ export function describeCircleRepositoryContract(
       expect(await getCircle(uow)).toEqual(circle);
     });
 
+    it("CP-S22 (display names): round-trips each member's displayName, keeping case and emoji", async () => {
+      const { uow } = await factory();
+      const circle = circleFixture({
+        id: CIRCLE.id,
+        members: [member(1, { displayName: "Ana 🔥" }), member(2, { displayName: "ana" })],
+      });
+      await saveCircle(uow, circle, null);
+      expect((await getCircle(uow))?.members.map((m) => m.displayName)).toEqual(["Ana 🔥", "ana"]);
+    });
+
+    it("CP-S23 (display names): a rename saved with expectedVersion persists the new name", async () => {
+      const { uow } = await factory();
+      const original = circleFixture({
+        id: CIRCLE.id,
+        members: [member(1, { displayName: "Ana" })],
+      });
+      await saveCircle(uow, original, null);
+      const renamed = {
+        ...original,
+        members: [member(1, { displayName: "ANA" })],
+        version: 1,
+      };
+      await saveCircle(uow, renamed, 0);
+      expect(await getCircle(uow)).toEqual(renamed);
+    });
+
     it("CP-S3/S4: round-trips a null invite, archivedAt and a left member's leftAt", async () => {
       const { uow } = await factory();
       const circle = circleFixture({

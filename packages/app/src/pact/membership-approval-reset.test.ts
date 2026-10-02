@@ -5,7 +5,7 @@ import { joinCircle } from "../circle/join-circle.ts";
 import { leaveCircle } from "../circle/leave-circle.ts";
 import { habitId, userId } from "../shared/ids.ts";
 import { createTestApp } from "../testing/app-harness.ts";
-import { createCircleInput } from "../testing/circle-inputs.ts";
+import { createCircleInput, joinCircleInput } from "../testing/circle-inputs.ts";
 import {
   givenOpenPactWithOneApproval,
   givenSoloOpenPact,
@@ -27,9 +27,7 @@ describe("approval resets when membership changes (PA-5, PA-6)", () => {
     const joined = await joinCircle(
       app,
       { userId: userId("user-carla") },
-      {
-        inviteCode: invite.value.code,
-      },
+      joinCircleInput(invite.value.code),
     );
 
     expect(joined.ok).toBe(true);
@@ -110,7 +108,7 @@ describe("approval resets when membership changes (PA-5, PA-6)", () => {
     const joined = await joinCircle(
       app,
       { userId: userId("user-carla") },
-      { inviteCode: invite.value.code },
+      joinCircleInput(invite.value.code),
     );
     expect(joined).toEqual({ ok: false, error: { kind: "CircleArchived" } });
   });

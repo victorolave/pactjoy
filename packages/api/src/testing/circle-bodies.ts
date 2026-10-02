@@ -4,10 +4,16 @@
  * place. Tests of REJECTED raw bodies keep their literals on purpose.
  */
 
-export function createCircleBody(name: string): { name: string } {
-  return { name };
+export function createCircleBody(
+  name: string,
+  displayName = "Creator",
+): { name: string; displayName: string } {
+  return { name, displayName };
 }
 
-export function joinCircleBody(inviteCode: string): { inviteCode: string } {
-  return { inviteCode };
+export function joinCircleBody(
+  inviteCode: string,
+  displayName = "Joiner",
+): { inviteCode: string; displayName: string } {
+  return { inviteCode, displayName };
 }

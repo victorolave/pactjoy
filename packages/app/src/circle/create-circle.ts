@@ -15,6 +15,7 @@ export interface CreateCircleDeps {
 
 export interface CreateCircleInput {
   readonly name: string;
+  readonly displayName: string;
 }
 
 export type CreateCircleError = BuildCircleError | { readonly kind: "AlreadyInActiveCircle" };
@@ -40,6 +41,7 @@ export async function createCircle(
       name: input.name,
       creatorId: memberId(deps.ids.next()),
       creatorUserId: actor.userId,
+      creatorDisplayName: input.displayName,
       now: deps.clock.now(),
     });
     if (!built.ok) {

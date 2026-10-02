@@ -13,8 +13,9 @@ import { type ApiDeps, type Route, toResult, validate } from "./support.ts";
 
 const circleParams = object({ circleId: uuid });
 const named = object({ name: string });
+const createBody = object({ name: string, displayName: string });
 const none = object({});
-const joinBody = object({ inviteCode });
+const joinBody = object({ inviteCode, displayName: string });
 
 export function circleRoutes(deps: ApiDeps): Route[] {
   return [
@@ -22,9 +23,12 @@ export function circleRoutes(deps: ApiDeps): Route[] {
       method: "POST",
       pattern: "/circles",
       async handle(ctx) {
-        const input = validate(ctx, { params: none, body: named });
+        const input = validate(ctx, { params: none, body: createBody });
         if (!input.ok) return input.result;
-        const result = await createCircle(deps, ctx.actor, { name: input.body.name });
+        const result = await createCircle(deps, ctx.actor, {
+          name: input.body.name,
+          displayName: input.body.displayName,
+        });
         return toResult(result, 201, (circle) => presentCircle(circle, ctx.actor));
       },
     },
@@ -60,7 +64,10 @@ export function circleRoutes(deps: ApiDeps): Route[] {
         const input = validate(ctx, { params: none, body: joinBody });
         if (!input.ok) return input.result;
         // The raw code is passed on: the app normalizes it. It lives in the body, never the URL.
-        const result = await joinCircle(deps, ctx.actor, { inviteCode: input.body.inviteCode });
+        const result = await joinCircle(deps, ctx.actor, {
+          inviteCode: input.body.inviteCode,
+          displayName: input.body.displayName,
+        });
         return toResult(result, 200, (circle) => presentCircle(circle, ctx.actor));
       },
     },

@@ -21,6 +21,7 @@ interface CircleRow {
 interface MemberRow {
   id: string;
   user_id: string;
+  display_name: string;
   status: "active" | "left";
   joined_at: Instant;
   left_at: Instant | null;
@@ -58,7 +59,7 @@ export function createPgCircleRepository(exec: SqlExecutor, mode: BindMode): Cir
   async function load(row: CircleRow | undefined): Promise<Circle | null> {
     if (!row) return null;
     const members = await exec.query<MemberRow>(
-      "select id, user_id, status, joined_at, left_at from pactjoy.circle_members where circle_id = $1 order by position",
+      "select id, user_id, display_name, status, joined_at, left_at from pactjoy.circle_members where circle_id = $1 order by position",
       [row.id],
     );
     const invites = await exec.query<InviteRow>(
@@ -73,6 +74,7 @@ export function createPgCircleRepository(exec: SqlExecutor, mode: BindMode): Cir
         (m): Member => ({
           id: memberId(m.id),
           userId: userId(m.user_id),
+          displayName: m.display_name,
           status: m.status,
           joinedAt: m.joined_at,
           leftAt: m.left_at,
@@ -156,16 +158,17 @@ export function createPgCircleRepository(exec: SqlExecutor, mode: BindMode): Cir
       }
       if (circle.members.length > 0) {
         const values = circle.members.map((_, i) => {
-          const n = i * 7;
-          return `($${n + 1}, $${n + 2}, $${n + 3}, $${n + 4}, $${n + 5}, $${n + 6}::timestamptz, $${n + 7}::timestamptz)`;
+          const n = i * 8;
+          return `($${n + 1}, $${n + 2}, $${n + 3}, $${n + 4}, $${n + 5}, $${n + 6}, $${n + 7}::timestamptz, $${n + 8}::timestamptz)`;
         });
         await exec.query(
-          `insert into pactjoy.circle_members (id, circle_id, position, user_id, status, joined_at, left_at) values ${values.join(", ")}`,
+          `insert into pactjoy.circle_members (id, circle_id, position, user_id, display_name, status, joined_at, left_at) values ${values.join(", ")}`,
           circle.members.flatMap((m, position) => [
             m.id,
             circle.id,
             position,
             m.userId,
+            m.displayName,
             m.status,
             iso(m.joinedAt),
             isoOrNull(m.leftAt),

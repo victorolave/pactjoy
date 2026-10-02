@@ -51,9 +51,11 @@ describe("joinCircle", () => {
     });
     if (!invite.ok) throw new Error("fixture setup failed");
 
-    const result = await joinCircle(app, actorFor("user-victor"), {
-      inviteCode: invite.value.code,
-    });
+    const result = await joinCircle(
+      app,
+      actorFor("user-victor"),
+      joinCircleInput(invite.value.code),
+    );
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -74,9 +76,11 @@ describe("joinCircle", () => {
     });
     if (!invite.ok) throw new Error("fixture setup failed");
 
-    const result = await joinCircle(app, actorFor("user-victor"), {
-      inviteCode: invite.value.code,
-    });
+    const result = await joinCircle(
+      app,
+      actorFor("user-victor"),
+      joinCircleInput(invite.value.code),
+    );
 
     expect(result.ok).toBe(true);
   });
@@ -95,9 +99,11 @@ describe("joinCircle", () => {
     if (!invite.ok) throw new Error("fixture setup failed");
     await givenSeasonStatus(app, created.value.id, "active");
 
-    const result = await joinCircle(app, actorFor("user-victor"), {
-      inviteCode: invite.value.code,
-    });
+    const result = await joinCircle(
+      app,
+      actorFor("user-victor"),
+      joinCircleInput(invite.value.code),
+    );
 
     expect(result).toEqual({ ok: false, error: { kind: "SeasonNotJoinable" } });
   });
@@ -116,11 +122,49 @@ describe("joinCircle", () => {
     if (!invite.ok) throw new Error("fixture setup failed");
     await givenSeasonStatus(app, created.value.id, "closed");
 
-    const result = await joinCircle(app, actorFor("user-victor"), {
-      inviteCode: invite.value.code,
-    });
+    const result = await joinCircle(
+      app,
+      actorFor("user-victor"),
+      joinCircleInput(invite.value.code),
+    );
 
     expect(result.ok).toBe(true);
+  });
+
+  it("CM-19: stores the joiner's display name trimmed; blank or too long is InvalidDisplayName and changes nothing", async () => {
+    const app = createTestApp();
+    const created = await createCircle(
+      app,
+      actorFor("user-andrea"),
+      createCircleInput("Río Runners"),
+    );
+    if (!created.ok) throw new Error("fixture setup failed");
+    const invite = await generateInvite(app, actorFor("user-andrea"), {
+      circleId: created.value.id,
+    });
+    if (!invite.ok) throw new Error("fixture setup failed");
+    const code = invite.value.code;
+
+    const blank = await joinCircle(app, actorFor("user-victor"), {
+      inviteCode: code,
+      displayName: "   ",
+    });
+    const tooLong = await joinCircle(app, actorFor("user-victor"), {
+      inviteCode: code,
+      displayName: "a".repeat(31),
+    });
+    const stillOne = await app.circles.get(created.value.id);
+    const ok = await joinCircle(app, actorFor("user-victor"), {
+      inviteCode: code,
+      displayName: "  Vic  ",
+    });
+
+    expect(blank).toEqual({ ok: false, error: { kind: "InvalidDisplayName" } });
+    expect(tooLong).toEqual({ ok: false, error: { kind: "InvalidDisplayName" } });
+    expect(stillOne?.members).toHaveLength(1);
+    expect(ok.ok).toBe(true);
+    if (!ok.ok) return;
+    expect(ok.value.members.map((m) => m.displayName)).toEqual(["Creator", "Vic"]);
   });
 
   it("CM-4: rejects an expired invite code", async () => {
@@ -169,14 +213,18 @@ describe("joinCircle", () => {
     if (!second.ok) throw new Error("fixture setup failed");
     expect(second.value.code).not.toBe(first.value.code);
 
-    const withOldCode = await joinCircle(app, actorFor("user-victor"), {
-      inviteCode: first.value.code,
-    });
+    const withOldCode = await joinCircle(
+      app,
+      actorFor("user-victor"),
+      joinCircleInput(first.value.code),
+    );
     expect(withOldCode).toEqual({ ok: false, error: { kind: "InviteNotFound" } });
 
-    const withNewCode = await joinCircle(app, actorFor("user-victor"), {
-      inviteCode: second.value.code,
-    });
+    const withNewCode = await joinCircle(
+      app,
+      actorFor("user-victor"),
+      joinCircleInput(second.value.code),
+    );
     expect(withNewCode.ok).toBe(true);
   });
 
@@ -220,9 +268,11 @@ describe("joinCircle", () => {
     });
     if (!invite.ok) throw new Error("fixture setup failed");
 
-    const result = await joinCircle(app, actorFor("user-andrea"), {
-      inviteCode: invite.value.code,
-    });
+    const result = await joinCircle(
+      app,
+      actorFor("user-andrea"),
+      joinCircleInput(invite.value.code),
+    );
 
     expect(result).toEqual({ ok: false, error: { kind: "AlreadyInActiveCircle" } });
   });
@@ -260,8 +310,8 @@ describe("joinCircle", () => {
     });
 
     const [a, b] = await Promise.allSettled([
-      joinCircle(app, actorFor("user-racer-a"), joinCircleInput("RACE01")),
-      joinCircle(app, actorFor("user-racer-b"), joinCircleInput("RACE01")),
+      joinCircle(app, actorFor("user-racer-a"), joinCircleInput("RACE01", "Racer A")),
+      joinCircle(app, actorFor("user-racer-b"), joinCircleInput("RACE01", "Racer B")),
     ]);
 
     const settled = [a, b];

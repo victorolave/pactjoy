@@ -25,6 +25,7 @@ const CIRCLE = {
     {
       id: memberId(uuid(0x101)),
       userId: userId(uuid(0x201)),
+      displayName: "Member 1",
       status: "active" as const,
       joinedAt: T0,
       leftAt: null,

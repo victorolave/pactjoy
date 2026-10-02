@@ -43,10 +43,10 @@ const MEASURE = { unit: "done", frequency: { kind: "timesPerWeek", times: 3 } };
 
 type Row = [useCase: string, method: string, path: string, body?: unknown];
 const TABLE: Row[] = [
-  ["createCircle", "POST", "/circles", { name: "Crew" }],
+  ["createCircle", "POST", "/circles", { name: "Crew", displayName: "Ana" }],
   ["renameCircle", "PATCH", `/circles/${ID}`, { name: "Crew" }],
   ["generateInvite", "POST", `/circles/${ID}/invite`],
-  ["joinCircle", "POST", "/circles/join", { inviteCode: "ABCDEF" }],
+  ["joinCircle", "POST", "/circles/join", { inviteCode: "ABCDEF", displayName: "Vic" }],
   ["leaveCircle", "POST", `/circles/${ID}/leave`],
   ["createHabit", "POST", "/habits", { name: "Run" }],
   [

@@ -26,6 +26,7 @@ describe("renameCircle", () => {
             {
               id: memberId("member-victor"),
               userId: userId("user-victor"),
+              displayName: "Victor",
               status: "active",
               joinedAt: app.clock.now(),
               leftAt: null,

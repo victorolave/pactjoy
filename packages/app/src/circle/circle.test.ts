@@ -12,6 +12,7 @@ describe("buildCircle", () => {
       name: "Río Runners",
       creatorId: memberId("member-1"),
       creatorUserId: userId("user-andrea"),
+      creatorDisplayName: "Andrea",
       now: NOW,
     });
 
@@ -22,6 +23,7 @@ describe("buildCircle", () => {
       {
         id: "member-1",
         userId: "user-andrea",
+        displayName: "Andrea",
         status: "active",
         joinedAt: NOW,
         leftAt: null,
@@ -37,6 +39,7 @@ describe("buildCircle", () => {
       name: "   ",
       creatorId: memberId("member-1"),
       creatorUserId: userId("user-andrea"),
+      creatorDisplayName: "Andrea",
       now: NOW,
     });
 
@@ -50,6 +53,7 @@ describe("buildCircle", () => {
         name,
         creatorId: memberId("member-1"),
         creatorUserId: userId("user-andrea"),
+        creatorDisplayName: "Andrea",
         now: NOW,
       });
 
@@ -60,6 +64,44 @@ describe("buildCircle", () => {
   });
 });
 
+describe("buildCircle display name", () => {
+  const build = (creatorDisplayName: string) =>
+    buildCircle({
+      id: circleId("circle-1"),
+      name: "Río Runners",
+      creatorId: memberId("member-1"),
+      creatorUserId: userId("user-andrea"),
+      creatorDisplayName,
+      now: NOW,
+    });
+
+  it("CM-16 / DN-S1: stores the creator's display name trimmed", () => {
+    const result = build("  Ana  ");
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.members[0]?.displayName).toBe("Ana");
+  });
+
+  it("CM-17 / DN-S2: rejects an invalid display name as InvalidDisplayName", () => {
+    expect(build("   ")).toEqual({ ok: false, error: { kind: "InvalidDisplayName" } });
+    expect(build("a".repeat(31))).toEqual({ ok: false, error: { kind: "InvalidDisplayName" } });
+  });
+
+  it("reports InvalidName before InvalidDisplayName", () => {
+    const result = buildCircle({
+      id: circleId("circle-1"),
+      name: " ",
+      creatorId: memberId("member-1"),
+      creatorUserId: userId("user-andrea"),
+      creatorDisplayName: " ",
+      now: NOW,
+    });
+
+    expect(result).toEqual({ ok: false, error: { kind: "InvalidName" } });
+  });
+});
+
 describe("activeMembers / findActiveMember", () => {
   it("filters out members who have left and finds an active member by userId", () => {
     const circle = buildCircle({
@@ -67,6 +109,7 @@ describe("activeMembers / findActiveMember", () => {
       name: "Río Runners",
       creatorId: memberId("member-1"),
       creatorUserId: userId("user-andrea"),
+      creatorDisplayName: "Andrea",
       now: NOW,
     });
     if (!circle.ok) throw new Error("fixture setup failed");
@@ -78,6 +121,7 @@ describe("activeMembers / findActiveMember", () => {
         {
           id: memberId("member-2"),
           userId: userId("user-victor"),
+          displayName: "Victor",
           status: "left" as const,
           joinedAt: NOW,
           leftAt: NOW,

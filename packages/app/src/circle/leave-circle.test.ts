@@ -27,9 +27,11 @@ describe("leaveCircle", () => {
       circleId: created.value.id,
     });
     if (!invite.ok) throw new Error("fixture setup failed");
-    const joined = await joinCircle(app, actorFor("user-victor"), {
-      inviteCode: invite.value.code,
-    });
+    const joined = await joinCircle(
+      app,
+      actorFor("user-victor"),
+      joinCircleInput(invite.value.code),
+    );
     if (!joined.ok) throw new Error("fixture setup failed");
 
     const result = await leaveCircle(app, actorFor("user-victor"), {

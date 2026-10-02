@@ -30,7 +30,14 @@ const circle: Circle = {
   id: circleId(uuid(0xc1)),
   name: "Circle",
   members: [
-    { id: MEMBER, userId: userId(uuid(0x201)), status: "active", joinedAt: T0, leftAt: null },
+    {
+      id: MEMBER,
+      userId: userId(uuid(0x201)),
+      displayName: "Member 1",
+      status: "active",
+      joinedAt: T0,
+      leftAt: null,
+    },
   ],
   invite: null,
   createdAt: T0,

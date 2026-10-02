@@ -84,12 +84,54 @@ describe("POST /circles (UE-C-S1..S3)", () => {
     expect(transaction).toHaveBeenCalledOnce();
   });
 
+  it("UE-C-S11: stores the creator's display name, trimmed", async () => {
+    const { app, call } = setup();
+    const { status } = await call("POST", "/circles", "andrea", {
+      name: "Crew",
+      displayName: "  Ana ",
+    });
+    expect(status).toBe(201);
+    const stored = await app.circles.findActiveByUser(ANDREA);
+    expect(stored?.members[0]?.displayName).toBe("Ana");
+  });
+
+  it.each([
+    ["blank", "   "],
+    ["31 code points", "a".repeat(31)],
+  ])(
+    "UE-C-S13: a %s display name reaches the app and comes back InvalidDisplayName 422",
+    async (_label, displayName) => {
+      const { call, transaction } = setup();
+      const { status, json } = await call("POST", "/circles", "andrea", {
+        name: "Crew",
+        displayName,
+      });
+      expect([status, json.error.code]).toEqual([422, "InvalidDisplayName"]);
+      expect(transaction).toHaveBeenCalledOnce();
+    },
+  );
+
+  it.each([
+    ["not a string", { name: "Crew", displayName: 5 }, "type"],
+    ["missing", { name: "Crew" }, "required"],
+  ])(
+    "UE-C-S14 / RV-R11: displayName %s is InvalidRequest, no repository call",
+    async (_label, body, problem) => {
+      const { call, transaction, read } = setup();
+      const { status, json } = await call("POST", "/circles", "andrea", body);
+      expect([status, json.error.code]).toEqual([422, "InvalidRequest"]);
+      expect(json.error.details.issues).toContainEqual({ path: "displayName", problem });
+      expect(transaction).not.toHaveBeenCalled();
+      expect(read).not.toHaveBeenCalled();
+    },
+  );
+
   it.each([
     ["wrong type", { name: 123 }, "type"],
     ["missing field", {}, "required"],
     [
       "unknown field (userId is never accepted: R0b)",
-      { name: "x", userId: VICTOR },
+      { name: "x", displayName: "Ana", userId: VICTOR },
       "unknownField",
     ],
     ["no body", undefined, "required"],

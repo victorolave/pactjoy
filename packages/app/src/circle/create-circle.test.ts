@@ -40,6 +40,33 @@ describe("createCircle", () => {
     ).toBeNull();
   });
 
+  it("CM-16: stores the creator's display name, trimmed", async () => {
+    const app = createTestApp();
+
+    const result = await createCircle(app, actorFor("user-andrea"), {
+      name: "Río Runners",
+      displayName: "  Ana  ",
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.members[0]?.displayName).toBe("Ana");
+  });
+
+  it("CM-17: rejects an invalid display name with InvalidDisplayName and persists nothing", async () => {
+    const app = createTestApp();
+
+    const result = await createCircle(app, actorFor("user-andrea"), {
+      name: "Río Runners",
+      displayName: "   ",
+    });
+
+    expect(result).toEqual({ ok: false, error: { kind: "InvalidDisplayName" } });
+    expect(
+      await app.uow.read((repos) => repos.circles.findActiveByUser(userId("user-andrea"))),
+    ).toBeNull();
+  });
+
   it("CM-11: rejects creating a second circle while already an active member of one", async () => {
     const app = createTestApp();
     const first = await createCircle(
