@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { createCircleBody, joinCircleBody } from "../src/testing/index.ts";
 import { setup } from "./harness.ts";
 
 // Every weekday scheduled (0-6): today already counts, so a logged day scores immediately.
@@ -16,13 +17,16 @@ const DAILY = {
 describe("AC-S3: the whole journey over in-memory adapters", () => {
   it("circle, invite, join, season, commitments, pact, entries, ranked standings", async () => {
     const { call } = setup();
-    const circle = await call("POST", "/circles", "andrea", { name: "Crew" });
+    const circle = await call("POST", "/circles", "andrea", createCircleBody("Crew"));
     expect(circle.status).toBe(201);
     const circleId: string = circle.json.data.id;
     const invite = await call("POST", `/circles/${circleId}/invite`, "andrea");
-    const joined = await call("POST", "/circles/join", "victor", {
-      inviteCode: invite.json.data.code,
-    });
+    const joined = await call(
+      "POST",
+      "/circles/join",
+      "victor",
+      joinCircleBody(invite.json.data.code),
+    );
     expect(joined.status).toBe(200);
     const season = await call("POST", `/circles/${circleId}/seasons`, "andrea", {
       timezone: "America/Bogota",

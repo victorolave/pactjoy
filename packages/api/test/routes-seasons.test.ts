@@ -1,5 +1,6 @@
 import { seasonId } from "@pactjoy/app";
 import { describe, expect, it } from "vitest";
+import { createCircleBody } from "../src/testing/index.ts";
 import { setup, UNKNOWN_CIRCLE, VICTOR } from "./harness.ts";
 
 // The fixed test clock is 2023-11-14T22:13Z, so in America/Bogota "tomorrow" is 2023-11-15.
@@ -8,7 +9,7 @@ const NOWHERE = `/circles/${UNKNOWN_CIRCLE}/seasons`;
 
 async function givenCircle() {
   const ctx = setup();
-  const created = await ctx.call("POST", "/circles", "andrea", { name: "Crew" });
+  const created = await ctx.call("POST", "/circles", "andrea", createCircleBody("Crew"));
   const circleId: string = created.json.data.id;
   return { ...ctx, circleId, seasonsPath: `/circles/${circleId}/seasons` };
 }

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { createCircleBody } from "../src/testing/index.ts";
 import { setup, UNKNOWN_CIRCLE, VICTOR } from "./harness.ts";
 
 const DONE = { unit: "done", frequency: { kind: "timesPerWeek", times: 3 } };
@@ -6,7 +7,7 @@ const NOWHERE = `/seasons/${UNKNOWN_CIRCLE}/approval`;
 
 async function givenSeason(weightPercent = 100, privacy = "visible") {
   const ctx = setup();
-  const circle = await ctx.call("POST", "/circles", "andrea", { name: "Crew" });
+  const circle = await ctx.call("POST", "/circles", "andrea", createCircleBody("Crew"));
   const season = await ctx.call("POST", `/circles/${circle.json.data.id}/seasons`, "andrea", {
     timezone: "America/Bogota",
     startDate: "2023-11-15",

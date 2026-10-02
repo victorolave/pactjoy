@@ -1,3 +1,4 @@
+import { createCircleBody, joinCircleBody } from "@pactjoy/api/testing";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { createHttpOverPostgres, DAILY, TODAY, USERS } from "./api-http.ts";
 import { connect, databaseUrl, truncateAll } from "./db.ts";
@@ -20,7 +21,7 @@ const statuses = (responses: { status: number }[]) => responses.map((r) => r.sta
 
 /** u1 owns a circle with a pact-open season; returns the ids. */
 async function openSeason() {
-  const circle = await call("POST", "/circles", "u1", { name: "Crew" });
+  const circle = await call("POST", "/circles", "u1", createCircleBody("Crew"));
   const season = await call("POST", `/circles/${circle.json.data.id}/seasons`, "u1", {
     timezone: "America/Bogota",
     startDate: TODAY,
@@ -60,17 +61,20 @@ describe("HTTP over Postgres: concurrency", () => {
   });
 
   it("UE-C-S10: two joins for the last seat leave one 200 and one refusal, never a 500", async () => {
-    const circle = await call("POST", "/circles", "u1", { name: "Crew" });
+    const circle = await call("POST", "/circles", "u1", createCircleBody("Crew"));
     const invite = await call("POST", `/circles/${circle.json.data.id}/invite`, "u1");
     for (const joiner of ["u2", "u3", "u4", "u5"]) {
-      const joined = await call("POST", "/circles/join", joiner, {
-        inviteCode: invite.json.data.code,
-      });
+      const joined = await call(
+        "POST",
+        "/circles/join",
+        joiner,
+        joinCircleBody(invite.json.data.code),
+      );
       expect(joined.status).toBe(200);
     }
     const race = await Promise.all(
       ["u6", "u7"].map((joiner) =>
-        call("POST", "/circles/join", joiner, { inviteCode: invite.json.data.code }),
+        call("POST", "/circles/join", joiner, joinCircleBody(invite.json.data.code)),
       ),
     );
     expect(statuses(race)).toEqual([200, 409]);
@@ -110,7 +114,7 @@ describe("HTTP over Postgres: concurrency", () => {
       await truncateAll(admin);
       const { circleId, seasonId } = await openSeason();
       const invite = await call("POST", `/circles/${circleId}/invite`, "u1");
-      await call("POST", "/circles/join", "u2", { inviteCode: invite.json.data.code });
+      await call("POST", "/circles/join", "u2", joinCircleBody(invite.json.data.code));
       await commit(seasonId, "u1");
       // Both approvers read the pact once, after the last commitment landed.
       const { pactRevision } = await commit(seasonId, "u2");
@@ -160,11 +164,11 @@ describe("HTTP over Postgres: concurrency", () => {
       let sawConflict = false;
       for (let i = 0; i < ITERATIONS; i++) {
         await truncateAll(admin);
-        const other = await call("POST", "/circles", "u2", { name: "Other" });
+        const other = await call("POST", "/circles", "u2", createCircleBody("Other"));
         const invite = await call("POST", `/circles/${other.json.data.id}/invite`, "u2");
         const race = await Promise.all([
-          call("POST", "/circles", "u1", { name: "Mine" }),
-          call("POST", "/circles/join", "u1", { inviteCode: invite.json.data.code }),
+          call("POST", "/circles", "u1", createCircleBody("Mine")),
+          call("POST", "/circles/join", "u1", joinCircleBody(invite.json.data.code)),
         ]);
         if (expectOneWinnerOneConflict(race)) sawConflict = true;
         const [row] = await admin.unsafe(ACTIVE_ROWS_FOR_U1);
@@ -180,8 +184,8 @@ describe("HTTP over Postgres: concurrency", () => {
       for (let i = 0; i < ITERATIONS; i++) {
         await truncateAll(admin);
         const race = await Promise.all([
-          call("POST", "/circles", "u1", { name: "First" }),
-          call("POST", "/circles", "u1", { name: "Second" }),
+          call("POST", "/circles", "u1", createCircleBody("First")),
+          call("POST", "/circles", "u1", createCircleBody("Second")),
         ]);
         if (expectOneWinnerOneConflict(race)) sawConflict = true;
         const [row] = await admin.unsafe(ACTIVE_ROWS_FOR_U1);
