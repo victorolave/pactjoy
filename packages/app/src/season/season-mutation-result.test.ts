@@ -104,11 +104,14 @@ describe("season mutations return { season, viewerId } (SV-R2)", () => {
     const app = createTestApp({ now: NOW });
     const { circle, season, andrea, victor } = await givenOpenPactWithOneApproval(app);
 
-    const withdrawn = await withdrawApproval(app, andrea, { seasonId: season.id });
+    // The no-op runs first, while Andrea's approval is still in place, so the viewer
+    // cannot be confused with the approver left on the season.
     const noop = await withdrawApproval(app, victor, { seasonId: season.id });
+    expect(noop.ok && noop.value.viewerId).toBe(await memberIdOf(app, circle.id, victor));
+    expect(noop.ok && noop.value.season.approvals).toHaveLength(1);
 
+    const withdrawn = await withdrawApproval(app, andrea, { seasonId: season.id });
     expect(withdrawn.ok && withdrawn.value.viewerId).toBe(await memberIdOf(app, circle.id, andrea));
     expect(withdrawn.ok && withdrawn.value.season.approvals).toEqual([]);
-    expect(noop.ok && noop.value.viewerId).toBe(await memberIdOf(app, circle.id, victor));
   });
 });
