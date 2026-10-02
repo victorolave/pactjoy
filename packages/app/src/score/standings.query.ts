@@ -3,7 +3,13 @@ import { displayPoints, rankStandings, scoreMember } from "@pactjoy/engine";
 import type { Actor } from "../shared/actor.ts";
 import type { SeasonId } from "../shared/ids.ts";
 import { ok, type Result } from "../shared/result.ts";
-import { loadScoreContext, type ScoreContextError, type ScoreQueryDeps } from "./score-context.ts";
+import {
+  loadScoreContext,
+  type ScoreContextError,
+  type ScoreData,
+  type ScoreQueryDeps,
+  type StartedScoreContext,
+} from "./score-context.ts";
 import { toScoreInput } from "./score-input.ts";
 
 export type StandingsDeps = ScoreQueryDeps;
@@ -37,6 +43,41 @@ export type StandingsView =
     };
 
 /**
+ * The ranking core of {@link standings}: synchronous, over data the caller
+ * already loaded, so it composes inside any `uow.read` (SQ-R10).
+ */
+export function standingsView(
+  started: StartedScoreContext,
+  data: ScoreData,
+): Extract<StandingsView, { kind: "ranked" }> {
+  const { season, circle, start } = started;
+  const participants = circle.members
+    .filter((member) => season.commitments.some((commitment) => commitment.memberId === member.id))
+    .map((member) => ({
+      memberId: member.id,
+      status: member.status,
+      points: scoreMember(
+        toScoreInput({
+          season,
+          actualStart: start.actualStart,
+          memberId: member.id,
+          entries: data.entries,
+          pauses: data.pauses,
+          today: start.today,
+        }),
+      ).points,
+    }));
+  const names = new Map(circle.members.map((member) => [member.id, member.displayName]));
+  const rows = rankStandings(participants).map((row) => ({
+    memberId: row.memberId,
+    displayName: names.get(row.memberId) ?? "",
+    rank: row.rank,
+    points: displayPoints(row.points),
+  }));
+  return { kind: "ranked", rows, eligibleParticipantCount: rows.length };
+}
+
+/**
  * The season's standings (Clasificacion), ranked by points. Recomputed from
  * Entries on every call, pauses included (P2-2, SQ-8). Participants are the
  * circle's members who hold at least one commitment in the season; a member
@@ -53,37 +94,12 @@ export async function standings(
     if (!context.ok) {
       return context;
     }
-    const { season, circle, start } = context.value;
+    const { season, start } = context.value;
     if (start === null) {
       return ok({ kind: "notStarted" });
     }
     const entries = await repos.entries.listBySeason(season.id);
     const pauses = await repos.pauses.listBySeason(season.id);
-    const participants = circle.members
-      .filter((member) =>
-        season.commitments.some((commitment) => commitment.memberId === member.id),
-      )
-      .map((member) => ({
-        memberId: member.id,
-        status: member.status,
-        points: scoreMember(
-          toScoreInput({
-            season,
-            actualStart: start.actualStart,
-            memberId: member.id,
-            entries,
-            pauses,
-            today: start.today,
-          }),
-        ).points,
-      }));
-    const names = new Map(circle.members.map((member) => [member.id, member.displayName]));
-    const rows = rankStandings(participants).map((row) => ({
-      memberId: row.memberId,
-      displayName: names.get(row.memberId) ?? "",
-      rank: row.rank,
-      points: displayPoints(row.points),
-    }));
-    return ok({ kind: "ranked", rows, eligibleParticipantCount: rows.length });
+    return ok(standingsView({ ...context.value, start }, { entries, pauses }));
   });
 }
