@@ -3,7 +3,7 @@ import { activeMembers, findActiveMember } from "../circle/circle.ts";
 import { commitmentsSumToFullWeight } from "../commitment/commitment.ts";
 import type { Repositories } from "../ports/repositories.ts";
 import type { UnitOfWork } from "../ports/unit-of-work.ts";
-import type { PactApproval, Season } from "../season/season.ts";
+import type { PactApproval, Season, SeasonMutationResult } from "../season/season.ts";
 import type { Actor } from "../shared/actor.ts";
 import type { SeasonId } from "../shared/ids.ts";
 import { err, ok, type Result } from "../shared/result.ts";
@@ -22,6 +22,8 @@ export interface ApprovePactInput {
   /** The `pactRevision` the caller last saw; approving a pact that changed since is `StaleSeason`. */
   readonly expectedPactRevision: number;
 }
+
+export type ApprovePactResult = Result<SeasonMutationResult, ApprovePactError>;
 
 export type ApprovePactError =
   | { readonly kind: "SeasonNotFound" }
@@ -57,8 +59,8 @@ export async function approvePact(
   deps: ApprovePactDeps,
   actor: Actor,
   input: ApprovePactInput,
-): Promise<Result<Season, ApprovePactError>> {
-  return deps.uow.transaction(async (repos): Promise<Result<Season, ApprovePactError>> => {
+): Promise<ApprovePactResult> {
+  return deps.uow.transaction(async (repos): Promise<ApprovePactResult> => {
     const season = await repos.seasons.get(input.seasonId);
     if (!season) {
       return err({ kind: "SeasonNotFound" });
@@ -99,6 +101,6 @@ export async function approvePact(
     }
 
     await repos.seasons.save(updated, season.version);
-    return ok(updated);
+    return ok({ season: updated, viewerId: member.id });
   });
 }

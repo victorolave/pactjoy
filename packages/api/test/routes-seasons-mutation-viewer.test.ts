@@ -38,6 +38,14 @@ const MUTATIONS: Record<string, (g: Given, who: Who) => ReturnType<Given["call"]
       `${g.path}/commitments/${who === "andrea" ? g.openCommitmentId : g.victorCommitmentId}`,
       who,
     ),
+  approvePact: async (g, who) => {
+    const seen = await g.call("GET", g.path, who);
+    return g.call("PUT", `${g.path}/approval`, who, {
+      expectedPactRevision: seen.json.data.pactRevision,
+    });
+  },
+  // Nothing to withdraw yet: the idempotent no-op path must carry the viewer too.
+  withdrawApproval: (g, who) => g.call("DELETE", `${g.path}/approval`, who),
 };
 
 describe("season mutation responses are viewer-aware (SV-S5, SV-S6, UE-S1..S5, UE-P1, UE-P2)", () => {

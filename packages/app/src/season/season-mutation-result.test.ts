@@ -3,6 +3,8 @@ import { findActiveMember } from "../circle/circle.ts";
 import { addCommitment } from "../commitment/add-commitment.ts";
 import { editCommitment } from "../commitment/edit-commitment.ts";
 import { removeCommitment } from "../commitment/remove-commitment.ts";
+import { approvePact } from "../pact/approve-pact.ts";
+import { withdrawApproval } from "../pact/withdraw-approval.ts";
 import type { Actor } from "../shared/actor.ts";
 import { habitId } from "../shared/ids.ts";
 import { createTestApp, type TestApp } from "../testing/app-harness.ts";
@@ -83,5 +85,33 @@ describe("season mutations return { season, viewerId } (SV-R2)", () => {
 
     expect(result.ok && result.value.viewerId).toBe(victorId);
     expect(result.ok && result.value.season.commitments).toHaveLength(1);
+  });
+
+  it("approvePact returns the approver, also when the approval closes the pact", async () => {
+    const app = createTestApp({ now: NOW });
+    const { circle, season, victor } = await givenOpenPactWithOneApproval(app);
+
+    const result = await approvePact(app, victor, {
+      seasonId: season.id,
+      expectedPactRevision: season.pactRevision,
+    });
+
+    expect(result.ok && result.value.viewerId).toBe(await memberIdOf(app, circle.id, victor));
+    expect(result.ok && result.value.season.status).toBe("active");
+  });
+
+  it("withdrawApproval returns the member, on a withdrawal and on the nothing-to-withdraw no-op", async () => {
+    const app = createTestApp({ now: NOW });
+    const { circle, season, andrea, victor } = await givenOpenPactWithOneApproval(app);
+
+    // The no-op runs first, while Andrea's approval is still in place, so the viewer
+    // cannot be confused with the approver left on the season.
+    const noop = await withdrawApproval(app, victor, { seasonId: season.id });
+    expect(noop.ok && noop.value.viewerId).toBe(await memberIdOf(app, circle.id, victor));
+    expect(noop.ok && noop.value.season.approvals).toHaveLength(1);
+
+    const withdrawn = await withdrawApproval(app, andrea, { seasonId: season.id });
+    expect(withdrawn.ok && withdrawn.value.viewerId).toBe(await memberIdOf(app, circle.id, andrea));
+    expect(withdrawn.ok && withdrawn.value.season.approvals).toEqual([]);
   });
 });

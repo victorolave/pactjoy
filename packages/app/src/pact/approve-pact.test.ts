@@ -105,7 +105,7 @@ describe("approvePact", () => {
     expect(first.ok).toBe(true);
     expect(second.ok).toBe(true);
     if (!first.ok || !second.ok) return;
-    expect(second.value.status).toBe("pactOpen");
+    expect(second.value.season.status).toBe("pactOpen");
 
     const third = await approvePact(app, actorFor(memberActorIds[2] as string), {
       seasonId: season.id,
@@ -114,9 +114,9 @@ describe("approvePact", () => {
 
     expect(third.ok).toBe(true);
     if (!third.ok) return;
-    expect(third.value.status).toBe("active");
-    expect(third.value.pactClosedAt).not.toBeNull();
-    expect(third.value.approvals).toHaveLength(3);
+    expect(third.value.season.status).toBe("active");
+    expect(third.value.season.pactClosedAt).not.toBeNull();
+    expect(third.value.season.approvals).toHaveLength(3);
   });
 
   it("PI-2: approving, and the approval that closes the pact, leave pactRevision unchanged", async () => {
@@ -134,9 +134,9 @@ describe("approvePact", () => {
 
     expect(first.ok && closing.ok).toBe(true);
     if (!first.ok || !closing.ok) return;
-    expect(first.value.pactRevision).toBe(season.pactRevision);
-    expect(closing.value.status).toBe("active");
-    expect(closing.value.pactRevision).toBe(season.pactRevision);
+    expect(first.value.season.pactRevision).toBe(season.pactRevision);
+    expect(closing.value.season.status).toBe("active");
+    expect(closing.value.season.pactRevision).toBe(season.pactRevision);
   });
 
   it("new PA-11 (B4): a solo circle's single member closes their own pact", async () => {
@@ -150,8 +150,8 @@ describe("approvePact", () => {
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.value.status).toBe("active");
-    expect(result.value.approvals).toHaveLength(1);
+    expect(result.value.season.status).toBe("active");
+    expect(result.value.season.approvals).toHaveLength(1);
   });
 
   it("PA-9: a non-member cannot approve", async () => {
@@ -185,7 +185,7 @@ describe("approvePact", () => {
       expectedPactRevision: season.pactRevision,
     });
     if (!closed.ok) throw new Error("fixture setup failed");
-    expect(closed.value.status).toBe("active");
+    expect(closed.value.season.status).toBe("active");
 
     const result = await approvePact(app, actorFor("user-andrea"), {
       seasonId: season.id,
@@ -263,8 +263,8 @@ describe("approvePact", () => {
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.value.actualStart).toBe("2025-10-01");
-    expect(result.value.lengthWeeks).toBe(8);
+    expect(result.value.season.actualStart).toBe("2025-10-01");
+    expect(result.value.season.lengthWeeks).toBe(8);
   });
 
   it("PA-7-corrected/B3: closing after the nominal start date shifts actualStart to the next day, full length kept", async () => {
@@ -284,8 +284,8 @@ describe("approvePact", () => {
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.value.actualStart).toBe("2025-10-05");
-    expect(result.value.lengthWeeks).toBe(8);
+    expect(result.value.season.actualStart).toBe("2025-10-05");
+    expect(result.value.season.lengthWeeks).toBe(8);
   });
 
   it("re-approving is idempotent: it does not duplicate the member's approval entry", async () => {
@@ -298,14 +298,14 @@ describe("approvePact", () => {
     });
     if (!first.ok) throw new Error("fixture setup failed");
     const second = await approvePact(app, actorFor(memberActorIds[0] as string), {
-      seasonId: first.value.id,
-      expectedPactRevision: first.value.pactRevision,
+      seasonId: first.value.season.id,
+      expectedPactRevision: first.value.season.pactRevision,
     });
 
     expect(second.ok).toBe(true);
     if (!second.ok) return;
-    expect(second.value.approvals).toHaveLength(1);
-    expect(second.value.status).toBe("pactOpen");
+    expect(second.value.season.approvals).toHaveLength(1);
+    expect(second.value.season.status).toBe("pactOpen");
   });
 
   it("unanimity is judged over ACTIVE members: after one leaves, the remaining members' approvals close the pact", async () => {
@@ -327,8 +327,8 @@ describe("approvePact", () => {
       expectedPactRevision: reread.pactRevision,
     });
 
-    expect(first.ok && first.value.status).toBe("pactOpen");
-    expect(second.ok && second.value.status).toBe("active");
+    expect(first.ok && first.value.season.status).toBe("pactOpen");
+    expect(second.ok && second.value.season.status).toBe("active");
   });
 
   it("the closing date is resolved in the season's own timezone, not UTC (B3)", async () => {
@@ -353,7 +353,7 @@ describe("approvePact", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     // Local date is still the nominal start (10-01), so no shift. In UTC it would be 10-02 -> 10-03.
-    expect(result.value.actualStart).toBe("2025-10-01");
+    expect(result.value.season.actualStart).toBe("2025-10-01");
   });
 
   describe("expectedPactRevision precondition (PI-S1..S5)", () => {
@@ -429,7 +429,7 @@ describe("approvePact", () => {
         expectedPactRevision: season.pactRevision,
       });
 
-      expect(result.ok && result.value.pactRevision).toBe(season.pactRevision);
+      expect(result.ok && result.value.season.pactRevision).toBe(season.pactRevision);
     });
 
     it("PI-S4: a non-member with a stale revision gets NotAMember, not StaleSeason", async () => {
@@ -466,7 +466,7 @@ describe("approvePact", () => {
       if (!approved.ok) throw new Error("fixture setup failed");
       const withdrawn = await withdrawApproval(app, actor, { seasonId: season.id });
       if (!withdrawn.ok) throw new Error("fixture setup failed");
-      expect(withdrawn.value.pactRevision).toBe(season.pactRevision);
+      expect(withdrawn.value.season.pactRevision).toBe(season.pactRevision);
 
       const again = await approvePact(app, actor, {
         seasonId: season.id,
@@ -475,7 +475,7 @@ describe("approvePact", () => {
 
       expect(again.ok).toBe(true);
       if (!again.ok) return;
-      expect(again.value.approvals).toHaveLength(1);
+      expect(again.value.season.approvals).toHaveLength(1);
     });
   });
 });

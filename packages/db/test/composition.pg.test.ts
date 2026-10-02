@@ -104,7 +104,7 @@ describe("createPostgresUnitOfWork", () => {
         seasonId: created.id,
         expectedPactRevision: withCommitment.pactRevision,
       }),
-    );
+    ).season;
     expect(active.status).toBe("active");
     const commitment = withCommitment.commitments[0];
     if (!commitment) throw new Error("commitment missing");
