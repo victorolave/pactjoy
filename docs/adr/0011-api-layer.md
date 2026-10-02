@@ -94,7 +94,7 @@ The owner answered Q1 to Q15 on 2026-10-01, following the recommendations except
 14. Q14: see Q7.
 15. Q15: "Private" hides only the habit and the measure; existence, weight and points stay visible to other members (current behaviour).
 
-Also decided: a unique partial index on `circle_members(user_id) WHERE status = 'active'` (one active circle per user), in a new migration. The db adapter must map a race's 23505 `unique_violation` to a domain outcome (`AlreadyInActiveCircle` or `ConcurrencyConflict`, 409), otherwise it surfaces as a 500; a race test like `api-http-concurrency` covers it.
+Also decided, and done (change `unique-active-circle`): a unique partial index `circle_members_active_user_key` on `circle_members(user_id) WHERE status = 'active'` (one active circle per user), in migration `20261001000700`. The db adapter maps a race's 23505 on that constraint to `ConcurrencyConflict` (409), matched by constraint name; a client retry then sees the winner and gets `AlreadyInActiveCircle`. The create+join and create+create races are covered in `api-http-concurrency.pg.test.ts`.
 
 ### Operational checklist (hosted Supabase, manual; the owner executes it)
 

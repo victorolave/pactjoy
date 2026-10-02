@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { createHttpOverPostgres, DAILY, TODAY } from "./api-http.ts";
+import { createHttpOverPostgres, DAILY, TODAY, USERS } from "./api-http.ts";
 import { connect, databaseUrl, truncateAll } from "./db.ts";
 
 // Pool of 3 (the production setting): every race below also runs under connection pressure.
@@ -139,6 +139,58 @@ describe("HTTP over Postgres: concurrency", () => {
       expect(approvals?.n).toBe(2);
     }
     process.stderr.write(`UE-P-S5: 409 observed in ${ITERATIONS} iterations: ${sawConflict}\n`);
+  });
+
+  describe("one active circle per user (CM-16, CM-17)", () => {
+    const ACTIVE_ROWS_FOR_U1 = `select count(*)::int as n from pactjoy.circle_members where user_id = '${USERS[0]}' and status = 'active'`;
+
+    function expectOneWinnerOneConflict(
+      race: { status: number; json: { error: { code: string } } }[],
+    ): boolean {
+      const winners = race.filter((r) => r.status === 201 || r.status === 200);
+      const losers = race.filter((r) => r.status === 409);
+      expect(winners).toHaveLength(1);
+      expect(losers).toHaveLength(1);
+      const code = losers[0]?.json.error.code;
+      expect(["AlreadyInActiveCircle", "ConcurrencyConflict"]).toContain(code);
+      return code === "ConcurrencyConflict";
+    }
+
+    it("CM-16: create and join at once for a user with no circle leave one winner and one 409", async () => {
+      let sawConflict = false;
+      for (let i = 0; i < ITERATIONS; i++) {
+        await truncateAll(admin);
+        const other = await call("POST", "/circles", "u2", { name: "Other" });
+        const invite = await call("POST", `/circles/${other.json.data.id}/invite`, "u2");
+        const race = await Promise.all([
+          call("POST", "/circles", "u1", { name: "Mine" }),
+          call("POST", "/circles/join", "u1", { inviteCode: invite.json.data.code }),
+        ]);
+        if (expectOneWinnerOneConflict(race)) sawConflict = true;
+        const [row] = await admin.unsafe(ACTIVE_ROWS_FOR_U1);
+        expect(row?.n).toBe(1);
+      }
+      process.stderr.write(
+        `CM-16: ConcurrencyConflict observed in ${ITERATIONS}: ${sawConflict}\n`,
+      );
+    });
+
+    it("CM-17: two creates at once for a user with no circle leave one 201 and one 409", async () => {
+      let sawConflict = false;
+      for (let i = 0; i < ITERATIONS; i++) {
+        await truncateAll(admin);
+        const race = await Promise.all([
+          call("POST", "/circles", "u1", { name: "First" }),
+          call("POST", "/circles", "u1", { name: "Second" }),
+        ]);
+        if (expectOneWinnerOneConflict(race)) sawConflict = true;
+        const [row] = await admin.unsafe(ACTIVE_ROWS_FOR_U1);
+        expect(row?.n).toBe(1);
+      }
+      process.stderr.write(
+        `CM-17: ConcurrencyConflict observed in ${ITERATIONS}: ${sawConflict}\n`,
+      );
+    });
   });
 
   it("UE-E-S7: two identical concurrent recordEntry calls store one entry and never fail with 500", async () => {

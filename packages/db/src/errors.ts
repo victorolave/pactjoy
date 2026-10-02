@@ -7,6 +7,9 @@ import { ConcurrencyConflict } from "@pactjoy/app";
  * those names (design section 4). `circle_invites_code_key` also fires for an
  * expired code that is reused: that surfaces as ConcurrencyConflict and the
  * client retries (decisions-schema, ADR-0010).
+ * `circle_members_active_user_key` fires when two writers give one user an
+ * active membership at once (A5): the loser gets ConcurrencyConflict, matched
+ * by constraint name only, never retried.
  */
 const CONFLICT_CONSTRAINTS: ReadonlySet<string> = new Set([
   "habits_pkey",
@@ -15,6 +18,7 @@ const CONFLICT_CONSTRAINTS: ReadonlySet<string> = new Set([
   "seasons_pkey",
   "entries_pkey",
   "entries_client_request_key",
+  "circle_members_active_user_key",
 ]);
 
 const DEADLOCK_DETECTED = "40P01";

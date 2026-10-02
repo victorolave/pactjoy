@@ -55,6 +55,12 @@ export interface CircleRepository {
    * the version as it was BEFORE this transaction's own write.
    */
   guardVersion(id: CircleId, expectedVersion: number): Promise<void>;
-  /** @throws {ConcurrencyConflict} if the stored version no longer matches `expectedVersion` (D5). */
+  /**
+   * @throws {ConcurrencyConflict} if the stored version no longer matches `expectedVersion` (D5).
+   * Also thrown when the save would give a user a second ACTIVE membership
+   * (in another circle): a user is active in at most one circle (A5), enforced
+   * by the store, not only by the use cases. Not retried; a client retry then
+   * sees the winner's circle and the use case answers `AlreadyInActiveCircle`.
+   */
   save(circle: Circle, expectedVersion: number | null): Promise<void>;
 }

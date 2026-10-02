@@ -12,6 +12,7 @@ const CONFLICT_CONSTRAINTS = [
   "seasons_pkey",
   "entries_pkey",
   "entries_client_request_key",
+  "circle_members_active_user_key",
 ];
 
 describe("isRetryable", () => {
@@ -48,6 +49,8 @@ describe("mapError", () => {
   it("rethrows other unique violations, with or without a constraint name, untouched", () => {
     for (const error of [
       pgError("23505", "circle_members_position_key"),
+      pgError("23505", "circle_members_pkey"),
+      pgError("23505", "circle_members_unknown_key"),
       pgError("23505", "season_approvals_member_key"),
       pgError("23505"),
     ]) {

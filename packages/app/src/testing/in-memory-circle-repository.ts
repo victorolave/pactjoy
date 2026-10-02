@@ -28,7 +28,7 @@ export interface CircleTransactionScope {
    * check is `validate()`'s job).
    */
   readonly repository: CircleRepository;
-  /** @throws {ConcurrencyConflict} if any staged write's `expectedVersion` no longer matches the live store. Does not mutate. */
+  /** @throws {ConcurrencyConflict} if any staged write's `expectedVersion` no longer matches the live store, or would give a user a second active membership. Does not mutate. */
   validate(): void;
   /** Applies every staged write to the live store. Callers MUST call `validate()` first (see docstring above). */
   apply(): void;
@@ -54,6 +54,32 @@ function findActiveByUser(store: ReadonlyMap<CircleId, Circle>, userId: UserId):
     }
   }
   return null;
+}
+
+/**
+ * A5 / CM-18: one active membership per user across the whole `view`. Throws
+ * the same `ConcurrencyConflict` that Postgres's unique partial index
+ * `circle_members_active_user_key` yields. Only the `touched` circles are
+ * checked, against every circle in the view (a user active twice inside one
+ * circle trips it too).
+ */
+function assertOneActiveCirclePerUser(
+  view: ReadonlyMap<CircleId, Circle>,
+  touched: Iterable<Circle>,
+): void {
+  for (const circle of touched) {
+    const seen = new Set<UserId>();
+    for (const member of circle.members) {
+      if (member.status !== "active") continue;
+      if (seen.has(member.userId)) throw new ConcurrencyConflict();
+      seen.add(member.userId);
+    }
+    for (const other of view.values()) {
+      if (other.id === circle.id) continue;
+      const clash = other.members.some((m) => m.status === "active" && seen.has(m.userId));
+      if (clash) throw new ConcurrencyConflict();
+    }
+  }
 }
 
 /** Deterministic in-memory {@link CircleRepository} for tests (ADR-0008). */
@@ -83,6 +109,7 @@ export function createInMemoryCircleRepository(): InMemoryCircleRepository {
       if (currentVersion !== expectedVersion) {
         throw new ConcurrencyConflict();
       }
+      assertOneActiveCirclePerUser(new Map(store).set(circle.id, circle), [circle]);
       store.set(circle.id, circle);
     },
 
@@ -139,6 +166,10 @@ export function createInMemoryCircleRepository(): InMemoryCircleRepository {
               throw new ConcurrencyConflict();
             }
           }
+          assertOneActiveCirclePerUser(
+            viewMap(),
+            [...staged.values()].map((write) => write.circle),
+          );
         },
         apply(): void {
           for (const [id, { circle }] of staged) {
