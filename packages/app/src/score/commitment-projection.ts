@@ -29,26 +29,25 @@ export type MeasureView =
       readonly schedule: Schedule;
     };
 
-function projectMeasure(measure: Measure): MeasureView {
+export function projectMeasure(measure: Measure): MeasureView {
   if (measure.unit === "done") {
     return measure;
   }
-  const { target } = measure;
   return {
     unit: measure.unit,
     customLabel: measure.customLabel,
     precision: measure.precision,
     target:
-      target.direction === "reach"
+      measure.target.direction === "reach"
         ? {
             direction: "reach",
-            minimum: toDecimalString(target.minimum),
-            ideal: toDecimalString(target.ideal),
+            minimum: toDecimalString(measure.target.minimum),
+            ideal: toDecimalString(measure.target.ideal),
           }
         : {
             direction: "limit",
-            ideal: toDecimalString(target.ideal),
-            tolerance: toDecimalString(target.tolerance),
+            ideal: toDecimalString(measure.target.ideal),
+            tolerance: toDecimalString(measure.target.tolerance),
           },
     schedule: measure.schedule,
   };

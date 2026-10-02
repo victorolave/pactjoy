@@ -11,6 +11,7 @@ import type { CircleId, SeasonId } from "../shared/ids.ts";
 import type { LocalDate } from "../time/local-date.ts";
 import { toSeasonDay } from "../time/season-calendar.ts";
 import type { TimeZoneId } from "../time/time-zone.port.ts";
+import { type TodayRow, todayRows } from "./today-rows.ts";
 
 export type TodayDeps = ScoreQueryDeps;
 
@@ -60,6 +61,8 @@ export type TodayView =
   | ({
       readonly state: "active" | "ended";
       readonly summary: TodaySummary;
+      /** One per commitment of the viewer, in season order. */
+      readonly rows: readonly TodayRow[];
       readonly standings: Extract<StandingsView, { kind: "ranked" }>;
     } & TodayBase);
 
@@ -128,9 +131,21 @@ export async function today(deps: TodayDeps, actor: Actor): Promise<TodayView> {
       entries: await repos.entries.listBySeason(season.id),
       pauses: await repos.pauses.listBySeason(season.id),
     };
+    const mine = season.commitments.filter((commitment) => commitment.memberId === viewer.id);
+    const habits = await repos.habits.getMany(mine.map((commitment) => commitment.habitId));
     return {
       state: ended ? "ended" : "active",
       ...base,
+      rows: todayRows({
+        season,
+        actualStart: season.actualStart,
+        commitments: mine,
+        habits,
+        entries: data.entries.filter((entry) => entry.memberId === viewer.id),
+        pauses: data.pauses.filter((pause) => pause.memberId === viewer.id),
+        today: day.day,
+        refDay: scoringDay,
+      }),
       summary: {
         week: (scoringDay - (scoringDay % DAYS_PER_WEEK)) / DAYS_PER_WEEK + 1,
         weekCount: season.lengthWeeks,
