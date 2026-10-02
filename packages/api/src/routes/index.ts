@@ -7,6 +7,7 @@ import { circleRoutes } from "./circles.ts";
 import { commitmentRoutes } from "./commitments.ts";
 import { entryRoutes } from "./entries.ts";
 import { habitRoutes } from "./habits.ts";
+import { meRoutes } from "./me.ts";
 import { pactRoutes } from "./pact.ts";
 import { scoreRoutes } from "./scores.ts";
 import { seasonRoutes } from "./seasons.ts";
@@ -24,6 +25,7 @@ const routeTable = (deps: ApiDeps): Route[] => [
   ...pactRoutes(deps),
   ...entryRoutes(deps),
   ...scoreRoutes(deps),
+  ...meRoutes(deps),
 ];
 
 /** The whole API as a Web `Request` handler, built from ports only. */
