@@ -1,5 +1,4 @@
 import {
-  type CommitmentRecord,
   canSeeDetail,
   type Measure,
   type MeasureView,
@@ -70,16 +69,12 @@ export function presentMeasure(measure: Measure): MeasureView {
   };
 }
 
-const showsDetail = (commitment: CommitmentRecord, viewer: MemberId | null): boolean =>
-  viewer === null ? commitment.privacy === "visible" : canSeeDetail(commitment, viewer);
-
 /**
  * `viewer` is the member asking and decides which private commitments are shown: their own in
- * full (marked `private`), everyone else's hidden (SV-R1, Q8). `null` means no viewer is known
- * and stays conservative: private commitments are hidden for EVERYONE, owner included (decision
- * #5018).
+ * full (marked `private`), everyone else's hidden (SV-R1, Q8). Every caller has one: a read or a
+ * mutation result carries the member behind the actor.
  */
-export function presentSeason(season: Season, viewer: MemberId | null): SeasonDto {
+export function presentSeason(season: Season, viewer: MemberId): SeasonDto {
   return {
     id: season.id,
     circleId: season.circleId,
@@ -99,7 +94,7 @@ export function presentSeason(season: Season, viewer: MemberId | null): SeasonDt
     pactRevision: season.pactRevision,
     commitments: season.commitments.map(
       (commitment): CommitmentDto =>
-        showsDetail(commitment, viewer)
+        canSeeDetail(commitment, viewer)
           ? {
               kind: "detail",
               id: commitment.id,
@@ -119,10 +114,6 @@ export function presentSeason(season: Season, viewer: MemberId | null): SeasonDt
   };
 }
 
-/** A mutation result projected for the member who acted (SV-R2). */
+/** A season (read or mutation result) projected for the member who is asking. */
 export const presentSeasonFor = ({ season, viewerId }: SeasonMutationResult): SeasonDto =>
   presentSeason(season, viewerId);
-
-/** The mutation routes carry no viewer yet (S6b): the conservative projection. */
-export const presentSeasonWithoutViewer = (season: Season): SeasonDto =>
-  presentSeason(season, null);

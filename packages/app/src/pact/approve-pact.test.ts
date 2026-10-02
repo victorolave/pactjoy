@@ -73,7 +73,7 @@ async function seasonWithFullyWeightedMembers(
   });
   if (!season.ok) throw new Error("fixture setup failed");
 
-  let current = season.value;
+  let current = season.value.season;
   current = await addFullWeightCommitment(app, current.id, "user-andrea");
   for (const actorId of otherActorIds) {
     current = await addFullWeightCommitment(app, current.id, actorId);
@@ -211,7 +211,7 @@ describe("approvePact", () => {
     });
     if (!season.ok) throw new Error("fixture setup failed");
     const withCommitment = await addCommitment(app, actorFor("user-andrea"), {
-      seasonId: season.value.id,
+      seasonId: season.value.season.id,
       habitId: habitId("habit-run"),
       weightPercent: 60,
       privacy: "visible",
@@ -244,8 +244,8 @@ describe("approvePact", () => {
     if (!season.ok) throw new Error("fixture setup failed");
 
     const result = await approvePact(app, actorFor("user-andrea"), {
-      seasonId: season.value.id,
-      expectedPactRevision: season.value.pactRevision,
+      seasonId: season.value.season.id,
+      expectedPactRevision: season.value.season.pactRevision,
     });
 
     expect(result).toEqual({ ok: false, error: { kind: "CommitmentWeightsNotFull" } });
@@ -367,7 +367,7 @@ describe("approvePact", () => {
         lengthWeeks: 6,
       });
       if (!edited.ok) throw new Error("fixture setup failed");
-      expect(edited.value.pactRevision).toBe(season.pactRevision + 1);
+      expect(edited.value.season.pactRevision).toBe(season.pactRevision + 1);
       const before = await app.seasons.get(season.id);
 
       const result = await approvePact(app, actorFor(memberActorIds[0] as string), {
@@ -413,8 +413,8 @@ describe("approvePact", () => {
       if (!season.ok) throw new Error("fixture setup failed");
 
       const result = await approvePact(app, actorFor("user-andrea"), {
-        seasonId: season.value.id,
-        expectedPactRevision: season.value.pactRevision + 1,
+        seasonId: season.value.season.id,
+        expectedPactRevision: season.value.season.pactRevision + 1,
       });
 
       expect(result).toEqual(stale);

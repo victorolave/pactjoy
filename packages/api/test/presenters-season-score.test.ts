@@ -15,7 +15,7 @@ import {
 import { type CommitmentId, frac, fromInt, parseDecimal } from "@pactjoy/engine";
 import { describe, expect, it } from "vitest";
 import { presentMemberScore, presentStandings } from "../src/presenters/score.ts";
-import { presentMeasure, presentSeason } from "../src/presenters/season.ts";
+import { presentMeasure, presentSeason, presentSeasonFor } from "../src/presenters/season.ts";
 
 const T = instant(1_700_000_000_123);
 const ISO = "2023-11-14T22:13:20.123Z";
@@ -89,7 +89,7 @@ function noBigint(value: unknown): void {
 
 describe("presenters: season, score", () => {
   it("PR-S1/S2/S3: fractions are exact decimal strings and the body is JSON-safe", () => {
-    const dto = presentSeason(season, null);
+    const dto = presentSeason(season, memberId("m1"));
     noBigint(dto);
     expect(() => JSON.stringify(dto)).not.toThrow();
     expect(JSON.parse(JSON.stringify(dto))).toEqual(dto);
@@ -109,10 +109,11 @@ describe("presenters: season, score", () => {
     expect(presentMeasure(priv.measure)).toEqual(priv.measure);
   });
 
-  it("without a viewer (mutation routes until S6b) private commitments are hidden for everyone", () => {
-    const hidden = presentSeason(season, null).commitments[2];
-    expect(hidden).toEqual({ kind: "hidden", id: "k3", memberId: "m1", weightPercent: 20 });
-    expect(JSON.stringify(presentSeason(season, null))).not.toContain("secret-habit");
+  it("SV-R2: presentSeasonFor projects a mutation result for the member who acted", () => {
+    const owner = presentSeasonFor({ season, viewerId: memberId("m1") });
+    const other = presentSeasonFor({ season, viewerId: memberId("m2") });
+    expect(owner.commitments[2]).toMatchObject({ kind: "detail", privacy: "private" });
+    expect(other.commitments[2]).toMatchObject({ kind: "hidden" });
   });
 
   it("SV-R1: the owner viewer sees their own private commitment in full, marked private", () => {
@@ -141,7 +142,7 @@ describe("presenters: season, score", () => {
   });
 
   it("season fields: ISO instants, dates, approvals", () => {
-    expect(presentSeason(season, null)).toMatchObject({
+    expect(presentSeason(season, memberId("m2"))).toMatchObject({
       id: "s1",
       circleId: "c1",
       timeZone: "America/Bogota",

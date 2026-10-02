@@ -18,8 +18,8 @@ import {
   isSeasonLengthWeeks,
   type ReviewCadenceWeeks,
   reviewCadenceForLength,
-  type Season,
   type SeasonLengthWeeks,
+  type SeasonMutationResult,
   type StartDateWindowError,
   validateStartDateWindow,
 } from "./season.ts";
@@ -40,6 +40,8 @@ export interface CreateSeasonInput {
   readonly lengthWeeks: SeasonLengthWeeks;
   readonly reviewCadenceWeeks?: ReviewCadenceWeeks;
 }
+
+export type CreateSeasonResult = Result<SeasonMutationResult, CreateSeasonError>;
 
 export type CreateSeasonError =
   | { readonly kind: "CircleNotFound" }
@@ -64,8 +66,8 @@ export async function createSeason(
   deps: CreateSeasonDeps,
   actor: Actor,
   input: CreateSeasonInput,
-): Promise<Result<Season, CreateSeasonError>> {
-  return deps.uow.transaction(async (repos): Promise<Result<Season, CreateSeasonError>> => {
+): Promise<CreateSeasonResult> {
+  return deps.uow.transaction(async (repos): Promise<CreateSeasonResult> => {
     const circle = await repos.circles.get(input.circleId);
     if (!circle) {
       return err({ kind: "CircleNotFound" });
@@ -73,7 +75,8 @@ export async function createSeason(
     if (circle.archivedAt !== null) {
       return err({ kind: "CircleArchived" });
     }
-    if (!findActiveMember(circle, actor.userId)) {
+    const member = findActiveMember(circle, actor.userId);
+    if (!member) {
       return err({ kind: "NotAMember" });
     }
 
@@ -127,6 +130,6 @@ export async function createSeason(
     // two transactions to race on ONE shared optimistic-concurrency check.
     // Reuses Circle's existing `version` -- no redundant state added.
     await repos.circles.save({ ...circle, version: circle.version + 1 }, circle.version);
-    return ok(season);
+    return ok({ season, viewerId: member.id });
   });
 }

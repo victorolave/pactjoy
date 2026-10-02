@@ -31,7 +31,7 @@ async function givenOpenSeason(app: ReturnType<typeof createTestApp>) {
     lengthWeeks: 8,
   });
   if (!season.ok) throw new Error("fixture setup failed");
-  return { circle: circle.value, season: season.value };
+  return { circle: circle.value, season: season.value.season };
 }
 
 describe("editSeasonParams", () => {
@@ -46,8 +46,8 @@ describe("editSeasonParams", () => {
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.value.nominalStart).toBe("2025-10-05");
-    expect(result.value.version).toBe(season.version + 1);
+    expect(result.value.season.nominalStart).toBe("2025-10-05");
+    expect(result.value.season.version).toBe(season.version + 1);
 
     const stored = await app.uow.read((repos) => repos.seasons.get(season.id));
     expect(stored?.nominalStart).toBe("2025-10-05");
@@ -67,9 +67,9 @@ describe("editSeasonParams", () => {
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.value.timeZone).toBe("Europe/Madrid");
-    expect(result.value.lengthWeeks).toBe(4);
-    expect(result.value.reviewCadenceWeeks).toBe(3);
+    expect(result.value.season.timeZone).toBe("Europe/Madrid");
+    expect(result.value.season.lengthWeeks).toBe(4);
+    expect(result.value.season.reviewCadenceWeeks).toBe(3);
   });
 
   it("any active member may edit -- no owner/admin role (A4)", async () => {
@@ -226,14 +226,14 @@ describe("editSeasonParams", () => {
     // one day earlier (2025-09-27), so the SAME nominalStart is now 31 days
     // ahead -- outside the window. Must be re-validated and rejected.
     const result = await editSeasonParams(app, actorFor("user-andrea"), {
-      seasonId: created.value.id,
+      seasonId: created.value.season.id,
       timezone: "zone-early",
     });
 
     expect(result).toEqual({ ok: false, error: { kind: "StartDateTooFarAhead" } });
-    const stored = await app.uow.read((repos) => repos.seasons.get(created.value.id));
+    const stored = await app.uow.read((repos) => repos.seasons.get(created.value.season.id));
     expect(stored?.timeZone).toBe("zone-late");
-    expect(stored?.version).toBe(created.value.version);
+    expect(stored?.version).toBe(created.value.season.version);
   });
 
   describe("no-op detection (SS-18, PI-S8..S11)", () => {
@@ -254,7 +254,7 @@ describe("editSeasonParams", () => {
 
       const result = await editSeasonParams(app, actorFor("user-andrea"), { seasonId: season.id });
 
-      expect(result).toEqual({ ok: true, value: season });
+      expect(result.ok && result.value.season).toEqual(season);
       await expectUntouched(app, season);
     });
 
@@ -269,7 +269,7 @@ describe("editSeasonParams", () => {
         reviewCadenceWeeks: season.reviewCadenceWeeks,
       });
 
-      expect(result).toEqual({ ok: true, value: season });
+      expect(result.ok && result.value.season).toEqual(season);
       await expectUntouched(app, season);
     });
 
@@ -290,9 +290,9 @@ describe("editSeasonParams", () => {
 
         expect(result.ok).toBe(true);
         if (!result.ok) return;
-        expect(result.value.approvals).toEqual([]);
-        expect(result.value.version).toBe(season.version + 1);
-        expect(result.value.pactRevision).toBe(season.pactRevision + 1);
+        expect(result.value.season.approvals).toEqual([]);
+        expect(result.value.season.version).toBe(season.version + 1);
+        expect(result.value.season.pactRevision).toBe(season.pactRevision + 1);
       },
     );
 
@@ -313,15 +313,15 @@ describe("editSeasonParams", () => {
       if (!created.ok) throw new Error("fixture setup failed");
 
       const result = await editSeasonParams(app, actorFor("user-andrea"), {
-        seasonId: created.value.id,
+        seasonId: created.value.season.id,
         timezone: "utc",
       });
 
       expect(result.ok).toBe(true);
       if (!result.ok) return;
-      expect(result.value.timeZone).toBe("utc");
-      expect(result.value.version).toBe(created.value.version + 1);
-      expect(result.value.pactRevision).toBe(created.value.pactRevision + 1);
+      expect(result.value.season.timeZone).toBe("utc");
+      expect(result.value.season.version).toBe(created.value.season.version + 1);
+      expect(result.value.season.pactRevision).toBe(created.value.season.pactRevision + 1);
     });
 
     it("PI-S11: an invalid value still errors even when nothing else changes", async () => {
@@ -353,7 +353,7 @@ describe("editSeasonParams", () => {
         startDate: "2025-09-01",
       });
 
-      expect(result).toEqual({ ok: true, value: past });
+      expect(result.ok && result.value.season).toEqual(past);
       await expectUntouched(app, past);
     });
 

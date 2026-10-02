@@ -11,6 +11,7 @@ type Dto = { kind: string; habitId?: string; weightPercent: number };
  * may see its detail.
  */
 const MUTATIONS: Record<string, (g: Given, who: Who) => ReturnType<Given["call"]>> = {
+  editSeasonParams: (g, who) => g.call("PATCH", g.path, who, { lengthWeeks: 8 }),
   addCommitment: async (g, who) => {
     const habit = await g.call("POST", "/habits", who, { name: `Extra-${who}` });
     return g.call("POST", `${g.path}/commitments`, who, {

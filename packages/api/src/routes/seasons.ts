@@ -7,7 +7,7 @@ import {
   seasonId,
   seasonView,
 } from "@pactjoy/app";
-import { presentSeason, presentSeasonWithoutViewer } from "../presenters/season.ts";
+import { presentSeasonFor } from "../presenters/season.ts";
 import { uuid } from "../validation/formats.ts";
 import { number, object, optional, string } from "../validation/schema.ts";
 import { type ApiDeps, type Route, toResult, validate } from "./support.ts";
@@ -52,7 +52,7 @@ export function seasonRoutes(deps: ApiDeps): Route[] {
             ? {}
             : { reviewCadenceWeeks: asCadence(reviewCadenceWeeks) }),
         });
-        return toResult(result, 201, presentSeasonWithoutViewer);
+        return toResult(result, 201, presentSeasonFor);
       },
     },
     {
@@ -66,7 +66,7 @@ export function seasonRoutes(deps: ApiDeps): Route[] {
         const result = await seasonView(deps, ctx.actor, {
           seasonId: seasonId(input.params.seasonId),
         });
-        return toResult(result, 200, ({ season, viewerId }) => presentSeason(season, viewerId));
+        return toResult(result, 200, presentSeasonFor);
       },
     },
     {
@@ -85,7 +85,7 @@ export function seasonRoutes(deps: ApiDeps): Route[] {
             ? {}
             : { reviewCadenceWeeks: asCadence(reviewCadenceWeeks) }),
         });
-        return toResult(result, 200, presentSeasonWithoutViewer);
+        return toResult(result, 200, presentSeasonFor);
       },
     },
   ];

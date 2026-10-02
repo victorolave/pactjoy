@@ -25,7 +25,7 @@ async function seasonFor(app: ReturnType<typeof createTestApp>) {
     lengthWeeks: 8,
   });
   if (!season.ok) throw new Error("fixture setup failed");
-  return { circle: circle.value, season: season.value };
+  return { circle: circle.value, season: season.value.season };
 }
 
 describe("addCommitment", () => {

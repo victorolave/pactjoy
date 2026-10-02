@@ -30,7 +30,7 @@ async function seasonWithCommitment(app: ReturnType<typeof createTestApp>) {
   });
   if (!season.ok) throw new Error("fixture setup failed");
   const added = await addCommitment(app, actorFor("user-andrea"), {
-    seasonId: season.value.id,
+    seasonId: season.value.season.id,
     habitId: habitId("habit-run"),
     weightPercent: 20,
     privacy: "visible",
