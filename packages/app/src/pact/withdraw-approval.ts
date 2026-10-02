@@ -1,7 +1,7 @@
 import { findActiveMember } from "../circle/circle.ts";
 import type { Repositories } from "../ports/repositories.ts";
 import type { UnitOfWork } from "../ports/unit-of-work.ts";
-import type { Season } from "../season/season.ts";
+import type { Season, SeasonMutationResult } from "../season/season.ts";
 import type { Actor } from "../shared/actor.ts";
 import type { SeasonId } from "../shared/ids.ts";
 import { err, ok, type Result } from "../shared/result.ts";
@@ -13,6 +13,8 @@ export interface WithdrawApprovalDeps {
 export interface WithdrawApprovalInput {
   readonly seasonId: SeasonId;
 }
+
+export type WithdrawApprovalResult = Result<SeasonMutationResult, WithdrawApprovalError>;
 
 export type WithdrawApprovalError =
   | { readonly kind: "SeasonNotFound" }
@@ -30,8 +32,8 @@ export async function withdrawApproval(
   deps: WithdrawApprovalDeps,
   actor: Actor,
   input: WithdrawApprovalInput,
-): Promise<Result<Season, WithdrawApprovalError>> {
-  return deps.uow.transaction(async (repos): Promise<Result<Season, WithdrawApprovalError>> => {
+): Promise<WithdrawApprovalResult> {
+  return deps.uow.transaction(async (repos): Promise<WithdrawApprovalResult> => {
     const season = await repos.seasons.get(input.seasonId);
     if (!season) {
       return err({ kind: "SeasonNotFound" });
@@ -48,12 +50,12 @@ export async function withdrawApproval(
     }
 
     if (!season.approvals.some((approval) => approval.memberId === member.id)) {
-      return ok(season);
+      return ok({ season, viewerId: member.id });
     }
 
     const approvals = season.approvals.filter((approval) => approval.memberId !== member.id);
     const updated: Season = { ...season, approvals, version: season.version + 1 };
     await repos.seasons.save(updated, season.version);
-    return ok(updated);
+    return ok({ season: updated, viewerId: member.id });
   });
 }

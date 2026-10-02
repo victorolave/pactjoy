@@ -63,7 +63,7 @@ export async function givenOpenPactWithOneApproval(app: TestApp): Promise<OpenPa
       seasonId: season.id,
       expectedPactRevision: season.pactRevision,
     }),
-  );
+  ).season;
   return { circle, season, andrea, victor };
 }
 

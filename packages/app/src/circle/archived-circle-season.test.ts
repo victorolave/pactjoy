@@ -57,7 +57,7 @@ describe("an archived circle's kept ACTIVE season is frozen", () => {
       const result = await attempt();
       expect(result, name).toEqual({ ok: false, error: { kind: "NotAMember" } });
     }
-    expect(await app.seasons.get(seasonId)).toEqual(closed.value);
+    expect(await app.seasons.get(seasonId)).toEqual(closed.value.season);
     expect(await app.circles.get(circle.id)).toEqual(left.value);
   });
 });

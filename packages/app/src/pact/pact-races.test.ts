@@ -127,7 +127,7 @@ describe("pact approval races (deterministic, D5)", () => {
     } = await givenOpenPactWithOneApproval(app);
     const withdrawn = await withdrawApproval(app, andrea, { seasonId: approvedSeason.id });
     if (!withdrawn.ok) throw new Error("fixture setup failed");
-    expect(withdrawn.value.approvals).toEqual([]);
+    expect(withdrawn.value.season.approvals).toEqual([]);
 
     const { winner, loser } = await raceTransactions(
       app,
@@ -144,7 +144,7 @@ describe("pact approval races (deterministic, D5)", () => {
     const stored = await storedSeason(app, approvedSeason.id);
     expect(stored.status).toBe("pactOpen");
     expect(stored.approvals).toEqual([]);
-    expect(stored.version).toBe(withdrawn.value.version + 1);
+    expect(stored.version).toBe(withdrawn.value.season.version + 1);
   });
 
   it("approval commits first: a concurrent commitment edit is rejected and its change never lands", async () => {
@@ -244,7 +244,7 @@ describe("pact approval races (deterministic, D5)", () => {
       seasonId: approvedSeason.id,
       expectedPactRevision: approvedSeason.pactRevision,
     });
-    expect(retry.ok && retry.value.status).toBe("active");
+    expect(retry.ok && retry.value.season.status).toBe("active");
   });
 
   it("solo leave (season discarded) commits first: the approval is rejected as NotAMember and the season stays gone", async () => {

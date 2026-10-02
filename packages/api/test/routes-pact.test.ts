@@ -69,12 +69,11 @@ describe("PUT /seasons/:seasonId/approval (UE-P-S1..S3)", () => {
     expect(json.data.approvals).toHaveLength(1);
   });
 
-  it("S1: a private commitment is presented as hidden, with no detail", async () => {
+  it("S1: the approver sees their own private commitment in full, marked private (SV-R2)", async () => {
     const { call, path, body } = await givenSeason(100, "private");
     const { json } = await call("PUT", path, "andrea", body);
     expect(json.data.commitments).toHaveLength(1);
-    expect(json.data.commitments[0].kind).toBe("hidden");
-    expect(JSON.stringify(json.data.commitments)).not.toContain("timesPerWeek");
+    expect(json.data.commitments[0]).toMatchObject({ kind: "detail", privacy: "private" });
   });
 
   it("UE-P-S7: a missing, malformed or negative expectedPactRevision is 422 with no repository call", async () => {

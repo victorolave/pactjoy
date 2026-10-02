@@ -71,7 +71,7 @@ describe("approval resets when membership changes (PA-5, PA-6)", () => {
       expectedPactRevision: season.pactRevision,
     });
     if (!closed.ok) throw new Error("fixture setup failed");
-    expect(closed.value.status).toBe("active");
+    expect(closed.value.season.status).toBe("active");
 
     const left = await leaveCircle(app, victor, { circleId: circle.id });
 
@@ -121,7 +121,7 @@ describe("approval resets when membership changes (PA-5, PA-6)", () => {
       expectedPactRevision: season.pactRevision,
     });
     if (!closed.ok) throw new Error("fixture setup failed");
-    expect(closed.value.status).toBe("active");
+    expect(closed.value.season.status).toBe("active");
 
     const left = await leaveCircle(app, andrea, { circleId: circle.id });
 

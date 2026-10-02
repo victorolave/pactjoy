@@ -51,17 +51,17 @@ describe("withdrawApproval", () => {
       expectedPactRevision: season.pactRevision,
     });
     if (!approved.ok) throw new Error("fixture setup failed");
-    expect(approved.value.approvals).toHaveLength(1);
+    expect(approved.value.season.approvals).toHaveLength(1);
 
     const result = await withdrawApproval(app, actorFor("user-andrea"), {
-      seasonId: approved.value.id,
+      seasonId: approved.value.season.id,
     });
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.value.approvals).toHaveLength(0);
-    expect(result.value.status).toBe("pactOpen");
-    expect(result.value.pactRevision).toBe(season.pactRevision);
+    expect(result.value.season.approvals).toHaveLength(0);
+    expect(result.value.season.status).toBe("pactOpen");
+    expect(result.value.season.pactRevision).toBe(season.pactRevision);
   });
 
   it("PA-4: withdrawing after the pact has already closed is rejected", async () => {
@@ -81,14 +81,14 @@ describe("withdrawApproval", () => {
     });
     if (!firstApproval.ok) throw new Error("fixture setup failed");
     const closed = await approvePact(app, actorFor("user-victor"), {
-      seasonId: firstApproval.value.id,
-      expectedPactRevision: firstApproval.value.pactRevision,
+      seasonId: firstApproval.value.season.id,
+      expectedPactRevision: firstApproval.value.season.pactRevision,
     });
     if (!closed.ok) throw new Error("fixture setup failed");
-    expect(closed.value.status).toBe("active");
+    expect(closed.value.season.status).toBe("active");
 
     const result = await withdrawApproval(app, actorFor("user-andrea"), {
-      seasonId: closed.value.id,
+      seasonId: closed.value.season.id,
     });
 
     expect(result).toEqual({ ok: false, error: { kind: "PactAlreadyClosed" } });
@@ -123,7 +123,7 @@ describe("withdrawApproval", () => {
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.value).toEqual(season);
+    expect(result.value.season).toEqual(season);
     const stored = await app.uow.read((repos) => repos.seasons.get(season.id));
     expect(stored).toEqual(season);
     expect(stored?.version).toBe(season.version);
@@ -144,9 +144,9 @@ describe("withdrawApproval", () => {
 
     expect(second.ok).toBe(true);
     if (!second.ok) return;
-    expect(second.value.version).toBe(first.value.version);
+    expect(second.value.season.version).toBe(first.value.season.version);
     expect((await app.uow.read((repos) => repos.seasons.get(season.id)))?.version).toBe(
-      first.value.version,
+      first.value.season.version,
     );
   });
 });

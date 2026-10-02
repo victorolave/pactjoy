@@ -174,7 +174,7 @@ describe("leaveCircle", () => {
 
       expect(result.ok && result.value.archivedAt).toBe(NOW);
       const stored = await app.uow.read((repos) => repos.seasons.get(season.id));
-      expect(stored).toEqual(closed.value);
+      expect(stored).toEqual(closed.value.season);
     });
   });
 });
