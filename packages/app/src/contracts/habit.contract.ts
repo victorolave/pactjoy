@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Habit } from "../habit/habit.ts";
 import { ConcurrencyConflict } from "../shared/errors.ts";
+import { habitId } from "../shared/ids.ts";
 import { ok } from "../shared/result.ts";
 import { instant } from "../time/instant.ts";
 import { type ContractSubject, HABIT, type HabitRepositories } from "./fixtures.ts";
@@ -82,6 +83,56 @@ export function describeHabitRepositoryContract(
       };
       await saveHabit(uow, habit, null);
       expect(await readHabit(uow)).toEqual(habit);
+    });
+
+    describe("getMany (HG-S1..S3)", () => {
+      const H2 = { ...HABIT, id: habitId("00000000-0000-4000-8000-0000000000d2"), name: "Two" };
+      const H3 = { ...HABIT, id: habitId("00000000-0000-4000-8000-0000000000d3"), name: "Three" };
+      const UNKNOWN = habitId("00000000-0000-4000-8000-0000000000d9");
+      const byId = (a: Habit, b: Habit) => a.id.localeCompare(b.id);
+
+      async function seed(uow: Uow): Promise<void> {
+        await saveHabit(uow, HABIT, null);
+        await saveHabit(uow, H2, null);
+        await saveHabit(uow, H3, null);
+      }
+
+      it("HG-S1 returns the habits that exist and skips unknown ids", async () => {
+        const { uow } = await factory();
+        await seed(uow);
+        const found = await uow.read(({ habits }) => habits.getMany([HABIT.id, UNKNOWN, H3.id]));
+        expect([...found].sort(byId)).toEqual([HABIT, H3]);
+      });
+
+      it("HG-S2 returns [] for no ids", async () => {
+        const { uow } = await factory();
+        await seed(uow);
+        expect(await uow.read(({ habits }) => habits.getMany([]))).toEqual([]);
+      });
+
+      it("HG-S3 returns each habit once when ids repeat", async () => {
+        const { uow } = await factory();
+        await seed(uow);
+        const found = await uow.read(({ habits }) =>
+          habits.getMany([H2.id, H2.id, HABIT.id, H2.id]),
+        );
+        expect([...found].sort(byId)).toEqual([HABIT, H2]);
+      });
+
+      it("returns [] when every id is unknown", async () => {
+        const { uow } = await factory();
+        expect(await uow.read(({ habits }) => habits.getMany([UNKNOWN]))).toEqual([]);
+      });
+
+      it("inside a transaction it sees its own staged writes over the store", async () => {
+        const { uow } = await factory();
+        await saveHabit(uow, HABIT, null);
+        const seen = await uow.transaction(async ({ habits }) => {
+          await habits.save(H2, null);
+          return ok(await habits.getMany([HABIT.id, H2.id]));
+        });
+        expect([...(seen as { value: readonly Habit[] }).value].sort(byId)).toEqual([HABIT, H2]);
+      });
     });
   });
 }

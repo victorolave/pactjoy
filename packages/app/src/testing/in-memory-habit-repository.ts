@@ -36,9 +36,22 @@ export interface InMemoryHabitRepository extends HabitRepository {
 export function createInMemoryHabitRepository(): InMemoryHabitRepository {
   const store = new Map<HabitId, Habit>();
 
+  function pick(ids: readonly HabitId[], read: (id: HabitId) => Habit | null): readonly Habit[] {
+    const found: Habit[] = [];
+    for (const id of new Set(ids)) {
+      const habit = read(id);
+      if (habit) found.push(habit);
+    }
+    return found;
+  }
+
   return {
     async get(id: HabitId): Promise<Habit | null> {
       return store.get(id) ?? null;
+    },
+
+    async getMany(ids: readonly HabitId[]): Promise<readonly Habit[]> {
+      return pick(ids, (id) => store.get(id) ?? null);
     },
 
     async save(habit: Habit, expectedVersion: number | null): Promise<void> {
@@ -60,6 +73,10 @@ export function createInMemoryHabitRepository(): InMemoryHabitRepository {
       const repository: HabitRepository = {
         async get(id: HabitId): Promise<Habit | null> {
           return view(id);
+        },
+
+        async getMany(ids: readonly HabitId[]): Promise<readonly Habit[]> {
+          return pick(ids, view);
         },
 
         async save(habit: Habit, expectedVersion: number | null): Promise<void> {

@@ -18,25 +18,40 @@ interface HabitRow {
   version: number;
 }
 
+const COLUMNS = "id, owner_id, name, why, category, created_at, version";
+
+function toHabit(row: HabitRow): Habit {
+  return {
+    id: habitId(row.id),
+    ownerId: userId(row.owner_id),
+    name: row.name,
+    why: row.why,
+    category: row.category,
+    createdAt: row.created_at,
+    version: row.version,
+  };
+}
+
 /** Ids bind as text and Postgres infers uuid from the column; a non-uuid id is a raw error (HP-S11). */
 export function createPgHabitRepository(exec: SqlExecutor): HabitRepository {
   return {
     async get(id) {
       const { rows } = await exec.query<HabitRow>(
-        "select id, owner_id, name, why, category, created_at, version from pactjoy.habits where id = $1",
+        `select ${COLUMNS} from pactjoy.habits where id = $1`,
         [id],
       );
       const row = rows[0];
-      if (!row) return null;
-      return {
-        id: habitId(row.id),
-        ownerId: userId(row.owner_id),
-        name: row.name,
-        why: row.why,
-        category: row.category,
-        createdAt: row.created_at,
-        version: row.version,
-      };
+      return row ? toHabit(row) : null;
+    },
+
+    // A single query; `= any` already collapses repeated ids. No query at all for no ids.
+    async getMany(ids) {
+      if (ids.length === 0) return [];
+      const { rows } = await exec.query<HabitRow>(
+        `select ${COLUMNS} from pactjoy.habits where id = any($1::uuid[])`,
+        [[...ids]],
+      );
+      return rows.map(toHabit);
     },
 
     async save(habit: Habit, expectedVersion) {
