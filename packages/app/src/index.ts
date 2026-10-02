@@ -181,3 +181,12 @@ export type { SeasonDayResult } from "./time/season-calendar.ts";
 export { localDateOfSeasonDay, toSeasonDay } from "./time/season-calendar.ts";
 export type { TimeZone, TimeZoneId } from "./time/time-zone.port.ts";
 export { timeZoneId } from "./time/time-zone.port.ts";
+export type {
+  TodayBase,
+  TodayCircle,
+  TodayDeps,
+  TodaySeason,
+  TodaySummary,
+  TodayView,
+} from "./today/today.query.ts";
+export { today } from "./today/today.query.ts";
