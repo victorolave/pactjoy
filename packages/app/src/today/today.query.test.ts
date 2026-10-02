@@ -3,10 +3,18 @@ import { describe, expect, it } from "vitest";
 import { memberId } from "../circle/circle.ts";
 import type { Measure } from "../commitment/commitment.ts";
 import { buildCommitment, commitmentId } from "../commitment/commitment.ts";
+import { recordEntry } from "../entry/record-entry.ts";
+import { memberScore } from "../score/member-score.query.ts";
+import { startWeekdayOf } from "../score/score-input.ts";
 import { circleId, habitId, seasonId, userId } from "../shared/ids.ts";
 import { createTestApp, type TestApp } from "../testing/app-harness.ts";
 import { circleFixture, memberFixture, seasonFixture } from "../testing/builders.ts";
-import { fixtureTimeZone, givenActiveSeason, localInstant } from "../testing/entry-fixtures.ts";
+import {
+  atInstant,
+  fixtureTimeZone,
+  givenActiveSeason,
+  localInstant,
+} from "../testing/entry-fixtures.ts";
 import { epochDay, type LocalDate, localDate, localDateOfEpochDay } from "../time/local-date.ts";
 import { timeZoneId } from "../time/time-zone.port.ts";
 import { today } from "./today.query.ts";
@@ -31,7 +39,7 @@ async function setup(status: "pactOpen" | "active" | "closed", clockDate = DAY(0
 }
 
 /** A season whose pact closed late (B3): nominalStart is D0 but it began on D0+3. */
-async function setupLateStart(clockDate: LocalDate) {
+async function setupLateStart(clockDate: LocalDate, measure: Measure = DAILY_REACH) {
   const app = createTestApp({ now: localInstant(clockDate), timeZone: fixtureTimeZone });
   const andrea = memberFixture({
     id: ANDREA,
@@ -53,7 +61,7 @@ async function setupLateStart(clockDate: LocalDate) {
         habitId: habitId("habit-andrea"),
         weightPercent: 100,
         privacy: "visible",
-        measure: DAILY_REACH,
+        measure,
       }),
     ],
   });
@@ -188,6 +196,39 @@ describe("today: states (TD-R2, TD-R3)", () => {
 
     const after = await setupLateStart(DAY(31));
     expect(await today(after.app, after.actor)).toMatchObject({ state: "ended" });
+  });
+
+  it("B3: the summary score weekdays are counted from actualStart", async () => {
+    // Scheduled on the weekdays of season days 0 and 1; nominalStart is 3 days earlier, so
+    // counting weekdays from it would move both slots (and the entry's slot) to other days.
+    const onActualStartWeekday: Measure = {
+      ...DAILY_REACH,
+      schedule: {
+        period: "perSession",
+        frequency: {
+          kind: "specificDays",
+          weekdays: [startWeekdayOf(DAY(3)), startWeekdayOf(DAY(4))],
+        },
+      },
+    };
+    const { app, actor } = await setupLateStart(DAY(3), onActualStartWeekday);
+    const recorded = await recordEntry(app, actor, {
+      seasonId: seasonId("season-1"),
+      commitmentId: commitmentId("commitment-andrea"),
+      value: { kind: "quantity", value: "30" },
+      clientRequestId: "r-late-start",
+    });
+    expect(recorded.ok).toBe(true);
+
+    // Day 2: the first slot is filled, the second was missed.
+    const later = atInstant(app, localInstant(DAY(5)));
+    const view = await today(later, actor);
+    const score = await memberScore(later, actor, { seasonId: seasonId("season-1") });
+    expect(score).toMatchObject({ ok: true, value: { kind: "scored", points: 125 } });
+    expect(view).toMatchObject({
+      state: "active",
+      summary: { score: score.ok ? score.value : null },
+    });
   });
 
   it("an ended season stays ended long after its last day", async () => {
