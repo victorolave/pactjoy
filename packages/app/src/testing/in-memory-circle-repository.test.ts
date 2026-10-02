@@ -14,6 +14,7 @@ function buildFixtureCircle(id = "circle-1", user = "user-andrea") {
     name: "Río Runners",
     creatorId: memberId("member-1"),
     creatorUserId: userId(user),
+    creatorDisplayName: "Andrea",
     now: NOW,
   });
   if (!result.ok) throw new Error("fixture setup failed");

@@ -18,6 +18,7 @@ const T0 = instant(1_700_000_000_000);
 const memberOf = (n: number) => ({
   id: memberId(uuid(0x100 + n)),
   userId: userId(uuid(0x200 + n)),
+  displayName: `Member ${n}`,
   status: "active" as const,
   joinedAt: T0,
   leftAt: null,
@@ -125,7 +126,7 @@ describe("circle guardVersion on Postgres", () => {
       await a.ready();
       await within(
         admin.unsafe(
-          "insert into pactjoy.circle_members (id, circle_id, position, user_id, status, joined_at) values ($1, $2, 1, $3, 'active', now())",
+          "insert into pactjoy.circle_members (id, circle_id, position, user_id, display_name, status, joined_at) values ($1, $2, 1, $3, 'Raw', 'active', now())",
           [memberOf(2).id, C.id, memberOf(2).userId],
         ),
       );

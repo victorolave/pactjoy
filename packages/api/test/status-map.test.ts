@@ -45,9 +45,9 @@ function errorCoverageGaps(index: string, source: string) {
 }
 
 describe("app error status map", () => {
-  it("EM-S1..S5: 58 kinds, 33x422 4x403 6x404 14x409 1x410", () => {
-    expect(KINDS).toHaveLength(58);
-    expect(kindsWith(422)).toHaveLength(33);
+  it("EM-S1..S5: 59 kinds, 34x422 4x403 6x404 14x409 1x410", () => {
+    expect(KINDS).toHaveLength(59);
+    expect(kindsWith(422)).toHaveLength(34);
     expect(kindsWith(403)).toEqual([
       "CommitmentNotOwned",
       "EntryNotOwned",

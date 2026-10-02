@@ -21,6 +21,7 @@ const DEFAULT_INSTANT: Instant = instant(1_700_000_000_000);
 export interface MemberFixtureOptions {
   readonly id: MemberId;
   readonly userId: UserId;
+  readonly displayName?: string;
   readonly status?: "active" | "left";
   readonly joinedAt?: Instant;
   readonly leftAt?: Instant | null;
@@ -31,6 +32,7 @@ export function memberFixture(options: MemberFixtureOptions): Member {
   return {
     id: options.id,
     userId: options.userId,
+    displayName: options.displayName ?? `Member ${options.id.slice(-12)}`,
     status: options.status ?? "active",
     joinedAt: options.joinedAt ?? DEFAULT_INSTANT,
     leftAt: options.leftAt ?? null,

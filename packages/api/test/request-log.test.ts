@@ -218,7 +218,7 @@ describe("full pipeline logging (createApi)", () => {
       new Request("http://x/api/circles", {
         method: "POST",
         headers: { authorization: "Bearer andrea", "content-type": "application/json" },
-        body: JSON.stringify({ name: "c" }),
+        body: JSON.stringify({ name: "c", displayName: "Ana" }),
       }),
     );
 

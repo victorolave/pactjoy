@@ -6,6 +6,7 @@ import type { Actor } from "../shared/actor.ts";
 import { err, ok, type Result } from "../shared/result.ts";
 import type { Clock } from "../time/clock.port.ts";
 import { activeMembers, type Circle, MAX_MEMBERS, type Member, memberId } from "./circle.ts";
+import { normalizeDisplayName } from "./display-name.ts";
 import { normalizeInviteCode } from "./invite-code.ts";
 import { canJoinCircle } from "./season-gate.ts";
 
@@ -17,6 +18,7 @@ export interface JoinCircleDeps {
 
 export interface JoinCircleInput {
   readonly inviteCode: string;
+  readonly displayName: string;
 }
 
 export type JoinCircleError =
@@ -25,7 +27,8 @@ export type JoinCircleError =
   | { readonly kind: "CircleArchived" }
   | { readonly kind: "AlreadyInActiveCircle" }
   | { readonly kind: "SeasonNotJoinable" }
-  | { readonly kind: "CircleFull" };
+  | { readonly kind: "CircleFull" }
+  | { readonly kind: "InvalidDisplayName" };
 
 /**
  * Joins a circle via a valid, unexpired invite code (CM-3..CM-5, CM-9..
@@ -73,9 +76,15 @@ export async function joinCircle(
       return err({ kind: "CircleFull" });
     }
 
+    const displayName = normalizeDisplayName(input.displayName);
+    if (displayName === null) {
+      return err({ kind: "InvalidDisplayName" });
+    }
+
     const newMember: Member = {
       id: memberId(deps.ids.next()),
       userId: actor.userId,
+      displayName,
       status: "active",
       joinedAt: now,
       leftAt: null,

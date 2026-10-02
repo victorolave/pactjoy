@@ -68,13 +68,18 @@ describe("HTTP over Postgres: concurrency", () => {
         "POST",
         "/circles/join",
         joiner,
-        joinCircleBody(invite.json.data.code),
+        joinCircleBody(invite.json.data.code, `Joiner ${joiner}`),
       );
       expect(joined.status).toBe(200);
     }
     const race = await Promise.all(
       ["u6", "u7"].map((joiner) =>
-        call("POST", "/circles/join", joiner, joinCircleBody(invite.json.data.code)),
+        call(
+          "POST",
+          "/circles/join",
+          joiner,
+          joinCircleBody(invite.json.data.code, `Joiner ${joiner}`),
+        ),
       ),
     );
     expect(statuses(race)).toEqual([200, 409]);

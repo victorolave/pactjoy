@@ -65,7 +65,12 @@ describe("createPostgresUnitOfWork", () => {
   });
 
   it("DC-S3/S10: createCircle and createHabit succeed with v7 ids that uuid columns accept", async () => {
-    const circle = must(await createCircle({ uow, ids, clock }, andrea, { name: "Rio Runners" }));
+    const circle = must(
+      await createCircle({ uow, ids, clock }, andrea, {
+        name: "Rio Runners",
+        displayName: "Andrea",
+      }),
+    );
     const habit = must(await createHabit({ uow, ids, clock }, andrea, { name: "Run" }));
     expect(circle.id).toMatch(UUID_V7);
     expect(habit.id).toMatch(UUID_V7);
@@ -74,7 +79,9 @@ describe("createPostgresUnitOfWork", () => {
 
   it("DC-S13: runs the real use cases end to end and scores with no pauses", async () => {
     const deps = { uow, ids, clock, timeZone };
-    const circle = must(await createCircle(deps, andrea, { name: "Rio Runners" }));
+    const circle = must(
+      await createCircle(deps, andrea, { name: "Rio Runners", displayName: "Andrea" }),
+    );
     const created = must(
       await createSeason(deps, andrea, {
         circleId: circle.id,

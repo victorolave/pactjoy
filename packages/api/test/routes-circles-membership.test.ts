@@ -1,4 +1,4 @@
-import { seasonId } from "@pactjoy/app";
+import { type CircleId, seasonId } from "@pactjoy/app";
 import { seasonFixture } from "@pactjoy/app/testing";
 import { describe, expect, it, vi } from "vitest";
 import { createCircleBody, joinCircleBody } from "../src/testing/index.ts";
@@ -15,18 +15,49 @@ async function givenInvitedCircle() {
 
 describe("POST /circles/join (UE-C-S6..S8)", () => {
   it("S6: 200 joins with the code in the body; lowercase and padded codes are accepted", async () => {
-    const { call, code } = await givenInvitedCircle();
+    const { app, call, code, circleId } = await givenInvitedCircle();
     const { status, json } = await call("POST", "/circles/join", "victor", {
       inviteCode: ` ${code.toLowerCase()} `,
+      displayName: "  Vic ",
     });
     expect(status).toBe(200);
     expect(json.data.members).toHaveLength(2);
+    expect((await app.circles.get(circleId as CircleId))?.members[1]?.displayName).toBe("Vic");
     expect(json.data.invite.code).toBe(code); // the joiner is an active viewer, so the invite shows
     expect(Object.keys(json.data.invite).sort()).toEqual(["code", "createdAt", "expiresAt"]);
     expect(json.data.invite).not.toHaveProperty("createdBy");
     expect(json.data.members.filter((m: { isYou: boolean }) => m.isYou)).toHaveLength(1);
     expect(JSON.stringify(json)).not.toContain(VICTOR);
   });
+
+  it("UE-C-S13: a blank or 31 code point display name is InvalidDisplayName 422", async () => {
+    const { call, code } = await givenInvitedCircle();
+    for (const displayName of ["   ", "a".repeat(31)]) {
+      const { status, json } = await call("POST", "/circles/join", "victor", {
+        inviteCode: code,
+        displayName,
+      });
+      expect([status, json.error.code]).toEqual([422, "InvalidDisplayName"]);
+    }
+  });
+
+  it.each([
+    ["not a string", { displayName: 5 }, "type"],
+    ["missing", {}, "required"],
+  ])(
+    "UE-C-S14 / RV-R11: displayName %s is InvalidRequest, use case not called",
+    async (_label, extra, problem) => {
+      const { call, code, transaction } = await givenInvitedCircle();
+      transaction.mockClear();
+      const { status, json } = await call("POST", "/circles/join", "victor", {
+        inviteCode: code,
+        ...extra,
+      });
+      expect([status, json.error.code]).toEqual([422, "InvalidRequest"]);
+      expect(json.error.details.issues).toContainEqual({ path: "displayName", problem });
+      expect(transaction).not.toHaveBeenCalled();
+    },
+  );
 
   it("S7: 404 InviteNotFound for a well-formed code nobody owns", async () => {
     const { call } = await givenInvitedCircle();
@@ -114,7 +145,11 @@ describe("POST /circles/join (UE-C-S6..S8)", () => {
     ["oversized", { inviteCode: "A".repeat(65) }, "format"],
     ["not a string", { inviteCode: 123456 }, "type"],
     ["missing", {}, "required"],
-    ["unknown field", { inviteCode: "AAAAAA", circleId: UNKNOWN_CIRCLE }, "unknownField"],
+    [
+      "unknown field",
+      { inviteCode: "AAAAAA", displayName: "Vic", circleId: UNKNOWN_CIRCLE },
+      "unknownField",
+    ],
     ["no body", undefined, "required"],
   ])(
     "RV-S18..S20: 422 InvalidRequest on %s; the invite lookup never runs",

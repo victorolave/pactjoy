@@ -31,7 +31,11 @@ const DONE_MEASURE = {
 async function joinCircleAs(app: TestApp, circleId: CircleId, actorId: string) {
   const invite = await generateInvite(app, actorFor("user-andrea"), { circleId });
   if (!invite.ok) throw new Error("fixture setup failed");
-  const joined = await joinCircle(app, actorFor(actorId), joinCircleInput(invite.value.code));
+  const joined = await joinCircle(
+    app,
+    actorFor(actorId),
+    joinCircleInput(invite.value.code, actorId),
+  );
   if (!joined.ok) throw new Error("fixture setup failed");
   return joined.value;
 }

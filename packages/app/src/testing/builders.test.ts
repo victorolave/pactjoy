@@ -11,6 +11,7 @@ describe("memberFixture", () => {
     expect(member).toEqual({
       id: "member-1",
       userId: "user-andrea",
+      displayName: "Member member-1",
       status: "active",
       joinedAt: instant(1_700_000_000_000),
       leftAt: null,
@@ -19,9 +20,11 @@ describe("memberFixture", () => {
     const left = memberFixture({
       id: memberId("member-2"),
       userId: userId("user-victor"),
+      displayName: "Vic",
       status: "left",
       leftAt: instant(1_700_000_100_000),
     });
+    expect(left.displayName).toBe("Vic");
     expect(left.status).toBe("left");
     expect(left.leftAt).toBe(1_700_000_100_000);
   });

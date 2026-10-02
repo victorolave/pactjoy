@@ -1,0 +1,24 @@
+-- PactJoy: a display name per circle member (change circle-display-names, CP-R10).
+--
+-- Each member chooses the name others see in one circle; there is no global
+-- profile. The column is `not null` with no default: the app always supplies it.
+--
+-- Forward-only, with NO backfill. `add column ... not null` fails if
+-- `circle_members` already has rows. A dev reset is accepted (no hosted
+-- database holds data yet); do not apply this to one that does.
+--
+-- No check constraint and no unique index: validation (trim, non-empty, at most
+-- 30 code points) and "unique among active members, case-insensitive" are app
+-- rules, serialized by the circle version guard. A lowercased NFC key cannot be
+-- expressed portably as a partial index, and no business logic lives in Postgres.
+-- Two members may therefore hold the same value at the DB level.
+--
+-- The column stays overwritable: a later change (Q1, account deletion) will
+-- anonymize it with a plain UPDATE.
+--
+-- Rollback: a forward migration `..._drop_circle_members_display_name.sql`
+-- (`alter table pactjoy.circle_members drop column display_name`), or a dev
+-- reset. Without it, reverting the code makes every insert fail on `not null`.
+-- No grant is needed: the table-level privileges were revoked in 000500.
+
+alter table pactjoy.circle_members add column display_name text not null;

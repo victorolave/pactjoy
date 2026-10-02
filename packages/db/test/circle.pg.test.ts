@@ -20,6 +20,7 @@ const T0 = instant(1_700_000_000_000);
 const member = (n: number) => ({
   id: memberId(uuid(0x100 + n)),
   userId: userId(uuid(0x200 + n)),
+  displayName: `Member ${n}`,
   status: "active" as const,
   joinedAt: T0,
   leftAt: null,
@@ -66,7 +67,7 @@ const within = <T>(promise: Promise<T>, ms: number) =>
 
 const rawInsertMember = (c: Circle, n: number, position: number) =>
   admin.unsafe(
-    "insert into pactjoy.circle_members (id, circle_id, position, user_id, status, joined_at) values ($1, $2, $3, $4, 'active', now())",
+    "insert into pactjoy.circle_members (id, circle_id, position, user_id, display_name, status, joined_at) values ($1, $2, $3, $4, 'Raw', 'active', now())",
     [member(n).id, c.id, position, member(n).userId],
   );
 
@@ -94,7 +95,7 @@ describe("circle repository on Postgres", () => {
     await save(b, null);
     const error = await admin
       .unsafe(
-        "insert into pactjoy.circle_members (id, circle_id, position, user_id, status, joined_at) values ($1, $2, 0, $3, 'active', now())",
+        "insert into pactjoy.circle_members (id, circle_id, position, user_id, display_name, status, joined_at) values ($1, $2, 0, $3, 'Raw', 'active', now())",
         [member(9).id, b.id, member(1).userId],
       )
       .catch((e) => e);
@@ -111,7 +112,7 @@ describe("circle repository on Postgres", () => {
     for (const x of [a, b, c]) await save(x, null);
     const insert = (n: number, circleRow: Circle, status: "active" | "left") =>
       admin.unsafe(
-        "insert into pactjoy.circle_members (id, circle_id, position, user_id, status, joined_at, left_at) values ($1, $2, 0, $3, $4, now(), case when $4 = 'left' then now() end)",
+        "insert into pactjoy.circle_members (id, circle_id, position, user_id, display_name, status, joined_at, left_at) values ($1, $2, 0, $3, 'Raw', $4, now(), case when $4 = 'left' then now() end)",
         [member(n).id, circleRow.id, member(1).userId, status],
       );
     await insert(11, a, "left");
@@ -122,6 +123,28 @@ describe("circle repository on Postgres", () => {
       [member(1).userId],
     );
     expect(rows[0]?.n).toBe(3);
+  });
+
+  it("CP-S24 (display names): a member row without display_name is rejected as not-null", async () => {
+    const c = circle(1);
+    await save(c, null);
+    const error = await admin
+      .unsafe(
+        "insert into pactjoy.circle_members (id, circle_id, position, user_id, status, joined_at, display_name) values ($1, $2, 1, $3, 'active', now(), null)",
+        [member(2).id, c.id, member(2).userId],
+      )
+      .catch((e) => e);
+    expect(error).toMatchObject({ code: "23502", column_name: "display_name" });
+  });
+
+  it("CP-S25 (display names): two members of one circle may hold equal display names at the DB level", async () => {
+    const c = circle(1, { members: [member(1), member(2)] });
+    await save(c, null);
+    await admin.unsafe(
+      "update pactjoy.circle_members set display_name = 'Same' where circle_id = $1",
+      [c.id],
+    );
+    expect((await load(c))?.members.map((m) => m.displayName)).toEqual(["Same", "Same"]);
   });
 
   it("CP-S25: the active-user index is unique and partial, and the old non-unique one is gone", async () => {
@@ -139,7 +162,7 @@ describe("circle repository on Postgres", () => {
     const insert = (status: string, leftAt: string | null) =>
       admin
         .unsafe(
-          "insert into pactjoy.circle_members (id, circle_id, position, user_id, status, joined_at, left_at) values ($1, $2, 1, $3, $4, now(), $5::timestamptz)",
+          "insert into pactjoy.circle_members (id, circle_id, position, user_id, display_name, status, joined_at, left_at) values ($1, $2, 1, $3, 'Raw', $4, now(), $5::timestamptz)",
           [member(2).id, c.id, member(2).userId, status, leftAt],
         )
         .catch((e) => e);
