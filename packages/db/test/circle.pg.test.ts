@@ -87,6 +87,52 @@ describe("circle repository on Postgres", () => {
     expect(error).toMatchObject({ code: "23505", constraint_name: "circle_members_position_key" });
   });
 
+  it("CP-S22: a raw second active row for one user is rejected on circle_members_active_user_key", async () => {
+    const a = circle(1);
+    const b = circle(2, { members: [] });
+    await save(a, null);
+    await save(b, null);
+    const error = await admin
+      .unsafe(
+        "insert into pactjoy.circle_members (id, circle_id, position, user_id, status, joined_at) values ($1, $2, 0, $3, 'active', now())",
+        [member(9).id, b.id, member(1).userId],
+      )
+      .catch((e) => e);
+    expect(error).toMatchObject({
+      code: "23505",
+      constraint_name: "circle_members_active_user_key",
+    });
+  });
+
+  it("CP-S23: a left row plus an active row, and several left rows, are allowed for one user", async () => {
+    const a = circle(1, { members: [] });
+    const b = circle(2, { members: [] });
+    const c = circle(3, { members: [] });
+    for (const x of [a, b, c]) await save(x, null);
+    const insert = (n: number, circleRow: Circle, status: "active" | "left") =>
+      admin.unsafe(
+        "insert into pactjoy.circle_members (id, circle_id, position, user_id, status, joined_at, left_at) values ($1, $2, 0, $3, $4, now(), case when $4 = 'left' then now() end)",
+        [member(n).id, circleRow.id, member(1).userId, status],
+      );
+    await insert(11, a, "left");
+    await insert(12, b, "left");
+    await insert(13, c, "active");
+    const rows = await admin.unsafe(
+      "select count(*)::int as n from pactjoy.circle_members where user_id = $1",
+      [member(1).userId],
+    );
+    expect(rows[0]?.n).toBe(3);
+  });
+
+  it("CP-S25: the active-user index is unique and partial, and the old non-unique one is gone", async () => {
+    const rows = await admin.unsafe(
+      "select indexname, indexdef from pg_indexes where schemaname = 'pactjoy' and tablename = 'circle_members' and indexname in ('circle_members_active_user_key', 'circle_members_active_user_idx')",
+    );
+    expect(rows.map((r) => r.indexname)).toEqual(["circle_members_active_user_key"]);
+    expect(rows[0]?.indexdef).toContain("CREATE UNIQUE INDEX");
+    expect(rows[0]?.indexdef).toContain("WHERE (status = 'active'");
+  });
+
   it("a member is left exactly when left_at is set (circle_members_left_at_check)", async () => {
     const c = circle(1);
     await save(c, null);

@@ -8,6 +8,7 @@ import { circleId, userId } from "../shared/ids.ts";
 import { ok } from "../shared/result.ts";
 import { circleFixture, memberFixture } from "../testing/builders.ts";
 import { instant } from "../time/instant.ts";
+import { deferred } from "./deferred.ts";
 import { CIRCLE, type ContractSubject } from "./fixtures.ts";
 
 type CircleRepositories = Pick<Repositories, "circles">;
@@ -185,6 +186,92 @@ export function describeCircleRepositoryContract(
       expect(await read(uow, (c) => c.findActiveByUser(active.userId))).toEqual(circle);
       expect(await read(uow, (c) => c.findActiveByUser(left.userId))).toBeNull();
       expect(await read(uow, (c) => c.findActiveByUser(userId(uuid(0x2ff))))).toBeNull();
+    });
+
+    it("CM-18/CP-S26: a save giving a user a second active membership conflicts and saves nothing", async () => {
+      const { uow } = await factory();
+      const shared = member(1);
+      await saveCircle(uow, circleFixture({ id: CIRCLE.id, members: [shared] }), null);
+      const second = circleFixture({
+        id: OTHER_CIRCLE_ID,
+        members: [member(2, { userId: shared.userId })],
+      });
+      await expect(saveCircle(uow, second, null)).rejects.toBeInstanceOf(ConcurrencyConflict);
+      expect(await read(uow, (c) => c.get(OTHER_CIRCLE_ID))).toBeNull();
+    });
+
+    it("CP-S29: after the winner committed, the loser's retry sees the winner's circle", async () => {
+      const { uow } = await factory();
+      const shared = member(1);
+      const winner = circleFixture({ id: CIRCLE.id, members: [shared] });
+      await saveCircle(uow, winner, null);
+      const loser = circleFixture({
+        id: OTHER_CIRCLE_ID,
+        members: [member(2, { userId: shared.userId })],
+      });
+      await expect(saveCircle(uow, loser, null)).rejects.toBeInstanceOf(ConcurrencyConflict);
+      expect(await read(uow, (c) => c.findActiveByUser(shared.userId))).toEqual(winner);
+    });
+
+    it("CM-18: a user who left circle A may be active in circle B", async () => {
+      const { uow } = await factory();
+      const left = member(1, { status: "left", leftAt: instant(9) });
+      await saveCircle(uow, circleFixture({ id: CIRCLE.id, members: [member(2), left] }), null);
+      const active = circleFixture({
+        id: OTHER_CIRCLE_ID,
+        members: [member(3, { userId: left.userId })],
+      });
+      await saveCircle(uow, active, null);
+      expect(await read(uow, (c) => c.findActiveByUser(left.userId))).toEqual(active);
+    });
+
+    it("CM-18: re-saving a circle with the same active user (v0 to v1) succeeds", async () => {
+      const { uow } = await factory();
+      const shared = member(1);
+      const v0 = circleFixture({ id: CIRCLE.id, members: [shared] });
+      await saveCircle(uow, v0, null);
+      const v1 = { ...v0, name: "renamed", members: [shared, member(2)], version: 1 };
+      await saveCircle(uow, v1, 0);
+      expect(await getCircle(uow)).toEqual(v1);
+    });
+
+    it("CM-18/CP-S26: of two open transactions giving a user an active membership in different circles, exactly one commits", async () => {
+      const { uow } = await factory();
+      const userA = member(1);
+      const first = circleFixture({ id: CIRCLE.id, members: [userA] });
+      const second = circleFixture({
+        id: OTHER_CIRCLE_ID,
+        members: [member(2, { userId: userA.userId })],
+      });
+      const saved = deferred();
+      const release = deferred();
+      const one = uow.transaction(async ({ circles }) => {
+        await circles.save(first, null);
+        saved.resolve();
+        await release.promise;
+        return ok(undefined);
+      });
+      one.catch(() => undefined);
+      let two: Promise<unknown> = Promise.resolve();
+      try {
+        await Promise.race([saved.promise, one]);
+        // May block on the first one's index entry: do not await yet.
+        two = saveCircle(uow, second, null);
+        two.catch(() => undefined);
+        release.resolve();
+        const settled = await Promise.allSettled([one, two]);
+        expect(settled.map((s) => s.status).sort()).toEqual(["fulfilled", "rejected"]);
+        const rejected = settled.find((s) => s.status === "rejected");
+        expect(rejected?.status === "rejected" && rejected.reason).toBeInstanceOf(
+          ConcurrencyConflict,
+        );
+        // Which one wins depends on the adapter's locking; the winner's circle is the one stored.
+        const winner = settled[0]?.status === "fulfilled" ? first : second;
+        expect(await read(uow, (c) => c.findActiveByUser(userA.userId))).toEqual(winner);
+      } finally {
+        release.resolve();
+        await Promise.allSettled([one, two]);
+      }
     });
   });
 }

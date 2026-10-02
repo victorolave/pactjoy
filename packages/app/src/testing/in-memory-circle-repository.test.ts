@@ -8,12 +8,12 @@ import { createInMemoryCircleRepository } from "./in-memory-circle-repository.ts
 
 const NOW = instant(1_700_000_000_000);
 
-function buildFixtureCircle(id = "circle-1") {
+function buildFixtureCircle(id = "circle-1", user = "user-andrea") {
   const result = buildCircle({
     id: circleId(id),
     name: "Río Runners",
     creatorId: memberId("member-1"),
-    creatorUserId: userId("user-andrea"),
+    creatorUserId: userId(user),
     now: NOW,
   });
   if (!result.ok) throw new Error("fixture setup failed");
@@ -97,8 +97,8 @@ describe("createInMemoryCircleRepository", () => {
 
     it("validate()+apply() applies every staged write together when all versions still match", async () => {
       const repo = createInMemoryCircleRepository();
-      const x = buildFixtureCircle("circle-x");
-      const y = buildFixtureCircle("circle-y");
+      const x = buildFixtureCircle("circle-x", "user-x");
+      const y = buildFixtureCircle("circle-y", "user-y");
       await repo.save(x, null);
       await repo.save(y, null);
 
@@ -114,8 +114,8 @@ describe("createInMemoryCircleRepository", () => {
 
     it("D5/atomicity: if ANY staged aggregate's version has moved on, validate() throws and apply() is never reached -- no partial commit", async () => {
       const repo = createInMemoryCircleRepository();
-      const x = buildFixtureCircle("circle-x");
-      const y = buildFixtureCircle("circle-y");
+      const x = buildFixtureCircle("circle-x", "user-x");
+      const y = buildFixtureCircle("circle-y", "user-y");
       await repo.save(x, null);
       await repo.save(y, null);
 
@@ -148,5 +148,29 @@ describe("createInMemoryCircleRepository", () => {
       expect(() => b.validate()).toThrow(ConcurrencyConflict);
       expect((await repo.get(circle.id))?.name).toBe("A wins");
     });
+
+    it("CM-18: of two open transactions giving one user an active membership, the second commit throws", async () => {
+      const repo = createInMemoryCircleRepository();
+      const first = repo.beginTransaction();
+      const second = repo.beginTransaction();
+      await first.repository.save(buildFixtureCircle("circle-1"), null);
+      await second.repository.save(buildFixtureCircle("circle-2"), null);
+
+      first.validate();
+      first.apply();
+
+      expect(() => second.validate()).toThrow(ConcurrencyConflict);
+      expect(await repo.get(circleId("circle-2"))).toBeNull();
+    });
+  });
+
+  it("CM-18: a non-transactional save() of a second active membership throws and saves nothing", async () => {
+    const repo = createInMemoryCircleRepository();
+    await repo.save(buildFixtureCircle("circle-1"), null);
+
+    await expect(repo.save(buildFixtureCircle("circle-2"), null)).rejects.toThrow(
+      ConcurrencyConflict,
+    );
+    expect(await repo.get(circleId("circle-2"))).toBeNull();
   });
 });
