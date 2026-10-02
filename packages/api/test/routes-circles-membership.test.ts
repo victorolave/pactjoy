@@ -30,6 +30,23 @@ describe("POST /circles/join (UE-C-S6..S8)", () => {
     expect(JSON.stringify(json)).not.toContain(VICTOR);
   });
 
+  it("SQ-13: a successful join returns the circle DTO with every active member's display name, the joiner's included", async () => {
+    const ctx = setup();
+    const created = await ctx.call("POST", "/circles", "andrea", createCircleBody("Crew", "Zoe"));
+    const invite = await ctx.call("POST", `/circles/${created.json.data.id}/invite`, "andrea");
+    const { status, json } = await ctx.call(
+      "POST",
+      "/circles/join",
+      "victor",
+      joinCircleBody(invite.json.data.code, "Vic"),
+    );
+    expect(status).toBe(200);
+    expect(json.data.members.map((m: { displayName: string }) => m.displayName).sort()).toEqual([
+      "Vic",
+      "Zoe",
+    ]);
+  });
+
   it("UE-C-S13: a blank or 31 code point display name is InvalidDisplayName 422", async () => {
     const { call, code } = await givenInvitedCircle();
     for (const displayName of ["   ", "a".repeat(31)]) {
