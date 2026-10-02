@@ -13,10 +13,16 @@ export function setup() {
   const app = createTestApp();
   const transaction = vi.fn(app.uow.transaction.bind(app.uow));
   const read = vi.fn(app.uow.read.bind(app.uow));
+  let now = app.clock.now();
+  const clock = { now: () => now };
+  /** Moves the API's clock; the in-memory app keeps its own fixed one. */
+  const setNow = (instant: typeof now) => {
+    now = instant;
+  };
   const handler = createApi(
     {
       uow: { transaction, read } as typeof app.uow,
-      clock: app.clock,
+      clock,
       timeZone: app.timeZone,
       ids: createDeterministicUuidGenerator(),
       random: app.random,
@@ -51,5 +57,5 @@ export function setup() {
     // biome-ignore lint/suspicious/noExplicitAny: test helper over an untyped JSON envelope
     return { status: response.status, json: (await response.json()) as any };
   };
-  return { app, call, callRaw, transaction, read };
+  return { app, call, callRaw, transaction, read, setNow };
 }

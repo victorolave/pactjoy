@@ -167,9 +167,9 @@ describe("GET /me/today (TD-R1, TD-S11)", () => {
   });
 
   it("ended: the row describes the last season day", async () => {
-    const { call, app } = await givenTwoMemberSeason(DAILY);
+    const { call, setNow } = await givenTwoMemberSeason(DAILY);
     // 2023-12-12 12:00 in Bogota is day 28, the first day after the 4-week season.
-    (app.clock as { now: () => number }).now = () => instant(Date.UTC(2023, 11, 12, 17));
+    setNow(instant(Date.UTC(2023, 11, 12, 17)));
     const res = await call("GET", "/me/today", "andrea");
     expect(res.status).toBe(200);
     expect(res.json.data.state).toBe("ended");
