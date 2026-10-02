@@ -68,12 +68,16 @@ export function standingsView(
       ).points,
     }));
   const names = new Map(circle.members.map((member) => [member.id, member.displayName]));
-  const rows = rankStandings(participants).map((row) => ({
-    memberId: row.memberId,
-    displayName: names.get(row.memberId) ?? "",
-    rank: row.rank,
-    points: displayPoints(row.points),
-  }));
+  const rows = rankStandings(participants).map((row) => {
+    const displayName = names.get(row.memberId);
+    if (displayName === undefined) throw new Error(`no display name for member ${row.memberId}`);
+    return {
+      memberId: row.memberId,
+      displayName,
+      rank: row.rank,
+      points: displayPoints(row.points),
+    };
+  });
   return { kind: "ranked", rows, eligibleParticipantCount: rows.length };
 }
 
