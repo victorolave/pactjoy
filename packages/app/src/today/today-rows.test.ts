@@ -11,7 +11,7 @@ import {
   givenActiveSeason,
   localInstant,
 } from "../testing/entry-fixtures.ts";
-import { dayOf, PER_DAY_REACH } from "../testing/entry-measures.ts";
+import { dayOf, PER_DAY_REACH, TIMES_PER_WEEK, WEEKLY_TOTAL } from "../testing/entry-measures.ts";
 import { changeSeason } from "../testing/entry-test-helpers.ts";
 import { type TodayView, today } from "./today.query.ts";
 
@@ -161,6 +161,66 @@ describe("today rows: day rows (TD-R4, TD-R6)", () => {
   });
 });
 
+describe("today rows: week rows (TD-R5)", () => {
+  it("TD-S6: timesPerWeek 3 with 2 entries reports 2 of 3 sessions", async () => {
+    const { app, given } = await setup(TIMES_PER_WEEK, 2);
+    await record(app, given, 0, "30");
+    await record(app, given, 1, "30");
+    expect(rowsOf(await today(app, given.andrea))[0]).toMatchObject({
+      kind: "week",
+      habitName: "Meditar",
+      progress: {
+        value: "60",
+        target: { direction: "reach", minimum: "10", ideal: "30" },
+        sessionsDone: 2,
+        sessionsTarget: 3,
+        percent: 67,
+      },
+      opportunity: { state: "open", graceUntil: dayOf(7) },
+    });
+  });
+
+  it("a week row has no scheduledToday", async () => {
+    const { app, given } = await setup(TIMES_PER_WEEK, 2);
+    expect(rowsOf(await today(app, given.andrea))[0]).not.toHaveProperty("scheduledToday");
+  });
+
+  it("weeklyTotal shows the accumulated value against the ideal", async () => {
+    const { app, given } = await setup(WEEKLY_TOTAL, 3);
+    await record(app, given, 1, "15");
+    expect(rowsOf(await today(app, given.andrea))[0]).toMatchObject({
+      kind: "week",
+      progress: {
+        value: "15",
+        target: { direction: "reach", minimum: "10", ideal: "30" },
+        sessionsDone: 1,
+        sessionsTarget: 1,
+        percent: 50,
+      },
+    });
+  });
+
+  it("percent rounds half up: 15 of 30 is 50 and 18.75 of 30 (5/8) is 63", async () => {
+    const half = await setup(WEEKLY_TOTAL, 3);
+    await record(half.app, half.given, 1, "15");
+    expect(rowsOf(await today(half.app, half.given.andrea))[0]).toMatchObject({
+      progress: { percent: 50 },
+    });
+    const fiveEighths = await setup(WEEKLY_TOTAL, 3);
+    await record(fiveEighths.app, fiveEighths.given, 1, "18.75");
+    expect(rowsOf(await today(fiveEighths.app, fiveEighths.given.andrea))[0]).toMatchObject({
+      progress: { percent: 63 },
+    });
+  });
+
+  it("a week with nothing logged has a null value", async () => {
+    const { app, given } = await setup(WEEKLY_TOTAL, 0);
+    expect(rowsOf(await today(app, given.andrea))[0]).toMatchObject({
+      progress: { value: null, sessionsDone: 0, percent: 0 },
+    });
+  });
+});
+
 describe("today rows: opportunity state precedence (TD-R6)", () => {
   it("TD-S7: the day after the last stays editable within grace, with the last day's deadline", async () => {
     const { app, given } = await setup(PER_DAY_REACH, 27);
@@ -213,6 +273,32 @@ describe("today rows: opportunity state precedence (TD-R6)", () => {
     });
   });
 
+  it("a fully paused week row is paused and carries no progress", async () => {
+    const { app, given } = await setup(TIMES_PER_WEEK, 3);
+    app.pauses.add(
+      given.season.id,
+      pause(given.andreaCommitment, 0, 6, {
+        kind: "approved",
+        decidedOn: seasonDay(0),
+        resumedOn: null,
+      }),
+    );
+    expect(rowsOf(await today(app, given.andrea))[0]).toMatchObject({
+      kind: "week",
+      progress: null,
+      opportunity: { state: "paused", graceUntil: null },
+    });
+  });
+
+  it("a pending request over the whole week makes the week row onHold", async () => {
+    const { app, given } = await setup(TIMES_PER_WEEK, 3);
+    app.pauses.add(given.season.id, pause(given.andreaCommitment, 0, 6, { kind: "pending" }));
+    expect(rowsOf(await today(app, given.andrea))[0]).toMatchObject({
+      kind: "week",
+      opportunity: { state: "onHold", graceUntil: null },
+    });
+  });
+
   it("paused outranks closed and logged", async () => {
     const { app, given } = await setup(PER_DAY_REACH, 27);
     await record(app, given, 27, "30");
@@ -226,6 +312,27 @@ describe("today rows: opportunity state precedence (TD-R6)", () => {
     );
     const view = await today(atInstant(app, localInstant(dayOf(29))), given.andrea);
     expect(rowsOf(view)[0]).toMatchObject({ opportunity: { state: "paused", graceUntil: null } });
+  });
+
+  it("a partial pause of a week row keeps it scored, paused only on the paused day", async () => {
+    const { app, given } = await setup(TIMES_PER_WEEK, 3);
+    app.pauses.add(
+      given.season.id,
+      pause(given.andreaCommitment, 3, 4, {
+        kind: "approved",
+        decidedOn: seasonDay(3),
+        resumedOn: null,
+      }),
+    );
+    expect(rowsOf(await today(app, given.andrea))[0]).toMatchObject({
+      kind: "week",
+      progress: { sessionsTarget: 2 },
+      opportunity: { state: "paused", graceUntil: null },
+    });
+    const later = await today(atInstant(app, localInstant(dayOf(5))), given.andrea);
+    expect(rowsOf(later)[0]).toMatchObject({
+      opportunity: { state: "open", graceUntil: dayOf(7) },
+    });
   });
 });
 
@@ -272,5 +379,21 @@ describe("today rows: privacy (TD-R8, TD-S9)", () => {
     expect(text).not.toContain("secret victor note");
     expect(view).toMatchObject({ standings: { kind: "ranked" } });
     expect(text).toContain("Victor");
+  });
+});
+
+describe("today rows: whose rows (TD-R4)", () => {
+  it("each viewer gets only their own commitment's row", async () => {
+    const { app, given } = await setup(PER_DAY_REACH, 2);
+    expect(rowsOf(await today(app, given.victor))).toEqual([
+      expect.objectContaining({
+        commitmentId: given.victorCommitment,
+        habitName: "Leer",
+        kind: "week",
+      }),
+    ]);
+    expect(rowsOf(await today(app, given.andrea))).toEqual([
+      expect.objectContaining({ commitmentId: given.andreaCommitment, kind: "day" }),
+    ]);
   });
 });
