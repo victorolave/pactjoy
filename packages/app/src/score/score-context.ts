@@ -54,6 +54,19 @@ export interface ScoreData {
 }
 
 /**
+ * The member an actor is in a season's circle, for READ access: any active
+ * member, plus participants of the season even after they left the circle or
+ * the circle was archived (2026-09-30 decision). `undefined` for everyone else.
+ */
+export function findViewer(season: Season, circle: Circle, actor: Actor): Member | undefined {
+  return circle.members.find(
+    (member) =>
+      member.userId === actor.userId &&
+      (member.status === "active" || isParticipant(season, member.id)),
+  );
+}
+
+/**
  * The synchronous core of `loadScoreContext`: resolves the viewer and "today"
  * from an already-loaded season and circle, so a caller that composes several
  * reads inside ONE `uow.read` can reuse it without a nested read.
@@ -64,13 +77,7 @@ export function scoreContextOf(
   circle: Circle | null,
   actor: Actor,
 ): Result<ScoreContext, { readonly kind: "NotAMember" }> {
-  // Read-only access: any active member, plus participants of the season even after
-  // they left the circle or the circle was archived (2026-09-30 decision).
-  const viewer = circle?.members.find(
-    (member) =>
-      member.userId === actor.userId &&
-      (member.status === "active" || isParticipant(season, member.id)),
-  );
+  const viewer = circle ? findViewer(season, circle, actor) : undefined;
   if (!circle || !viewer) {
     return err({ kind: "NotAMember" });
   }
