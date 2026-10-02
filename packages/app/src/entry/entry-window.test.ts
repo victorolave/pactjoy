@@ -1,6 +1,6 @@
 import { type Schedule, seasonDay } from "@pactjoy/engine";
 import { describe, expect, it } from "vitest";
-import { checkEntryWindow } from "./entry-window.ts";
+import { checkEntryWindow, entryWindowDeadline } from "./entry-window.ts";
 
 const PER_DAY: Schedule = {
   period: "perSession",
@@ -55,5 +55,33 @@ describe("checkEntryWindow", () => {
     expect(check(PER_DAY, 5, 9, 2)).toEqual({ kind: "WindowClosed" });
     expect(check(WEEKLY_TOTAL, 1, 9, 2)).toBeNull();
     expect(check(WEEKLY_TOTAL, 1, 10, 2)).toEqual({ kind: "WindowClosed" });
+  });
+});
+
+describe("entryWindowDeadline", () => {
+  it("is the end of the next day for a day-bound opportunity", () => {
+    expect(entryWindowDeadline(PER_DAY, seasonDay(5))).toBe(6);
+  });
+
+  it("is the week's last day plus grace for a week-bound opportunity", () => {
+    for (const schedule of [WEEKLY_TOTAL, TIMES_PER_WEEK]) {
+      expect(entryWindowDeadline(schedule, seasonDay(1))).toBe(7);
+      expect(entryWindowDeadline(schedule, seasonDay(7))).toBe(14);
+    }
+  });
+
+  it("adds the pause grace extension", () => {
+    expect(entryWindowDeadline(PER_DAY, seasonDay(5), 2)).toBe(8);
+    expect(entryWindowDeadline(WEEKLY_TOTAL, seasonDay(1), 2)).toBe(9);
+  });
+
+  it("agrees with checkEntryWindow: closed exactly the day after the deadline", () => {
+    for (const schedule of [PER_DAY, WEEKLY_TOTAL, TIMES_PER_WEEK]) {
+      for (const extension of [0, 3]) {
+        const deadline = entryWindowDeadline(schedule, seasonDay(2), extension);
+        expect(check(schedule, 2, deadline, extension)).toBeNull();
+        expect(check(schedule, 2, deadline + 1, extension)).toEqual({ kind: "WindowClosed" });
+      }
+    }
   });
 });

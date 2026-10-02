@@ -36,6 +36,20 @@ function periodEnd(schedule: Schedule, day: SeasonDay): SeasonDay {
 }
 
 /**
+ * The last day an entry for `day` may still be recorded, edited or deleted:
+ * the engine's grace deadline of the opportunity's period plus the pause
+ * extension (B7). The ONE formula behind {@link checkEntryWindow} and the
+ * `graceUntil` Today shows, so the two cannot disagree.
+ */
+export function entryWindowDeadline(
+  schedule: Schedule,
+  day: SeasonDay,
+  pauseGraceExtensionDays = 0,
+): SeasonDay {
+  return seasonDay(graceDeadline(periodEnd(schedule, day)) + pauseGraceExtensionDays);
+}
+
+/**
  * Whether an entry for `day` may be recorded (or, in S8, edited/deleted)
  * `today` (ER-2, ER-8, ER-9, ER-10..ER-13): not in the future (A10), inside
  * the season, and no later than the period's grace deadline (engine
@@ -50,7 +64,6 @@ export function checkEntryWindow(input: EntryWindowInput): EntryWindowError | nu
   if (input.day >= input.lengthWeeks * DAYS_PER_WEEK) {
     return { kind: "OutsideSeason" };
   }
-  const base = graceDeadline(periodEnd(input.schedule, input.day));
-  const deadline = base + (input.pauseGraceExtensionDays ?? 0);
+  const deadline = entryWindowDeadline(input.schedule, input.day, input.pauseGraceExtensionDays);
   return input.today > deadline ? { kind: "WindowClosed" } : null;
 }
