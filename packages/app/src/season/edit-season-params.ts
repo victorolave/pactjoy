@@ -16,6 +16,7 @@ import {
   type ReviewCadenceWeeks,
   type Season,
   type SeasonLengthWeeks,
+  type SeasonMutationResult,
   type StartDateWindowError,
   validateStartDateWindow,
 } from "./season.ts";
@@ -35,6 +36,8 @@ export interface EditSeasonParamsInput {
   readonly lengthWeeks?: SeasonLengthWeeks;
   readonly reviewCadenceWeeks?: ReviewCadenceWeeks;
 }
+
+export type EditSeasonParamsResult = Result<SeasonMutationResult, EditSeasonParamsError>;
 
 export type EditSeasonParamsError =
   | { readonly kind: "SeasonNotFound" }
@@ -62,15 +65,16 @@ export async function editSeasonParams(
   deps: EditSeasonParamsDeps,
   actor: Actor,
   input: EditSeasonParamsInput,
-): Promise<Result<Season, EditSeasonParamsError>> {
-  return deps.uow.transaction(async (repos): Promise<Result<Season, EditSeasonParamsError>> => {
+): Promise<EditSeasonParamsResult> {
+  return deps.uow.transaction(async (repos): Promise<EditSeasonParamsResult> => {
     const season = await repos.seasons.get(input.seasonId);
     if (!season) {
       return err({ kind: "SeasonNotFound" });
     }
 
     const circle = await repos.circles.get(season.circleId);
-    if (!circle || !findActiveMember(circle, actor.userId)) {
+    const member = circle ? findActiveMember(circle, actor.userId) : undefined;
+    if (!member) {
       return err({ kind: "NotAMember" });
     }
 
@@ -114,7 +118,7 @@ export async function editSeasonParams(
       lengthWeeks === season.lengthWeeks &&
       reviewCadenceWeeks === season.reviewCadenceWeeks
     ) {
-      return ok(season);
+      return ok({ season, viewerId: member.id });
     }
 
     // Re-validate the A6 window whenever `startDate` OR `timezone` changes
@@ -143,6 +147,6 @@ export async function editSeasonParams(
       version: season.version + 1,
     };
     await repos.seasons.save(updated, season.version);
-    return ok(updated);
+    return ok({ season: updated, viewerId: member.id });
   });
 }

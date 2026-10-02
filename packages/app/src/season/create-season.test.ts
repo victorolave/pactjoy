@@ -36,13 +36,13 @@ describe("createSeason", () => {
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.value.status).toBe("pactOpen");
-    expect(result.value.circleId).toBe(circle.value.id);
-    expect(result.value.timeZone).toBe("America/Santiago");
-    expect(result.value.nominalStart).toBe("2025-10-01");
-    expect(result.value.lengthWeeks).toBe(8);
+    expect(result.value.season.status).toBe("pactOpen");
+    expect(result.value.season.circleId).toBe(circle.value.id);
+    expect(result.value.season.timeZone).toBe("America/Santiago");
+    expect(result.value.season.nominalStart).toBe("2025-10-01");
+    expect(result.value.season.lengthWeeks).toBe(8);
 
-    const stored = await app.uow.read((repos) => repos.seasons.get(result.value.id));
+    const stored = await app.uow.read((repos) => repos.seasons.get(result.value.season.id));
     expect(stored?.status).toBe("pactOpen");
   });
 
@@ -64,7 +64,7 @@ describe("createSeason", () => {
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.value.reviewCadenceWeeks).toBe(2);
+    expect(result.value.season.reviewCadenceWeeks).toBe(2);
   });
 
   it("accepts an explicit reviewCadenceWeeks override", async () => {
@@ -86,7 +86,7 @@ describe("createSeason", () => {
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.value.reviewCadenceWeeks).toBe(1);
+    expect(result.value.season.reviewCadenceWeeks).toBe(1);
   });
 
   it("SS-4: rejects a start date 31 days ahead", async () => {
@@ -259,7 +259,7 @@ describe("createSeason", () => {
     });
     if (!first.ok) throw new Error("fixture setup failed");
     await app.uow.transaction(async (repos) => {
-      await repos.seasons.save({ ...first.value, status: "closed", version: 1 }, 0);
+      await repos.seasons.save({ ...first.value.season, status: "closed", version: 1 }, 0);
       return ok(undefined);
     });
 
@@ -313,7 +313,7 @@ describe("createSeason", () => {
     const persisted = await app.uow.read((repos) =>
       repos.seasons.findLatestByCircle(circle.value.id),
     );
-    expect(persisted?.id).toBe(winner.value.id);
+    expect(persisted?.id).toBe(winner.value.season.id);
   });
 
   it("rejects creating a season in an archived circle, leaving no season behind", async () => {

@@ -32,7 +32,7 @@ async function twoMemberSeason(app: ReturnType<typeof createTestApp>) {
   });
   if (!season.ok) throw new Error("fixture setup failed");
   const withCommitment = await addCommitment(app, actorFor("user-andrea"), {
-    seasonId: season.value.id,
+    seasonId: season.value.season.id,
     habitId: habitId("habit-run"),
     weightPercent: 100,
     privacy: "visible",

@@ -89,7 +89,7 @@ describe("createPostgresUnitOfWork", () => {
         startDate: "2025-09-28",
         lengthWeeks: 8,
       }),
-    );
+    ).season;
     const withCommitment = must(
       await addCommitment(deps, andrea, {
         seasonId: created.id,

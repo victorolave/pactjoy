@@ -45,7 +45,7 @@ export async function givenOpenPactWithOneApproval(app: TestApp): Promise<OpenPa
       startDate: "2025-10-01",
       lengthWeeks: 8,
     }),
-  );
+  ).season;
   let season = created;
   for (const actor of [andrea, victor]) {
     season = must(
@@ -89,7 +89,7 @@ export async function givenSoloOpenPact(app: TestApp): Promise<{
       startDate: "2025-10-01",
       lengthWeeks: 8,
     }),
-  );
+  ).season;
   const season = must(
     await addCommitment(app, andrea, {
       seasonId: created.id,

@@ -1,15 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { findActiveMember } from "../circle/circle.ts";
+import { createCircle } from "../circle/create-circle.ts";
 import { addCommitment } from "../commitment/add-commitment.ts";
 import { editCommitment } from "../commitment/edit-commitment.ts";
 import { removeCommitment } from "../commitment/remove-commitment.ts";
 import { approvePact } from "../pact/approve-pact.ts";
 import { withdrawApproval } from "../pact/withdraw-approval.ts";
 import type { Actor } from "../shared/actor.ts";
-import { habitId } from "../shared/ids.ts";
+import { habitId, userId } from "../shared/ids.ts";
 import { createTestApp, type TestApp } from "../testing/app-harness.ts";
+import { createCircleInput } from "../testing/circle-inputs.ts";
 import { givenOpenPactWithOneApproval } from "../testing/pact-fixtures.ts";
 import { instant } from "../time/instant.ts";
+import { createSeason } from "./create-season.ts";
+import { editSeasonParams } from "./edit-season-params.ts";
 
 // Noon UTC keeps the local calendar date "2025-09-28" stable in America/Santiago.
 const NOW = instant(1_759_060_800_000);
@@ -33,6 +37,36 @@ async function memberIdOf(
  * who acted, resolved inside the transaction -- no post-commit lookup (ADR-0011).
  */
 describe("season mutations return { season, viewerId } (SV-R2)", () => {
+  it("createSeason returns the creator as the viewer", async () => {
+    const app = createTestApp({ now: NOW });
+    const andrea: Actor = { userId: userId("user-andrea") };
+    const circle = await createCircle(app, andrea, createCircleInput("Solo"));
+    if (!circle.ok) throw new Error("fixture setup failed");
+
+    const result = await createSeason(app, andrea, {
+      circleId: circle.value.id,
+      timezone: "America/Santiago",
+      startDate: "2025-10-01",
+      lengthWeeks: 8,
+    });
+
+    expect(result.ok && result.value.viewerId).toBe(await memberIdOf(app, circle.value.id, andrea));
+    expect(result.ok && result.value.season.status).toBe("pactOpen");
+  });
+
+  it("editSeasonParams returns the editor, on a change and on a no-op", async () => {
+    const app = createTestApp({ now: NOW });
+    const { circle, season, victor } = await givenOpenPactWithOneApproval(app);
+    const victorId = await memberIdOf(app, circle.id, victor);
+
+    const changed = await editSeasonParams(app, victor, { seasonId: season.id, lengthWeeks: 12 });
+    const unchanged = await editSeasonParams(app, victor, { seasonId: season.id, lengthWeeks: 12 });
+
+    expect(changed.ok && changed.value.viewerId).toBe(victorId);
+    expect(unchanged.ok && unchanged.value.viewerId).toBe(victorId);
+    expect(unchanged.ok && unchanged.value.season.lengthWeeks).toBe(12);
+  });
+
   it("addCommitment returns the member who added, not another member", async () => {
     const app = createTestApp({ now: NOW });
     const { circle, season, victor } = await givenOpenPactWithOneApproval(app);

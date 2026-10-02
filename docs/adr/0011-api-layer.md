@@ -19,7 +19,7 @@ Status: this ADR is a draft. Every item below is a proposal until the slices tha
 - Proposed: **Router.** Hand-written, routes as data, a configurable base path (default `/api`). Construction throws on duplicate params or same-shape routes, so there is no precedence to reason about. Hono is the documented swap.
 - Proposed: **Auth.** In-code JWT verification through a `TokenVerifier` port, implemented by a jose + remote JWKS adapter that lives in exactly one file (`src/adapters/jose-token-verifier.ts`). ES256 and RS256 only; `iss`, `aud=authenticated`, `role=authenticated`, a uuid `sub`; anonymous users rejected. The function is deployed with `verify_jwt = false`, because the gateway gives no envelope or CORS on 401. Every rejection is a uniform 401 (no oracle); an unreachable JWKS is a 503.
 - Proposed: **Envelope and status map.** `{ data }` on success, `{ error: { code, message, details? } }` on failure, where `code` is the app error kind verbatim. The status map is exhaustive at compile time (`satisfies Record<AppErrorKind, ...>`) and a scan test fails if the app exports a new `*Error` union the API does not list. Provisional under Q7.
-- Proposed: **Presenters.** The JSON boundary: Fractions as exact decimal strings, Instants as ISO-8601 UTC, no BigInt, never `userId` or `requestFingerprint`. Season responses are viewer-agnostic and conservative: a private commitment is hidden for everyone, including its owner, until a viewer-aware read model exists (Q2, Q8). Entry notes are emitted raw only because every entry response is the actor's own entry. **Requirement:** any future endpoint that returns another member's entry MUST go through `visibleNote`; the entry presenter must not be reused for that case as is.
+- Proposed: **Presenters.** The JSON boundary: Fractions as exact decimal strings, Instants as ISO-8601 UTC, no BigInt, never `userId` or `requestFingerprint`. Season responses are viewer-aware (Q8, change `viewer-read-models`): a member sees their own private commitment in full, marked `private`, and every other member's private commitment hidden. The viewer is the acting member the use case resolved inside its transaction (`SeasonMutationResult`, or `SeasonView` for the read), never a post-commit lookup. Entry notes are emitted raw only because every entry response is the actor's own entry. **Requirement:** any future endpoint that returns another member's entry MUST go through `visibleNote`; the entry presenter must not be reused for that case as is.
 - Proposed: **Composition.** `createApi(deps, options)` takes ports only and reads no environment. `createLazyHandler` builds once per isolate and memoizes; a failed build answers 503 and is retried on the next request. `loadApiEnv` reads configuration through an injected getter. Building opens no connection.
 - Proposed: **Database-unavailable gotcha.** A connect failure (DNS, refused) kills the Edge worker and surfaces as an empty 503 with no CORS headers, which a browser sees as a network error. Catchable failures go through an injected `isUnavailable` predicate exported by `@pactjoy/db`, so no SQLSTATE knowledge lives in the API. Clients retry; `recordEntry` is safe through `clientRequestId` and the other writes are guarded by versions.
 
@@ -79,13 +79,13 @@ Either way only the shell, the import map and the deploy procedure change; `pack
 The owner answered Q1 to Q15 on 2026-10-01, following the recommendations except Q3. "Decided" does not mean implemented; the work that remains is listed per answer.
 
 1. Q1: Account deletion or anonymization is a separate change (P2-5). `DELETE /me` stays reserved and not routed.
-2. Q2: PWA read models are a separate change, guided by the design batches (Today and Entry first). It also covers Q8.
+2. Q2: PWA read models are a separate change, guided by the design batches (Today and Entry first). It also covers Q8. Implemented (change `viewer-read-models`): `GET /me/today` and `GET /seasons/:seasonId`.
 3. Q3: Display names are PER CIRCLE: each member picks a visible name when creating or joining a circle; there is no global profile. Implemented (change `circle-display-names`): name on `circle_members` (migration `20261001000800`), required in create and join, unique among active members (case-insensitive), exposed in the circle, standings and member score reads, and changeable through `PATCH /circles/:circleId/members/me`.
 4. Q4: Adopt `supabase config push` for the hosted auth and API settings, from the versioned `supabase/config.toml`.
 5. Q5: CORS uses the `ALLOWED_ORIGINS` env allow-list with exact origins per environment (the current implementation).
 6. Q6: Email OTP signup stays open (`enable_signup = true`), relying on Supabase rate limits. Revisit before launch.
 7. Q7 and Q14: Keep 403 for non-members and non-owners of existing resources. Accepted risk: it reveals that an id exists, but ids are UUID v7. The idempotency status is also settled: `IdempotencyKeyReused` stays 422.
-8. Q8: The owner should see their own private commitments, which needs a viewer-aware season read model (tied to Q2). Until then season responses hide private commitments from everyone.
+8. Q8: The owner should see their own private commitments, which needs a viewer-aware season read model (tied to Q2). Implemented (change `viewer-read-models`): `GET /seasons/:seasonId` and the seven season mutations answer for the acting member (owner sees own private commitments in full, others see them hidden).
 9. Q9: Pact approvals (who and when) stay visible to every member (current behaviour).
 10. Q10: A member who left keeps read-only access to the circle's member list, consistent with read-only scores.
 11. Q11: Remove `createdBy` from the invite DTO (implemented).
@@ -148,8 +148,7 @@ Nothing here runs from CI or from the repository.
 
 ### Negative
 
-- Owners see their own private commitments as hidden in season responses until a viewer-aware read model exists (Q8).
-- The PWA has no read endpoints for circles, seasons or habits yet (Q2).
+- The PWA has no read endpoints for circles or habits yet (Q2 covers Today and the season only).
 - Local development works with the CLI defaults (ES256 with a served JWKS, see the spike); a local signing key file (`supabase gen signing-key`) is optional. The hosted project needs asymmetric JWT signing keys enabled (ops checklist, S0.0).
 - A database outage at connect time is an empty 503 without CORS that the API cannot improve.
 
