@@ -51,6 +51,43 @@ describe("HTTP over Postgres: the real handler on the migrated database", () => 
     expect(row?.n).toBe(1);
   });
 
+  it("TD-S11: GET /me/today reads the migrated database in one request (habits.getMany on Postgres)", async () => {
+    const { call } = api;
+    const circle = await call("POST", "/circles", "u1", createCircleBody("Crew"));
+    const habit = await call("POST", "/habits", "u1", { name: "Run" });
+    const season = await call("POST", `/circles/${circle.json.data.id}/seasons`, "u1", {
+      timezone: "America/Bogota",
+      startDate: TODAY,
+      lengthWeeks: 4,
+    });
+    const seasonId: string = season.json.data.id;
+    const added = await call("POST", `/seasons/${seasonId}/commitments`, "u1", {
+      habitId: habit.json.data.id,
+      weightPercent: 100,
+      privacy: "visible",
+      measure: DAILY,
+    });
+    await call("PUT", `/seasons/${seasonId}/approval`, "u1", {
+      expectedPactRevision: added.json.data.pactRevision,
+    });
+    await call("POST", `/seasons/${seasonId}/entries`, "u1", {
+      commitmentId: added.json.data.commitments[0].id,
+      value: { kind: "quantity", value: "30" },
+      clientRequestId: "r-today",
+    });
+
+    const res = await call("GET", "/me/today", "u1");
+    expect(res.status).toBe(200);
+    expect(res.json.data).toMatchObject({
+      state: "active",
+      today: TODAY,
+      timeZone: "America/Bogota",
+      rows: [{ kind: "day", habitName: "Run", opportunity: { state: "logged" } }],
+    });
+    expect(JSON.stringify(res.json)).not.toContain("userId");
+    expect((await call("GET", "/me/today", "u2")).json.data).toEqual({ state: "noCircle" });
+  });
+
   it("a malformed invite code and a non-uuid habitId are 422 and never reach Postgres (no 22P02)", async () => {
     const { call } = api;
     const circle = await call("POST", "/circles", "u1", createCircleBody("Crew"));
