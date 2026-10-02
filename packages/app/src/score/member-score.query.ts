@@ -39,6 +39,7 @@ export type MemberScoreView =
       readonly kind: "scored";
       readonly scope: "own";
       readonly memberId: MemberId;
+      readonly displayName: string;
       readonly points: number;
       /** Percent; `null` while nothing has been counted yet. */
       readonly consistency: number | null;
@@ -51,24 +52,27 @@ export type MemberScoreView =
       readonly kind: "scored";
       readonly scope: "others";
       readonly memberId: MemberId;
+      readonly displayName: string;
       readonly points: number;
       readonly commitments: readonly CommitmentScoreView[];
     };
 
 function toView(
-  memberId: MemberId,
+  member: { readonly id: MemberId; readonly displayName: string },
   score: MemberScore,
   commitments: readonly CommitmentScoreView[],
   own: boolean,
 ): MemberScoreView {
+  const { id: memberId, displayName } = member;
   const points = displayPoints(score.points);
   if (!own) {
-    return { kind: "scored", scope: "others", memberId, points, commitments };
+    return { kind: "scored", scope: "others", memberId, displayName, points, commitments };
   }
   return {
     kind: "scored",
     scope: "own",
     memberId,
+    displayName,
     points,
     consistency: score.consistency === null ? null : displayPercent(score.consistency),
     idealCompletion: score.idealCompletion === null ? null : displayPercent(score.idealCompletion),
@@ -121,6 +125,6 @@ export async function memberScore(
       if (!scored) throw new Error(`engine returned no score for commitment ${record.id}`);
       return projectCommitment(record, scored, viewer.id);
     });
-    return ok(toView(target.id, score, commitments, target.id === viewer.id));
+    return ok(toView(target, score, commitments, target.id === viewer.id));
   });
 }

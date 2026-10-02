@@ -12,6 +12,7 @@ export interface CircleDto {
   readonly name: string;
   readonly members: readonly {
     readonly id: string;
+    readonly displayName: string;
     readonly status: "active" | "left";
     readonly joinedAt: string;
     readonly leftAt: string | null;
@@ -41,6 +42,7 @@ export function presentCircle(circle: Circle, viewer: Actor): CircleDto {
     name: circle.name,
     members: circle.members.map((member) => ({
       id: member.id,
+      displayName: member.displayName,
       status: member.status,
       joinedAt: presentInstant(member.joinedAt),
       leftAt: presentInstantOrNull(member.leftAt),

@@ -136,6 +136,7 @@ describe("presenters: season, score", () => {
       kind: "scored",
       scope: "own",
       memberId: memberId("m1"),
+      displayName: "Me",
       points: 500,
       consistency: null,
       idealCompletion: null,
@@ -152,7 +153,7 @@ describe("presenters: season, score", () => {
     expect(othersJson).not.toHaveProperty("idealCompletion");
     const ranked: StandingsView = {
       kind: "ranked",
-      rows: [{ memberId: memberId("m1"), rank: 1, points: 10 }],
+      rows: [{ memberId: memberId("m1"), displayName: "Me", rank: 1, points: 10 }],
       eligibleParticipantCount: 1,
     };
     expect(JSON.parse(JSON.stringify(presentStandings(ranked)))).toEqual(ranked);

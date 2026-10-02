@@ -63,8 +63,16 @@ export async function givenActiveSeason(
 ): Promise<ActiveSeasonFixture> {
   const andrea: Actor = { userId: userId("user-andrea") };
   const victor: Actor = { userId: userId("user-victor") };
-  const andreaMember = memberFixture({ id: memberId("member-andrea"), userId: andrea.userId });
-  const victorMember = memberFixture({ id: memberId("member-victor"), userId: victor.userId });
+  const andreaMember = memberFixture({
+    id: memberId("member-andrea"),
+    userId: andrea.userId,
+    displayName: "Andrea",
+  });
+  const victorMember = memberFixture({
+    id: memberId("member-victor"),
+    userId: victor.userId,
+    displayName: "Victor",
+  });
   const circle = circleFixture({ id: circleId("circle-1"), members: [andreaMember, victorMember] });
   const andreaCommitment = commitmentId("commitment-andrea");
   const victorCommitment = commitmentId("commitment-victor");

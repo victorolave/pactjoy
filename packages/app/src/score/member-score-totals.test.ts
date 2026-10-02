@@ -59,7 +59,7 @@ describe("memberScore: member-level totals", () => {
 
   it("another member sees only points: consistency and idealCompletion are absent", async () => {
     const { given, view, viewAsJson } = await setup();
-    const keys = ["commitments", "kind", "memberId", "points", "scope"];
+    const keys = ["commitments", "displayName", "kind", "memberId", "points", "scope"];
 
     const raw = await view(given.victor);
     const json = await viewAsJson(given.victor);
@@ -90,6 +90,7 @@ describe("memberScore: member-level totals", () => {
       kind: "scored",
       scope: "others",
       memberId: ANDREA,
+      displayName: "Andrea",
       points: 36,
       commitments: [
         { kind: "hidden", commitmentId: given.andreaCommitment, weightPercent: 100, points: 36 },

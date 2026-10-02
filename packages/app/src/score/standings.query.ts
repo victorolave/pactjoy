@@ -16,6 +16,8 @@ export type StandingsError = ScoreContextError;
 
 export interface StandingsRowView {
   readonly memberId: MemberId;
+  /** The member's per-circle name; `userId` is never exposed. */
+  readonly displayName: string;
   /** Members with the same displayed points share a rank. */
   readonly rank: number;
   readonly points: number;
@@ -75,8 +77,10 @@ export async function standings(
           }),
         ).points,
       }));
+    const names = new Map(circle.members.map((member) => [member.id, member.displayName]));
     const rows = rankStandings(participants).map((row) => ({
       memberId: row.memberId,
+      displayName: names.get(row.memberId) ?? "",
       rank: row.rank,
       points: displayPoints(row.points),
     }));

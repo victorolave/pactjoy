@@ -79,6 +79,27 @@ describe("POST /circles/join (UE-C-S6..S8)", () => {
     expect([status, json.error.code]).toEqual([404, "InviteNotFound"]);
   });
 
+  it("SQ-13: no failed join reveals the display name of an existing member", async () => {
+    const ctx = setup();
+    const created = await ctx.call("POST", "/circles", "andrea", createCircleBody("Crew", "Zoe"));
+    const invite = await ctx.call("POST", `/circles/${created.json.data.id}/invite`, "andrea");
+    const code: string = invite.json.data.code;
+    const taken = await ctx.call("POST", "/circles/join", "victor", joinCircleBody(code, " ZOE "));
+    expect(taken.json.error.code).toBe("DisplayNameTaken");
+    expect(JSON.stringify(taken.json)).not.toContain("Zoe");
+    const attempts = [
+      { inviteCode: code, displayName: "   " }, // InvalidDisplayName
+      joinCircleBody("AAAAAA", "Joiner"), // InviteNotFound
+    ];
+    await ctx.call("POST", "/circles", "victor", createCircleBody("Mine", "Vic"));
+    attempts.push(joinCircleBody(code, "Joiner")); // AlreadyInActiveCircle
+    for (const body of attempts) {
+      const { json } = await ctx.call("POST", "/circles/join", "victor", body);
+      expect(json.error).toBeDefined();
+      expect(JSON.stringify(json)).not.toMatch(/zoe/i);
+    }
+  });
+
   it("S8: 409 AlreadyInActiveCircle for a member of another circle", async () => {
     const { call, code } = await givenInvitedCircle();
     await call("POST", "/circles", "victor", createCircleBody("Mine"));

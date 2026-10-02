@@ -130,6 +130,14 @@ describe("presenters: circle, habit, entry", () => {
     expect(JSON.stringify(dto)).not.toContain("u-other");
   });
 
+  it("SQ-9/SQ-12: every member, active or left, carries a displayName", () => {
+    const dto = presentCircle(circle, { userId: ME });
+    expect(dto.members.map((m) => [m.id, m.displayName])).toEqual([
+      ["m1", "Me"],
+      ["m2", "Other"],
+    ]);
+  });
+
   it("invite is shown only to an active viewer", () => {
     expect(presentCircle(circle, { userId: ME }).invite).toEqual({
       code: "AB3D7K",
