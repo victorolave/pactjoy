@@ -200,6 +200,19 @@ describe("today rows: week rows (TD-R5)", () => {
     });
   });
 
+  it("percent rounds half up: 15 of 30 is 50 and 18.75 of 30 (5/8) is 63", async () => {
+    const half = await setup(WEEKLY_TOTAL, 3);
+    await record(half.app, half.given, 1, "15");
+    expect(rowsOf(await today(half.app, half.given.andrea))[0]).toMatchObject({
+      progress: { percent: 50 },
+    });
+    const fiveEighths = await setup(WEEKLY_TOTAL, 3);
+    await record(fiveEighths.app, fiveEighths.given, 1, "18.75");
+    expect(rowsOf(await today(fiveEighths.app, fiveEighths.given.andrea))[0]).toMatchObject({
+      progress: { percent: 63 },
+    });
+  });
+
   it("a week with nothing logged has a null value", async () => {
     const { app, given } = await setup(WEEKLY_TOTAL, 0);
     expect(rowsOf(await today(app, given.andrea))[0]).toMatchObject({
@@ -274,6 +287,15 @@ describe("today rows: opportunity state precedence (TD-R6)", () => {
       kind: "week",
       progress: null,
       opportunity: { state: "paused", graceUntil: null },
+    });
+  });
+
+  it("a pending request over the whole week makes the week row onHold", async () => {
+    const { app, given } = await setup(TIMES_PER_WEEK, 3);
+    app.pauses.add(given.season.id, pause(given.andreaCommitment, 0, 6, { kind: "pending" }));
+    expect(rowsOf(await today(app, given.andrea))[0]).toMatchObject({
+      kind: "week",
+      opportunity: { state: "onHold", graceUntil: null },
     });
   });
 
