@@ -5,6 +5,7 @@ import {
   joinCircle,
   leaveCircle,
   renameCircle,
+  renameMyDisplayName,
 } from "@pactjoy/app";
 import { presentCircle, presentInvite } from "../presenters/circle.ts";
 import { inviteCode, uuid } from "../validation/formats.ts";
@@ -14,6 +15,7 @@ import { type ApiDeps, type Route, toResult, validate } from "./support.ts";
 const circleParams = object({ circleId: uuid });
 const named = object({ name: string });
 const createBody = object({ name: string, displayName: string });
+const displayNamed = object({ displayName: string });
 const none = object({});
 const joinBody = object({ inviteCode, displayName: string });
 
@@ -41,6 +43,20 @@ export function circleRoutes(deps: ApiDeps): Route[] {
         const result = await renameCircle(deps, ctx.actor, {
           circleId: circleId(input.params.circleId),
           name: input.body.name,
+        });
+        return toResult(result, 200, (circle) => presentCircle(circle, ctx.actor));
+      },
+    },
+    {
+      method: "PATCH",
+      pattern: "/circles/:circleId/members/me",
+      async handle(ctx) {
+        const input = validate(ctx, { params: circleParams, body: displayNamed });
+        if (!input.ok) return input.result;
+        // The member is the token's actor: there is no member id in the URL or the body.
+        const result = await renameMyDisplayName(deps, ctx.actor, {
+          circleId: circleId(input.params.circleId),
+          displayName: input.body.displayName,
         });
         return toResult(result, 200, (circle) => presentCircle(circle, ctx.actor));
       },

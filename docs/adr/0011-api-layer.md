@@ -80,7 +80,7 @@ The owner answered Q1 to Q15 on 2026-10-01, following the recommendations except
 
 1. Q1: Account deletion or anonymization is a separate change (P2-5). `DELETE /me` stays reserved and not routed.
 2. Q2: PWA read models are a separate change, guided by the design batches (Today and Entry first). It also covers Q8.
-3. Q3: Display names are PER CIRCLE: each member picks a visible name when creating or joining a circle; there is no global profile. A separate change (name on `circle_members`, inputs, presenters, validation). Until then responses expose only identifiers.
+3. Q3: Display names are PER CIRCLE: each member picks a visible name when creating or joining a circle; there is no global profile. Implemented (change `circle-display-names`): name on `circle_members` (migration `20261001000800`), required in create and join, unique among active members (case-insensitive), exposed in the circle, standings and member score reads, and changeable through `PATCH /circles/:circleId/members/me`.
 4. Q4: Adopt `supabase config push` for the hosted auth and API settings, from the versioned `supabase/config.toml`.
 5. Q5: CORS uses the `ALLOWED_ORIGINS` env allow-list with exact origins per environment (the current implementation).
 6. Q6: Email OTP signup stays open (`enable_signup = true`), relying on Supabase rate limits. Revisit before launch.
@@ -144,7 +144,7 @@ Nothing here runs from CI or from the repository.
 
 - Swapping the runtime (for example to NestJS) replaces only the shell; the router, auth, validation and presenters move unchanged.
 - Auth, routing and error mapping are covered by Node tests, not only by type checks.
-- Each product question maps to one place: Q5 is env, Q7 is one table, Q4 is `supabase config push`, Q6 is the `enable_signup` flag (`true`: decided open, also the CLI default), Q1 is a reserved route, and Q3 (display names, decided per circle but not implemented yet) is a presenter field: responses expose only identifiers until it lands, and adding names touches the presenter and the read model, not the router or auth.
+- Each product question maps to one place: Q5 is env, Q7 is one table, Q4 is `supabase config push`, Q6 is the `enable_signup` flag (`true`: decided open, also the CLI default), Q1 is a reserved route, and Q3 (display names, per circle, now implemented) was a small field plus one route (`PATCH /circles/:circleId/members/me`): adding names touched the domain, persistence, read model and presenter, plus one route entry; not the router or auth.
 
 ### Negative
 
