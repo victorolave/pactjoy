@@ -144,7 +144,9 @@ describe("HTTP over Postgres: concurrency", () => {
   describe("one active circle per user (CM-16, CM-17)", () => {
     const ACTIVE_ROWS_FOR_U1 = `select count(*)::int as n from pactjoy.circle_members where user_id = '${USERS[0]}' and status = 'active'`;
 
-    function expectOneWinnerOneConflict(race: { status: number; json: { error: { code: string } } }[]): boolean {
+    function expectOneWinnerOneConflict(
+      race: { status: number; json: { error: { code: string } } }[],
+    ): boolean {
       const winners = race.filter((r) => r.status === 201 || r.status === 200);
       const losers = race.filter((r) => r.status === 409);
       expect(winners).toHaveLength(1);

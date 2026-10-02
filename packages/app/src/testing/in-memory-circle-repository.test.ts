@@ -162,6 +162,17 @@ describe("createInMemoryCircleRepository", () => {
       expect(() => second.validate()).toThrow(ConcurrencyConflict);
       expect(await repo.get(circleId("circle-2"))).toBeNull();
     });
+
+    it("CM-18: one transaction staging two circles with the same active user fails validate() and commits neither", async () => {
+      const repo = createInMemoryCircleRepository();
+      const { repository: scoped, validate } = repo.beginTransaction();
+      await scoped.save(buildFixtureCircle("circle-1"), null);
+      await scoped.save(buildFixtureCircle("circle-2"), null);
+
+      expect(() => validate()).toThrow(ConcurrencyConflict);
+      expect(await repo.get(circleId("circle-1"))).toBeNull();
+      expect(await repo.get(circleId("circle-2"))).toBeNull();
+    });
   });
 
   it("CM-18: a non-transactional save() of a second active membership throws and saves nothing", async () => {
