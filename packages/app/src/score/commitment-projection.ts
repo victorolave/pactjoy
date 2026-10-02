@@ -6,12 +6,18 @@ import type {
   QuantityUnit,
   Schedule,
   Streak,
+  Target,
 } from "@pactjoy/engine";
 import { displayPercent, displayPoints } from "@pactjoy/engine";
 import type { CommitmentRecord, Measure, QuantityPrecision } from "../commitment/commitment.ts";
 import { toDecimalString } from "../shared/decimal.ts";
 import type { HabitId } from "../shared/ids.ts";
 import { canSeeDetail } from "./privacy.ts";
+
+/** A {@link Target} as exact decimal strings (engine fractions do not serialize). */
+export type TargetView =
+  | { readonly direction: "reach"; readonly minimum: string; readonly ideal: string }
+  | { readonly direction: "limit"; readonly ideal: string; readonly tolerance: string };
 
 /**
  * A {@link Measure} as a client receives it: thresholds are exact decimal
@@ -23,11 +29,24 @@ export type MeasureView =
       readonly unit: QuantityUnit;
       readonly customLabel: string | null;
       readonly precision: QuantityPrecision;
-      readonly target:
-        | { readonly direction: "reach"; readonly minimum: string; readonly ideal: string }
-        | { readonly direction: "limit"; readonly ideal: string; readonly tolerance: string };
+      readonly target: TargetView;
       readonly schedule: Schedule;
     };
+
+/** An engine {@link Target} as exact decimal strings. */
+export function projectTarget(target: Target): TargetView {
+  return target.direction === "reach"
+    ? {
+        direction: "reach",
+        minimum: toDecimalString(target.minimum),
+        ideal: toDecimalString(target.ideal),
+      }
+    : {
+        direction: "limit",
+        ideal: toDecimalString(target.ideal),
+        tolerance: toDecimalString(target.tolerance),
+      };
+}
 
 export function projectMeasure(measure: Measure): MeasureView {
   if (measure.unit === "done") {
@@ -37,18 +56,7 @@ export function projectMeasure(measure: Measure): MeasureView {
     unit: measure.unit,
     customLabel: measure.customLabel,
     precision: measure.precision,
-    target:
-      measure.target.direction === "reach"
-        ? {
-            direction: "reach",
-            minimum: toDecimalString(measure.target.minimum),
-            ideal: toDecimalString(measure.target.ideal),
-          }
-        : {
-            direction: "limit",
-            ideal: toDecimalString(measure.target.ideal),
-            tolerance: toDecimalString(measure.target.tolerance),
-          },
+    target: projectTarget(measure.target),
     schedule: measure.schedule,
   };
 }

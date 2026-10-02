@@ -195,4 +195,5 @@ export type {
   TodayEntry,
   TodayOpportunity,
   TodayRow,
+  TodayWeekProgress,
 } from "./today/today-rows.ts";

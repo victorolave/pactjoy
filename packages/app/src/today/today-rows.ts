@@ -1,12 +1,17 @@
 import type { CommitmentId, SeasonDay, WeekProgress } from "@pactjoy/engine";
-import { weekOf, weekProgress } from "@pactjoy/engine";
+import { displayPercent, weekOf, weekProgress } from "@pactjoy/engine";
 import type { CommitmentRecord } from "../commitment/commitment.ts";
 import { commitmentToEngine } from "../commitment/to-engine.ts";
 import type { EntryRecord } from "../entry/entry.ts";
 import { checkEntryWindow, entryWindowDeadline } from "../entry/entry-window.ts";
 import type { Habit } from "../habit/habit.ts";
 import type { MemberPauseRequest } from "../pause/pause-request.repository.ts";
-import { type MeasureView, projectMeasure } from "../score/commitment-projection.ts";
+import {
+  type MeasureView,
+  projectMeasure,
+  projectTarget,
+  type TargetView,
+} from "../score/commitment-projection.ts";
 import { startWeekdayOf, toEngineEntry } from "../score/score-input.ts";
 import type { Season } from "../season/season.ts";
 import { toDecimalString } from "../shared/decimal.ts";
@@ -37,6 +42,18 @@ export interface TodayEntry {
   readonly note: string | null;
 }
 
+/** The week's figures for a `timesPerWeek` / `weeklyTotal` row; `null` while the whole week is paused or on hold. */
+export interface TodayWeekProgress {
+  /** Sum of what counted; `null` while nothing has been logged. */
+  readonly value: string | null;
+  /** The week's effective (prorated) thresholds. */
+  readonly target: TargetView;
+  readonly sessionsDone: number;
+  readonly sessionsTarget: number;
+  /** Mean progress of the week's opportunities, rounded for display. */
+  readonly percent: number;
+}
+
 interface TodayRowBase {
   readonly commitmentId: CommitmentId;
   readonly habitName: string;
@@ -46,12 +63,10 @@ interface TodayRowBase {
   readonly entries: readonly TodayEntry[];
 }
 
-/**
- * One row per day-bound commitment (`specificDays`) OF THE VIEWER; other
- * members' commitments never appear. Week-bound commitments get their row in
- * the next slice.
- */
-export type TodayRow = TodayRowBase & { readonly kind: "day"; readonly scheduledToday: boolean };
+/** One row per commitment OF THE VIEWER; other members' commitments never appear. */
+export type TodayRow =
+  | (TodayRowBase & { readonly kind: "day"; readonly scheduledToday: boolean })
+  | (TodayRowBase & { readonly kind: "week"; readonly progress: TodayWeekProgress | null });
 
 export interface TodayRowsInput {
   readonly season: Season;
@@ -90,6 +105,16 @@ function entryView(record: EntryRecord, actualStart: LocalDate): TodayEntry {
   };
 }
 
+function weekProgressView(week: Extract<WeekProgress, { status: "scored" }>): TodayWeekProgress {
+  return {
+    value: week.value === null ? null : toDecimalString(week.value),
+    target: projectTarget(week.target),
+    sessionsDone: week.sessionsDone,
+    sessionsTarget: week.sessionsTarget,
+    percent: displayPercent(week.progress),
+  };
+}
+
 function stateOf(
   week: WeekProgress,
   refDay: SeasonDay,
@@ -104,7 +129,7 @@ function stateOf(
 }
 
 /**
- * The viewer's Today rows (TD-R4..R6): one per own day-bound commitment, from the same
+ * The viewer's Today rows (TD-R4..R6): one per own commitment, from the same
  * `weekProgress` the score uses and the same entry window `recordEntry`
  * enforces (`entryWindowDeadline` / `checkEntryWindow`), so Today never shows
  * open what recording would reject. Pure over data already loaded in the
@@ -120,15 +145,12 @@ export function todayRows(input: TodayRowsInput): readonly TodayRow[] {
   const engineEntries = input.entries.map(toEngineEntry);
   const week = weekOf(refDay);
 
-  return input.commitments.flatMap((commitment): TodayRow[] => {
+  return input.commitments.map((commitment): TodayRow => {
     const habitName = habitNames.get(commitment.habitId);
     if (habitName === undefined) {
       throw new Error(`habit ${commitment.habitId} of commitment ${commitment.id} not found`);
     }
     const { schedule } = commitment.measure;
-    if (schedule.period !== "perSession" || schedule.frequency.kind !== "specificDays") {
-      return [];
-    }
     const mine = input.entries.filter((entry) => entry.commitmentId === commitment.id);
     const progress = weekProgress({
       season: engineSeason,
@@ -180,10 +202,19 @@ export function todayRows(input: TodayRowsInput): readonly TodayRow[] {
         )
         .map((entry) => entryView(entry, actualStart)),
     };
-    // The weekday of the day the row describes (refDay), not of the real today.
-    const weekday = startWeekdayOf(dateOfDay(actualStart, refDay));
-    return [
-      { kind: "day", ...base, scheduledToday: schedule.frequency.weekdays.includes(weekday) },
-    ];
+    if (schedule.period === "perSession" && schedule.frequency.kind === "specificDays") {
+      // The weekday of the day the row describes (refDay), not of the real today.
+      const weekday = startWeekdayOf(dateOfDay(actualStart, refDay));
+      return {
+        kind: "day",
+        ...base,
+        scheduledToday: schedule.frequency.weekdays.includes(weekday),
+      };
+    }
+    return {
+      kind: "week",
+      ...base,
+      progress: progress.status === "scored" ? weekProgressView(progress) : null,
+    };
   });
 }
