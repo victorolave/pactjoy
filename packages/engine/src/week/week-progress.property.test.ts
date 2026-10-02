@@ -1,7 +1,7 @@
-import { array, assert, constantFrom, integer, property, record } from "fast-check";
+import { array, assert, constantFrom, integer, oneof, property, record } from "fast-check";
 import { expect, it } from "vitest";
 import type { Season, Weekday } from "../calendar/season-calendar.ts";
-import { seasonDay } from "../calendar/season-calendar.ts";
+import { seasonDay, weekdayOf } from "../calendar/season-calendar.ts";
 import type { Commitment } from "../commitment/commitment.ts";
 import { div, fromInt, mean, mul, sum } from "../fraction/fraction.ts";
 import type { PauseDecision } from "../pause/pause.ts";
@@ -50,7 +50,8 @@ const scenario = record({
     }),
     { maxLength: 2 },
   ),
-  today: integer({ min: 0, max: 40 }),
+  // Biased to the settled range so the scoreMember comparison (today >= 28) runs often.
+  today: oneof(integer({ min: 28, max: 40 }), integer({ min: 0, max: 40 })),
 });
 
 it("WP-S6: weekProgress matches pauseAwareWeekSessions per week and scoreMember points", () => {
@@ -89,6 +90,22 @@ it("WP-S6: weekProgress matches pauseAwareWeekSessions per week and scoreMember 
         expect(wp.sessionsTarget).toBe(plain.sessions.length);
         expect(wp.sessionsDone).toBe(plain.sessions.filter((x) => x.consistent).length);
         expect(wp.progress).toEqual(mean(plain.sessions.map((x) => x.progress)));
+        // The shown value is the sum of the counted session values, null when none counted.
+        const counted = plain.sessions.flatMap((x) => (x.value === null ? [] : [x.value]));
+        expect(wp.value).toEqual(counted.length === 0 ? null : sum(counted));
+        const { schedule } = s.commitment;
+        if (schedule.period === "perSession" && schedule.frequency.kind === "specificDays") {
+          // One slot per scheduled weekday no pause excludes, in the schedule's order.
+          const { weekdays } = schedule.frequency;
+          const excluded = new Set([...wp.excluded.paused, ...wp.excluded.onHold]);
+          const weekDays = Array.from({ length: 7 }, (_, i) => seasonDay(week * 7 + i));
+          const active = weekdays
+            .map((wd) => weekDays.find((d) => weekdayOf(sn, d) === wd))
+            .filter((d) => d !== undefined && !excluded.has(d));
+          expect(wp.slots.map((slot) => slot.day)).toEqual(active);
+        } else {
+          expect(wp.slots).toEqual([]);
+        }
         // Every opportunity weighs the same: a week stands for sessionsTarget of them.
         for (let i = 0; i < wp.sessionsTarget; i++) progresses.push(wp.progress);
       }
