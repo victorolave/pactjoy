@@ -1,4 +1,12 @@
-import { type Measure, type MeasureView, type Season, toDecimalString } from "@pactjoy/app";
+import {
+  type CommitmentRecord,
+  canSeeDetail,
+  type Measure,
+  type MeasureView,
+  type Season,
+  toDecimalString,
+} from "@pactjoy/app";
+import type { MemberId } from "@pactjoy/engine";
 import { presentInstant, presentInstantOrNull } from "./time.ts";
 
 export type CommitmentDto =
@@ -8,7 +16,7 @@ export type CommitmentDto =
       readonly memberId: string;
       readonly habitId: string;
       readonly weightPercent: number;
-      readonly privacy: "visible";
+      readonly privacy: "visible" | "private";
       readonly measure: MeasureView;
     }
   | {
@@ -61,12 +69,16 @@ export function presentMeasure(measure: Measure): MeasureView {
   };
 }
 
+const showsDetail = (commitment: CommitmentRecord, viewer: MemberId | null): boolean =>
+  viewer === null ? commitment.privacy === "visible" : canSeeDetail(commitment, viewer);
+
 /**
- * Season results carry no viewer MemberId, so the projection is viewer-agnostic
- * and conservative: `private` commitments are hidden for EVERYONE, owner
- * included (decision #5018; a viewer-aware read model is open question Q2).
+ * `viewer` is the member asking and decides which private commitments are shown: their own in
+ * full (marked `private`), everyone else's hidden (SV-R1, Q8). `null` means no viewer is known
+ * and stays conservative: private commitments are hidden for EVERYONE, owner included (decision
+ * #5018).
  */
-export function presentSeason(season: Season): SeasonDto {
+export function presentSeason(season: Season, viewer: MemberId | null): SeasonDto {
   return {
     id: season.id,
     circleId: season.circleId,
@@ -86,14 +98,14 @@ export function presentSeason(season: Season): SeasonDto {
     pactRevision: season.pactRevision,
     commitments: season.commitments.map(
       (commitment): CommitmentDto =>
-        commitment.privacy === "visible"
+        showsDetail(commitment, viewer)
           ? {
               kind: "detail",
               id: commitment.id,
               memberId: commitment.memberId,
               habitId: commitment.habitId,
               weightPercent: commitment.weightPercent,
-              privacy: "visible",
+              privacy: commitment.privacy,
               measure: presentMeasure(commitment.measure),
             }
           : {
@@ -105,3 +117,7 @@ export function presentSeason(season: Season): SeasonDto {
     ),
   };
 }
+
+/** The mutation routes carry no viewer yet (S6b): the conservative projection. */
+export const presentSeasonWithoutViewer = (season: Season): SeasonDto =>
+  presentSeason(season, null);

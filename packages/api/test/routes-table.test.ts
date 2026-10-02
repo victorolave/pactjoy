@@ -26,6 +26,7 @@ const { spies, USE_CASE_NAMES } = vi.hoisted(() => ({
     "memberScore",
     "standings",
     "today",
+    "seasonView",
   ] as string[],
 }));
 
@@ -86,11 +87,12 @@ const TABLE: Row[] = [
   ["memberScore", "GET", `/seasons/${ID}/members/${ID2}/score`],
   ["standings", "GET", `/seasons/${ID}/standings`],
   ["today", "GET", "/me/today"],
+  ["seasonView", "GET", `/seasons/${ID}`],
 ];
 
 describe("route table completeness (RT-S4)", () => {
-  it("has 21 routes over exactly the 20 use cases, the score one routed twice", () => {
-    expect(TABLE).toHaveLength(21);
+  it("has 22 routes over exactly the 21 use cases, the score one routed twice", () => {
+    expect(TABLE).toHaveLength(22);
     expect(new Set(TABLE.map(([name]) => name))).toEqual(new Set(USE_CASE_NAMES));
     expect(TABLE.filter(([name]) => name === "memberScore")).toHaveLength(2);
   });
