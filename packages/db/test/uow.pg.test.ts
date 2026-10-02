@@ -152,23 +152,35 @@ describe("retry on a real deadlock", () => {
     // waits: the re-run after the deadlock must not wait for anyone.
     const held = { first: deferred(), second: deferred() };
     const runs = { first: 0, second: 0 };
+    // Resolved once that side's transaction has fully settled (committed).
+    const settled = { first: deferred(), second: deferred() };
 
-    const lockInOrder = (who: "first" | "second", own: Habit, other: Habit) =>
-      uow.transaction(async ({ habits }) => {
-        runs[who] += 1;
-        const firstAttempt = runs[who] === 1;
-        const mine = await habits.get(own.id);
-        if (!mine) throw new Error("seed missing");
-        await habits.save({ ...mine, version: mine.version + 1 }, mine.version);
-        if (firstAttempt) {
-          held[who].resolve();
-          await within(held[who === "first" ? "second" : "first"].promise, 5_000);
-        }
-        const theirs = await habits.get(other.id);
-        if (!theirs) throw new Error("seed missing");
-        await habits.save({ ...theirs, version: theirs.version + 1 }, theirs.version);
-        return ok(undefined);
-      });
+    const lockInOrder = (who: "first" | "second", own: Habit, other: Habit) => {
+      const peer = who === "first" ? "second" : "first";
+      return uow
+        .transaction(async ({ habits }) => {
+          runs[who] += 1;
+          const firstAttempt = runs[who] === 1;
+          // The re-run must start only after the survivor has COMMITTED. Under
+          // READ COMMITTED a read taken while the survivor still holds its
+          // uncommitted locks returns the old version; the guarded update then
+          // blocks, and when the survivor commits it matches 0 rows and throws
+          // ConcurrencyConflict: the "loser must lose" rule working as designed.
+          if (!firstAttempt) await within(settled[peer].promise, 5_000);
+          const mine = await habits.get(own.id);
+          if (!mine) throw new Error("seed missing");
+          await habits.save({ ...mine, version: mine.version + 1 }, mine.version);
+          if (firstAttempt) {
+            held[who].resolve();
+            await within(held[peer].promise, 5_000);
+          }
+          const theirs = await habits.get(other.id);
+          if (!theirs) throw new Error("seed missing");
+          await habits.save({ ...theirs, version: theirs.version + 1 }, theirs.version);
+          return ok(undefined);
+        })
+        .finally(() => settled[who].resolve());
+    };
 
     try {
       const results = await within(
@@ -185,6 +197,8 @@ describe("retry on a real deadlock", () => {
       // Never leave a waiter behind if an assertion fails before both settle.
       held.first.resolve();
       held.second.resolve();
+      settled.first.resolve();
+      settled.second.resolve();
     }
   });
 });
