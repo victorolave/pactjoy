@@ -15,7 +15,8 @@ export function startWeekdayOf(date: LocalDate): Weekday {
   return ((epochDay(date) + EPOCH_WEEKDAY) % DAYS_PER_WEEK) as Weekday;
 }
 
-function toEngineEntry(record: EntryRecord): Entry {
+/** One stored entry as the engine reads it (1:1; no gap is ever filled). */
+export function toEngineEntry(record: EntryRecord): Entry {
   const base = {
     commitmentId: record.commitmentId,
     day: record.day,

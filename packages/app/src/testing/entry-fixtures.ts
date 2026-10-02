@@ -7,7 +7,7 @@ import { circleId, habitId, seasonId, userId } from "../shared/ids.ts";
 import { type Instant, instant } from "../time/instant.ts";
 import { epochDay, type LocalDate } from "../time/local-date.ts";
 import type { TestApp } from "./app-harness.ts";
-import { circleFixture, memberFixture, seasonFixture } from "./builders.ts";
+import { circleFixture, habitFixture, memberFixture, seasonFixture } from "./builders.ts";
 import { createFixedClock } from "./fixed-clock.ts";
 import { createFixedOffsetTimeZone } from "./fixed-time-zone.ts";
 
@@ -55,6 +55,7 @@ export const fixtureTimeZone = createFixedOffsetTimeZone({ offsetMinutes: OFFSET
  * GIVEN: a two-member circle whose season is stored directly (no use-case
  * setup) with its pact closed and `actualStart` = {@link SEASON_START}.
  * Andrea's commitment has the given `measure`; Victor's is a plain `done`.
+ * Their habits ("Meditar", "Leer") are stored too.
  */
 export async function givenActiveSeason(
   app: TestApp,
@@ -105,6 +106,14 @@ export async function givenActiveSeason(
   await app.uow.transaction(async (repos) => {
     await repos.circles.save(circle, null);
     await repos.seasons.save(season, null);
+    await repos.habits.save(
+      habitFixture({ id: habitId("habit-andrea"), ownerId: andrea.userId, name: "Meditar" }),
+      null,
+    );
+    await repos.habits.save(
+      habitFixture({ id: habitId("habit-victor"), ownerId: victor.userId, name: "Leer" }),
+      null,
+    );
     return { ok: true, value: undefined };
   });
   return { circle, season, andrea, victor, andreaCommitment, victorCommitment };

@@ -8,7 +8,7 @@ import { memberScore } from "../score/member-score.query.ts";
 import { startWeekdayOf } from "../score/score-input.ts";
 import { circleId, habitId, seasonId, userId } from "../shared/ids.ts";
 import { createTestApp, type TestApp } from "../testing/app-harness.ts";
-import { circleFixture, memberFixture, seasonFixture } from "../testing/builders.ts";
+import { circleFixture, habitFixture, memberFixture, seasonFixture } from "../testing/builders.ts";
 import {
   atInstant,
   fixtureTimeZone,
@@ -68,6 +68,10 @@ async function setupLateStart(clockDate: LocalDate, measure: Measure = DAILY_REA
   await app.uow.transaction(async (repos) => {
     await repos.circles.save(circle, null);
     await repos.seasons.save(season, null);
+    await repos.habits.save(
+      habitFixture({ id: habitId("habit-andrea"), ownerId: andrea.userId }),
+      null,
+    );
     return { ok: true, value: undefined };
   });
   return { app, actor: { userId: andrea.userId } };
@@ -268,6 +272,10 @@ describe("today: states (TD-R2, TD-R3)", () => {
     await app.uow.transaction(async (repos) => {
       await repos.circles.save(circle, null);
       await repos.seasons.save(season, null);
+      await repos.habits.save(
+        habitFixture({ id: habitId("habit-andrea"), ownerId: andrea.userId }),
+        null,
+      );
       return { ok: true, value: undefined };
     });
     const view = await today(app, { userId: andrea.userId });

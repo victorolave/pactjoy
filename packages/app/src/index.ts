@@ -190,3 +190,9 @@ export type {
   TodayView,
 } from "./today/today.query.ts";
 export { today } from "./today/today.query.ts";
+export type {
+  OpportunityState,
+  TodayEntry,
+  TodayOpportunity,
+  TodayRow,
+} from "./today/today-rows.ts";

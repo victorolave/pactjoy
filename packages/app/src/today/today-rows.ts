@@ -1,0 +1,189 @@
+import type { CommitmentId, SeasonDay, WeekProgress } from "@pactjoy/engine";
+import { weekOf, weekProgress } from "@pactjoy/engine";
+import type { CommitmentRecord } from "../commitment/commitment.ts";
+import { commitmentToEngine } from "../commitment/to-engine.ts";
+import type { EntryRecord } from "../entry/entry.ts";
+import { checkEntryWindow, entryWindowDeadline } from "../entry/entry-window.ts";
+import type { Habit } from "../habit/habit.ts";
+import type { MemberPauseRequest } from "../pause/pause-request.repository.ts";
+import { type MeasureView, projectMeasure } from "../score/commitment-projection.ts";
+import { startWeekdayOf, toEngineEntry } from "../score/score-input.ts";
+import type { Season } from "../season/season.ts";
+import { toDecimalString } from "../shared/decimal.ts";
+import type { EntryId, HabitId } from "../shared/ids.ts";
+import { epochDay, type LocalDate, localDateOfEpochDay } from "../time/local-date.ts";
+
+/**
+ * Where one opportunity stands for the viewer (TD-R6). Precedence:
+ * `paused`/`onHold` > `closed` > `logged` > `open`.
+ */
+export type OpportunityState = "open" | "logged" | "closed" | "paused" | "onHold";
+
+export interface TodayOpportunity {
+  readonly state: OpportunityState;
+  /** Last day (inclusive) the opportunity can still be logged or edited; `null` while paused or on hold. */
+  readonly graceUntil: LocalDate | null;
+}
+
+/** One of MY entries that its window still allows me to change. */
+export interface TodayEntry {
+  readonly entryId: EntryId;
+  /** The opportunity day the entry counts toward. */
+  readonly forDate: LocalDate;
+  readonly value:
+    | { readonly kind: "done" }
+    | { readonly kind: "missed" }
+    | { readonly kind: "quantity"; readonly value: string };
+  readonly note: string | null;
+}
+
+interface TodayRowBase {
+  readonly commitmentId: CommitmentId;
+  readonly habitName: string;
+  readonly privacy: "visible" | "private";
+  readonly measure: MeasureView;
+  readonly opportunity: TodayOpportunity;
+  readonly entries: readonly TodayEntry[];
+}
+
+/**
+ * One row per day-bound commitment (`specificDays`) OF THE VIEWER; other
+ * members' commitments never appear. Week-bound commitments get their row in
+ * the next slice.
+ */
+export type TodayRow = TodayRowBase & { readonly kind: "day"; readonly scheduledToday: boolean };
+
+export interface TodayRowsInput {
+  readonly season: Season;
+  readonly actualStart: LocalDate;
+  /** The viewer's own commitments, in season order. */
+  readonly commitments: readonly CommitmentRecord[];
+  readonly habits: readonly Habit[];
+  readonly entries: readonly EntryRecord[];
+  readonly pauses: readonly MemberPauseRequest[];
+  /** The real current season day (may be past the last day once the season ended). */
+  readonly today: SeasonDay;
+  /** The day the rows describe: today, or the last season day once ended. */
+  readonly refDay: SeasonDay;
+}
+
+/**
+ * Pause grace extension (B7) is hard-coded to 0 until `app-pause-workflow`
+ * (A2), exactly as `recordEntry` does, so Today and recording agree.
+ */
+const PAUSE_GRACE_EXTENSION_DAYS = 0;
+
+function dateOfDay(actualStart: LocalDate, day: number): LocalDate {
+  return localDateOfEpochDay(epochDay(actualStart) + day);
+}
+
+function entryView(record: EntryRecord, actualStart: LocalDate): TodayEntry {
+  const { value } = record;
+  return {
+    entryId: record.id,
+    forDate: dateOfDay(actualStart, record.day),
+    value:
+      value.kind === "quantity"
+        ? { kind: "quantity", value: toDecimalString(value.value) }
+        : { kind: value.kind },
+    note: record.note,
+  };
+}
+
+function stateOf(
+  week: WeekProgress,
+  refDay: SeasonDay,
+  closed: boolean,
+  logged: boolean,
+): OpportunityState {
+  if (week.status !== "scored") return week.status;
+  if (week.excluded.paused.includes(refDay)) return "paused";
+  if (week.excluded.onHold.includes(refDay)) return "onHold";
+  if (closed) return "closed";
+  return logged ? "logged" : "open";
+}
+
+/**
+ * The viewer's Today rows (TD-R4..R6): one per own day-bound commitment, from the same
+ * `weekProgress` the score uses and the same entry window `recordEntry`
+ * enforces (`entryWindowDeadline` / `checkEntryWindow`), so Today never shows
+ * open what recording would reject. Pure over data already loaded in the
+ * caller's single read.
+ */
+export function todayRows(input: TodayRowsInput): readonly TodayRow[] {
+  const { season, actualStart, today, refDay } = input;
+  const habitNames = new Map<HabitId, string>(input.habits.map((h) => [h.id, h.name]));
+  const engineSeason = {
+    lengthWeeks: season.lengthWeeks,
+    startWeekday: startWeekdayOf(actualStart),
+  };
+  const engineEntries = input.entries.map(toEngineEntry);
+  const week = weekOf(refDay);
+
+  return input.commitments.flatMap((commitment): TodayRow[] => {
+    const habitName = habitNames.get(commitment.habitId);
+    if (habitName === undefined) {
+      throw new Error(`habit ${commitment.habitId} of commitment ${commitment.id} not found`);
+    }
+    const { schedule } = commitment.measure;
+    if (schedule.period !== "perSession" || schedule.frequency.kind !== "specificDays") {
+      return [];
+    }
+    const mine = input.entries.filter((entry) => entry.commitmentId === commitment.id);
+    const progress = weekProgress({
+      season: engineSeason,
+      commitment: commitmentToEngine(commitment),
+      week,
+      entries: engineEntries.filter((entry) => entry.commitmentId === commitment.id),
+      pauses: input.pauses.filter((pause) => pause.commitmentId === commitment.id),
+      today: refDay,
+    });
+    const closed =
+      checkEntryWindow({
+        schedule,
+        day: refDay,
+        today,
+        lengthWeeks: season.lengthWeeks,
+        pauseGraceExtensionDays: PAUSE_GRACE_EXTENSION_DAYS,
+      }) !== null;
+    const state = stateOf(
+      progress,
+      refDay,
+      closed,
+      mine.some((entry) => entry.day === refDay),
+    );
+    const held = state === "paused" || state === "onHold";
+    const base: TodayRowBase = {
+      commitmentId: commitment.id,
+      habitName,
+      privacy: commitment.privacy,
+      measure: projectMeasure(commitment.measure),
+      opportunity: {
+        state,
+        graceUntil: held
+          ? null
+          : dateOfDay(
+              actualStart,
+              entryWindowDeadline(schedule, refDay, PAUSE_GRACE_EXTENSION_DAYS),
+            ),
+      },
+      entries: mine
+        .filter(
+          (entry) =>
+            checkEntryWindow({
+              schedule,
+              day: entry.day,
+              today,
+              lengthWeeks: season.lengthWeeks,
+              pauseGraceExtensionDays: PAUSE_GRACE_EXTENSION_DAYS,
+            }) === null,
+        )
+        .map((entry) => entryView(entry, actualStart)),
+    };
+    // The weekday of the day the row describes (refDay), not of the real today.
+    const weekday = startWeekdayOf(dateOfDay(actualStart, refDay));
+    return [
+      { kind: "day", ...base, scheduledToday: schedule.frequency.weekdays.includes(weekday) },
+    ];
+  });
+}
