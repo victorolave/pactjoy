@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { createCircleBody, joinCircleBody } from "../src/testing/index.ts";
 import { givenTwoMemberSeason } from "./entries-fixture.ts";
 import { ANDREA, setup, UNKNOWN_CIRCLE, VICTOR } from "./harness.ts";
 
@@ -47,7 +48,7 @@ async function givenScored(measure: object = DAILY) {
 /** A circle whose only season starts in the future: nothing to score yet (Andrea holds a commitment). */
 async function givenFutureSeason() {
   const ctx = setup();
-  const circle = await ctx.call("POST", "/circles", "andrea", { name: "Crew" });
+  const circle = await ctx.call("POST", "/circles", "andrea", createCircleBody("Crew"));
   const season = await ctx.call("POST", `/circles/${circle.json.data.id}/seasons`, "andrea", {
     timezone: "America/Bogota",
     startDate: "2023-11-20",
@@ -109,10 +110,10 @@ describe("GET /seasons/:seasonId/score (UE-E-S11)", () => {
 
   it("Q2 default: another member's private commitment is hidden (no habit or thresholds)", async () => {
     const ctx = setup();
-    const circle = await ctx.call("POST", "/circles", "andrea", { name: "Crew" });
+    const circle = await ctx.call("POST", "/circles", "andrea", createCircleBody("Crew"));
     const circleId: string = circle.json.data.id;
     const invite = await ctx.call("POST", `/circles/${circleId}/invite`, "andrea");
-    await ctx.call("POST", "/circles/join", "victor", { inviteCode: invite.json.data.code });
+    await ctx.call("POST", "/circles/join", "victor", joinCircleBody(invite.json.data.code));
     const season = await ctx.call("POST", `/circles/${circleId}/seasons`, "andrea", {
       timezone: "America/Bogota",
       startDate: "2023-11-14",

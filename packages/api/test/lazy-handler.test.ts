@@ -6,7 +6,12 @@ import { createLazyHandler } from "../src/composition/lazy-handler.ts";
 import { createConsoleLogger } from "../src/composition/logger.ts";
 import type { Handler } from "../src/http/types.ts";
 import { createApi } from "../src/routes/index.ts";
-import { createDeterministicUuidGenerator, createFakeTokenVerifier } from "../src/testing/index.ts";
+import {
+  createCircleBody,
+  createDeterministicUuidGenerator,
+  createFakeTokenVerifier,
+  joinCircleBody,
+} from "../src/testing/index.ts";
 
 const ANDREA = userId("aaaaaaaa-0000-4000-8000-000000000001");
 const SECRET = "postgres://u:secret@h:6543/db";
@@ -80,7 +85,7 @@ describe("createLazyHandler (AC-S4)", () => {
     expect(built).not.toHaveBeenCalled();
     await handler(request("GET", "/nope"));
     await handler(request("GET", "/nope"));
-    await handler(request("POST", "/circles", "andrea", { name: "Crew" }));
+    await handler(request("POST", "/circles", "andrea", createCircleBody("Crew")));
     expect(built).toHaveBeenCalledTimes(1);
   });
 
@@ -88,8 +93,8 @@ describe("createLazyHandler (AC-S4)", () => {
     const { build, connected, logger } = composition();
     const handler = createLazyHandler(build, { logger });
     const early = [
-      request("POST", "/circles", undefined, { name: "Crew" }),
-      request("POST", "/circles", "bogus", { name: "Crew" }),
+      request("POST", "/circles", undefined, createCircleBody("Crew")),
+      request("POST", "/circles", "bogus", createCircleBody("Crew")),
       request("GET", "/nowhere", "andrea"),
       request("DELETE", "/circles", "andrea"),
       request("POST", "/circles", "andrea", { name: "Crew", extra: true }),
@@ -99,9 +104,9 @@ describe("createLazyHandler (AC-S4)", () => {
     expect(statuses).toEqual([401, 401, 404, 405, 422]);
     expect(connected).not.toHaveBeenCalled();
 
-    expect((await handler(request("POST", "/circles", "andrea", { name: "Crew" }))).status).toBe(
-      201,
-    );
+    expect(
+      (await handler(request("POST", "/circles", "andrea", createCircleBody("Crew")))).status,
+    ).toBe(201);
     expect(connected).toHaveBeenCalledTimes(1);
     expect((await handler(request("POST", "/habits", "andrea", { name: "Run" }))).status).toBe(201);
     expect(connected).toHaveBeenCalledTimes(2); // one use-case call each; the factory ran once
@@ -128,7 +133,7 @@ describe("createLazyHandler (AC-S4)", () => {
     });
     expect(lines.join("\n")).toContain("API_DATABASE_URL");
 
-    const second = await handler(request("POST", "/circles", "andrea", { name: "Crew" }));
+    const second = await handler(request("POST", "/circles", "andrea", createCircleBody("Crew")));
     expect(second.status).toBe(201);
     expect(attempts).toBe(2);
     await handler(request("GET", "/nope"));
@@ -171,9 +176,9 @@ describe("logging (AU-S15, log half)", () => {
     const handler = createLazyHandler(build, { logger });
     const token = "tok-super-secret-value";
     await handler(request("GET", "/circles/x/nope", token));
-    await handler(request("POST", "/circles", token, { name: "Crew" }));
+    await handler(request("POST", "/circles", token, createCircleBody("Crew")));
     await handler(request("POST", "/circles", "andrea", { name: "Crew", note: "private words" }));
-    await handler(request("POST", "/circles/join", "andrea", { inviteCode: "ABCDEF" }));
+    await handler(request("POST", "/circles/join", "andrea", joinCircleBody("ABCDEF")));
     await handler(request("POST", "/circles/join", "andrea", { inviteCode: "zz-bad-code" }));
     const logged = lines.join("\n");
     expect(logged).toContain("auth.rejected"); // something WAS logged

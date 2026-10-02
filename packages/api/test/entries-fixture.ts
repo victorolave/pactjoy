@@ -1,3 +1,4 @@
+import { createCircleBody, joinCircleBody } from "../src/testing/index.ts";
 import { setup } from "./harness.ts";
 
 export const DONE = { unit: "done", frequency: { kind: "timesPerWeek", times: 3 } };
@@ -13,7 +14,7 @@ export const DONE_BODY = { value: { kind: "done" }, clientRequestId: "req-1" };
 /** The clock sits on 2023-11-14 (America/Bogota): a season starting today is active once the pact closes. */
 export async function givenActiveSeason(measure: object = DONE) {
   const ctx = setup();
-  const circle = await ctx.call("POST", "/circles", "andrea", { name: "Crew" });
+  const circle = await ctx.call("POST", "/circles", "andrea", createCircleBody("Crew"));
   const season = await ctx.call("POST", `/circles/${circle.json.data.id}/seasons`, "andrea", {
     timezone: "America/Bogota",
     startDate: "2023-11-14",
@@ -36,10 +37,10 @@ export async function givenActiveSeason(measure: object = DONE) {
 /** Andrea owns the circle, Victor joins before the season; both commit and approve. */
 export async function givenTwoMemberSeason(measure: object = DONE) {
   const ctx = setup();
-  const circle = await ctx.call("POST", "/circles", "andrea", { name: "Crew" });
+  const circle = await ctx.call("POST", "/circles", "andrea", createCircleBody("Crew"));
   const circleId: string = circle.json.data.id;
   const invite = await ctx.call("POST", `/circles/${circleId}/invite`, "andrea");
-  await ctx.call("POST", "/circles/join", "victor", { inviteCode: invite.json.data.code });
+  await ctx.call("POST", "/circles/join", "victor", joinCircleBody(invite.json.data.code));
   const season = await ctx.call("POST", `/circles/${circleId}/seasons`, "andrea", {
     timezone: "America/Bogota",
     startDate: "2023-11-14",

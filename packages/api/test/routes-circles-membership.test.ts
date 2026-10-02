@@ -1,12 +1,13 @@
 import { seasonId } from "@pactjoy/app";
 import { seasonFixture } from "@pactjoy/app/testing";
 import { describe, expect, it, vi } from "vitest";
+import { createCircleBody, joinCircleBody } from "../src/testing/index.ts";
 import { ANDREA, setup, UNKNOWN_CIRCLE, VICTOR } from "./harness.ts";
 
 /** Andrea owns a circle with an invite; returns the circle id and the code. */
 async function givenInvitedCircle() {
   const ctx = setup();
-  const created = await ctx.call("POST", "/circles", "andrea", { name: "Crew" });
+  const created = await ctx.call("POST", "/circles", "andrea", createCircleBody("Crew"));
   const circleId: string = created.json.data.id;
   const invite = await ctx.call("POST", `/circles/${circleId}/invite`, "andrea");
   return { ...ctx, circleId, code: invite.json.data.code as string };
@@ -29,16 +30,19 @@ describe("POST /circles/join (UE-C-S6..S8)", () => {
 
   it("S7: 404 InviteNotFound for a well-formed code nobody owns", async () => {
     const { call } = await givenInvitedCircle();
-    const { status, json } = await call("POST", "/circles/join", "victor", {
-      inviteCode: "AAAAAA",
-    });
+    const { status, json } = await call(
+      "POST",
+      "/circles/join",
+      "victor",
+      joinCircleBody("AAAAAA"),
+    );
     expect([status, json.error.code]).toEqual([404, "InviteNotFound"]);
   });
 
   it("S8: 409 AlreadyInActiveCircle for a member of another circle", async () => {
     const { call, code } = await givenInvitedCircle();
-    await call("POST", "/circles", "victor", { name: "Mine" });
-    const { status, json } = await call("POST", "/circles/join", "victor", { inviteCode: code });
+    await call("POST", "/circles", "victor", createCircleBody("Mine"));
+    const { status, json } = await call("POST", "/circles/join", "victor", joinCircleBody(code));
     expect([status, json.error.code]).toEqual([409, "AlreadyInActiveCircle"]);
   });
 
@@ -50,7 +54,7 @@ describe("POST /circles/join (UE-C-S6..S8)", () => {
       { ...circle, invite: { ...circle.invite, expiresAt: app.clock.now() }, version: 9 },
       circle.version,
     );
-    const { status, json } = await call("POST", "/circles/join", "victor", { inviteCode: code });
+    const { status, json } = await call("POST", "/circles/join", "victor", joinCircleBody(code));
     expect([status, json.error.code]).toEqual([410, "InviteExpired"]);
   });
 
@@ -68,7 +72,7 @@ describe("POST /circles/join (UE-C-S6..S8)", () => {
       { ...circle, members: [...circle.members, ...fillers], version: 9 },
       circle.version,
     );
-    const { status, json } = await call("POST", "/circles/join", "victor", { inviteCode: code });
+    const { status, json } = await call("POST", "/circles/join", "victor", joinCircleBody(code));
     expect([status, json.error.code]).toEqual([409, "CircleFull"]);
   });
 
@@ -82,7 +86,7 @@ describe("POST /circles/join (UE-C-S6..S8)", () => {
       }),
       null,
     );
-    const { status, json } = await call("POST", "/circles/join", "victor", { inviteCode: code });
+    const { status, json } = await call("POST", "/circles/join", "victor", joinCircleBody(code));
     expect([status, json.error.code]).toEqual([409, "SeasonNotJoinable"]);
   });
 
@@ -100,7 +104,7 @@ describe("POST /circles/join (UE-C-S6..S8)", () => {
     const circle = await app.circles.get(circleId as never);
     if (!circle) throw new Error("fixture setup failed");
     await app.circles.save({ ...circle, archivedAt: app.clock.now(), version: 9 }, circle.version);
-    const { status, json } = await call("POST", "/circles/join", "victor", { inviteCode: code });
+    const { status, json } = await call("POST", "/circles/join", "victor", joinCircleBody(code));
     expect([status, json.error.code]).toEqual([409, "CircleArchived"]);
   });
 
@@ -131,7 +135,7 @@ describe("POST /circles/join (UE-C-S6..S8)", () => {
 describe("POST /circles/:circleId/leave", () => {
   it("200 marks the caller as left; again gives 403 NotAMember; unknown circle 404", async () => {
     const { call, circleId, code } = await givenInvitedCircle();
-    await call("POST", "/circles/join", "victor", { inviteCode: code });
+    await call("POST", "/circles/join", "victor", joinCircleBody(code));
     const left = await call("POST", `/circles/${circleId}/leave`, "victor");
     expect(left.status).toBe(200);
     expect(left.json.data.members.find((m: { isYou: boolean }) => m.isYou).status).toBe("left");

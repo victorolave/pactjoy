@@ -1,3 +1,4 @@
+import { createCircleBody } from "@pactjoy/api/testing";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { createHttpOverPostgres, DAILY, TODAY } from "./api-http.ts";
 import { connect, databaseUrl, truncateAll } from "./db.ts";
@@ -14,7 +15,7 @@ afterAll(async () => {
 describe("HTTP over Postgres: the real handler on the migrated database", () => {
   it("AC-R8/AC-S9: circle, habit, season, commitment, approve, record, replay, standings", async () => {
     const { call } = api;
-    const circle = await call("POST", "/circles", "u1", { name: "Crew" });
+    const circle = await call("POST", "/circles", "u1", createCircleBody("Crew"));
     const habit = await call("POST", "/habits", "u1", { name: "Run" });
     const season = await call("POST", `/circles/${circle.json.data.id}/seasons`, "u1", {
       timezone: "America/Bogota",
@@ -52,7 +53,7 @@ describe("HTTP over Postgres: the real handler on the migrated database", () => 
 
   it("a malformed invite code and a non-uuid habitId are 422 and never reach Postgres (no 22P02)", async () => {
     const { call } = api;
-    const circle = await call("POST", "/circles", "u1", { name: "Crew" });
+    const circle = await call("POST", "/circles", "u1", createCircleBody("Crew"));
     const season = await call("POST", `/circles/${circle.json.data.id}/seasons`, "u1", {
       timezone: "America/Bogota",
       startDate: TODAY,
