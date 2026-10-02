@@ -131,7 +131,7 @@ export type {
   MemberScoreView,
 } from "./score/member-score.query.ts";
 export { memberScore } from "./score/member-score.query.ts";
-export { visibleNote } from "./score/privacy.ts";
+export { canSeeDetail, visibleNote } from "./score/privacy.ts";
 export type {
   StandingsDeps,
   StandingsError,
@@ -165,6 +165,13 @@ export {
   isSeasonLengthWeeks,
   reviewCadenceForLength,
 } from "./season/season.ts";
+export type {
+  SeasonView,
+  SeasonViewDeps,
+  SeasonViewError,
+  SeasonViewInput,
+} from "./season/season-view.query.ts";
+export { seasonView } from "./season/season-view.query.ts";
 export type { Actor } from "./shared/actor.ts";
 export { toDecimalString } from "./shared/decimal.ts";
 export { ConcurrencyConflict, InviteCodeGenerationFailed } from "./shared/errors.ts";
