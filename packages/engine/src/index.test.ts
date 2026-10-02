@@ -30,6 +30,7 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "scoreMember",
   "seasonDay",
   "weekOf",
+  "weekProgress",
 ].sort();
 
 describe("@pactjoy/engine public API", () => {
