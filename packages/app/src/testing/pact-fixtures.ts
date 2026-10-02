@@ -56,7 +56,7 @@ export async function givenOpenPactWithOneApproval(app: TestApp): Promise<OpenPa
         privacy: "visible",
         measure: { unit: "done", frequency: { kind: "timesPerWeek", times: 3 } },
       }),
-    );
+    ).season;
   }
   season = must(
     await approvePact(app, andrea, {
@@ -98,7 +98,7 @@ export async function givenSoloOpenPact(app: TestApp): Promise<{
       privacy: "visible",
       measure: { unit: "done", frequency: { kind: "timesPerWeek", times: 3 } },
     }),
-  );
+  ).season;
   return { circle, season, andrea };
 }
 

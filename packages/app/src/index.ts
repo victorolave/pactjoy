@@ -158,6 +158,7 @@ export type {
   ReviewCadenceWeeks,
   Season,
   SeasonLengthWeeks,
+  SeasonMutationResult,
   SeasonStatus,
 } from "./season/season.ts";
 export {

@@ -49,7 +49,7 @@ async function addFullWeightCommitment(app: TestApp, seasonIdValue: SeasonId, ac
     measure: DONE_MEASURE,
   });
   if (!result.ok) throw new Error("fixture setup failed");
-  return result.value;
+  return result.value.season;
 }
 
 /** GIVEN: a circle + open-pact season with `count` members, each with a single 100%-weight commitment. */
@@ -220,8 +220,8 @@ describe("approvePact", () => {
     if (!withCommitment.ok) throw new Error("fixture setup failed");
 
     const result = await approvePact(app, actorFor("user-andrea"), {
-      seasonId: withCommitment.value.id,
-      expectedPactRevision: withCommitment.value.pactRevision,
+      seasonId: withCommitment.value.season.id,
+      expectedPactRevision: withCommitment.value.season.pactRevision,
     });
 
     expect(result).toEqual({ ok: false, error: { kind: "CommitmentWeightsNotFull" } });

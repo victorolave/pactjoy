@@ -70,10 +70,10 @@ describe("PUT /seasons/:seasonId/commitments/:commitmentId (UE-S-S9)", () => {
     expect(await app.seasons.get(seasonId as never)).toEqual(before);
   });
 
-  it("passes privacy through: editing to private hides it for everyone (Q2 default)", async () => {
+  it("passes privacy through: editing to private still shows it in full to its owner (SV-R2)", async () => {
     const { call, path } = await givenCommitment();
     const { json } = await call("PUT", path, "andrea", { ...EDIT, privacy: "private" });
-    expect(json.data.commitments[0].kind).toBe("hidden");
+    expect(json.data.commitments[0].kind).toBe("detail");
   });
 
   it("maps the app errors: 422 InvalidWeight, 403 NotOwner, 404s, 409 PactNotOpen", async () => {

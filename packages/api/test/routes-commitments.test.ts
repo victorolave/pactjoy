@@ -103,11 +103,10 @@ describe("POST /seasons/:seasonId/commitments (UE-S-S5)", () => {
     expect([closed.status, closed.json.error.code]).toEqual([409, "PactNotOpen"]);
   });
 
-  it("a private commitment is hidden for everyone (Q2 design default)", async () => {
+  it("the owner sees their private commitment in full, marked private (SV-R2)", async () => {
     const { call, path, body } = await givenSeason();
     const { json } = await call("POST", path, "andrea", body(DONE, { privacy: "private" }));
-    expect(json.data.commitments[0].kind).toBe("hidden");
-    expect(json.data.commitments[0].measure).toBeUndefined();
+    expect(json.data.commitments[0]).toMatchObject({ kind: "detail", privacy: "private" });
   });
 
   const nested = (measure: unknown) => withMeasure(measure);

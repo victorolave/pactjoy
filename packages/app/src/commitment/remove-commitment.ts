@@ -3,7 +3,7 @@ import { findActiveMember } from "../circle/circle.ts";
 import { resetApprovals } from "../pact/reset-approvals.ts";
 import type { Repositories } from "../ports/repositories.ts";
 import type { UnitOfWork } from "../ports/unit-of-work.ts";
-import type { Season } from "../season/season.ts";
+import type { Season, SeasonMutationResult } from "../season/season.ts";
 import type { Actor } from "../shared/actor.ts";
 import type { SeasonId } from "../shared/ids.ts";
 import { err, ok, type Result } from "../shared/result.ts";
@@ -16,6 +16,8 @@ export interface RemoveCommitmentInput {
   readonly seasonId: SeasonId;
   readonly commitmentId: CommitmentId;
 }
+
+export type RemoveCommitmentResult = Result<SeasonMutationResult, RemoveCommitmentError>;
 
 export type RemoveCommitmentError =
   | { readonly kind: "SeasonNotFound" }
@@ -35,8 +37,8 @@ export async function removeCommitment(
   deps: RemoveCommitmentDeps,
   actor: Actor,
   input: RemoveCommitmentInput,
-): Promise<Result<Season, RemoveCommitmentError>> {
-  return deps.uow.transaction(async (repos): Promise<Result<Season, RemoveCommitmentError>> => {
+): Promise<RemoveCommitmentResult> {
+  return deps.uow.transaction(async (repos): Promise<RemoveCommitmentResult> => {
     const season = await repos.seasons.get(input.seasonId);
     if (!season) {
       return err({ kind: "SeasonNotFound" });
@@ -66,6 +68,6 @@ export async function removeCommitment(
       version: season.version + 1,
     };
     await repos.seasons.save(updated, season.version);
-    return ok(updated);
+    return ok({ season: updated, viewerId: member.id });
   });
 }

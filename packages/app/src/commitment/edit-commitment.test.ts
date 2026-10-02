@@ -38,7 +38,11 @@ async function seasonWithCommitment(app: ReturnType<typeof createTestApp>) {
     measure: { unit: "done", frequency: { kind: "timesPerWeek", times: 3 } },
   });
   if (!added.ok) throw new Error("fixture setup failed");
-  return { circle: circle.value, season: added.value, commitment: added.value.commitments[0] };
+  return {
+    circle: circle.value,
+    season: added.value.season,
+    commitment: added.value.season.commitments[0],
+  };
 }
 
 describe("editCommitment no-op (SS-13, PI-S12..S14)", () => {
@@ -66,7 +70,7 @@ describe("editCommitment no-op (SS-13, PI-S12..S14)", () => {
       measure: DONE_3,
     });
 
-    expect(result).toEqual({ ok: true, value: season });
+    expect(result.ok && result.value.season).toEqual(season);
     expect(save).not.toHaveBeenCalled();
     const stored = await storedSeason(app, season.id);
     expect(stored.approvals).toHaveLength(1);
@@ -92,7 +96,7 @@ describe("editCommitment no-op (SS-13, PI-S12..S14)", () => {
       measure: MINUTES("10.0", "30.00"),
     });
     expect(repeated).toEqual({ ok: true, value: first.value });
-    expect((await storedSeason(app, season.id)).version).toBe(first.value.version);
+    expect((await storedSeason(app, season.id)).version).toBe(first.value.season.version);
 
     const changed = await editCommitment(app, andrea, {
       ...base,
@@ -102,8 +106,8 @@ describe("editCommitment no-op (SS-13, PI-S12..S14)", () => {
 
     expect(changed.ok).toBe(true);
     if (!changed.ok) return;
-    expect(changed.value.version).toBe(first.value.version + 1);
-    expect(changed.value.pactRevision).toBe(first.value.pactRevision + 1);
+    expect(changed.value.season.version).toBe(first.value.season.version + 1);
+    expect(changed.value.season.pactRevision).toBe(first.value.season.pactRevision + 1);
   });
 
   it.each([
@@ -188,7 +192,7 @@ describe("editCommitment", () => {
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.value.commitments[0]?.habitId).toBe(habitId("habit-run"));
+    expect(result.value.season.commitments[0]?.habitId).toBe(habitId("habit-run"));
   });
 
   it("SS-13: edits the actor's own commitment while the pact is open", async () => {
@@ -206,10 +210,10 @@ describe("editCommitment", () => {
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.value.commitments).toHaveLength(1);
-    expect(result.value.commitments[0]?.weightPercent).toBe(35);
-    expect(result.value.commitments[0]?.privacy).toBe("private");
-    expect(result.value.version).toBe(season.version + 1);
+    expect(result.value.season.commitments).toHaveLength(1);
+    expect(result.value.season.commitments[0]?.weightPercent).toBe(35);
+    expect(result.value.season.commitments[0]?.privacy).toBe("private");
+    expect(result.value.season.version).toBe(season.version + 1);
   });
 
   it("rejects an unknown commitment id", async () => {

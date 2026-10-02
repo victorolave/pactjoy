@@ -3,7 +3,7 @@ import { resetApprovals } from "../pact/reset-approvals.ts";
 import type { IdGenerator } from "../ports/id-generator.ts";
 import type { Repositories } from "../ports/repositories.ts";
 import type { UnitOfWork } from "../ports/unit-of-work.ts";
-import type { Season } from "../season/season.ts";
+import type { Season, SeasonMutationResult } from "../season/season.ts";
 import type { Actor } from "../shared/actor.ts";
 import type { HabitId, SeasonId } from "../shared/ids.ts";
 import { err, ok, type Result } from "../shared/result.ts";
@@ -27,6 +27,8 @@ export interface AddCommitmentInput {
   readonly measure: MeasureInput;
 }
 
+export type AddCommitmentResult = Result<SeasonMutationResult, AddCommitmentError>;
+
 export type AddCommitmentError =
   | { readonly kind: "SeasonNotFound" }
   | { readonly kind: "NotAMember" }
@@ -46,8 +48,8 @@ export async function addCommitment(
   deps: AddCommitmentDeps,
   actor: Actor,
   input: AddCommitmentInput,
-): Promise<Result<Season, AddCommitmentError>> {
-  return deps.uow.transaction(async (repos): Promise<Result<Season, AddCommitmentError>> => {
+): Promise<AddCommitmentResult> {
+  return deps.uow.transaction(async (repos): Promise<AddCommitmentResult> => {
     const season = await repos.seasons.get(input.seasonId);
     if (!season) {
       return err({ kind: "SeasonNotFound" });
@@ -86,6 +88,6 @@ export async function addCommitment(
       version: season.version + 1,
     };
     await repos.seasons.save(updated, season.version);
-    return ok(updated);
+    return ok({ season: updated, viewerId: member.id });
   });
 }

@@ -6,7 +6,7 @@ import {
   removeCommitment,
   seasonId,
 } from "@pactjoy/app";
-import { presentSeasonWithoutViewer } from "../presenters/season.ts";
+import { presentSeasonFor } from "../presenters/season.ts";
 import { uuid } from "../validation/formats.ts";
 import { measureInput } from "../validation/measure.ts";
 import { number, object, oneOf } from "../validation/schema.ts";
@@ -42,7 +42,7 @@ export function commitmentRoutes(deps: ApiDeps): Route[] {
           commitmentId: commitmentId(input.params.commitmentId),
           ...input.body,
         });
-        return toResult(result, 200, presentSeasonWithoutViewer);
+        return toResult(result, 200, presentSeasonFor);
       },
     },
     {
@@ -55,7 +55,7 @@ export function commitmentRoutes(deps: ApiDeps): Route[] {
           seasonId: seasonId(input.params.seasonId),
           commitmentId: commitmentId(input.params.commitmentId),
         });
-        return toResult(result, 200, presentSeasonWithoutViewer);
+        return toResult(result, 200, presentSeasonFor);
       },
     },
     {
@@ -69,7 +69,7 @@ export function commitmentRoutes(deps: ApiDeps): Route[] {
           ...input.body,
           habitId: habitId(input.body.habitId),
         });
-        return toResult(result, 201, presentSeasonWithoutViewer);
+        return toResult(result, 201, presentSeasonFor);
       },
     },
   ];

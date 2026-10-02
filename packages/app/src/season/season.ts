@@ -17,6 +17,16 @@ export type SeasonLengthWeeks = 4 | 6 | 8 | 12;
 export type ReviewCadenceWeeks = 1 | 2 | 3;
 
 /**
+ * What a season mutation returns: the season it left behind together with the member who acted,
+ * resolved inside the transaction (the `RecordEntryResult.memberId` precedent; ADR-0011 rejects a
+ * post-commit lookup). The caller projects the season for that viewer with `canSeeDetail`.
+ */
+export interface SeasonMutationResult {
+  readonly season: Season;
+  readonly viewerId: MemberId;
+}
+
+/**
  * One member's unanimous approval of the pact (Pacto, S6, design's
  * `PactApproval`). Recorded per {@link MemberId}, at most one live entry
  * per member -- `approve-pact.ts` upserts by `memberId` instead of
