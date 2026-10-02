@@ -42,7 +42,7 @@ describe("pact approval races (deterministic, D5)", () => {
       app,
       (a) =>
         approvePact(a, victor, { seasonId: season.id, expectedPactRevision: season.pactRevision }),
-      (a) => joinCircle(a, carla, joinCircleInput(invite.value.code)),
+      (a) => joinCircle(a, carla, joinCircleInput(invite.value.code, "Carla")),
     );
 
     expect(winner.status).toBe("fulfilled");
@@ -61,7 +61,7 @@ describe("pact approval races (deterministic, D5)", () => {
 
     const { winner, loser } = await raceTransactions(
       app,
-      (a) => joinCircle(a, carla, joinCircleInput(invite.value.code)),
+      (a) => joinCircle(a, carla, joinCircleInput(invite.value.code, "Carla")),
       (a) =>
         approvePact(a, victor, { seasonId: season.id, expectedPactRevision: season.pactRevision }),
     );
@@ -85,7 +85,7 @@ describe("pact approval races (deterministic, D5)", () => {
 
     const { winner, loser } = await raceTransactions(
       app,
-      (a) => joinCircle(a, carla, joinCircleInput(invite.value.code)),
+      (a) => joinCircle(a, carla, joinCircleInput(invite.value.code, "Carla")),
       (a) =>
         approvePact(a, andrea, { seasonId: season.id, expectedPactRevision: season.pactRevision }),
     );

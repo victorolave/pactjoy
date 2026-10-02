@@ -87,6 +87,45 @@ describe("HTTP over Postgres: concurrency", () => {
     expect(["CircleFull", "ConcurrencyConflict"]).toContain(refusal?.json.error.code);
   });
 
+  it("UE-C-S12: a taken display name, in any case, is a 409 DisplayNameTaken", async () => {
+    const circle = await call("POST", "/circles", "u1", createCircleBody("Crew", "Ana"));
+    const invite = await call("POST", `/circles/${circle.json.data.id}/invite`, "u1");
+    const taken = await call(
+      "POST",
+      "/circles/join",
+      "u2",
+      joinCircleBody(invite.json.data.code, " ANA "),
+    );
+    expect([taken.status, taken.json.error.code]).toEqual([409, "DisplayNameTaken"]);
+  });
+
+  it("UE-C-S16: concurrent joins with the same display name leave one 200 and one 409, never a 500, one row", async () => {
+    for (let i = 0; i < ITERATIONS; i++) {
+      await truncateAll(admin);
+      const circle = await call("POST", "/circles", "u1", createCircleBody("Crew"));
+      const invite = await call("POST", `/circles/${circle.json.data.id}/invite`, "u1");
+      const race = await Promise.all(
+        [
+          ["u2", "Same"],
+          ["u3", "same"],
+        ].map(([user, name]) =>
+          call(
+            "POST",
+            "/circles/join",
+            user as string,
+            joinCircleBody(invite.json.data.code, name),
+          ),
+        ),
+      );
+      expect(statuses(race)).toEqual([200, 409]);
+      const refusal = race.find((r) => r.status === 409);
+      expect(["DisplayNameTaken", "ConcurrencyConflict"]).toContain(refusal?.json.error.code);
+      const [row] =
+        await admin`select count(*)::int as n from pactjoy.circle_members where lower(display_name) = 'same'`;
+      expect(row?.n).toBe(1);
+    }
+  });
+
   it("UE-S-S11: concurrent season edits never produce a 500, and the stored state matches the 200s", async () => {
     let sawConflict = false;
     for (let i = 0; i < ITERATIONS; i++) {

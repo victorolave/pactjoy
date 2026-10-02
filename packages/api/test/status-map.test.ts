@@ -45,8 +45,8 @@ function errorCoverageGaps(index: string, source: string) {
 }
 
 describe("app error status map", () => {
-  it("EM-S1..S5: 59 kinds, 34x422 4x403 6x404 14x409 1x410", () => {
-    expect(KINDS).toHaveLength(59);
+  it("EM-S1..S5: 60 kinds, 34x422 4x403 6x404 15x409 1x410", () => {
+    expect(KINDS).toHaveLength(60);
     expect(kindsWith(422)).toHaveLength(34);
     expect(kindsWith(403)).toEqual([
       "CommitmentNotOwned",
@@ -62,7 +62,7 @@ describe("app error status map", () => {
       "MemberNotFound",
       "SeasonNotFound",
     ]);
-    expect(kindsWith(409)).toHaveLength(14);
+    expect(kindsWith(409)).toHaveLength(15);
     expect(kindsWith(410)).toEqual(["InviteExpired"]);
   });
 
