@@ -7,7 +7,7 @@ import { circleId, habitId, seasonId, userId } from "../shared/ids.ts";
 import { createTestApp, type TestApp } from "../testing/app-harness.ts";
 import { circleFixture, memberFixture, seasonFixture } from "../testing/builders.ts";
 import { fixtureTimeZone, givenActiveSeason, localInstant } from "../testing/entry-fixtures.ts";
-import { epochDay, localDate, localDateOfEpochDay } from "../time/local-date.ts";
+import { epochDay, type LocalDate, localDate, localDateOfEpochDay } from "../time/local-date.ts";
 import { timeZoneId } from "../time/time-zone.port.ts";
 import { today } from "./today.query.ts";
 
@@ -28,6 +28,41 @@ async function setup(status: "pactOpen" | "active" | "closed", clockDate = DAY(0
   const app = createTestApp({ now: localInstant(clockDate), timeZone: fixtureTimeZone });
   const given = await givenActiveSeason(app, DAILY_REACH, status);
   return { app, given };
+}
+
+/** A season whose pact closed late (B3): nominalStart is D0 but it began on D0+3. */
+async function setupLateStart(clockDate: LocalDate) {
+  const app = createTestApp({ now: localInstant(clockDate), timeZone: fixtureTimeZone });
+  const andrea = memberFixture({
+    id: ANDREA,
+    userId: userId("user-andrea"),
+    displayName: "Andrea",
+  });
+  const circle = circleFixture({ id: circleId("circle-1"), members: [andrea] });
+  const season = seasonFixture({
+    id: seasonId("season-1"),
+    circleId: circle.id,
+    status: "active",
+    nominalStart: DAY(0),
+    actualStart: DAY(3),
+    lengthWeeks: 4,
+    commitments: [
+      buildCommitment({
+        id: commitmentId("commitment-andrea"),
+        memberId: andrea.id,
+        habitId: habitId("habit-andrea"),
+        weightPercent: 100,
+        privacy: "visible",
+        measure: DAILY_REACH,
+      }),
+    ],
+  });
+  await app.uow.transaction(async (repos) => {
+    await repos.circles.save(circle, null);
+    await repos.seasons.save(season, null);
+    return { ok: true, value: undefined };
+  });
+  return { app, actor: { userId: andrea.userId } };
 }
 
 describe("today: states (TD-R2, TD-R3)", () => {
@@ -114,6 +149,45 @@ describe("today: states (TD-R2, TD-R3)", () => {
       summary: { week: 4, weekCount: 4, daysLeft: 0, score: { kind: "scored" } },
       standings: { kind: "ranked" },
     });
+  });
+
+  it("the ended score is the score of the last day", async () => {
+    const last = await setup("active", DAY(27));
+    const lastView = await today(last.app, last.given.andrea);
+    const after = await setup("active", DAY(40));
+    const afterView = await today(after.app, after.given.andrea);
+    if (lastView.state !== "active" || afterView.state !== "ended") {
+      throw new Error("unexpected states");
+    }
+    expect(afterView.summary.score).toEqual(lastView.summary.score);
+    expect(afterView.standings).toEqual(lastView.standings);
+  });
+
+  it.each([
+    [6, 1, 21],
+    [7, 2, 20],
+    [13, 2, 14],
+    [14, 3, 13],
+  ])("week boundary: day %i is week %i with %i days left", async (day, week, daysLeft) => {
+    const { app, given } = await setup("active", DAY(day));
+    expect(await today(app, given.andrea)).toMatchObject({
+      state: "active",
+      summary: { week, daysLeft },
+    });
+  });
+
+  it("B3: today is measured from actualStart, not nominalStart", async () => {
+    const before = await setupLateStart(DAY(2));
+    expect(await today(before.app, before.actor)).toMatchObject({ state: "notStarted" });
+
+    const first = await setupLateStart(DAY(3));
+    expect(await today(first.app, first.actor)).toMatchObject({
+      state: "active",
+      summary: { week: 1, daysLeft: 27 },
+    });
+
+    const after = await setupLateStart(DAY(31));
+    expect(await today(after.app, after.actor)).toMatchObject({ state: "ended" });
   });
 
   it("an ended season stays ended long after its last day", async () => {

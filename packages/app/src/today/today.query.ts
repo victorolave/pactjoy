@@ -117,6 +117,7 @@ export async function today(deps: TodayDeps, actor: Actor): Promise<TodayView> {
     const scoringDay = ended ? lastDay : day.day;
     const context = scoreContextOf(deps, season, circle, actor);
     if (!context.ok) {
+      // Unreachable: `viewer` above is an active member, which scoreContextOf always accepts.
       throw new Error(`viewer ${viewer.id} cannot read season ${season.id}`);
     }
     const started = {
