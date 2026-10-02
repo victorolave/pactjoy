@@ -144,7 +144,7 @@ Nothing here runs from CI or from the repository.
 
 - Swapping the runtime (for example to NestJS) replaces only the shell; the router, auth, validation and presenters move unchanged.
 - Auth, routing and error mapping are covered by Node tests, not only by type checks.
-- Each product question maps to one place: Q5 is env, Q7 is one table, Q4 is `supabase config push`, Q6 is the `enable_signup` flag (`true`: decided open, also the CLI default), Q1 is a reserved route, and Q3 (display names, per circle, now implemented) was a presenter and read model field plus one route (`PATCH /circles/:circleId/members/me`): adding names touched the presenter, the read model and one route entry, not the router or auth.
+- Each product question maps to one place: Q5 is env, Q7 is one table, Q4 is `supabase config push`, Q6 is the `enable_signup` flag (`true`: decided open, also the CLI default), Q1 is a reserved route, and Q3 (display names, per circle, now implemented) was a small field plus one route (`PATCH /circles/:circleId/members/me`): adding names touched the domain, persistence, read model and presenter, plus one route entry; not the router or auth.
 
 ### Negative
 
