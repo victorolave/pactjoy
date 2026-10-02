@@ -44,6 +44,7 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "recordEntry",
   "removeCommitment",
   "renameCircle",
+  "renameMyDisplayName",
   "reviewCadenceForLength",
   "seasonId",
   "standings",

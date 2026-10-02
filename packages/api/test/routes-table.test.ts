@@ -8,6 +8,7 @@ const { spies, USE_CASE_NAMES } = vi.hoisted(() => ({
   USE_CASE_NAMES: [
     "createCircle",
     "renameCircle",
+    "renameMyDisplayName",
     "generateInvite",
     "joinCircle",
     "leaveCircle",
@@ -45,6 +46,7 @@ type Row = [useCase: string, method: string, path: string, body?: unknown];
 const TABLE: Row[] = [
   ["createCircle", "POST", "/circles", { name: "Crew", displayName: "Ana" }],
   ["renameCircle", "PATCH", `/circles/${ID}`, { name: "Crew" }],
+  ["renameMyDisplayName", "PATCH", `/circles/${ID}/members/me`, { displayName: "Ana" }],
   ["generateInvite", "POST", `/circles/${ID}/invite`],
   ["joinCircle", "POST", "/circles/join", { inviteCode: "ABCDEF", displayName: "Vic" }],
   ["leaveCircle", "POST", `/circles/${ID}/leave`],
@@ -85,8 +87,8 @@ const TABLE: Row[] = [
 ];
 
 describe("route table completeness (RT-S4)", () => {
-  it("has 19 routes over exactly the 18 use cases, the score one routed twice", () => {
-    expect(TABLE).toHaveLength(19);
+  it("has 20 routes over exactly the 19 use cases, the score one routed twice", () => {
+    expect(TABLE).toHaveLength(20);
     expect(new Set(TABLE.map(([name]) => name))).toEqual(new Set(USE_CASE_NAMES));
     expect(TABLE.filter(([name]) => name === "memberScore")).toHaveLength(2);
   });

@@ -38,6 +38,12 @@ export type {
   RenameCircleInput,
 } from "./circle/rename-circle.ts";
 export { renameCircle } from "./circle/rename-circle.ts";
+export type {
+  RenameMyDisplayNameDeps,
+  RenameMyDisplayNameError,
+  RenameMyDisplayNameInput,
+} from "./circle/rename-my-display-name.ts";
+export { renameMyDisplayName } from "./circle/rename-my-display-name.ts";
 export type { SeasonGateStatus } from "./circle/season-gate.ts";
 export type {
   AddCommitmentDeps,

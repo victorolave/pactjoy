@@ -1,4 +1,4 @@
-import { type CircleId, seasonId } from "@pactjoy/app";
+import { type CircleId, instant, seasonId } from "@pactjoy/app";
 import { seasonFixture } from "@pactjoy/app/testing";
 import { describe, expect, it, vi } from "vitest";
 import { createCircleBody, joinCircleBody } from "../src/testing/index.ts";
@@ -227,6 +227,105 @@ describe("POST /circles/:circleId/leave", () => {
     expect(json.error.details.issues[0].path).toBe(field);
     expect(transaction).not.toHaveBeenCalled();
     expect(read).not.toHaveBeenCalled();
+  });
+});
+
+describe("PATCH /circles/:circleId/members/me (UE-C-S15, RV-R11)", () => {
+  /** Andrea and Victor ("Vic") share a circle. */
+  async function givenTwoMembers() {
+    const ctx = await givenInvitedCircle();
+    await ctx.call("POST", "/circles/join", "victor", {
+      inviteCode: ctx.code,
+      displayName: "Vic",
+    });
+    return { ...ctx, path: `/circles/${ctx.circleId}/members/me` };
+  }
+
+  it("200 renames the caller's own name, trimmed, and returns the circle", async () => {
+    const { app, call, path, circleId } = await givenTwoMembers();
+    const before = await app.circles.get(circleId as CircleId);
+    const { status, json } = await call("PATCH", path, "victor", { displayName: "  Victor " });
+    expect(status).toBe(200);
+    expect(json.data.id).toBe(circleId);
+    expect(json.data.version).toBe((before?.version ?? 0) + 1);
+    const mine = json.data.members.find((m: { isYou: boolean }) => m.isYou);
+    expect(mine.displayName).toBe("Victor");
+    expect(JSON.stringify(json)).not.toContain(VICTOR);
+  });
+
+  it("a case-only change of one's own name is 200", async () => {
+    const { call, path } = await givenTwoMembers();
+    const { status } = await call("PATCH", path, "victor", { displayName: "VIC" });
+    expect(status).toBe(200);
+  });
+
+  it("409 DisplayNameTaken for another active member's name", async () => {
+    const { call, path } = await givenTwoMembers();
+    const { status, json } = await call("PATCH", path, "victor", { displayName: "creator" });
+    expect([status, json.error.code]).toEqual([409, "DisplayNameTaken"]);
+  });
+
+  it("422 InvalidDisplayName for a blank or 31 code point name", async () => {
+    const { call, path } = await givenTwoMembers();
+    for (const displayName of ["   ", "a".repeat(31)]) {
+      const { status, json } = await call("PATCH", path, "victor", { displayName });
+      expect([status, json.error.code]).toEqual([422, "InvalidDisplayName"]);
+    }
+  });
+
+  it("403 for a non-member; 404 for an unknown circle", async () => {
+    const { call, path } = await givenInvitedCircle().then((c) => ({
+      ...c,
+      path: `/circles/${c.circleId}/members/me`,
+    }));
+    const outsider = await call("PATCH", path, "victor", { displayName: "Vic" });
+    expect([outsider.status, outsider.json.error.code]).toEqual([403, "NotAMember"]);
+    const missing = await call("PATCH", `/circles/${UNKNOWN_CIRCLE}/members/me`, "andrea", {
+      displayName: "Ana",
+    });
+    expect([missing.status, missing.json.error.code]).toEqual([404, "CircleNotFound"]);
+  });
+
+  it("409 CircleArchived on an archived circle", async () => {
+    const { app, call, path, circleId } = await givenTwoMembers();
+    const circle = await app.circles.get(circleId as CircleId);
+    if (!circle) throw new Error("seed failed");
+    await app.circles.save(
+      { ...circle, archivedAt: instant(1), version: circle.version + 1 },
+      circle.version,
+    );
+    const { status, json } = await call("PATCH", path, "victor", { displayName: "Vic 2" });
+    expect([status, json.error.code]).toEqual([409, "CircleArchived"]);
+  });
+
+  it.each([
+    ["not a string", { displayName: 5 }, "displayName", "type"],
+    ["missing", {}, "displayName", "required"],
+    [
+      "a memberId (the actor comes from the token only)",
+      { displayName: "Vic", memberId: "x" },
+      "memberId",
+      "unknownField",
+    ],
+  ])(
+    "422 InvalidRequest, use case not called: displayName %s",
+    async (_l, body, field, problem) => {
+      const { call, path, transaction } = await givenTwoMembers();
+      transaction.mockClear();
+      const { status, json } = await call("PATCH", path, "victor", body);
+      expect([status, json.error.code]).toEqual([422, "InvalidRequest"]);
+      expect(json.error.details.issues).toContainEqual({ path: field, problem });
+      expect(transaction).not.toHaveBeenCalled();
+    },
+  );
+
+  it("401 without a token", async () => {
+    const { call, transaction } = setup();
+    const { status, json } = await call("PATCH", `/circles/${UNKNOWN_CIRCLE}/members/me`, null, {
+      displayName: "x",
+    });
+    expect([status, json.error.code]).toEqual([401, "Unauthorized"]);
+    expect(transaction).not.toHaveBeenCalled();
   });
 });
 

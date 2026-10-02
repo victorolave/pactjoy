@@ -15,18 +15,20 @@ import type {
   RecordEntryError,
   RemoveCommitmentError,
   RenameCircleError,
+  RenameMyDisplayNameError,
   StandingsError,
   WithdrawApprovalError,
 } from "@pactjoy/app";
 
 /**
- * Every error a use case can return, from the 18 `*Error` unions the app exports. The
+ * Every error a use case can return, from the 19 `*Error` unions the app exports. The
  * sub-unions (ValidateCommitmentError, EntryValueError, EntryWindowError) are already
  * members of these. A new use case must be added here (a boundary test scans the app index).
  */
 export type AppError =
   | CreateCircleError
   | RenameCircleError
+  | RenameMyDisplayNameError
   | GenerateInviteError
   | JoinCircleError
   | LeaveCircleError
