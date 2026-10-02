@@ -4,6 +4,7 @@ import {
   type Measure,
   type MeasureView,
   type Season,
+  type SeasonMutationResult,
   toDecimalString,
 } from "@pactjoy/app";
 import type { MemberId } from "@pactjoy/engine";
@@ -117,6 +118,10 @@ export function presentSeason(season: Season, viewer: MemberId | null): SeasonDt
     ),
   };
 }
+
+/** A mutation result projected for the member who acted (SV-R2). */
+export const presentSeasonFor = ({ season, viewerId }: SeasonMutationResult): SeasonDto =>
+  presentSeason(season, viewerId);
 
 /** The mutation routes carry no viewer yet (S6b): the conservative projection. */
 export const presentSeasonWithoutViewer = (season: Season): SeasonDto =>

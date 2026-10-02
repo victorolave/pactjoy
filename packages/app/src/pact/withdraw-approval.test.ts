@@ -39,7 +39,7 @@ async function twoMemberSeason(app: ReturnType<typeof createTestApp>) {
     measure: { unit: "done", frequency: { kind: "timesPerWeek", times: 3 } },
   });
   if (!withCommitment.ok) throw new Error("fixture setup failed");
-  return { circle: circle.value, season: withCommitment.value };
+  return { circle: circle.value, season: withCommitment.value.season };
 }
 
 describe("withdrawApproval", () => {
@@ -76,8 +76,8 @@ describe("withdrawApproval", () => {
     });
     if (!victorCommitted.ok) throw new Error("fixture setup failed");
     const firstApproval = await approvePact(app, actorFor("user-andrea"), {
-      seasonId: victorCommitted.value.id,
-      expectedPactRevision: victorCommitted.value.pactRevision,
+      seasonId: victorCommitted.value.season.id,
+      expectedPactRevision: victorCommitted.value.season.pactRevision,
     });
     if (!firstApproval.ok) throw new Error("fixture setup failed");
     const closed = await approvePact(app, actorFor("user-victor"), {

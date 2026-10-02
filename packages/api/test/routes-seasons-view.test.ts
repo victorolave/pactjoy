@@ -1,50 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { createCircleBody } from "../src/testing/index.ts";
-import { setup, UNKNOWN_CIRCLE, VICTOR } from "./harness.ts";
-
-const REACH = {
-  unit: "minutes",
-  direction: "reach",
-  minimum: "10",
-  ideal: "30",
-  schedule: { period: "weeklyTotal" },
-};
-const DONE = { unit: "done", frequency: { kind: "timesPerWeek", times: 3 } };
-
-/** Andrea has one private and one visible commitment; Victor is a second active member. */
-async function givenSeason() {
-  const ctx = setup();
-  const circle = await ctx.call("POST", "/circles", "andrea", createCircleBody("Crew"));
-  const circleId: string = circle.json.data.id;
-  const season = await ctx.call("POST", `/circles/${circleId}/seasons`, "andrea", {
-    timezone: "America/Bogota",
-    startDate: "2023-11-15",
-    lengthWeeks: 4,
-  });
-  const seasonId: string = season.json.data.id;
-  const add = async (name: string, privacy: string, weightPercent: number, measure: object) => {
-    const habit = await ctx.call("POST", "/habits", "andrea", { name });
-    const body = { habitId: habit.json.data.id, weightPercent, privacy, measure };
-    const created = await ctx.call("POST", `/seasons/${seasonId}/commitments`, "andrea", body);
-    expect(created.status).toBe(201);
-    return habit.json.data.id as string;
-  };
-  const secretHabit = await add("Secret-habit", "private", 60, REACH);
-  const openHabit = await add("Open-habit", "visible", 40, DONE);
-  const stored = await ctx.app.circles.get(circleId as never);
-  if (!stored) throw new Error("fixture setup failed");
-  const victor = {
-    userId: VICTOR,
-    id: "m-victor",
-    status: "active",
-    joinedAt: ctx.app.clock.now(),
-  };
-  await ctx.app.circles.save(
-    { ...stored, members: [...stored.members, victor as never], version: 9 },
-    stored.version,
-  );
-  return { ...ctx, circleId, secretHabit, openHabit, path: `/seasons/${seasonId}` };
-}
+import { UNKNOWN_CIRCLE, VICTOR } from "./harness.ts";
+import { givenSeason } from "./season-fixture.ts";
 
 describe("GET /seasons/:seasonId (SV-S1..S4, SV-S7)", () => {
   it("SV-S1: the owner sees their own private commitment in full, marked private", async () => {

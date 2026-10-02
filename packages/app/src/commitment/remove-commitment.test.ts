@@ -37,7 +37,11 @@ async function seasonWithCommitment(app: ReturnType<typeof createTestApp>) {
     measure: { unit: "done", frequency: { kind: "timesPerWeek", times: 3 } },
   });
   if (!added.ok) throw new Error("fixture setup failed");
-  return { circle: circle.value, season: added.value, commitment: added.value.commitments[0] };
+  return {
+    circle: circle.value,
+    season: added.value.season,
+    commitment: added.value.season.commitments[0],
+  };
 }
 
 describe("removeCommitment", () => {
@@ -53,8 +57,8 @@ describe("removeCommitment", () => {
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.value.commitments).toHaveLength(0);
-    expect(result.value.version).toBe(season.version + 1);
+    expect(result.value.season.commitments).toHaveLength(0);
+    expect(result.value.season.version).toBe(season.version + 1);
   });
 
   it("rejects an unknown commitment id", async () => {

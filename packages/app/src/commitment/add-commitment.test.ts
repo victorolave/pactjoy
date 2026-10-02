@@ -43,10 +43,10 @@ describe("addCommitment", () => {
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.value.commitments).toHaveLength(1);
-    expect(result.value.commitments[0]?.habitId).toBe("habit-run");
-    expect(result.value.commitments[0]?.weightPercent).toBe(20);
-    expect(result.value.version).toBe(season.version + 1);
+    expect(result.value.season.commitments).toHaveLength(1);
+    expect(result.value.season.commitments[0]?.habitId).toBe("habit-run");
+    expect(result.value.season.commitments[0]?.weightPercent).toBe(20);
+    expect(result.value.season.version).toBe(season.version + 1);
 
     const stored = await app.uow.read((repos) => repos.seasons.get(season.id));
     expect(stored?.commitments).toHaveLength(1);

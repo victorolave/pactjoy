@@ -98,7 +98,7 @@ describe("createPostgresUnitOfWork", () => {
         privacy: "visible",
         measure: { unit: "done", frequency: { kind: "timesPerWeek", times: 3 } },
       }),
-    );
+    ).season;
     const active = must(
       await approvePact(deps, andrea, {
         seasonId: created.id,
