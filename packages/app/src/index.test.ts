@@ -50,6 +50,7 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "standings",
   "timeZoneId",
   "toDecimalString",
+  "today",
   "toSeasonDay",
   "userId",
   "validateCommitment",
