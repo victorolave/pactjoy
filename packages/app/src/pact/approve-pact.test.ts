@@ -10,6 +10,7 @@ import type { CircleId, SeasonId } from "../shared/ids.ts";
 import { habitId, seasonId, userId } from "../shared/ids.ts";
 import type { TestApp } from "../testing/app-harness.ts";
 import { createTestApp } from "../testing/app-harness.ts";
+import { createCircleInput, joinCircleInput } from "../testing/circle-inputs.ts";
 import { createFixedOffsetTimeZone } from "../testing/fixed-time-zone.ts";
 import { instant } from "../time/instant.ts";
 import { approvePact } from "./approve-pact.ts";
@@ -30,7 +31,7 @@ const DONE_MEASURE = {
 async function joinCircleAs(app: TestApp, circleId: CircleId, actorId: string) {
   const invite = await generateInvite(app, actorFor("user-andrea"), { circleId });
   if (!invite.ok) throw new Error("fixture setup failed");
-  const joined = await joinCircle(app, actorFor(actorId), { inviteCode: invite.value.code });
+  const joined = await joinCircle(app, actorFor(actorId), joinCircleInput(invite.value.code));
   if (!joined.ok) throw new Error("fixture setup failed");
   return joined.value;
 }
@@ -54,7 +55,7 @@ async function seasonWithFullyWeightedMembers(
   startDate = "2025-10-01",
   timezone = "UTC",
 ) {
-  const circle = await createCircle(app, actorFor("user-andrea"), { name: "Río Runners" });
+  const circle = await createCircle(app, actorFor("user-andrea"), createCircleInput("Río Runners"));
   if (!circle.ok) throw new Error("fixture setup failed");
   const otherActorIds = Array.from({ length: count - 1 }, (_, i) => `user-member-${i}`);
   for (const actorId of otherActorIds) {
@@ -192,7 +193,11 @@ describe("approvePact", () => {
 
   it("new PA-10 (B5): rejects when the approving member's own weights don't sum to 100%", async () => {
     const app = utcTestApp();
-    const circle = await createCircle(app, actorFor("user-andrea"), { name: "Río Runners" });
+    const circle = await createCircle(
+      app,
+      actorFor("user-andrea"),
+      createCircleInput("Río Runners"),
+    );
     if (!circle.ok) throw new Error("fixture setup failed");
     const season = await createSeason(app, actorFor("user-andrea"), {
       circleId: circle.value.id,
@@ -220,7 +225,11 @@ describe("approvePact", () => {
 
   it("B5: a member with zero commitments cannot approve", async () => {
     const app = utcTestApp();
-    const circle = await createCircle(app, actorFor("user-andrea"), { name: "Río Runners" });
+    const circle = await createCircle(
+      app,
+      actorFor("user-andrea"),
+      createCircleInput("Río Runners"),
+    );
     if (!circle.ok) throw new Error("fixture setup failed");
     const season = await createSeason(app, actorFor("user-andrea"), {
       circleId: circle.value.id,
@@ -385,7 +394,11 @@ describe("approvePact", () => {
 
     it("PI-S4: StaleSeason beats CommitmentWeightsNotFull", async () => {
       const app = utcTestApp();
-      const circle = await createCircle(app, actorFor("user-andrea"), { name: "Río Runners" });
+      const circle = await createCircle(
+        app,
+        actorFor("user-andrea"),
+        createCircleInput("Río Runners"),
+      );
       if (!circle.ok) throw new Error("fixture setup failed");
       const season = await createSeason(app, actorFor("user-andrea"), {
         circleId: circle.value.id,

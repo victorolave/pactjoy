@@ -3,6 +3,7 @@ import type { RandomSource } from "../ports/random-source.ts";
 import { InviteCodeGenerationFailed } from "../shared/errors.ts";
 import { userId } from "../shared/ids.ts";
 import { createTestApp } from "../testing/app-harness.ts";
+import { createCircleInput } from "../testing/circle-inputs.ts";
 import { givenArchivedCircle } from "../testing/pact-fixtures.ts";
 import { createCircle } from "./create-circle.ts";
 import { generateInvite } from "./generate-invite.ts";
@@ -28,7 +29,11 @@ function collideThenSucceed(collidingDraws: number): RandomSource {
 describe("generateInvite", () => {
   it("CM-3: generates a 6-char code from the safe alphabet, expiring 7 days later", async () => {
     const app = createTestApp();
-    const created = await createCircle(app, actorFor("user-andrea"), { name: "Río Runners" });
+    const created = await createCircle(
+      app,
+      actorFor("user-andrea"),
+      createCircleInput("Río Runners"),
+    );
     if (!created.ok) throw new Error("fixture setup failed");
 
     const result = await generateInvite(app, actorFor("user-andrea"), {
@@ -46,7 +51,7 @@ describe("generateInvite", () => {
 
   it("CM-16 (B4): a solo (1-member) circle's own member can generate an invite", async () => {
     const app = createTestApp();
-    const created = await createCircle(app, actorFor("user-andrea"), { name: "Solo" });
+    const created = await createCircle(app, actorFor("user-andrea"), createCircleInput("Solo"));
     if (!created.ok) throw new Error("fixture setup failed");
     expect(created.value.members).toHaveLength(1);
 
@@ -59,7 +64,11 @@ describe("generateInvite", () => {
 
   it("rejects a non-member", async () => {
     const app = createTestApp();
-    const created = await createCircle(app, actorFor("user-andrea"), { name: "Río Runners" });
+    const created = await createCircle(
+      app,
+      actorFor("user-andrea"),
+      createCircleInput("Río Runners"),
+    );
     if (!created.ok) throw new Error("fixture setup failed");
 
     const result = await generateInvite(app, actorFor("user-stranger"), {
@@ -71,7 +80,11 @@ describe("generateInvite", () => {
 
   it("retries when the drawn code collides with another circle's active invite, and returns the non-colliding one", async () => {
     const app = createTestApp();
-    const other = await createCircle(app, actorFor("user-other"), { name: "Other circle" });
+    const other = await createCircle(
+      app,
+      actorFor("user-other"),
+      createCircleInput("Other circle"),
+    );
     if (!other.ok) throw new Error("fixture setup failed");
     const otherInvite = await generateInvite(
       { uow: app.uow, clock: app.clock, random: { int: () => 0 } },
@@ -81,7 +94,7 @@ describe("generateInvite", () => {
     if (!otherInvite.ok) throw new Error("fixture setup failed");
     expect(otherInvite.value.code).toBe("222222");
 
-    const mine = await createCircle(app, actorFor("user-andrea"), { name: "Mine" });
+    const mine = await createCircle(app, actorFor("user-andrea"), createCircleInput("Mine"));
     if (!mine.ok) throw new Error("fixture setup failed");
 
     const result = await generateInvite(
@@ -98,7 +111,11 @@ describe("generateInvite", () => {
 
   it("throws InviteCodeGenerationFailed after 5 attempts all collide with another circle's active invite", async () => {
     const app = createTestApp();
-    const other = await createCircle(app, actorFor("user-other"), { name: "Other circle" });
+    const other = await createCircle(
+      app,
+      actorFor("user-other"),
+      createCircleInput("Other circle"),
+    );
     if (!other.ok) throw new Error("fixture setup failed");
     const otherInvite = await generateInvite(
       { uow: app.uow, clock: app.clock, random: ALWAYS_COLLIDING_RANDOM },
@@ -107,7 +124,7 @@ describe("generateInvite", () => {
     );
     if (!otherInvite.ok) throw new Error("fixture setup failed");
 
-    const mine = await createCircle(app, actorFor("user-andrea"), { name: "Mine" });
+    const mine = await createCircle(app, actorFor("user-andrea"), createCircleInput("Mine"));
     if (!mine.ok) throw new Error("fixture setup failed");
 
     await expect(
@@ -121,7 +138,7 @@ describe("generateInvite", () => {
 
   it("does not treat a circle's own current code as a collision with itself (regenerating with the same draw)", async () => {
     const app = createTestApp();
-    const created = await createCircle(app, actorFor("user-andrea"), { name: "Mine" });
+    const created = await createCircle(app, actorFor("user-andrea"), createCircleInput("Mine"));
     if (!created.ok) throw new Error("fixture setup failed");
     const first = await generateInvite(
       { uow: app.uow, clock: app.clock, random: ALWAYS_COLLIDING_RANDOM },

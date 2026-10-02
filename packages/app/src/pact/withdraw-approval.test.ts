@@ -6,6 +6,7 @@ import { addCommitment } from "../commitment/add-commitment.ts";
 import { createSeason } from "../season/create-season.ts";
 import { habitId, seasonId, userId } from "../shared/ids.ts";
 import { createTestApp } from "../testing/app-harness.ts";
+import { createCircleInput, joinCircleInput } from "../testing/circle-inputs.ts";
 import { instant } from "../time/instant.ts";
 import { approvePact } from "./approve-pact.ts";
 import { withdrawApproval } from "./withdraw-approval.ts";
@@ -17,11 +18,11 @@ function actorFor(id: string) {
 const NOW = instant(1_759_060_800_000);
 
 async function twoMemberSeason(app: ReturnType<typeof createTestApp>) {
-  const circle = await createCircle(app, actorFor("user-andrea"), { name: "Río Runners" });
+  const circle = await createCircle(app, actorFor("user-andrea"), createCircleInput("Río Runners"));
   if (!circle.ok) throw new Error("fixture setup failed");
   const invite = await generateInvite(app, actorFor("user-andrea"), { circleId: circle.value.id });
   if (!invite.ok) throw new Error("fixture setup failed");
-  const joined = await joinCircle(app, actorFor("user-victor"), { inviteCode: invite.value.code });
+  const joined = await joinCircle(app, actorFor("user-victor"), joinCircleInput(invite.value.code));
   if (!joined.ok) throw new Error("fixture setup failed");
   const season = await createSeason(app, actorFor("user-andrea"), {
     circleId: circle.value.id,

@@ -5,6 +5,7 @@ import { joinCircle } from "../circle/join-circle.ts";
 import { leaveCircle } from "../circle/leave-circle.ts";
 import { habitId, userId } from "../shared/ids.ts";
 import { createTestApp } from "../testing/app-harness.ts";
+import { createCircleInput } from "../testing/circle-inputs.ts";
 import {
   givenOpenPactWithOneApproval,
   givenSoloOpenPact,
@@ -87,7 +88,7 @@ describe("approval resets when membership changes (PA-5, PA-6)", () => {
   it("leaving a circle that has no season at all still works (nothing to discard or reset)", async () => {
     const app = createTestApp({ now: NOW });
     const andrea = { userId: userId("user-andrea") };
-    const circle = await createCircle(app, andrea, { name: "Río Runners" });
+    const circle = await createCircle(app, andrea, createCircleInput("Río Runners"));
     if (!circle.ok) throw new Error("fixture setup failed");
 
     const left = await leaveCircle(app, andrea, { circleId: circle.value.id });

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ConcurrencyConflict } from "../shared/errors.ts";
 import { userId } from "../shared/ids.ts";
 import { createTestApp } from "../testing/app-harness.ts";
+import { joinCircleInput } from "../testing/circle-inputs.ts";
 import { givenSoloOpenPact } from "../testing/pact-fixtures.ts";
 import { raceTransactions } from "../testing/race-harness.ts";
 import { instant } from "../time/instant.ts";
@@ -28,7 +29,7 @@ describe("circle archive races (deterministic, D5)", () => {
     const { winner, loser } = await raceTransactions(
       app,
       (a) => leaveCircle(a, andrea, { circleId: circle.id }),
-      (a) => joinCircle(a, carla, { inviteCode: invite.value.code }),
+      (a) => joinCircle(a, carla, joinCircleInput(invite.value.code)),
     );
 
     expect(winner.status).toBe("fulfilled");
@@ -48,7 +49,7 @@ describe("circle archive races (deterministic, D5)", () => {
 
     const { winner, loser } = await raceTransactions(
       app,
-      (a) => joinCircle(a, carla, { inviteCode: invite.value.code }),
+      (a) => joinCircle(a, carla, joinCircleInput(invite.value.code)),
       (a) => leaveCircle(a, andrea, { circleId: circle.id }),
     );
 

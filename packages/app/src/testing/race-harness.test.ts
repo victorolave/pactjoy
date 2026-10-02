@@ -6,6 +6,7 @@ import { approvePact } from "../pact/approve-pact.ts";
 import { ConcurrencyConflict } from "../shared/errors.ts";
 import { instant } from "../time/instant.ts";
 import { createTestApp } from "./app-harness.ts";
+import { joinCircleInput } from "./circle-inputs.ts";
 import { givenActiveSeason } from "./entry-fixtures.ts";
 import { givenSoloOpenPact, storedSeason } from "./pact-fixtures.ts";
 import { raceTransactions } from "./race-harness.ts";
@@ -28,7 +29,7 @@ describe("raceTransactions", () => {
 
       const { winner, loser } = await raceTransactions(
         app,
-        (a) => joinCircle(a, andrea, { inviteCode: "NOSUCH" }),
+        (a) => joinCircle(a, andrea, joinCircleInput("NOSUCH")),
         (a) =>
           approvePact(a, andrea, {
             seasonId: season.id,
@@ -56,7 +57,7 @@ describe("raceTransactions", () => {
             seasonId: season.id,
             expectedPactRevision: season.pactRevision,
           }),
-        (a) => joinCircle(a, andrea, { inviteCode: "NOSUCH" }),
+        (a) => joinCircle(a, andrea, joinCircleInput("NOSUCH")),
       );
 
       expect(winner).toMatchObject({ status: "fulfilled", value: { ok: true } });

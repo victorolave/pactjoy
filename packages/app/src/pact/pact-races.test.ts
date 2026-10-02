@@ -6,6 +6,7 @@ import { editCommitment } from "../commitment/edit-commitment.ts";
 import { ConcurrencyConflict } from "../shared/errors.ts";
 import { userId } from "../shared/ids.ts";
 import { createTestApp } from "../testing/app-harness.ts";
+import { joinCircleInput } from "../testing/circle-inputs.ts";
 import {
   givenOpenPactWithOneApproval,
   givenSoloOpenPact,
@@ -41,7 +42,7 @@ describe("pact approval races (deterministic, D5)", () => {
       app,
       (a) =>
         approvePact(a, victor, { seasonId: season.id, expectedPactRevision: season.pactRevision }),
-      (a) => joinCircle(a, carla, { inviteCode: invite.value.code }),
+      (a) => joinCircle(a, carla, joinCircleInput(invite.value.code)),
     );
 
     expect(winner.status).toBe("fulfilled");
@@ -60,7 +61,7 @@ describe("pact approval races (deterministic, D5)", () => {
 
     const { winner, loser } = await raceTransactions(
       app,
-      (a) => joinCircle(a, carla, { inviteCode: invite.value.code }),
+      (a) => joinCircle(a, carla, joinCircleInput(invite.value.code)),
       (a) =>
         approvePact(a, victor, { seasonId: season.id, expectedPactRevision: season.pactRevision }),
     );
@@ -84,7 +85,7 @@ describe("pact approval races (deterministic, D5)", () => {
 
     const { winner, loser } = await raceTransactions(
       app,
-      (a) => joinCircle(a, carla, { inviteCode: invite.value.code }),
+      (a) => joinCircle(a, carla, joinCircleInput(invite.value.code)),
       (a) =>
         approvePact(a, andrea, { seasonId: season.id, expectedPactRevision: season.pactRevision }),
     );

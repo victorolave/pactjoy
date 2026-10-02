@@ -4,6 +4,7 @@ import { ConcurrencyConflict } from "../shared/errors.ts";
 import { circleId, userId } from "../shared/ids.ts";
 import { ok } from "../shared/result.ts";
 import { createTestApp } from "../testing/app-harness.ts";
+import { createCircleInput } from "../testing/circle-inputs.ts";
 import { givenArchivedCircle } from "../testing/pact-fixtures.ts";
 import { instant } from "../time/instant.ts";
 import { createSeason } from "./create-season.ts";
@@ -19,7 +20,11 @@ const NOW = instant(1_759_060_800_000); // 2025-09-28T12:00:00.000Z
 describe("createSeason", () => {
   it("new SS-17 (B1): creates a season directly with its pact open, never draft", async () => {
     const app = createTestApp({ now: NOW });
-    const circle = await createCircle(app, actorFor("user-andrea"), { name: "Río Runners" });
+    const circle = await createCircle(
+      app,
+      actorFor("user-andrea"),
+      createCircleInput("Río Runners"),
+    );
     if (!circle.ok) throw new Error("fixture setup failed");
 
     const result = await createSeason(app, actorFor("user-andrea"), {
@@ -43,7 +48,11 @@ describe("createSeason", () => {
 
   it("SS-6: defaults reviewCadenceWeeks per length when not given", async () => {
     const app = createTestApp({ now: NOW });
-    const circle = await createCircle(app, actorFor("user-andrea"), { name: "Río Runners" });
+    const circle = await createCircle(
+      app,
+      actorFor("user-andrea"),
+      createCircleInput("Río Runners"),
+    );
     if (!circle.ok) throw new Error("fixture setup failed");
 
     const result = await createSeason(app, actorFor("user-andrea"), {
@@ -60,7 +69,11 @@ describe("createSeason", () => {
 
   it("accepts an explicit reviewCadenceWeeks override", async () => {
     const app = createTestApp({ now: NOW });
-    const circle = await createCircle(app, actorFor("user-andrea"), { name: "Río Runners" });
+    const circle = await createCircle(
+      app,
+      actorFor("user-andrea"),
+      createCircleInput("Río Runners"),
+    );
     if (!circle.ok) throw new Error("fixture setup failed");
 
     const result = await createSeason(app, actorFor("user-andrea"), {
@@ -78,7 +91,11 @@ describe("createSeason", () => {
 
   it("SS-4: rejects a start date 31 days ahead", async () => {
     const app = createTestApp({ now: NOW });
-    const circle = await createCircle(app, actorFor("user-andrea"), { name: "Río Runners" });
+    const circle = await createCircle(
+      app,
+      actorFor("user-andrea"),
+      createCircleInput("Río Runners"),
+    );
     if (!circle.ok) throw new Error("fixture setup failed");
 
     const result = await createSeason(app, actorFor("user-andrea"), {
@@ -93,7 +110,11 @@ describe("createSeason", () => {
 
   it("SS-5: rejects a start date of yesterday", async () => {
     const app = createTestApp({ now: NOW });
-    const circle = await createCircle(app, actorFor("user-andrea"), { name: "Río Runners" });
+    const circle = await createCircle(
+      app,
+      actorFor("user-andrea"),
+      createCircleInput("Río Runners"),
+    );
     if (!circle.ok) throw new Error("fixture setup failed");
 
     const result = await createSeason(app, actorFor("user-andrea"), {
@@ -108,7 +129,11 @@ describe("createSeason", () => {
 
   it("rejects an invalid IANA timezone", async () => {
     const app = createTestApp({ now: NOW });
-    const circle = await createCircle(app, actorFor("user-andrea"), { name: "Río Runners" });
+    const circle = await createCircle(
+      app,
+      actorFor("user-andrea"),
+      createCircleInput("Río Runners"),
+    );
     if (!circle.ok) throw new Error("fixture setup failed");
 
     const result = await createSeason(app, actorFor("user-andrea"), {
@@ -123,7 +148,11 @@ describe("createSeason", () => {
 
   it("SHOULD-FIX: rejects a lengthWeeks outside {4,6,8,12} at runtime -- the HTTP adapter (C) can send arbitrary numbers despite the TS union", async () => {
     const app = createTestApp({ now: NOW });
-    const circle = await createCircle(app, actorFor("user-andrea"), { name: "Río Runners" });
+    const circle = await createCircle(
+      app,
+      actorFor("user-andrea"),
+      createCircleInput("Río Runners"),
+    );
     if (!circle.ok) throw new Error("fixture setup failed");
 
     const result = await createSeason(app, actorFor("user-andrea"), {
@@ -138,7 +167,11 @@ describe("createSeason", () => {
 
   it("SHOULD-FIX: rejects a reviewCadenceWeeks outside {1,2,3} at runtime", async () => {
     const app = createTestApp({ now: NOW });
-    const circle = await createCircle(app, actorFor("user-andrea"), { name: "Río Runners" });
+    const circle = await createCircle(
+      app,
+      actorFor("user-andrea"),
+      createCircleInput("Río Runners"),
+    );
     if (!circle.ok) throw new Error("fixture setup failed");
 
     const result = await createSeason(app, actorFor("user-andrea"), {
@@ -167,7 +200,11 @@ describe("createSeason", () => {
 
   it("rejects when the actor is not an active member of the circle", async () => {
     const app = createTestApp({ now: NOW });
-    const circle = await createCircle(app, actorFor("user-andrea"), { name: "Río Runners" });
+    const circle = await createCircle(
+      app,
+      actorFor("user-andrea"),
+      createCircleInput("Río Runners"),
+    );
     if (!circle.ok) throw new Error("fixture setup failed");
 
     const result = await createSeason(app, actorFor("user-outsider"), {
@@ -182,7 +219,11 @@ describe("createSeason", () => {
 
   it("CM-12 (delta, B1): rejects a second season while the circle already has a pactOpen-or-active season", async () => {
     const app = createTestApp({ now: NOW });
-    const circle = await createCircle(app, actorFor("user-andrea"), { name: "Río Runners" });
+    const circle = await createCircle(
+      app,
+      actorFor("user-andrea"),
+      createCircleInput("Río Runners"),
+    );
     if (!circle.ok) throw new Error("fixture setup failed");
     const first = await createSeason(app, actorFor("user-andrea"), {
       circleId: circle.value.id,
@@ -204,7 +245,11 @@ describe("createSeason", () => {
 
   it("CM-12 (delta, B1): allows a new season once the circle's latest season is closed", async () => {
     const app = createTestApp({ now: NOW });
-    const circle = await createCircle(app, actorFor("user-andrea"), { name: "Río Runners" });
+    const circle = await createCircle(
+      app,
+      actorFor("user-andrea"),
+      createCircleInput("Río Runners"),
+    );
     if (!circle.ok) throw new Error("fixture setup failed");
     const first = await createSeason(app, actorFor("user-andrea"), {
       circleId: circle.value.id,
@@ -230,7 +275,11 @@ describe("createSeason", () => {
 
   it("BLOCKER-2/CM-12: two concurrent createSeason calls on the same circle race on the circle's version -- exactly one succeeds, the loser gets ConcurrencyConflict", async () => {
     const app = createTestApp({ now: NOW });
-    const circle = await createCircle(app, actorFor("user-andrea"), { name: "Río Runners" });
+    const circle = await createCircle(
+      app,
+      actorFor("user-andrea"),
+      createCircleInput("Río Runners"),
+    );
     if (!circle.ok) throw new Error("fixture setup failed");
 
     const [a, b] = await Promise.allSettled([

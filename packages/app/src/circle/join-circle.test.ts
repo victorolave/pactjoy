@@ -6,6 +6,7 @@ import { ok } from "../shared/result.ts";
 import type { TestApp } from "../testing/app-harness.ts";
 import { createTestApp } from "../testing/app-harness.ts";
 import { memberFixture, seasonFixture } from "../testing/builders.ts";
+import { createCircleInput, joinCircleInput } from "../testing/circle-inputs.ts";
 import { givenArchivedCircle } from "../testing/pact-fixtures.ts";
 import { instant } from "../time/instant.ts";
 import { memberId } from "./circle.ts";
@@ -39,7 +40,11 @@ async function givenSeasonStatus(
 describe("joinCircle", () => {
   it("CM-7/CM-8 (reinterpreted, B1): joining is allowed while there is no season yet (default gate)", async () => {
     const app = createTestApp();
-    const created = await createCircle(app, actorFor("user-andrea"), { name: "Río Runners" });
+    const created = await createCircle(
+      app,
+      actorFor("user-andrea"),
+      createCircleInput("Río Runners"),
+    );
     if (!created.ok) throw new Error("fixture setup failed");
     const invite = await generateInvite(app, actorFor("user-andrea"), {
       circleId: created.value.id,
@@ -57,7 +62,11 @@ describe("joinCircle", () => {
 
   it("CM-7/CM-8 (reinterpreted, B1): joining is allowed while the season's pact is still open", async () => {
     const app = createTestApp();
-    const created = await createCircle(app, actorFor("user-andrea"), { name: "Río Runners" });
+    const created = await createCircle(
+      app,
+      actorFor("user-andrea"),
+      createCircleInput("Río Runners"),
+    );
     if (!created.ok) throw new Error("fixture setup failed");
     await givenSeasonStatus(app, created.value.id, "pactOpen");
     const invite = await generateInvite(app, actorFor("user-andrea"), {
@@ -74,7 +83,11 @@ describe("joinCircle", () => {
 
   it("CM-9 (B11): rejects joining while a season is active (pact closed, mid-season)", async () => {
     const app = createTestApp();
-    const created = await createCircle(app, actorFor("user-andrea"), { name: "Río Runners" });
+    const created = await createCircle(
+      app,
+      actorFor("user-andrea"),
+      createCircleInput("Río Runners"),
+    );
     if (!created.ok) throw new Error("fixture setup failed");
     const invite = await generateInvite(app, actorFor("user-andrea"), {
       circleId: created.value.id,
@@ -91,7 +104,11 @@ describe("joinCircle", () => {
 
   it("B11: allows joining between seasons -- the circle's last season is closed", async () => {
     const app = createTestApp();
-    const created = await createCircle(app, actorFor("user-andrea"), { name: "Río Runners" });
+    const created = await createCircle(
+      app,
+      actorFor("user-andrea"),
+      createCircleInput("Río Runners"),
+    );
     if (!created.ok) throw new Error("fixture setup failed");
     const invite = await generateInvite(app, actorFor("user-andrea"), {
       circleId: created.value.id,
@@ -108,7 +125,11 @@ describe("joinCircle", () => {
 
   it("CM-4: rejects an expired invite code", async () => {
     const app = createTestApp({ now: instant(1_700_000_000_000) });
-    const created = await createCircle(app, actorFor("user-andrea"), { name: "Río Runners" });
+    const created = await createCircle(
+      app,
+      actorFor("user-andrea"),
+      createCircleInput("Río Runners"),
+    );
     if (!created.ok) throw new Error("fixture setup failed");
     const circle = {
       ...created.value,
@@ -125,14 +146,18 @@ describe("joinCircle", () => {
       return ok(undefined);
     });
 
-    const result = await joinCircle(app, actorFor("user-victor"), { inviteCode: "AB23CD" });
+    const result = await joinCircle(app, actorFor("user-victor"), joinCircleInput("AB23CD"));
 
     expect(result).toEqual({ ok: false, error: { kind: "InviteExpired" } });
   });
 
   it("CM-5: an invalidated (regenerated) code is rejected; the new code works", async () => {
     const app = createTestApp();
-    const created = await createCircle(app, actorFor("user-andrea"), { name: "Río Runners" });
+    const created = await createCircle(
+      app,
+      actorFor("user-andrea"),
+      createCircleInput("Río Runners"),
+    );
     if (!created.ok) throw new Error("fixture setup failed");
     const first = await generateInvite(app, actorFor("user-andrea"), {
       circleId: created.value.id,
@@ -157,7 +182,7 @@ describe("joinCircle", () => {
 
   it("CM-10: rejects a 7th member when the circle already has 6 active members", async () => {
     const app = createTestApp();
-    const created = await createCircle(app, actorFor("user-0"), { name: "Full circle" });
+    const created = await createCircle(app, actorFor("user-0"), createCircleInput("Full circle"));
     if (!created.ok) throw new Error("fixture setup failed");
     const extraMembers = Array.from({ length: 5 }, (_, i) =>
       memberFixture({ id: memberId(`member-extra-${i}`), userId: userId(`user-${i + 1}`) }),
@@ -179,16 +204,16 @@ describe("joinCircle", () => {
       return ok(undefined);
     });
 
-    const result = await joinCircle(app, actorFor("user-seventh"), { inviteCode: "FU11CC" });
+    const result = await joinCircle(app, actorFor("user-seventh"), joinCircleInput("FU11CC"));
 
     expect(result).toEqual({ ok: false, error: { kind: "CircleFull" } });
   });
 
   it("CM-11: rejects joining while already an active member of another circle", async () => {
     const app = createTestApp();
-    const first = await createCircle(app, actorFor("user-andrea"), { name: "First" });
+    const first = await createCircle(app, actorFor("user-andrea"), createCircleInput("First"));
     if (!first.ok) throw new Error("fixture setup failed");
-    const second = await createCircle(app, actorFor("user-victor"), { name: "Second" });
+    const second = await createCircle(app, actorFor("user-victor"), createCircleInput("Second"));
     if (!second.ok) throw new Error("fixture setup failed");
     const invite = await generateInvite(app, actorFor("user-victor"), {
       circleId: second.value.id,
@@ -205,14 +230,14 @@ describe("joinCircle", () => {
   it("rejects a code that never existed", async () => {
     const app = createTestApp();
 
-    const result = await joinCircle(app, actorFor("user-victor"), { inviteCode: "ZZZZZZ" });
+    const result = await joinCircle(app, actorFor("user-victor"), joinCircleInput("ZZZZZZ"));
 
     expect(result).toEqual({ ok: false, error: { kind: "InviteNotFound" } });
   });
 
   it("D5: two concurrent joins racing the 6-member cap -- exactly one commits, the loser is rejected with ConcurrencyConflict, and the winner's write is not lost", async () => {
     const app = createTestApp();
-    const created = await createCircle(app, actorFor("user-0"), { name: "Almost full" });
+    const created = await createCircle(app, actorFor("user-0"), createCircleInput("Almost full"));
     if (!created.ok) throw new Error("fixture setup failed");
     const extraMembers = Array.from({ length: 4 }, (_, i) =>
       memberFixture({ id: memberId(`member-extra-${i}`), userId: userId(`user-${i + 1}`) }),
@@ -235,8 +260,8 @@ describe("joinCircle", () => {
     });
 
     const [a, b] = await Promise.allSettled([
-      joinCircle(app, actorFor("user-racer-a"), { inviteCode: "RACE01" }),
-      joinCircle(app, actorFor("user-racer-b"), { inviteCode: "RACE01" }),
+      joinCircle(app, actorFor("user-racer-a"), joinCircleInput("RACE01")),
+      joinCircle(app, actorFor("user-racer-b"), joinCircleInput("RACE01")),
     ]);
 
     const settled = [a, b];
@@ -257,7 +282,7 @@ describe("joinCircle", () => {
     const app = createTestApp();
     const { circle, inviteCode } = await givenArchivedCircle(app);
 
-    const result = await joinCircle(app, actorFor("user-carla"), { inviteCode });
+    const result = await joinCircle(app, actorFor("user-carla"), joinCircleInput(inviteCode));
 
     expect(result).toEqual({ ok: false, error: { kind: "CircleArchived" } });
     expect(await app.circles.get(circle.id)).toEqual(circle);
