@@ -10,6 +10,7 @@ import type { Season } from "../season/season.ts";
 import type { Actor } from "../shared/actor.ts";
 import { habitId, type SeasonId, userId } from "../shared/ids.ts";
 import type { TestApp } from "./app-harness.ts";
+import { createCircleInput, joinCircleInput } from "./circle-inputs.ts";
 
 export interface OpenPactWithOneApproval {
   readonly circle: Circle;
@@ -34,9 +35,9 @@ function must<T, E>(result: { ok: true; value: T } | { ok: false; error: E }): T
 export async function givenOpenPactWithOneApproval(app: TestApp): Promise<OpenPactWithOneApproval> {
   const andrea: Actor = { userId: userId("user-andrea") };
   const victor: Actor = { userId: userId("user-victor") };
-  const circle = must(await createCircle(app, andrea, { name: "Río Runners" }));
+  const circle = must(await createCircle(app, andrea, createCircleInput("Río Runners")));
   const invite = must(await generateInvite(app, andrea, { circleId: circle.id }));
-  must(await joinCircle(app, victor, { inviteCode: invite.code }));
+  must(await joinCircle(app, victor, joinCircleInput(invite.code)));
   const created = must(
     await createSeason(app, andrea, {
       circleId: circle.id,
@@ -80,7 +81,7 @@ export async function givenSoloOpenPact(app: TestApp): Promise<{
   readonly andrea: Actor;
 }> {
   const andrea: Actor = { userId: userId("user-andrea") };
-  const circle = must(await createCircle(app, andrea, { name: "Solo" }));
+  const circle = must(await createCircle(app, andrea, createCircleInput("Solo")));
   const created = must(
     await createSeason(app, andrea, {
       circleId: circle.id,
@@ -111,7 +112,7 @@ export async function givenArchivedCircle(app: TestApp): Promise<{
   readonly andrea: Actor;
 }> {
   const andrea: Actor = { userId: userId("user-andrea") };
-  const created = must(await createCircle(app, andrea, { name: "Solo" }));
+  const created = must(await createCircle(app, andrea, createCircleInput("Solo")));
   const invite = must(await generateInvite(app, andrea, { circleId: created.id }));
   const circle = must(await leaveCircle(app, andrea, { circleId: created.id }));
   return { circle, inviteCode: invite.code, andrea };

@@ -14,6 +14,7 @@ export type {
   SeasonFixtureOptions,
 } from "./builders.ts";
 export { circleFixture, habitFixture, memberFixture, seasonFixture } from "./builders.ts";
+export { createCircleInput, joinCircleInput } from "./circle-inputs.ts";
 export { createFixedClock } from "./fixed-clock.ts";
 export type { FixedOffsetTimeZoneOptions } from "./fixed-time-zone.ts";
 export { createFixedOffsetTimeZone } from "./fixed-time-zone.ts";

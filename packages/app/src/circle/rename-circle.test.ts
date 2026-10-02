@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { userId } from "../shared/ids.ts";
 import { createTestApp } from "../testing/app-harness.ts";
+import { createCircleInput } from "../testing/circle-inputs.ts";
 import { givenArchivedCircle } from "../testing/pact-fixtures.ts";
 import { memberId } from "./circle.ts";
 import { createCircle } from "./create-circle.ts";
@@ -13,7 +14,7 @@ function actorFor(id: string) {
 describe("renameCircle", () => {
   it("CM-15: any member (not just the creator) may rename the circle -- no admin role (A4)", async () => {
     const app = createTestApp();
-    const created = await createCircle(app, actorFor("user-andrea"), { name: "Original" });
+    const created = await createCircle(app, actorFor("user-andrea"), createCircleInput("Original"));
     if (!created.ok) throw new Error("fixture setup failed");
     // A second member, not the creator, joined out-of-band for this test.
     await app.uow.transaction(async (repos) => {
@@ -49,7 +50,7 @@ describe("renameCircle", () => {
 
   it("CM-16 (B4): a solo (1-member) circle can rename itself -- no minimum-member guard", async () => {
     const app = createTestApp();
-    const created = await createCircle(app, actorFor("user-andrea"), { name: "Solo" });
+    const created = await createCircle(app, actorFor("user-andrea"), createCircleInput("Solo"));
     if (!created.ok) throw new Error("fixture setup failed");
     expect(created.value.members).toHaveLength(1);
 
@@ -63,7 +64,7 @@ describe("renameCircle", () => {
 
   it("rejects a non-member", async () => {
     const app = createTestApp();
-    const created = await createCircle(app, actorFor("user-andrea"), { name: "Original" });
+    const created = await createCircle(app, actorFor("user-andrea"), createCircleInput("Original"));
     if (!created.ok) throw new Error("fixture setup failed");
 
     const result = await renameCircle(app, actorFor("user-stranger"), {
@@ -76,7 +77,7 @@ describe("renameCircle", () => {
 
   it("rejects an empty name", async () => {
     const app = createTestApp();
-    const created = await createCircle(app, actorFor("user-andrea"), { name: "Original" });
+    const created = await createCircle(app, actorFor("user-andrea"), createCircleInput("Original"));
     if (!created.ok) throw new Error("fixture setup failed");
 
     const result = await renameCircle(app, actorFor("user-andrea"), {
@@ -89,7 +90,7 @@ describe("renameCircle", () => {
 
   it("rejects a name with a lone surrogate (storable text), leaving the circle untouched", async () => {
     const app = createTestApp();
-    const created = await createCircle(app, actorFor("user-andrea"), { name: "Original" });
+    const created = await createCircle(app, actorFor("user-andrea"), createCircleInput("Original"));
     if (!created.ok) throw new Error("fixture setup failed");
 
     const result = await renameCircle(app, actorFor("user-andrea"), {

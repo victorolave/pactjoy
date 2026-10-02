@@ -7,6 +7,7 @@ import { ConcurrencyConflict } from "../shared/errors.ts";
 import { habitId, userId } from "../shared/ids.ts";
 import { ok } from "../shared/result.ts";
 import { createTestApp } from "../testing/app-harness.ts";
+import { createCircleInput } from "../testing/circle-inputs.ts";
 import { instant } from "../time/instant.ts";
 import { addCommitment } from "./add-commitment.ts";
 import { commitmentId } from "./commitment.ts";
@@ -19,7 +20,7 @@ function actorFor(id: string) {
 const NOW = instant(1_759_060_800_000); // 2025-09-28T12:00:00.000Z
 
 async function seasonWithCommitment(app: ReturnType<typeof createTestApp>) {
-  const circle = await createCircle(app, actorFor("user-andrea"), { name: "Río Runners" });
+  const circle = await createCircle(app, actorFor("user-andrea"), createCircleInput("Río Runners"));
   if (!circle.ok) throw new Error("fixture setup failed");
   const season = await createSeason(app, actorFor("user-andrea"), {
     circleId: circle.value.id,

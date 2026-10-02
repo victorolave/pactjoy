@@ -5,6 +5,7 @@ import { joinCircle } from "../circle/join-circle.ts";
 import { seasonId, userId } from "../shared/ids.ts";
 import { ok } from "../shared/result.ts";
 import { createTestApp } from "../testing/app-harness.ts";
+import { createCircleInput } from "../testing/circle-inputs.ts";
 import { givenOpenPactWithOneApproval } from "../testing/pact-fixtures.ts";
 import { instant } from "../time/instant.ts";
 import { localDate } from "../time/local-date.ts";
@@ -21,7 +22,7 @@ function actorFor(id: string) {
 const NOW = instant(1_759_060_800_000);
 
 async function givenOpenSeason(app: ReturnType<typeof createTestApp>) {
-  const circle = await createCircle(app, actorFor("user-andrea"), { name: "Río Runners" });
+  const circle = await createCircle(app, actorFor("user-andrea"), createCircleInput("Río Runners"));
   if (!circle.ok) throw new Error("fixture setup failed");
   const season = await createSeason(app, actorFor("user-andrea"), {
     circleId: circle.value.id,
@@ -204,7 +205,11 @@ describe("editSeasonParams", () => {
       },
     };
     const app = createTestApp({ now: NOW, timeZone: twoZoneTimeZone });
-    const circle = await createCircle(app, actorFor("user-andrea"), { name: "Río Runners" });
+    const circle = await createCircle(
+      app,
+      actorFor("user-andrea"),
+      createCircleInput("Río Runners"),
+    );
     if (!circle.ok) throw new Error("fixture setup failed");
     // nominalStart is exactly 30 days ahead of "zone-late"'s today (2025-09-28) -- right at the A6 boundary, valid.
     const created = await createSeason(app, actorFor("user-andrea"), {
@@ -291,7 +296,11 @@ describe("editSeasonParams", () => {
 
     it("PI-S10: timezone 'utc' vs stored 'UTC' is compared as a raw string, so it is a change", async () => {
       const app = createTestApp({ now: NOW });
-      const circle = await createCircle(app, actorFor("user-andrea"), { name: "Río Runners" });
+      const circle = await createCircle(
+        app,
+        actorFor("user-andrea"),
+        createCircleInput("Río Runners"),
+      );
       if (!circle.ok) throw new Error("fixture setup failed");
       const created = await createSeason(app, actorFor("user-andrea"), {
         circleId: circle.value.id,
