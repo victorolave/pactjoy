@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   initialValue,
   isSubmittable,
+  limitMeasureOf,
   nudge,
   presetsFor,
   quantityMeasureOf,
@@ -153,5 +154,17 @@ describe("quantityMeasureOf", () => {
       target: { direction: "limit", ideal: "1", tolerance: "3" },
     };
     expect(quantityMeasureOf(limit)).toBeNull();
+  });
+});
+
+describe("limitMeasureOf", () => {
+  it("returns limit quantities and nothing for done or reach", () => {
+    const limit: Quantity = {
+      ...perSession(),
+      target: { direction: "limit", ideal: "2", tolerance: "4" },
+    };
+    expect(limitMeasureOf(limit)).toMatchObject({ target: { direction: "limit", tolerance: "4" } });
+    expect(limitMeasureOf(perSession())).toBeNull();
+    expect(limitMeasureOf({ unit: "done", schedule: perSession().schedule as never })).toBeNull();
   });
 });

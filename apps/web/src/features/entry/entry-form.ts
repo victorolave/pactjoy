@@ -12,6 +12,16 @@ export function quantityMeasureOf(measure: MeasureView): ReachQuantity | null {
   return measure as ReachQuantity;
 }
 
+export type LimitQuantity = Quantity & {
+  readonly target: Extract<Quantity["target"], { direction: "limit" }>;
+};
+
+/** The measure when it is a limit quantity (the grid sheet); null for done and reach. */
+export function limitMeasureOf(measure: MeasureView): LimitQuantity | null {
+  if (measure.unit === "done" || measure.target.direction !== "limit") return null;
+  return measure as LimitQuantity;
+}
+
 const STEP_BY_UNIT: Partial<Record<Quantity["unit"], string>> = {
   minutes: "5",
   pages: "5",
