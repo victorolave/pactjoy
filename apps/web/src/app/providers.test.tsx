@@ -5,16 +5,20 @@ import { useSession } from "../features/auth/session-context.tsx";
 import { createSessionEvents } from "../features/auth/session-events.ts";
 import { SessionManager } from "../features/auth/session-manager.ts";
 import { FakeAuth, fakeSession } from "../testing/fake-auth.ts";
+import { FakePactJoyApi } from "../testing/fake-pactjoy-api.ts";
 import { FixedClock } from "../testing/fixed-clock.ts";
+import { noCircleTodayFixture } from "../testing/fixtures/today.ts";
 import { MemoryTokenStore } from "../testing/memory-token-store.ts";
 import type { AppDependencies } from "./dependencies.ts";
 import { AppProviders } from "./providers.tsx";
 
 function deps(overrides: Partial<AppDependencies> = {}): AppDependencies {
   const auth = new FakeAuth();
+  const api = new FakePactJoyApi(noCircleTodayFixture());
   const store = new MemoryTokenStore(fakeSession());
   return {
     auth,
+    api,
     store,
     sessions: new SessionManager(auth, store, new FixedClock(0)),
     sessionEvents: createSessionEvents(),

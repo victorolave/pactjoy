@@ -6,14 +6,18 @@ import type { AppDependencies } from "./app/dependencies.ts";
 import { createSessionEvents } from "./features/auth/session-events.ts";
 import { SessionManager } from "./features/auth/session-manager.ts";
 import { FakeAuth, fakeSession } from "./testing/fake-auth.ts";
+import { FakePactJoyApi } from "./testing/fake-pactjoy-api.ts";
 import { FixedClock } from "./testing/fixed-clock.ts";
+import { noCircleTodayFixture } from "./testing/fixtures/today.ts";
 import { MemoryTokenStore } from "./testing/memory-token-store.ts";
 
 function deps(signedIn: boolean): AppDependencies {
   const auth = new FakeAuth();
+  const api = new FakePactJoyApi(noCircleTodayFixture());
   const store = new MemoryTokenStore(signedIn ? fakeSession() : null);
   return {
     auth,
+    api,
     store,
     sessions: new SessionManager(auth, store, new FixedClock(0)),
     sessionEvents: createSessionEvents(),

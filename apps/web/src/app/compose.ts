@@ -1,4 +1,5 @@
 import { GoTrueAuth, type GoTrueAuthOptions } from "../adapters/gotrue-auth.ts";
+import { HttpPactJoyApi } from "../adapters/http-pactjoy-api.ts";
 import { LocalStorageTokenStore } from "../adapters/local-storage-token-store.ts";
 import { SystemClock } from "../adapters/system-clock.ts";
 import type { AppConfig } from "../config.ts";
@@ -25,11 +26,20 @@ export function createDependencies(config: AppConfig, env: ComposeEnvironment): 
     clock,
   });
   const store = env.store ?? new LocalStorageTokenStore();
+  const sessions = new SessionManager(auth, store, clock);
+  const sessionEvents = createSessionEvents();
   return {
     auth,
+    api: new HttpPactJoyApi({
+      baseUrl: config.apiBaseUrl,
+      getAccessToken: () => sessions.getAccessToken(),
+      refreshAccessToken: () => sessions.forceRefresh(),
+      onUnauthorized: () => sessionEvents.expire(),
+      fetch: env.fetch,
+    }),
     store,
-    sessions: new SessionManager(auth, store, clock),
-    sessionEvents: createSessionEvents(),
+    sessions,
+    sessionEvents,
     queryClient: createQueryClient(),
   };
 }

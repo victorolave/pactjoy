@@ -1,6 +1,7 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { type ReactNode, useCallback } from "react";
 import { SessionProvider } from "../features/auth/session-context.tsx";
+import { ApiProvider } from "./api-context.tsx";
 import type { AppDependencies } from "./dependencies.ts";
 
 export function AppProviders({
@@ -22,7 +23,7 @@ export function AppProviders({
         expired={deps.sessionEvents}
         onSessionEnd={onSessionEnd}
       >
-        {children}
+        <ApiProvider api={deps.api}>{children}</ApiProvider>
       </SessionProvider>
     </QueryClientProvider>
   );

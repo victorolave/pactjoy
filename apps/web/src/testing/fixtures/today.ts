@@ -45,7 +45,7 @@ export const noSeasonTodayFixture = (): TodayView => ({
   circle: base().circle,
 });
 
-export const pactOpenTodayFixture = (): TodayView => ({
+export const pactOpenTodayFixture = (): Season => ({
   state: "pactOpen",
   ...base(),
   season: { ...base().season, actualStart: null },
