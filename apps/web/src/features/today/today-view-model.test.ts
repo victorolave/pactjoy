@@ -169,6 +169,12 @@ describe("toTodayModel: sections and counts (TO-R3)", () => {
     });
   });
 
+  it("describes today while the season runs, and its last day once it ended (C-W4)", () => {
+    expect(running(activeTodayFixture()).refDate).toBe("2026-10-02");
+    // 4 weeks from 2026-09-28: the last day is 2026-10-25, though today is 2026-10-27.
+    expect(running(endedTodayFixture()).refDate).toBe("2026-10-25");
+  });
+
   it("carries the server's today, to tell entries of another day", () => {
     expect(running(activeTodayFixture()).today).toBe("2026-10-02");
   });

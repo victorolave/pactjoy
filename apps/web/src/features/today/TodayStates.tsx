@@ -158,7 +158,7 @@ export function RunningToday({ model }: { readonly model: RunningModel }) {
   const { forToday, otherDays, week } = model.sections;
   const showDayState = model.kind === "active";
   return (
-    <TodayDateContext.Provider value={model.today}>
+    <TodayDateContext.Provider value={{ today: model.today, refDate: model.refDate }}>
       <RunningHeader model={model} />
       {model.kind === "ended" && (
         <InlineMessage tone="info" title="Temporada terminada">
