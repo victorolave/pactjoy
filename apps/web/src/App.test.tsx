@@ -1,3 +1,4 @@
+import type { TodayView } from "@pactjoy/app";
 import { QueryClient } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
@@ -10,9 +11,10 @@ import { FakeAuth, fakeSession } from "./testing/fake-auth.ts";
 import { FakeConnectivity } from "./testing/fake-connectivity.ts";
 import { FakePactJoyApi } from "./testing/fake-pactjoy-api.ts";
 import { FixedClock } from "./testing/fixed-clock.ts";
-import { noCircleTodayFixture } from "./testing/fixtures/today.ts";
+import { activeTodayFixture, noCircleTodayFixture } from "./testing/fixtures/today.ts";
 import { MemoryStorage } from "./testing/memory-storage.ts";
 import { MemoryTokenStore } from "./testing/memory-token-store.ts";
+import { seedPersistedToday } from "./testing/seed-persisted-today.ts";
 import { SequentialIds } from "./testing/sequential-ids.ts";
 
 function deps(signedIn: boolean): AppDependencies {
@@ -31,6 +33,27 @@ function deps(signedIn: boolean): AppDependencies {
     persister: createTodayPersister(new MemoryStorage()),
   };
 }
+
+describe("App with a saved Today from before the shape changed", () => {
+  it("shows the app, not a blank screen: the old copy is dropped", async () => {
+    const storage = new MemoryStorage();
+    // A running Today as an older build saved it: no `points` on its rows, no `pointsToday`.
+    const old = activeTodayFixture();
+    const stale = {
+      ...old,
+      summary: { week: 1, weekCount: 4, daysLeft: 23, score: old.summary.score },
+      rows: old.rows.map(({ points: _points, ...row }) => row),
+    };
+    seedPersistedToday(storage, stale as unknown as TodayView);
+    const dependencies = { ...deps(true), persister: createTodayPersister(storage) };
+    dependencies.api = new FakePactJoyApi(noCircleTodayFixture());
+    render(<App deps={dependencies} />);
+    expect(
+      await screen.findByRole("heading", { name: "Aún no estás en un círculo" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+});
 
 describe("App", () => {
   it("renders the shell with the tab bar for a signed-in user", () => {
