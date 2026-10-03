@@ -1,0 +1,8 @@
+/* Floats above the tab bar, inside the safe area. */
+.host {
+  position: fixed;
+  left: var(--layout-margin-mobile);
+  right: var(--layout-margin-mobile);
+  bottom: calc(var(--safe-bottom) + var(--space-8) + var(--space-4));
+  z-index: 40;
+}
