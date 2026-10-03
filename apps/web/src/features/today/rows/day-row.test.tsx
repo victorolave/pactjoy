@@ -6,6 +6,7 @@ import {
   type Entry,
   entryFixture,
 } from "../../../testing/fixtures/today.ts";
+import { TodayDateContext } from "../today-date-context.tsx";
 import { DayRow } from "./DayRow.tsx";
 
 const show = (row: DayRowData) => render(<DayRow row={row} />);
@@ -100,5 +101,59 @@ describe("day row (TO-R3)", () => {
   it("has no control unless one is given", () => {
     show(dayRowFixture());
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("says the weekday for an entry that belongs to yesterday (B-W1)", () => {
+    render(
+      <TodayDateContext.Provider value={{ today: "2026-10-02", refDate: "2026-10-02" }}>
+        <DayRow
+          row={dayRowFixture({
+            opportunity: {
+              state: "logged",
+              graceUntil: "2026-10-03" as DayRowData["opportunity"]["graceUntil"],
+            },
+            entries: [
+              entryFixture({ kind: "done" }, { forDate: "2026-10-01" as Entry["forDate"] }),
+            ],
+          })}
+        />
+      </TodayDateContext.Provider>,
+    );
+    expect(screen.getByText("Registrado el jueves")).toBeInTheDocument();
+    expect(screen.queryByText("Registrado hoy")).not.toBeInTheDocument();
+  });
+
+  it("gives a Hoy no salió a neutral glyph, not the done check or the success tone (B-W2)", () => {
+    const { container } = render(
+      <DayRow
+        row={dayRowFixture({
+          opportunity: {
+            state: "logged",
+            graceUntil: "2026-10-03" as DayRowData["opportunity"]["graceUntil"],
+          },
+          entries: [entryFixture({ kind: "missed" })],
+        })}
+      />,
+    );
+    expect(screen.getByText("Hoy no salió")).toBeInTheDocument();
+    expect(container.querySelector("[data-tone]")).toHaveAttribute("data-tone", "default");
+    expect(container.querySelector(".lucide-check")).toBeNull();
+    expect(container.querySelector(".lucide-x")).not.toBeNull();
+  });
+
+  it("still gives a real done the success tone and the check", () => {
+    const { container } = render(
+      <DayRow
+        row={dayRowFixture({
+          opportunity: {
+            state: "logged",
+            graceUntil: "2026-10-03" as DayRowData["opportunity"]["graceUntil"],
+          },
+          entries: [entryFixture({ kind: "done" })],
+        })}
+      />,
+    );
+    expect(container.querySelector("[data-tone]")).toHaveAttribute("data-tone", "done");
+    expect(container.querySelector(".lucide-check")).not.toBeNull();
   });
 });
