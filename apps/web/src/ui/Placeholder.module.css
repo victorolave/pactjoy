@@ -21,6 +21,22 @@
   height: auto;
 }
 
+.imageSized {
+  display: block;
+  flex: none;
+  object-fit: contain;
+}
+
+.imageSized[data-size="lg"] {
+  width: var(--illustration-lg);
+  height: var(--illustration-lg);
+}
+
+.imageSized[data-size="md"] {
+  width: var(--illustration-md);
+  height: var(--illustration-md);
+}
+
 .logoImage {
   display: block;
   height: var(--icon-lg);

@@ -21,11 +21,16 @@ export interface IllustrationProps {
   readonly src?: string;
   /** A short banner image instead of a full-width one. */
   readonly compact?: boolean;
+  /** A square box (the design's 200 or 130) with the image contained, instead of the full width. */
+  readonly size?: "lg" | "md";
 }
 
 /** Without a name or a src a neutral block is drawn and no image is requested. */
-export function Illustration({ alt, name, src, compact = false }: IllustrationProps) {
+export function Illustration({ alt, name, src, compact = false, size }: IllustrationProps) {
   const url = src ?? (name === undefined ? undefined : ILLUSTRATIONS[name]);
+  if (url !== undefined && size !== undefined) {
+    return <img className={styles.imageSized} data-size={size} src={url} alt={alt} />;
+  }
   if (url !== undefined) {
     return <img className={compact ? styles.imageCompact : styles.image} src={url} alt={alt} />;
   }

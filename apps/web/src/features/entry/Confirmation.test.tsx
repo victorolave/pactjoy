@@ -17,10 +17,32 @@ describe("Confirmation", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it("takes another title, for a deletion", () => {
-    render(<Confirmation title="Registro borrado." detail="Leer" onClose={() => {}} />);
-    expect(screen.getByText("Registro borrado.")).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: "Registro borrado" })).toBeInTheDocument();
+  it("draws the illustration in its own 200 box, not at the sheet's full width (design 20)", () => {
+    render(<Confirmation detail="Leer" onClose={() => {}} />);
+    expect(screen.getByRole("img", { name: "Registro guardado" })).toHaveAttribute(
+      "data-size",
+      "lg",
+    );
+  });
+
+  it("shows the points the server gave, and the closing line", () => {
+    render(
+      <Confirmation
+        detail="Leer · 20 min"
+        points={4}
+        message="Mínimo cumplido. Un paso más en tu meta."
+        onClose={() => {}}
+      />,
+    );
+    expect(screen.getByText("+4 pts")).toBeInTheDocument();
+    expect(screen.getByText("Mínimo cumplido. Un paso más en tu meta.")).toBeInTheDocument();
+  });
+
+  it("shows no points when there are none to show, or zero", () => {
+    const { rerender } = render(<Confirmation detail="Leer" onClose={() => {}} />);
+    expect(screen.queryByText(/pts/)).not.toBeInTheDocument();
+    rerender(<Confirmation detail="Leer" points={0} onClose={() => {}} />);
+    expect(screen.queryByText(/pts/)).not.toBeInTheDocument();
   });
 });
 
@@ -38,6 +60,17 @@ describe("useAutoClose", () => {
     render(<Probe saved={null} onClose={onClose} />);
     act(() => vi.advanceTimersByTime(10_000));
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("keeps its 1200 ms when the callback changes meanwhile (Today refetching re-renders)", () => {
+    const first = vi.fn();
+    const second = vi.fn();
+    const { rerender } = render(<Probe saved="ok" onClose={first} />);
+    act(() => vi.advanceTimersByTime(800));
+    rerender(<Probe saved="ok" onClose={second} />);
+    act(() => vi.advanceTimersByTime(400));
+    expect(first).not.toHaveBeenCalled();
+    expect(second).toHaveBeenCalledTimes(1);
   });
 
   it("closes after 1200 ms, and not a moment before", () => {

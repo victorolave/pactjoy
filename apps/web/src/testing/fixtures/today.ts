@@ -63,6 +63,7 @@ export const dayRowFixture = (overrides: Partial<DayRow> = {}): DayRow => ({
     schedule: { period: "perSession", frequency: { kind: "specificDays", weekdays: [0, 2, 4] } },
   },
   opportunity: { state: "open", graceUntil: localDate("2026-10-03") },
+  points: { perOpportunity: "8", earned: null, limitPercents: null },
   entries: [],
   ...overrides,
 });
@@ -92,6 +93,7 @@ export const weekRowFixture = (overrides: Partial<WeekRow> = {}): WeekRow => ({
     schedule: { period: "perSession", frequency: { kind: "timesPerWeek", times: 3 } },
   },
   opportunity: { state: "open", graceUntil: localDate("2026-10-05") },
+  points: { perOpportunity: "83.33", earned: null, limitPercents: null },
   entries: [],
   progress: {
     value: "40",
@@ -127,7 +129,7 @@ const ownScore = (): Active["summary"]["score"] => ({
 export const activeTodayFixture = (overrides: Partial<Active> = {}): Active => ({
   state: "active",
   ...base(),
-  summary: { week: 1, weekCount: 4, daysLeft: 23, score: ownScore() },
+  summary: { week: 1, weekCount: 4, daysLeft: 23, pointsToday: 0, score: ownScore() },
   rows: [dayRowFixture(), weekRowFixture()],
   standings: STANDINGS,
   ...overrides,
@@ -138,7 +140,7 @@ export const endedTodayFixture = (overrides: Partial<Active> = {}): Active => ({
   state: "ended",
   ...base(),
   today: localDate("2026-10-27"),
-  summary: { week: 4, weekCount: 4, daysLeft: 0, score: ownScore() },
+  summary: { week: 4, weekCount: 4, daysLeft: 0, pointsToday: 0, score: ownScore() },
   rows: [weekRowFixture({ opportunity: { state: "closed", graceUntil: localDate("2026-10-26") } })],
   standings: STANDINGS,
   ...overrides,
