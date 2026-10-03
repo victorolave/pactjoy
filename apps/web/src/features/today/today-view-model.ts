@@ -38,6 +38,10 @@ export type TodayModel =
       };
       /** Day-bound opportunities of yesterday still open to register (design 15d). */
       readonly pendingYesterday: Running["pendingYesterday"];
+      /** What was registered yesterday and can still be changed: it lives in the De ayer card. */
+      readonly yesterdayRegistered: readonly YesterdayRegistered[];
+      /** Every row with ALL its entries, so the edit sheet reaches yesterday's too. */
+      readonly sheetRows: Running["rows"];
       readonly counts: { readonly logged: number; readonly scheduled: number };
       /** Whole points the viewer's entries for the described day earned, from the server. */
       readonly pointsToday: number;
@@ -52,6 +56,12 @@ export type TodayModel =
       readonly season: SeasonCardModel;
       readonly standings: StandingsPairModel | null;
     };
+
+/** One entry of yesterday, with the row of its commitment (design 15d). */
+export interface YesterdayRegistered {
+  readonly row: Row;
+  readonly entry: Row["entries"][number];
+}
 
 export interface SeasonCardModel {
   readonly points: string;
@@ -151,8 +161,24 @@ function dayStateOf(
   return registrable.every(achieved) ? "allDone" : "allLogged";
 }
 
+/** A row shows and edits ONLY the entries of the day on display; yesterday's have their own place. */
+function ofDay<T extends Row>(row: T, refDate: string): T {
+  return { ...row, entries: row.entries.filter((entry) => entry.forDate === refDate) };
+}
+
 function running(view: Running): TodayModel {
-  const days = view.rows.filter((row): row is DayRow => row.kind === "day");
+  const refDate = refDateOf(view);
+  const yesterday = addDays(view.today, -1);
+  const yesterdayRegistered =
+    view.state === "ended"
+      ? []
+      : view.rows.flatMap((row) =>
+          row.entries
+            .filter((entry) => entry.forDate === yesterday)
+            .map((entry): YesterdayRegistered => ({ row, entry })),
+        );
+  const rows = view.rows.map((row) => ofDay(row, refDate));
+  const days = rows.filter((row): row is DayRow => row.kind === "day");
   const forToday = days.filter((row) => row.scheduledToday);
   const registrable = forToday.filter(isRegistrable);
   const logged = registrable.filter((row) => row.opportunity.state === "logged").length;
@@ -166,13 +192,15 @@ function running(view: Running): TodayModel {
     sections: {
       forToday,
       otherDays: days.filter((row) => !row.scheduledToday),
-      week: view.rows.filter((row): row is WeekRow => row.kind === "week"),
+      week: rows.filter((row): row is WeekRow => row.kind === "week"),
     },
     pendingYesterday: view.pendingYesterday,
+    yesterdayRegistered,
+    sheetRows: view.rows,
     counts: { logged, scheduled: registrable.length },
     pointsToday: view.summary.pointsToday,
     today: view.today,
-    refDate: refDateOf(view),
+    refDate,
     dayState: dayStateOf(registrable, logged),
     season: seasonCard(view),
     standings: standingsPair(view),

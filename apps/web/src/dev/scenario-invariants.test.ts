@@ -104,12 +104,18 @@ describe("scenarios only describe what the server can produce", () => {
     }
   });
 
-  it.each(views)("%s: a logged row has an entry, an open one has none", (_id, view) => {
-    for (const row of running(view)?.rows ?? []) {
-      if (row.opportunity.state === "logged") expect(row.entries.length).toBeGreaterThan(0);
-      if (row.opportunity.state === "open" && row.kind === "day") {
-        expect(row.entries).toEqual([]);
+  it.each(views)(
+    "%s: logged means an entry for the day on display, open means none",
+    (_id, view) => {
+      const data = running(view);
+      if (data === null) return;
+      const refDate = data.state === "ended" ? "2026-10-25" : data.today;
+      for (const row of data.rows) {
+        const ofDay = row.entries.filter((entry) => entry.forDate === refDate);
+        if (row.opportunity.state === "logged") expect(ofDay.length).toBeGreaterThan(0);
+        // Yesterday's entries ride along (their window is open) but do not make today's row logged.
+        if (row.opportunity.state === "open" && row.kind === "day") expect(ofDay).toEqual([]);
       }
-    }
-  });
+    },
+  );
 });

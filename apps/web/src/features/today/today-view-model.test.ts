@@ -138,6 +138,41 @@ describe("toTodayModel: sections and counts (TO-R3)", () => {
     expect(pointsToday).toBe(14);
   });
 
+  it("a row keeps only today's entries: yesterday's belong to the De ayer card", () => {
+    const today = entryFixture({ kind: "quantity", value: "20" }, { entryId: "e-today" as never });
+    const yesterday = entryFixture(
+      { kind: "quantity", value: "30" },
+      { entryId: "e-yesterday" as never, forDate: "2026-10-01" as never },
+    );
+    const model = running(
+      activeTodayFixture({ rows: [row("logged", { entries: [yesterday, today] })] }),
+    );
+    expect(model.sections.forToday[0]?.entries.map((e) => e.entryId)).toEqual(["e-today"]);
+    expect(model.yesterdayRegistered.map((item) => item.entry.entryId)).toEqual(["e-yesterday"]);
+    expect(model.yesterdayRegistered[0]?.row.commitmentId).toBe(
+      model.sections.forToday[0]?.commitmentId,
+    );
+  });
+
+  it("the sheet can still reach yesterday's entry, through every row's own entries", () => {
+    const yesterday = entryFixture(
+      { kind: "done" },
+      { entryId: "e-yesterday" as never, forDate: "2026-10-01" as never },
+    );
+    const model = running(activeTodayFixture({ rows: [row("open", { entries: [yesterday] })] }));
+    expect(model.sheetRows[0]?.entries.map((e) => e.entryId)).toEqual(["e-yesterday"]);
+    expect(model.sections.forToday[0]?.entries).toEqual([]);
+  });
+
+  it("an ended season shows the last day's entries and lists nothing for yesterday", () => {
+    const last = entryFixture({ kind: "done" }, { forDate: "2026-10-25" as never });
+    const model = running(
+      endedTodayFixture({ rows: [row("logged", { entries: [last], scheduledToday: true })] }),
+    );
+    expect(model.sections.forToday[0]?.entries).toHaveLength(1);
+    expect(model.yesterdayRegistered).toEqual([]);
+  });
+
   it("never counts a day not scheduled today as pending", () => {
     const { counts } = running(
       activeTodayFixture({

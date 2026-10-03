@@ -2,6 +2,7 @@ import type { TodayRow } from "@pactjoy/app";
 import { useEffect, useState } from "react";
 import { useOnline } from "../../app/connectivity-context.tsx";
 import { Button } from "../../ui/Button.tsx";
+import { Centered } from "../../ui/Centered.tsx";
 import { IconButton } from "../../ui/IconButton.tsx";
 import { InlineMessage } from "../../ui/InlineMessage.tsx";
 import { Sheet } from "../../ui/Sheet.tsx";
@@ -101,15 +102,17 @@ export function RowWithControls({
                 aria-hidden={missedOpen ? undefined : true}
               >
                 <div className={styles.collapseInner}>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    aria-label={`Hoy no salió: ${row.habitName}`}
-                    disabled={!missedOpen || oneTap.pending || !online}
-                    onClick={oneTap.missed}
-                  >
-                    Hoy no salió
-                  </Button>
+                  <Centered>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      aria-label={`Hoy no salió: ${row.habitName}`}
+                      disabled={!missedOpen || oneTap.pending || !online}
+                      onClick={oneTap.missed}
+                    >
+                      Hoy no salió
+                    </Button>
+                  </Centered>
                 </div>
               </div>
             )}

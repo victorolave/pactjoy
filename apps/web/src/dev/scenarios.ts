@@ -203,6 +203,53 @@ const pendingYesterday = (): TodayView => {
   });
 };
 
+const yesterdayEntry = (value: DayRow["entries"][number]["value"], entryId: string) =>
+  entryFixture(value, { entryId: id(entryId), forDate: date("2026-10-01") });
+
+/**
+ * Today is Friday. Dibujar is still pending from yesterday; Correr was registered yesterday (4 km) and
+ * again today (3 km), and Meditar was marked as missed yesterday: each in its own place.
+ */
+const mixedYesterday = (): TodayView => {
+  const dibujar = meditar({
+    commitmentId: id("c-dibujar"),
+    habitName: "Dibujar",
+    measure: {
+      unit: "done",
+      schedule: { period: "perSession", frequency: { kind: "specificDays", weekdays: [3, 4] } },
+    },
+  });
+  const running = correr({
+    opportunity: { state: "logged", graceUntil: date("2026-10-03") },
+    measure: {
+      unit: "km",
+      customLabel: null,
+      precision: "decimal",
+      target: { direction: "reach", minimum: "3", ideal: "5" },
+      schedule: { period: "perSession", frequency: { kind: "specificDays", weekdays: [3, 4] } },
+    },
+    entries: [
+      yesterdayEntry({ kind: "quantity", value: "4" }, "e-correr-ayer"),
+      entryFixture({ kind: "quantity", value: "3" }, { entryId: id("e-correr-hoy") }),
+    ],
+    points: { perOpportunity: "12.5", earned: 8, limitPercents: null },
+  });
+  const meditado = meditar({
+    entries: [yesterdayEntry({ kind: "missed" }, "e-meditar-ayer")],
+    measure: {
+      unit: "done",
+      schedule: { period: "perSession", frequency: { kind: "specificDays", weekdays: [3, 4] } },
+    },
+  });
+  return withSummary(
+    activeTodayFixture({
+      rows: [dibujar, running, meditado],
+      pendingYesterday: [pending(dibujar)],
+    }),
+    8,
+  );
+};
+
 /** Today is Sunday: nothing is scheduled, but Saturday's Estirar is still open. */
 const pendingYesterdayNothingToday = (): TodayView => {
   const estirar = meditar({
@@ -360,6 +407,14 @@ export const SCENARIOS: readonly Scenario[] = [
     description: "Dibujar y Correr quedaron abiertos ayer; se pueden registrar hasta hoy.",
     mode: "data",
     today: pendingYesterday,
+  },
+  {
+    id: "yesterdayMixed",
+    title: "Ayer: pendiente y registrado",
+    description:
+      "Dibujar pendiente; Correr registrado ayer y hoy; Meditar marcado como no salió ayer.",
+    mode: "data",
+    today: mixedYesterday,
   },
   {
     id: "pendingYesterdayNothingToday",
