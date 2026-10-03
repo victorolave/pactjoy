@@ -1,5 +1,6 @@
-import { QueryClientProvider } from "@tanstack/react-query";
-import { type ReactNode, useCallback } from "react";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import { type ReactNode, useCallback, useMemo } from "react";
+import { persistOptionsFor } from "../adapters/query-persister.ts";
 import { SessionProvider } from "../features/auth/session-context.tsx";
 import { ApiProvider } from "./api-context.tsx";
 import { ConnectivityProvider } from "./connectivity-context.tsx";
@@ -14,11 +15,15 @@ export function AppProviders({
   readonly deps: AppDependencies;
   readonly children: ReactNode;
 }) {
-  const { queryClient } = deps;
-  // Cached data belongs to the signed-in user: drop it whenever the session ends.
-  const onSessionEnd = useCallback(() => queryClient.clear(), [queryClient]);
+  const { queryClient, persister } = deps;
+  // Cached data belongs to the signed-in user: drop it, and the saved copy, whenever the session ends.
+  const onSessionEnd = useCallback(() => {
+    queryClient.clear();
+    void persister.removeClient();
+  }, [queryClient, persister]);
+  const persistOptions = useMemo(() => persistOptionsFor(persister), [persister]);
   return (
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider client={queryClient} persistOptions={persistOptions}>
       <SessionProvider
         auth={deps.auth}
         store={deps.store}
@@ -34,6 +39,6 @@ export function AppProviders({
           </IdsProvider>
         </ApiProvider>
       </SessionProvider>
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   );
 }

@@ -50,8 +50,15 @@ export function SessionProvider({
   const [session, setSession] = useState<Session | null>(() => store.load());
   const [notice, setNotice] = useState<SessionNotice | null>(null);
 
-  // Another tab refreshes or ends the session: follow it.
-  useEffect(() => store.subscribe(setSession), [store]);
+  // Another tab refreshes or ends the session: follow it. Its sign out ends this tab's data too.
+  useEffect(
+    () =>
+      store.subscribe((next) => {
+        setSession(next);
+        if (next === null) onSessionEnd?.();
+      }),
+    [store, onSessionEnd],
+  );
 
   const expire = useCallback(() => {
     store.clear();

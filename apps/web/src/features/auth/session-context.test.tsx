@@ -167,6 +167,26 @@ describe("SessionProvider", () => {
     expect(user()).toHaveTextContent("none");
   });
 
+  it("tells the app when another tab ends the session, but not when it only refreshes it", () => {
+    const auth = new FakeAuth();
+    const store = new MemoryTokenStore(fakeSession());
+    const onSessionEnd = vi.fn();
+    render(
+      <SessionProvider
+        auth={auth}
+        store={store}
+        manager={new SessionManager(auth, store, new FixedClock(0))}
+        onSessionEnd={onSessionEnd}
+      >
+        <Probe />
+      </SessionProvider>,
+    );
+    act(() => store.emitExternal(fakeSession({ accessToken: "access-2" })));
+    expect(onSessionEnd).not.toHaveBeenCalled();
+    act(() => store.emitExternal(null));
+    expect(onSessionEnd).toHaveBeenCalledTimes(1);
+  });
+
   it("surfaces the port's AuthError to the caller", async () => {
     const auth = new FakeAuth();
     const store = new MemoryTokenStore();
