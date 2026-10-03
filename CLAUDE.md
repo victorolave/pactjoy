@@ -135,4 +135,4 @@ Full detail in the Mechanics page in Notion.
    - A3: social.
    - E: account deletion.
 
-Pending product question Q16: the `timesPerWeek` late-entry window differs between `packages/app` and the engine.
+Product question Q16 decided (2026-10-02): `timesPerWeek` sessions count until the week closes plus grace (weekly window, per Mechanics); the engine fix is in progress.
