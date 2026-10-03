@@ -11,6 +11,12 @@ export function limitOptions(tolerance: number): number[] {
   return Array.from({ length: last + 1 }, (_, index) => index);
 }
 
+/** The grid's options, plus the chosen value when it is outside them (editing a stored entry). */
+function optionsWith(tolerance: number, value: number | null): number[] {
+  const options = limitOptions(tolerance);
+  return value === null || options.includes(value) ? options : [...options, value];
+}
+
 function zoneOf(option: number, ideal: number, tolerance: number): string {
   if (option <= ideal) return "Ideal";
   return option <= tolerance ? "Tolerancia" : "Excede";
@@ -31,7 +37,7 @@ export interface LimitGridProps {
 export function LimitGrid({ unit, ideal, tolerance, value, onSelect }: LimitGridProps) {
   return (
     <div className={styles.grid} role="radiogroup" aria-label={`Cantidad de ${unit}`}>
-      {limitOptions(tolerance).map((option) => (
+      {optionsWith(tolerance, value).map((option) => (
         // biome-ignore lint/a11y/useSemanticElements: a button-based radio group, like the design system's
         <button
           key={option}

@@ -58,6 +58,44 @@ describe("editing a limit entry", () => {
   });
 });
 
+describe("editing a limit entry the grid cannot show", () => {
+  it("keeps a stored value outside the grid, selected and savable", async () => {
+    const { deps } = renderToday([coffee([quantity("7", "entry-9")])]);
+    await userEvent.click(await screen.findByRole("button", { name: "Editar registro de Café" }));
+    const dialog = await screen.findByRole("dialog", { name: "Café" });
+    expect(within(dialog).getByRole("radio", { name: /^7/ })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    await userEvent.click(within(dialog).getByRole("button", { name: "Guardar 7 veces" }));
+    await screen.findByRole("heading", { name: "Café" }).catch(() => undefined);
+    await waitFor(() => expect(deps.api.edited[0]).toMatchObject({ value: { value: "7" } }));
+  });
+
+  it("edits a stored 20 on a stepper when the tolerance is past the grid", async () => {
+    const wide = coffee([quantity("20", "entry-9")]);
+    const { deps } = renderToday([
+      {
+        ...wide,
+        measure: {
+          unit: "times",
+          customLabel: null,
+          precision: "integer",
+          target: { direction: "limit", ideal: "14", tolerance: "20" },
+          schedule: wide.measure.schedule,
+        },
+      } as typeof wide,
+    ]);
+    await userEvent.click(await screen.findByRole("button", { name: "Editar registro de Café" }));
+    const dialog = await screen.findByRole("dialog", { name: "Café" });
+    expect(within(dialog).queryByRole("radiogroup")).not.toBeInTheDocument();
+    expect(within(dialog).getByRole("textbox", { name: "Cantidad" })).toHaveValue("20");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Más" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Guardar 21 veces" }));
+    await waitFor(() => expect(deps.api.edited[0]).toMatchObject({ value: { value: "21" } }));
+  });
+});
+
 describe("edit failures (EN-R8)", () => {
   it("tells that the entry is gone, keeps the sheet and refetches Today (EN-S16)", async () => {
     const { deps } = renderToday([reading([quantity("25")])], "/?entry=commitment-2&id=entry-1");

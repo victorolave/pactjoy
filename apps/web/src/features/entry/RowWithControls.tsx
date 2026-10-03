@@ -1,4 +1,5 @@
 import type { TodayRow } from "@pactjoy/app";
+import { useOnline } from "../../app/connectivity-context.tsx";
 import { IconButton } from "../../ui/IconButton.tsx";
 import { InlineMessage } from "../../ui/InlineMessage.tsx";
 import { TodayRowCard } from "../today/rows/TodayRowCard.tsx";
@@ -16,6 +17,8 @@ export function RowWithControls({
 }) {
   const oneTap = useOneTap(row.commitmentId, seasonId);
   const sheet = useEntrySheet();
+  // No write queue (P1): every write control is off until the network is back.
+  const online = useOnline();
   const offersOneTap =
     row.kind === "day" && row.measure.unit === "done" && row.opportunity.state === "open";
   const offersSheet =
@@ -38,13 +41,13 @@ export function RowWithControls({
                 icon="check"
                 variant="outline"
                 label={`Registrar ${row.habitName}`}
-                disabled={oneTap.pending}
+                disabled={oneTap.pending || !online}
                 onClick={oneTap.done}
               />
               <IconButton
                 icon="x"
                 label={`Hoy no salió: ${row.habitName}`}
-                disabled={oneTap.pending}
+                disabled={oneTap.pending || !online}
                 onClick={oneTap.missed}
               />
             </>
@@ -54,6 +57,7 @@ export function RowWithControls({
               icon="plus"
               variant="outline"
               label={`Registrar ${row.habitName}`}
+              disabled={!online}
               onClick={() => sheet.open(row.commitmentId)}
             />
           )}
@@ -61,6 +65,7 @@ export function RowWithControls({
             <IconButton
               icon="pencil"
               label={`Editar registro de ${row.habitName}`}
+              disabled={!online}
               onClick={() => sheet.open(row.commitmentId, firstEntry.entryId)}
             />
           )}
