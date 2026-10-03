@@ -100,6 +100,17 @@ describe("day row (TO-R3)", () => {
       expect(screen.queryByText(/Llevas/)).not.toBeInTheDocument();
     });
 
+    it("keeps 'Llevas X hoy' for a reach row next to it", () => {
+      show(
+        quantityDay({
+          opportunity: { state: "logged", graceUntil: null },
+          entries: [entryFixture({ kind: "quantity", value: "3" })],
+        }),
+      );
+      expect(screen.getByText("Llevas 3 km hoy")).toBeInTheDocument();
+      expect(screen.queryByText(/Hoy:/)).not.toBeInTheDocument();
+    });
+
     it("keeps the decimal comma", () => {
       show(limitDay("glasses", ["1.5"], "decimal" as never));
       expect(screen.getByText("Hoy: 1,5 vasos")).toBeInTheDocument();
