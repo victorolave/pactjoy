@@ -1,6 +1,7 @@
 import type { MeasureView, TodayEntry } from "@pactjoy/app";
 import { fromScaled, toScaled } from "../../shared/decimal.ts";
 import { weekdayName } from "../../shared/format.ts";
+import type { ProgressMark } from "../../ui/ProgressBar.tsx";
 
 /** Decimal strings come from the server with a dot; Spanish writes a comma. */
 export const formatDecimal = (value: string): string => value.replace(".", ",");
@@ -49,6 +50,38 @@ export function targetText(measure: MeasureView): string | null {
   return target.direction === "reach"
     ? `mín. ${formatDecimal(target.minimum)} · ideal ${formatDecimal(target.ideal)}${suffix}`
     : `ideal hasta ${formatDecimal(target.ideal)} · tolerancia ${formatDecimal(target.tolerance)}${suffix}`;
+}
+
+/** What a week-bound row says instead of points: they are assigned when the week closes (design 17b). */
+export const WEEK_POINTS_NOTE = "Los puntos se asignan al cerrar la semana.";
+
+/** Whether the opportunity is the week's (timesPerWeek or weeklyTotal) rather than a day's. */
+export function isWeekBound(measure: MeasureView): boolean {
+  const { schedule } = measure;
+  return schedule.period === "weeklyTotal" || schedule.frequency.kind === "timesPerWeek";
+}
+
+/** The thresholds as a sentence for a sheet: "mínimo 10 min, ideal 30 min", "ideal hasta 2, tolerancia hasta 4 veces". */
+export function targetPhrase(measure: MeasureView): string {
+  if (measure.unit === "done") return "";
+  const { target } = measure;
+  const unit = unitLabel(measure);
+  const suffix = unit === null || unit === "" ? "" : ` ${unit}`;
+  return target.direction === "reach"
+    ? `mínimo ${formatDecimal(target.minimum)}${suffix}, ideal ${formatDecimal(target.ideal)}${suffix}`
+    : `ideal hasta ${formatDecimal(target.ideal)}, tolerancia hasta ${formatDecimal(target.tolerance)}${suffix}`;
+}
+
+/** The labelled minimum and ideal under a progress bar: "mín. 10" and "ideal 30 min". */
+export function reachMarks(measure: MeasureView): ProgressMark[] {
+  if (measure.unit === "done" || measure.target.direction !== "reach") return [];
+  const unit = unitLabel(measure);
+  const suffix = unit === null || unit === "" ? "" : ` ${unit}`;
+  const { minimum, ideal } = measure.target;
+  return [
+    { at: Number(minimum), label: `mín. ${formatDecimal(minimum)}` },
+    { at: Number(ideal), label: `ideal ${formatDecimal(ideal)}${suffix}` },
+  ];
 }
 
 /** Monday first, as the engine numbers weekdays. */

@@ -1,16 +1,30 @@
 import type { ReactNode } from "react";
-import { ProgressBar, type ProgressMark } from "../../../ui/ProgressBar.tsx";
+import { fromScaled } from "../../../shared/decimal.ts";
+import { ProgressBar } from "../../../ui/ProgressBar.tsx";
 import { Tag } from "../../../ui/Tag.tsx";
-import { formatDecimal, scheduleText, targetText, unitLabel } from "../row-labels.ts";
+import { loggedToday } from "../logged-totals.ts";
+import {
+  formatDecimal,
+  quantityText,
+  reachMarks,
+  scheduleText,
+  targetText,
+  unitLabel,
+} from "../row-labels.ts";
+import { useTodayDates } from "../today-date-context.tsx";
 import type { WeekTodayRow } from "../today-view-model.ts";
 import { RowFrame } from "./RowFrame.tsx";
+import { SessionBar } from "./SessionBar.tsx";
 
 type Progress = NonNullable<WeekTodayRow["progress"]>;
 
-function detailOf(row: WeekTodayRow, progress: Progress): string {
+function detailOf(row: WeekTodayRow, progress: Progress, today: string | undefined): string {
   const { measure } = row;
   if (measure.schedule.period === "perSession") {
-    return `${progress.sessionsDone} de ${progress.sessionsTarget} esta semana`;
+    const week = `${progress.sessionsDone} de ${progress.sessionsTarget} esta semana`;
+    const logged = loggedToday(row, today);
+    // Design 22: "2 de 5 esta semana · llevas 25 min hoy".
+    return logged > 0n ? `${week} · llevas ${quantityText(fromScaled(logged), measure)} hoy` : week;
   }
   const unit = unitLabel(measure);
   const suffix = unit === null || unit === "" ? "" : ` ${unit}`;
@@ -22,38 +36,17 @@ function detailOf(row: WeekTodayRow, progress: Progress): string {
 }
 
 function barOf(row: WeekTodayRow, progress: Progress): ReactNode {
-  const valueLabel = `${progress.percent} %`;
-  // Sessions are scored by the server: the bar shows its percent as is.
-  if (row.measure.schedule.period === "perSession") {
-    return (
-      <ProgressBar
-        name={`Progreso de ${row.habitName}`}
-        value={progress.percent}
-        max={100}
-        valueLabel={valueLabel}
-      />
-    );
-  }
-  // A weekly reach total reads against its ideal, with the minimum marked.
+  // A session row shows today's amount against its minimum and ideal (design proto).
+  if (row.measure.schedule.period === "perSession") return <SessionBar row={row} />;
+  // A weekly reach total reads against its ideal, with the minimum marked and no percent.
   if (progress.target.direction !== "reach") return undefined;
-  const unit = unitLabel(row.measure);
-  const marks: ProgressMark[] = [
-    {
-      at: Number(progress.target.minimum),
-      label: `mín. ${formatDecimal(progress.target.minimum)}`,
-    },
-    {
-      at: Number(progress.target.ideal),
-      label: `ideal ${formatDecimal(progress.target.ideal)}${unit === null || unit === "" ? "" : ` ${unit}`}`,
-    },
-  ];
   return (
     <ProgressBar
       name={`Progreso de ${row.habitName}`}
       value={Number(progress.value ?? "0")}
       max={Number(progress.target.ideal)}
-      valueLabel={valueLabel}
-      marks={marks}
+      minimum={Number(progress.target.minimum)}
+      marks={reachMarks(row.measure)}
     />
   );
 }
@@ -68,13 +61,14 @@ export function WeekRow({
   readonly below?: ReactNode;
 }) {
   const { progress } = row;
+  const dates = useTodayDates();
   const closed = row.opportunity.state === "closed";
   return (
     <RowFrame
       title={row.habitName}
       glyph="repeat"
       details={[
-        progress === null ? scheduleText(row.measure) : detailOf(row, progress),
+        progress === null ? scheduleText(row.measure) : detailOf(row, progress, dates?.refDate),
         ...(closed ? ["Cerrada"] : []),
       ]}
       badges={row.privacy === "private" ? <Tag>Privado</Tag> : undefined}

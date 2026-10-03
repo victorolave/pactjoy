@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   type DayRow,
   dayRowFixture,
+  entryFixture,
   type WeekRow,
   weekRowFixture,
 } from "../../../testing/fixtures/today.ts";
@@ -77,14 +78,51 @@ describe("TodayRowCard routing (TO-R5)", () => {
 });
 
 describe("week row (TO-R4)", () => {
-  it("shows sessions done of target and the progress bar for timesPerWeek (TO-S7)", () => {
+  it("shows sessions done of target and today's bar for timesPerWeek (TO-S7)", () => {
     show(weekRowFixture());
     expect(screen.getByRole("heading", { name: "Leer" })).toBeInTheDocument();
     expect(screen.getByText("2 de 3 esta semana")).toBeInTheDocument();
     const bar = screen.getByRole("progressbar");
-    expect(bar).toHaveAttribute("aria-valuenow", "67");
-    expect(bar).toHaveAttribute("aria-valuemax", "100");
-    expect(screen.getByText("67 %")).toBeInTheDocument();
+    expect(bar).toHaveAttribute("aria-valuenow", "0");
+    expect(bar).toHaveAttribute("aria-valuemax", "30");
+    expect(screen.getByText("mín. 10")).toBeInTheDocument();
+    expect(screen.getByText("ideal 30 min")).toBeInTheDocument();
+    // The percent label is gone: the bar and its marks say it.
+    expect(screen.queryByText(/\d+ %/)).not.toBeInTheDocument();
+  });
+
+  it("fills a session bar with today's amount, neutral below the minimum and gradient from it", () => {
+    const logged = (value: string) =>
+      weekRowFixture({
+        entries: [entryFixture({ kind: "quantity", value })],
+        opportunity: { state: "logged", graceUntil: null },
+      });
+    const { unmount } = show(logged("5"));
+    expect(screen.getByRole("progressbar").firstElementChild).toHaveStyle({
+      background: "var(--ink-400)",
+    });
+    unmount();
+    show(logged("20"));
+    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "20");
+    expect(screen.getByRole("progressbar").firstElementChild).toHaveStyle({
+      background: "var(--gradient-together)",
+    });
+  });
+
+  it("gives a reach quantity on a day row the same bar, and a done row none", () => {
+    show(
+      dayRowFixture({
+        measure: {
+          unit: "km",
+          customLabel: null,
+          precision: "integer",
+          target: { direction: "reach", minimum: "3", ideal: "5" },
+          schedule: { period: "perSession", frequency: { kind: "specificDays", weekdays: [4] } },
+        },
+      }),
+    );
+    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuemax", "5");
+    expect(screen.getByText("ideal 5 km")).toBeInTheDocument();
   });
 
   it("shows value over ideal for a weekly total, with the minimum and ideal marks", () => {

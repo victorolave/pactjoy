@@ -4,13 +4,16 @@ import { entryText, quantityText, scheduleText, sumQuantities, targetText } from
 import { useTodayDate } from "../today-date-context.tsx";
 import type { DayTodayRow } from "../today-view-model.ts";
 import { RowFrame } from "./RowFrame.tsx";
+import { SessionBar } from "./SessionBar.tsx";
 
 export function DayRow({
   row,
   action,
   below,
+  optimisticDone = false,
 }: {
   readonly row: DayTodayRow;
+  readonly optimisticDone?: boolean;
   readonly action?: ReactNode;
   readonly below?: ReactNode;
 }) {
@@ -18,7 +21,8 @@ export function DayRow({
   const today = useTodayDate();
   const logged = state === "logged" && row.entries.length > 0;
   // A "Hoy no salió" is a registered day, not a success: it gets no check and no success colour.
-  const achieved = logged && row.entries.some((entry) => entry.value.kind !== "missed");
+  const achieved =
+    optimisticDone || (logged && row.entries.some((entry) => entry.value.kind !== "missed"));
   const lines = (missed: boolean) =>
     row.entries
       .filter((entry) => (entry.value.kind === "missed") === missed)
@@ -27,14 +31,16 @@ export function DayRow({
   const quantities = row.entries.filter((entry) => entry.value.kind === "quantity");
   const sumsUp =
     achieved &&
-    quantities.length > 1 &&
+    quantities.length > 0 &&
     quantities.length === row.entries.length &&
     quantities.every((entry) => today === undefined || entry.forDate === today);
   const statuses = !achieved
     ? []
-    : sumsUp
-      ? [`Llevas ${quantityText(sumQuantities(quantities), row.measure)} hoy`]
-      : lines(false);
+    : row.entries.length === 0
+      ? ["Registrado hoy"]
+      : sumsUp
+        ? [`Llevas ${quantityText(sumQuantities(quantities), row.measure)} hoy`]
+        : lines(false);
   const detail = !row.scheduledToday
     ? "No toca hoy"
     : state === "closed"
@@ -47,10 +53,15 @@ export function DayRow({
       tone={achieved ? "done" : "default"}
       statuses={statuses}
       points={achieved ? row.points.earned : null}
-      details={logged ? lines(true) : [detail]}
+      details={logged || achieved ? lines(true) : [detail]}
       badges={row.privacy === "private" ? <Tag>Privado</Tag> : undefined}
       action={action}
-      below={below}
+      below={
+        <>
+          <SessionBar row={row} />
+          {below}
+        </>
+      }
     />
   );
 }

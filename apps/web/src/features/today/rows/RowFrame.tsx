@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { pointsText } from "../../../shared/format.ts";
 import { Card } from "../../../ui/Card.tsx";
 import { cx } from "../../../ui/cx.ts";
 import { Icon, type IconName } from "../../../ui/icon/Icon.tsx";
@@ -51,7 +52,7 @@ export function RowFrame({
             <div className={styles.titleLine}>
               <h3 className={styles.title}>{title}</h3>
               {points !== null && points > 0 && (
-                <span className={styles.points}>{`+${points} pts`}</span>
+                <span className={styles.points}>{pointsText(points)}</span>
               )}
             </div>
             {statuses.map((text, index) => (
