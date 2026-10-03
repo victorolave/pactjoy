@@ -1,5 +1,5 @@
 import { QueryClient } from "@tanstack/react-query";
-import { act, render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { useSession } from "../features/auth/session-context.tsx";
 import { createSessionEvents } from "../features/auth/session-events.ts";
@@ -9,8 +9,11 @@ import { FakePactJoyApi } from "../testing/fake-pactjoy-api.ts";
 import { FixedClock } from "../testing/fixed-clock.ts";
 import { noCircleTodayFixture } from "../testing/fixtures/today.ts";
 import { MemoryTokenStore } from "../testing/memory-token-store.ts";
+import { SequentialIds } from "../testing/sequential-ids.ts";
 import type { AppDependencies } from "./dependencies.ts";
+import { useIds } from "./ids-context.tsx";
 import { AppProviders } from "./providers.tsx";
+import { useToasts } from "./toast-context.tsx";
 
 function deps(overrides: Partial<AppDependencies> = {}): AppDependencies {
   const auth = new FakeAuth();
@@ -19,6 +22,7 @@ function deps(overrides: Partial<AppDependencies> = {}): AppDependencies {
   return {
     auth,
     api,
+    ids: new SequentialIds(),
     store,
     sessions: new SessionManager(auth, store, new FixedClock(0)),
     sessionEvents: createSessionEvents(),
@@ -54,5 +58,24 @@ describe("AppProviders", () => {
     act(() => sessionEvents.expire());
     expect(screen.getByLabelText("who")).toHaveTextContent("none");
     expect(queryClient.getQueryData(["today"])).toBeUndefined();
+  });
+
+  it("provides the ids port and the toast host to the tree", () => {
+    function Probe() {
+      const id = useIds().newId();
+      const { show } = useToasts();
+      return (
+        <button type="button" onClick={() => show({ message: id })}>
+          probar
+        </button>
+      );
+    }
+    render(
+      <AppProviders deps={deps()}>
+        <Probe />
+      </AppProviders>,
+    );
+    screen.getByRole("button", { name: "probar" }).click();
+    return waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("id-1"));
   });
 });

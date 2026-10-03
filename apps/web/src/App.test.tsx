@@ -10,6 +10,7 @@ import { FakePactJoyApi } from "./testing/fake-pactjoy-api.ts";
 import { FixedClock } from "./testing/fixed-clock.ts";
 import { noCircleTodayFixture } from "./testing/fixtures/today.ts";
 import { MemoryTokenStore } from "./testing/memory-token-store.ts";
+import { SequentialIds } from "./testing/sequential-ids.ts";
 
 function deps(signedIn: boolean): AppDependencies {
   const auth = new FakeAuth();
@@ -18,6 +19,7 @@ function deps(signedIn: boolean): AppDependencies {
   return {
     auth,
     api,
+    ids: new SequentialIds(),
     store,
     sessions: new SessionManager(auth, store, new FixedClock(0)),
     sessionEvents: createSessionEvents(),

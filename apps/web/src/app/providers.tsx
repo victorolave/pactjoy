@@ -3,6 +3,8 @@ import { type ReactNode, useCallback } from "react";
 import { SessionProvider } from "../features/auth/session-context.tsx";
 import { ApiProvider } from "./api-context.tsx";
 import type { AppDependencies } from "./dependencies.ts";
+import { IdsProvider } from "./ids-context.tsx";
+import { ToastProvider } from "./toast-context.tsx";
 
 export function AppProviders({
   deps,
@@ -23,7 +25,11 @@ export function AppProviders({
         expired={deps.sessionEvents}
         onSessionEnd={onSessionEnd}
       >
-        <ApiProvider api={deps.api}>{children}</ApiProvider>
+        <ApiProvider api={deps.api}>
+          <IdsProvider ids={deps.ids}>
+            <ToastProvider>{children}</ToastProvider>
+          </IdsProvider>
+        </ApiProvider>
       </SessionProvider>
     </QueryClientProvider>
   );

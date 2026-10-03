@@ -20,6 +20,12 @@ describe("createDependencies", () => {
     expect(new Headers(init?.headers).get("apikey")).toBe("anon-key");
   });
 
+  it("issues fresh UUIDs for client request ids", () => {
+    const { ids } = createDependencies(CONFIG, { fetch: vi.fn<typeof fetch>() });
+    expect(ids.newId()).toMatch(/^[0-9a-f-]{36}$/);
+    expect(ids.newId()).not.toBe(ids.newId());
+  });
+
   it("shares one session event channel and one query client", () => {
     const deps = createDependencies(CONFIG, { fetch: vi.fn<typeof fetch>() });
     const expired = vi.fn();

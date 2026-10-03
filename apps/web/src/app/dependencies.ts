@@ -2,6 +2,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import type { SessionEvents } from "../features/auth/session-events.ts";
 import type { SessionManager } from "../features/auth/session-manager.ts";
 import type { AuthPort } from "../ports/auth.ts";
+import type { IdSource } from "../ports/ids.ts";
 import type { PactJoyApi } from "../ports/pactjoy-api.ts";
 import type { TokenStore } from "../ports/token-store.ts";
 
@@ -9,6 +10,7 @@ import type { TokenStore } from "../ports/token-store.ts";
 export interface AppDependencies {
   readonly auth: AuthPort;
   readonly api: PactJoyApi;
+  readonly ids: IdSource;
   readonly store: TokenStore;
   readonly sessions: SessionManager;
   /** The API adapter's `onUnauthorized` calls `sessionEvents.expire`. */

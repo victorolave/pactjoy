@@ -13,6 +13,7 @@ import { FakePactJoyApi } from "./fake-pactjoy-api.ts";
 import { FixedClock } from "./fixed-clock.ts";
 import { activeTodayFixture } from "./fixtures/today.ts";
 import { MemoryTokenStore } from "./memory-token-store.ts";
+import { SequentialIds } from "./sequential-ids.ts";
 
 export interface RenderAppOptions {
   readonly path?: string;
@@ -46,6 +47,7 @@ export function renderApp({
   const deps = {
     auth,
     api,
+    ids: new SequentialIds(),
     store,
     sessions: new SessionManager(auth, store, new FixedClock(0)),
     sessionEvents: createSessionEvents(),
