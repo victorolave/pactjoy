@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Tag } from "../../../ui/Tag.tsx";
-import { entryText, scheduleText, targetText } from "../row-labels.ts";
+import { entryText, quantityText, scheduleText, sumQuantities, targetText } from "../row-labels.ts";
 import { useTodayDate } from "../today-date-context.tsx";
 import type { DayTodayRow } from "../today-view-model.ts";
 import { RowFrame } from "./RowFrame.tsx";
@@ -23,6 +23,18 @@ export function DayRow({
     row.entries
       .filter((entry) => (entry.value.kind === "missed") === missed)
       .map((entry) => entryText(entry, row.measure, today));
+  // Logged rows weigh one line: several quantities of today read "Llevas 35 min hoy" (design 22).
+  const quantities = row.entries.filter((entry) => entry.value.kind === "quantity");
+  const sumsUp =
+    achieved &&
+    quantities.length > 1 &&
+    quantities.length === row.entries.length &&
+    quantities.every((entry) => today === undefined || entry.forDate === today);
+  const statuses = !achieved
+    ? []
+    : sumsUp
+      ? [`Llevas ${quantityText(sumQuantities(quantities), row.measure)} hoy`]
+      : lines(false);
   const detail = !row.scheduledToday
     ? "No toca hoy"
     : state === "closed"
@@ -33,7 +45,8 @@ export function DayRow({
       title={row.habitName}
       glyph={achieved ? "check" : logged ? "x" : "repeat"}
       tone={achieved ? "done" : "default"}
-      statuses={achieved ? lines(false) : []}
+      statuses={statuses}
+      points={achieved ? row.points.earned : null}
       details={logged ? lines(true) : [detail]}
       badges={row.privacy === "private" ? <Tag>Privado</Tag> : undefined}
       action={action}

@@ -59,6 +59,11 @@ describe("TodayRowCard routing (TO-R5)", () => {
     expect(screen.queryByText("Aviso en la fila")).not.toBeInTheDocument();
   });
 
+  it("gives the row one padding only: the card is flush and the content insets itself", () => {
+    show(dayRowFixture());
+    expect(screen.getByRole("article")).toHaveClass("pj-card--flush");
+  });
+
   it("routes a week row to the week card", () => {
     show(weekRowFixture(), control);
     expect(screen.getByText("2 de 3 esta semana")).toBeInTheDocument();

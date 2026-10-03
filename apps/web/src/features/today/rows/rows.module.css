@@ -46,6 +46,19 @@
   font: 700 var(--type-body-size) / var(--type-label-line) var(--font-sans);
 }
 
+.titleLine {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.points {
+  font: var(--font-label);
+  font-size: var(--type-small-size);
+  color: var(--text-success);
+  white-space: nowrap;
+}
+
 .detail {
   margin: 0;
   font: var(--font-small);

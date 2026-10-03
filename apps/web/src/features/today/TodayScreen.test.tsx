@@ -121,6 +121,10 @@ describe("Today active: rows (TO-R3, TO-R4, TO-R5)", () => {
     );
     expect(await screen.findByText("Hoy ya está cumplido.")).toBeInTheDocument();
     expect(screen.getByText("2 de 2 compromisos de hoy")).toBeInTheDocument();
+    // The success surface of the design, not the warm one.
+    const card = screen.getByText("2 de 2 compromisos de hoy").closest(".pj-card");
+    expect(card?.className).toMatch(/success/);
+    expect(card).not.toHaveClass("pj-card--warm");
     expect(screen.getByText("Meditar y Dibujar.")).toBeInTheDocument();
     expect(screen.queryByText("¿Qué quieres cumplir hoy?")).not.toBeInTheDocument();
   });

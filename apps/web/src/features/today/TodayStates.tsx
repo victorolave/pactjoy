@@ -125,7 +125,7 @@ function AllDone({ model }: { readonly model: RunningModel }) {
   // Only real dones and quantities are celebrated; a day with a "Hoy no salió" is just registered.
   const achieved = model.dayState === "allDone";
   return (
-    <Card tone="warm">
+    <Card tone="success">
       <div className={styles.allDone}>
         <span className={achieved ? styles.allDoneGlyph : styles.allLoggedGlyph}>
           <Icon name={achieved ? "check" : "minus"} />

@@ -1,5 +1,6 @@
 import { NavLink } from "react-router";
 import { Icon, type IconName } from "../ui/icon/Icon.tsx";
+import styles from "./TabBar.module.css";
 
 interface Tab {
   readonly to: string;
@@ -19,7 +20,7 @@ export function TabBar() {
   return (
     <nav className="pj-tabbar" aria-label="Principal">
       {TABS.map((tab) => (
-        <NavLink key={tab.to} to={tab.to} end className="pj-tabbar__item">
+        <NavLink key={tab.to} to={tab.to} end className={`pj-tabbar__item ${styles.item}`}>
           <span className="pj-tabbar__pill">
             <Icon name={tab.icon} />
           </span>

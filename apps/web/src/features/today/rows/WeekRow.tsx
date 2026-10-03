@@ -78,6 +78,7 @@ export function WeekRow({
         ...(closed ? ["Cerrada"] : []),
       ]}
       badges={row.privacy === "private" ? <Tag>Privado</Tag> : undefined}
+      points={row.points.earned}
       action={action}
       below={
         <>

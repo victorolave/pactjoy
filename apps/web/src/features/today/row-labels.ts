@@ -1,4 +1,5 @@
 import type { MeasureView, TodayEntry } from "@pactjoy/app";
+import { fromScaled, toScaled } from "../../shared/decimal.ts";
 import { weekdayName } from "../../shared/format.ts";
 
 /** Decimal strings come from the server with a dot; Spanish writes a comma. */
@@ -27,6 +28,16 @@ export function quantityText(value: string, measure: MeasureView): string {
   const unit = value === "1" && label !== null ? (SINGULAR[label] ?? label) : label;
   const number = formatDecimal(value);
   return unit === null || unit === "" ? number : `${number} ${unit}`;
+}
+
+/** The exact sum of the quantities among `entries`, as a decimal string ("5.5"). */
+export function sumQuantities(entries: readonly TodayEntry[]): string {
+  const total = entries.reduce(
+    (sum, entry) =>
+      entry.value.kind === "quantity" ? sum + (toScaled(entry.value.value) ?? 0n) : sum,
+    0n,
+  );
+  return fromScaled(total);
 }
 
 /** The commitment's thresholds: "mín. 10 · ideal 30 min". Nothing for done/not done. */

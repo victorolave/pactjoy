@@ -13,6 +13,8 @@ export interface RowFrameProps {
   /** Lines of success-coloured text (what was registered). */
   readonly statuses?: readonly string[];
   readonly badges?: ReactNode;
+  /** Next to the title: "+8 pts" once the registro earned some. */
+  readonly points?: number | null;
   /** Register control (or any trailing control). */
   readonly action?: ReactNode;
   /** Full-width content under the row (a progress bar). */
@@ -27,11 +29,12 @@ export function RowFrame({
   details = [],
   statuses = [],
   badges,
+  points = null,
   action,
   below,
 }: RowFrameProps) {
   return (
-    <Card as="article" tone={tone === "muted" ? "sunken" : "default"}>
+    <Card as="article" flush tone={tone === "muted" ? "sunken" : "default"}>
       <div className={styles.card}>
         <div className={styles.top}>
           <span
@@ -45,7 +48,12 @@ export function RowFrame({
             <Icon name={glyph} />
           </span>
           <div className={styles.body}>
-            <h3 className={styles.title}>{title}</h3>
+            <div className={styles.titleLine}>
+              <h3 className={styles.title}>{title}</h3>
+              {points !== null && points > 0 && (
+                <span className={styles.points}>{`+${points} pts`}</span>
+              )}
+            </div>
             {statuses.map((text, index) => (
               // biome-ignore lint/suspicious/noArrayIndexKey: lines are static text, never reordered
               <p key={index} className={styles.status}>

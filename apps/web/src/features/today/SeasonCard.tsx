@@ -6,7 +6,7 @@ import type { SeasonCardModel } from "./today-view-model.ts";
 /** The viewer's season at a glance. Everything shown is server-computed. */
 export function SeasonCard({ model }: { readonly model: SeasonCardModel }) {
   return (
-    <Card as="section" tone="inverse">
+    <Card as="section" flush tone="inverse">
       <div className={styles.season}>
         <span className={styles.seasonBar} aria-hidden="true" />
         <div className={styles.seasonHead}>
