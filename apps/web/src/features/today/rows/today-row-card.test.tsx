@@ -10,10 +10,10 @@ import {
 } from "../../../testing/fixtures/today.ts";
 import { TodayRowCard } from "./TodayRowCard.tsx";
 
-const show = (row: TodayRow, actionFor?: (row: TodayRow) => ReactNode) =>
-  render(<TodayRowCard row={row} {...(actionFor === undefined ? {} : { actionFor })} />);
+const show = (row: TodayRow, action?: ReactNode, below?: ReactNode) =>
+  render(<TodayRowCard row={row} action={action} below={below} />);
 
-const control = () => <button type="button">Registrar</button>;
+const control = <button type="button">Registrar</button>;
 
 const state = (value: DayRow["opportunity"]["state"], overrides: Partial<DayRow> = {}) =>
   dayRowFixture({ opportunity: { state: value, graceUntil: null }, ...overrides });
@@ -49,6 +49,15 @@ describe("TodayRowCard routing (TO-R5)", () => {
       expect(screen.getByText(value === "paused" ? "En pausa" : "En espera")).toBeInTheDocument();
     },
   );
+
+  it("shows the content under a writable row, and hides it on a closed one", () => {
+    const note = <p>Aviso en la fila</p>;
+    const { unmount } = show(dayRowFixture(), undefined, note);
+    expect(screen.getByText("Aviso en la fila")).toBeInTheDocument();
+    unmount();
+    show(state("closed"), undefined, note);
+    expect(screen.queryByText("Aviso en la fila")).not.toBeInTheDocument();
+  });
 
   it("routes a week row to the week card", () => {
     show(weekRowFixture(), control);

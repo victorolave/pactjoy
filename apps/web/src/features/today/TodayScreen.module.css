@@ -39,3 +39,80 @@
   font: var(--font-h2);
   letter-spacing: var(--type-h2-track);
 }
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.sectionHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.sectionTitle {
+  margin: 0;
+  font: var(--font-h3);
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.allDone {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.allDoneGlyph {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--touch-target);
+  height: var(--touch-target);
+  border-radius: 50%;
+  background: var(--pj-success);
+  color: var(--pj-white);
+}
+
+.allDoneTitle {
+  font: var(--font-label);
+}
+
+.failure {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-7) var(--space-4);
+  text-align: center;
+}
+
+.failureGlyph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--space-8);
+  height: var(--space-8);
+  border-radius: 50%;
+  background: var(--ink-100);
+  color: var(--text-secondary);
+}
+
+.allLoggedGlyph {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--touch-target);
+  height: var(--touch-target);
+  border-radius: 50%;
+  background: var(--ink-100);
+  color: var(--text-secondary);
+}

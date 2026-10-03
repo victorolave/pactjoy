@@ -1,4 +1,5 @@
 import type { MeasureView, TodayEntry } from "@pactjoy/app";
+import { weekdayName } from "../../shared/format.ts";
 
 /** Decimal strings come from the server with a dot; Spanish writes a comma. */
 export const formatDecimal = (value: string): string => value.replace(".", ",");
@@ -18,9 +19,12 @@ export function unitLabel(measure: MeasureView): string | null {
   return UNIT_LABELS[measure.unit];
 }
 
-/** "30 min", or just the number for a done measure. */
+const SINGULAR: Readonly<Record<string, string>> = { veces: "vez", vasos: "vaso", "págs.": "pág." };
+
+/** "30 min", "1 vez", or just the number for a done measure. */
 export function quantityText(value: string, measure: MeasureView): string {
-  const unit = unitLabel(measure);
+  const label = unitLabel(measure);
+  const unit = value === "1" && label !== null ? (SINGULAR[label] ?? label) : label;
   const number = formatDecimal(value);
   return unit === null || unit === "" ? number : `${number} ${unit}`;
 }
@@ -53,14 +57,20 @@ export function scheduleText(measure: MeasureView): string {
     : `${schedule.frequency.times} veces por semana`;
 }
 
-/** What one logged entry reads as on its row. */
-export function entryText(entry: TodayEntry, measure: MeasureView): string {
+/**
+ * What one logged entry reads as on its row. An entry can belong to yesterday (grace period): then
+ * it says the weekday instead of "hoy". Without `today` every entry reads as today's.
+ */
+export function entryText(entry: TodayEntry, measure: MeasureView, today?: string): string {
+  const day = today === undefined || entry.forDate === today ? null : weekdayName(entry.forDate);
   switch (entry.value.kind) {
     case "done":
-      return "Registrado hoy";
+      return day === null ? "Registrado hoy" : `Registrado el ${day}`;
     case "missed":
-      return "Hoy no salió";
-    case "quantity":
-      return quantityText(entry.value.value, measure);
+      return day === null ? "Hoy no salió" : `No salió el ${day}`;
+    case "quantity": {
+      const amount = quantityText(entry.value.value, measure);
+      return day === null ? amount : `${amount} · ${day}`;
+    }
   }
 }

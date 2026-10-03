@@ -1,0 +1,97 @@
+.season {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  overflow: hidden;
+}
+
+.seasonBar {
+  position: absolute;
+  top: calc(var(--space-5) * -1);
+  left: calc(var(--space-4) * -1);
+  right: calc(var(--space-4) * -1);
+  height: var(--space-1);
+  background: var(--gradient-together);
+}
+
+.seasonHead,
+.seasonBody {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.seasonBody {
+  align-items: flex-end;
+}
+
+.seasonTitle {
+  font: var(--font-label);
+}
+
+.seasonMeta {
+  font: var(--font-meta);
+  color: var(--ink-300);
+}
+
+.points {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-1);
+  font: var(--font-h1);
+  font-variant-numeric: tabular-nums;
+}
+
+.unit {
+  font: var(--font-label);
+  color: var(--ink-300);
+}
+
+.rates {
+  display: flex;
+  flex-direction: column;
+  text-align: right;
+  font: var(--font-small);
+}
+
+.weeks {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: var(--space-1);
+}
+
+.week {
+  height: var(--space-2);
+  border-radius: var(--space-1);
+  background: var(--ink-700);
+}
+
+.weekDone {
+  background: var(--pj-cream);
+}
+
+.pair {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0 var(--space-1);
+}
+
+.pairBody {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.pairText {
+  flex: 1;
+  font: var(--font-small);
+}
+
+.pairMeta {
+  font: var(--font-small);
+  color: var(--text-secondary);
+}
