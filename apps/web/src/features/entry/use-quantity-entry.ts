@@ -14,6 +14,8 @@ export interface EntryProblem {
 export interface QuantityEntry {
   readonly pending: boolean;
   readonly saved: string | null;
+  /** The id of the entry just recorded, to undo it. */
+  readonly entryId: string | null;
   readonly problem: EntryProblem | null;
   submit(value: EntryValueInput, note: string | null, confirmation: string): void;
 }
@@ -24,6 +26,7 @@ export function useQuantityEntry(commitmentId: string, seasonId: string): Quanti
   const ids = useIds();
   const dates = useTodayDates();
   const [saved, setSaved] = useState<string | null>(null);
+  const [entryId, setEntryId] = useState<string | null>(null);
   const [problem, setProblem] = useState<EntryProblem | null>(null);
   const attempt = useRef<{ readonly signature: string; readonly id: string } | null>(null);
   const saving = useRef(false);
@@ -45,9 +48,10 @@ export function useQuantityEntry(commitmentId: string, seasonId: string): Quanti
         clientRequestId: id,
       },
       {
-        onSuccess: () => {
+        onSuccess: (recorded) => {
           saving.current = false;
           attempt.current = null;
+          setEntryId(recorded.entryId);
           setSaved(confirmation);
         },
         onError: (error) => {
@@ -58,5 +62,5 @@ export function useQuantityEntry(commitmentId: string, seasonId: string): Quanti
     );
   };
 
-  return { pending: record.isPending, saved, problem, submit };
+  return { pending: record.isPending, saved, entryId, problem, submit };
 }

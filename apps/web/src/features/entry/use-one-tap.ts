@@ -4,7 +4,8 @@ import { useToasts } from "../../app/toast-context.tsx";
 import type { RecordEntryCommand } from "../../ports/pactjoy-api.ts";
 import { useTodayDates } from "../today/today-date-context.tsx";
 import { entryFailure } from "./entry-messages.ts";
-import { useDeleteEntry, useRecordEntry } from "./queries.ts";
+import { useRecordEntry } from "./queries.ts";
+import { useSavedToast } from "./use-saved-toast.ts";
 
 const SAVED = "Registro guardado. Un paso más en tu meta.";
 const MISSED_SAVED = "Anotado: hoy no salió.";
@@ -23,27 +24,13 @@ export interface OneTap {
  */
 export function useOneTap(commitmentId: string, seasonId: string): OneTap {
   const record = useRecordEntry();
-  const remove = useDeleteEntry();
   const toasts = useToasts();
+  const showSaved = useSavedToast();
   const ids = useIds();
   const dates = useTodayDates();
   const [message, setMessage] = useState<string | null>(null);
   // Set synchronously on the first tap: React state would still say "idle" for a fast second tap.
   const saving = useRef(false);
-
-  const undo = (entryId: string): void => {
-    remove.mutate(entryId, {
-      onSuccess: () => toasts.show({ message: "Registro deshecho." }),
-      onError: () =>
-        toasts.show({
-          message: "No pudimos deshacer el registro.",
-          tone: "error",
-          durationMs: null,
-          actionLabel: "Reintentar",
-          onAction: () => undo(entryId),
-        }),
-    });
-  };
 
   const send = (command: RecordEntryCommand, saved: string): void => {
     saving.current = true;
@@ -51,11 +38,7 @@ export function useOneTap(commitmentId: string, seasonId: string): OneTap {
     record.mutate(command, {
       onSuccess: ({ entryId }) => {
         saving.current = false;
-        toasts.show({
-          message: saved,
-          actionLabel: "Deshacer",
-          onAction: () => undo(entryId),
-        });
+        showSaved(saved, entryId);
       },
       onError: (error) => {
         saving.current = false;

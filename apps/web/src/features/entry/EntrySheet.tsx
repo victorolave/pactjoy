@@ -1,12 +1,14 @@
 import type { MeasureView, TodayRow } from "@pactjoy/app";
 import { type ReactNode, useState } from "react";
 import { useOnline } from "../../app/connectivity-context.tsx";
+import { toScaled } from "../../shared/decimal.ts";
 import { Button } from "../../ui/Button.tsx";
 import { Card } from "../../ui/Card.tsx";
 import { InlineMessage } from "../../ui/InlineMessage.tsx";
 import { ProgressBar } from "../../ui/ProgressBar.tsx";
 import { Sheet } from "../../ui/Sheet.tsx";
 import { formatDecimal, quantityText, targetText, unitLabel } from "../today/row-labels.ts";
+import { useTodayDates } from "../today/today-date-context.tsx";
 import { Confirmation, useAutoClose } from "./Confirmation.tsx";
 import styles from "./entry.module.css";
 import {
@@ -20,16 +22,21 @@ import {
   type ReachQuantity,
   toSubmitValue,
 } from "./entry-form.ts";
+import { loggedBefore } from "./entry-totals.ts";
 import { LimitGrid } from "./LimitGrid.tsx";
 import { NoteField } from "./NoteField.tsx";
 import { QuantityStepper } from "./QuantityStepper.tsx";
+import { useEarnedGain } from "./use-earned-gain.ts";
 import { useQuantityEntry } from "./use-quantity-entry.ts";
+import { useSavedToast } from "./use-saved-toast.ts";
 
 export interface EntrySheetProps {
   readonly row: TodayRow;
   readonly seasonId: string;
   readonly onClose: () => void;
 }
+
+const MINIMUM_MET = "Mínimo cumplido. Un paso más en tu meta.";
 
 /** The record sheet: a stepper for a reach quantity, a grid for a limit. Done rows never open one. */
 export function EntrySheet({ row, seasonId, onClose }: EntrySheetProps) {
@@ -52,6 +59,8 @@ interface ShellProps {
   readonly toSend: string | null;
   readonly input: ReactNode;
   readonly card?: ReactNode;
+  /** The line under the points on the confirmation, when there is one to say. */
+  readonly confirmMessage?: string | null;
   readonly missedAllowed: boolean;
   readonly onClose: () => void;
 }
@@ -66,19 +75,39 @@ function RecordShell({
   toSend,
   input,
   card,
+  confirmMessage = null,
   missedAllowed,
   onClose,
 }: ShellProps) {
   const [note, setNote] = useState("");
   const entry = useQuantityEntry(row.commitmentId, seasonId);
   const online = useOnline();
+  const showSaved = useSavedToast();
+  const gain = useEarnedGain(row.points.earned);
 
-  useAutoClose(entry.saved, onClose);
+  // Closing after a save leaves the toast with Deshacer behind (design 20): the sheet is gone by then.
+  const finish = () => {
+    if (entry.saved !== null && entry.entryId !== null) {
+      showSaved(
+        gain === null
+          ? `Registro guardado. ${entry.saved}`
+          : `Registro guardado. ${row.habitName} · +${gain} pts`,
+        entry.entryId,
+      );
+    }
+    onClose();
+  };
+  useAutoClose(entry.saved, finish);
 
   if (entry.saved !== null) {
     return (
-      <Sheet open title={row.habitName} onClose={onClose}>
-        <Confirmation detail={entry.saved} onClose={onClose} />
+      <Sheet open headless title={row.habitName} onClose={finish}>
+        <Confirmation
+          detail={entry.saved}
+          points={gain}
+          message={confirmMessage}
+          onClose={finish}
+        />
       </Sheet>
     );
   }
@@ -146,9 +175,15 @@ function ReachSheet({
   readonly onClose: () => void;
 }) {
   const [value, setValue] = useState(() => initialValue(measure));
+  const dates = useTodayDates();
+  // Frozen when the sheet opens: after saving, Today refetches and the row already holds the new entry.
+  const [startTotal] = useState(() => loggedBefore(row, dates?.refDate));
   const unit = unitLabel(measure) ?? "";
   const weekly = row.kind === "week" && measure.schedule.period === "weeklyTotal";
   const toSend = toSubmitValue(value, measure.precision);
+  const minimumMet =
+    toSend !== null &&
+    startTotal + (toScaled(toSend) ?? 0n) >= (toScaled(measure.target.minimum) ?? 0n);
   return (
     <RecordShell
       row={row}
@@ -156,6 +191,7 @@ function ReachSheet({
       measure={measure}
       subtitle={reachSubtitle(row, measure, weekly, unit)}
       toSend={toSend}
+      confirmMessage={minimumMet ? MINIMUM_MET : null}
       missedAllowed
       onClose={onClose}
       input={

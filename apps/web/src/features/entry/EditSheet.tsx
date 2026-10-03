@@ -1,6 +1,7 @@
 import type { TodayEntry, TodayRow } from "@pactjoy/app";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { useOnline } from "../../app/connectivity-context.tsx";
+import { useToasts } from "../../app/toast-context.tsx";
 import { longDate } from "../../shared/format.ts";
 import { Button } from "../../ui/Button.tsx";
 import { InlineMessage } from "../../ui/InlineMessage.tsx";
@@ -19,6 +20,7 @@ import {
 import { LimitGrid } from "./LimitGrid.tsx";
 import { NoteField } from "./NoteField.tsx";
 import { QuantityStepper } from "./QuantityStepper.tsx";
+import { useEarnedGain } from "./use-earned-gain.ts";
 import { useEntryDelete } from "./use-entry-delete.ts";
 import { useEntryEdit } from "./use-entry-edit.ts";
 
@@ -34,14 +36,22 @@ export interface EditSheetProps {
  * The sheet stays mounted when another entry is chosen, only the form under it starts over.
  */
 export function EditSheet(props: EditSheetProps) {
+  // The confirmation after a save has no header, only the grabber (design 20).
+  const [confirming, setConfirming] = useState(false);
   return (
-    <Sheet open title={props.row.habitName} onClose={props.onClose}>
-      <EntryEditor key={props.entry.entryId} {...props} />
+    <Sheet open headless={confirming} title={props.row.habitName} onClose={props.onClose}>
+      <EntryEditor key={props.entry.entryId} {...props} onConfirming={setConfirming} />
     </Sheet>
   );
 }
 
-function EntryEditor({ row, entry, onSelect, onClose }: EditSheetProps) {
+function EntryEditor({
+  row,
+  entry,
+  onSelect,
+  onClose,
+  onConfirming,
+}: EditSheetProps & { readonly onConfirming: (confirming: boolean) => void }) {
   const edit = useEntryEdit(entry.entryId);
   const remove = useEntryDelete(entry.entryId);
   const online = useOnline();
@@ -55,12 +65,21 @@ function EntryEditor({ row, entry, onSelect, onClose }: EditSheetProps) {
   const grid = limit !== null && limitUsesGrid(limit);
   const measure = reach ?? limit;
 
-  const finished = edit.saved ?? remove.deleted;
-  useAutoClose(finished, onClose);
-  if (edit.saved !== null) return <Confirmation detail={edit.saved} onClose={onClose} />;
-  if (remove.deleted !== null) {
-    return <Confirmation title="Registro borrado." detail={remove.deleted} onClose={onClose} />;
-  }
+  const toasts = useToasts();
+  const gain = useEarnedGain(row.points.earned);
+
+  useAutoClose(edit.saved, onClose);
+  useEffect(() => onConfirming(edit.saved !== null), [edit.saved, onConfirming]);
+  // A delete closes the sheet and says so in a toast: the entry is gone, so there is nothing to edit.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: runs once, when the deletion lands
+  useEffect(() => {
+    if (remove.deleted === null) return;
+    toasts.show({ message: "Registro borrado." });
+    onClose();
+  }, [remove.deleted]);
+  if (edit.saved !== null)
+    return <Confirmation detail={edit.saved} points={gain} onClose={onClose} />;
+  if (remove.deleted !== null) return null;
 
   // What the sheet would send for the value, or null while it cannot be sent.
   const toSend =
