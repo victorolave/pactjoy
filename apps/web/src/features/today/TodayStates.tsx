@@ -203,7 +203,11 @@ export function RunningToday({ model }: { readonly model: RunningModel }) {
       {model.standings !== null && (
         <StandingsPair model={model.standings} viewerName={model.greetingName} />
       )}
-      <EntrySheetHost rows={[...forToday, ...week]} seasonId={model.seasonId} />
+      <EntrySheetHost
+        rows={[...forToday, ...otherDays, ...week]}
+        seasonId={model.seasonId}
+        pendingYesterday={model.pendingYesterday}
+      />
     </TodayDateContext.Provider>
   );
 }

@@ -21,7 +21,12 @@ export interface QuantityEntry {
 }
 
 /** Resending the same entry after a failure reuses its clientRequestId; a changed one gets a new id. */
-export function useQuantityEntry(commitmentId: string, seasonId: string): QuantityEntry {
+export function useQuantityEntry(
+  commitmentId: string,
+  seasonId: string,
+  /** The day to record for when it is not the day on display (yesterday, design 21). */
+  forDate?: string,
+): QuantityEntry {
   const record = useRecordEntry();
   const ids = useIds();
   const dates = useTodayDates();
@@ -42,7 +47,11 @@ export function useQuantityEntry(commitmentId: string, seasonId: string): Quanti
       {
         seasonId,
         commitmentId,
-        ...(dates === undefined ? {} : { forDate: dates.refDate }),
+        ...(forDate !== undefined
+          ? { forDate }
+          : dates === undefined
+            ? {}
+            : { forDate: dates.refDate }),
         value,
         note,
         clientRequestId: id,
