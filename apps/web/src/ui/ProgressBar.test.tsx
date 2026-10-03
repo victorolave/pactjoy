@@ -24,6 +24,23 @@ describe("ProgressBar", () => {
     });
   });
 
+  it("draws a tick where a threshold sits inside the bar, and none at its end (design 15a)", () => {
+    const { container } = render(
+      <ProgressBar
+        name="Lectura"
+        value={0}
+        max={30}
+        marks={[
+          { at: 10, label: "mín. 10" },
+          { at: 30, label: "ideal 30 min" },
+        ]}
+      />,
+    );
+    const ticks = container.querySelectorAll('[aria-hidden="true"]');
+    expect(ticks).toHaveLength(1);
+    expect(ticks[0]).toHaveStyle({ left: `${(10 / 30) * 100}%` });
+  });
+
   it("keeps the gradient when there is no minimum to measure against", () => {
     render(<ProgressBar name="Lectura" value={1} max={30} />);
     expect(screen.getByRole("progressbar").firstElementChild).toHaveStyle({

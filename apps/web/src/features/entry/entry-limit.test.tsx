@@ -106,7 +106,15 @@ describe("limit sheet (EN-R5)", () => {
     const options = within(dialog)
       .getAllByRole("radio")
       .map((radio) => radio.textContent);
-    expect(options).toEqual(["0100 %", "1100 %", "2100 %", "375 %", "450 %", "5+0 %"]);
+    // Each option says its zone and what it scores: "0", "Ideal", "100 %".
+    expect(options).toEqual([
+      "0Ideal100 %",
+      "1Ideal100 %",
+      "2Ideal100 %",
+      "3Tolerancia75 %",
+      "4Tolerancia50 %",
+      "5+Excede0 %",
+    ]);
   });
 
   it("sends the chosen option as the quantity (EN-S9)", async () => {

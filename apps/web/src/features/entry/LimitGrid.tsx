@@ -67,9 +67,8 @@ export function LimitGrid({
             onClick={() => onSelect(option)}
           >
             <span className={styles.optionNumber}>{open ? `${option}+` : option}</span>
-            <span className={styles.optionZone}>
-              {percent === undefined ? zoneOf(option, ideal, tolerance) : `${percent} %`}
-            </span>
+            <span className={styles.optionZone}>{zoneOf(option, ideal, tolerance)}</span>
+            {percent !== undefined && <span className={styles.optionZone}>{`${percent} %`}</span>}
           </button>
         );
       })}
