@@ -9,6 +9,7 @@ import { createSessionEvents } from "../features/auth/session-events.ts";
 import { SessionManager } from "../features/auth/session-manager.ts";
 import type { ApiError } from "../ports/api-error.ts";
 import { FakeAuth, fakeSession } from "./fake-auth.ts";
+import { FakeConnectivity } from "./fake-connectivity.ts";
 import { FakePactJoyApi } from "./fake-pactjoy-api.ts";
 import { FixedClock } from "./fixed-clock.ts";
 import { activeTodayFixture } from "./fixtures/today.ts";
@@ -21,6 +22,8 @@ export interface RenderAppOptions {
   readonly signedIn?: boolean;
   /** What `getToday` answers. Defaults to an active season. */
   readonly today?: TodayView;
+  /** Whether the network is reachable. Defaults to true. */
+  readonly online?: boolean;
   /** `getToday` rejects with these, one per call, before it answers `today`. */
   readonly todayFailures?: readonly ApiError[];
 }
@@ -41,6 +44,7 @@ export interface RenderedApp extends RenderResult {
   readonly deps: AppDependencies & {
     readonly auth: FakeAuth;
     readonly api: FakePactJoyApi;
+    readonly connectivity: FakeConnectivity;
     readonly store: MemoryTokenStore;
   };
 }
@@ -51,6 +55,7 @@ export function renderApp({
   signedIn = true,
   today = activeTodayFixture(),
   todayFailures = [],
+  online = true,
 }: RenderAppOptions = {}): RenderedApp {
   const auth = new FakeAuth();
   const store = new MemoryTokenStore(signedIn ? fakeSession() : null);
@@ -60,6 +65,7 @@ export function renderApp({
     auth,
     api,
     ids: new SequentialIds(),
+    connectivity: new FakeConnectivity(online),
     store,
     sessions: new SessionManager(auth, store, new FixedClock(0)),
     sessionEvents: createSessionEvents(),

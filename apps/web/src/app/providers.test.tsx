@@ -5,6 +5,7 @@ import { useSession } from "../features/auth/session-context.tsx";
 import { createSessionEvents } from "../features/auth/session-events.ts";
 import { SessionManager } from "../features/auth/session-manager.ts";
 import { FakeAuth, fakeSession } from "../testing/fake-auth.ts";
+import { FakeConnectivity } from "../testing/fake-connectivity.ts";
 import { FakePactJoyApi } from "../testing/fake-pactjoy-api.ts";
 import { FixedClock } from "../testing/fixed-clock.ts";
 import { noCircleTodayFixture } from "../testing/fixtures/today.ts";
@@ -23,6 +24,7 @@ function deps(overrides: Partial<AppDependencies> = {}): AppDependencies {
     auth,
     api,
     ids: new SequentialIds(),
+    connectivity: new FakeConnectivity(),
     store,
     sessions: new SessionManager(auth, store, new FixedClock(0)),
     sessionEvents: createSessionEvents(),

@@ -2,6 +2,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { type ReactNode, useCallback } from "react";
 import { SessionProvider } from "../features/auth/session-context.tsx";
 import { ApiProvider } from "./api-context.tsx";
+import { ConnectivityProvider } from "./connectivity-context.tsx";
 import type { AppDependencies } from "./dependencies.ts";
 import { IdsProvider } from "./ids-context.tsx";
 import { ToastProvider } from "./toast-context.tsx";
@@ -27,7 +28,9 @@ export function AppProviders({
       >
         <ApiProvider api={deps.api}>
           <IdsProvider ids={deps.ids}>
-            <ToastProvider>{children}</ToastProvider>
+            <ConnectivityProvider connectivity={deps.connectivity}>
+              <ToastProvider>{children}</ToastProvider>
+            </ConnectivityProvider>
           </IdsProvider>
         </ApiProvider>
       </SessionProvider>

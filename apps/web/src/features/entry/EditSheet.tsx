@@ -1,5 +1,6 @@
 import type { TodayEntry, TodayRow } from "@pactjoy/app";
 import { type ReactNode, useState } from "react";
+import { useOnline } from "../../app/connectivity-context.tsx";
 import { longDate } from "../../shared/format.ts";
 import { Button } from "../../ui/Button.tsx";
 import { InlineMessage } from "../../ui/InlineMessage.tsx";
@@ -37,6 +38,7 @@ export function EditSheet(props: EditSheetProps) {
 function EntryEditor({ row, entry, onSelect, onClose }: EditSheetProps) {
   const edit = useEntryEdit(entry.entryId);
   const remove = useEntryDelete(entry.entryId);
+  const online = useOnline();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [note, setNote] = useState(entry.note ?? "");
   const quantity = entry.value.kind === "quantity" ? entry.value.value : null;
@@ -131,13 +133,14 @@ function EntryEditor({ row, entry, onSelect, onClose }: EditSheetProps) {
       {edit.problem !== null && edit.problem.kind !== "noteField" && (
         <InlineMessage tone="error" title={edit.problem.message} />
       )}
+      {!online && <InlineMessage tone="pending" title="Sin conexión: no se puede guardar." />}
       {remove.problem !== null && <InlineMessage tone="error" title={remove.problem.message} />}
       {confirmingDelete ? (
         <div className={styles.actions}>
           <p className={styles.confirmationTitle}>¿Borrar este registro?</p>
           <Button
             block
-            disabled={remove.pending}
+            disabled={remove.pending || !online}
             onClick={() => remove.remove(`${row.habitName} · ${entryText(entry, row.measure)}`)}
           >
             Borrar
@@ -148,13 +151,14 @@ function EntryEditor({ row, entry, onSelect, onClose }: EditSheetProps) {
         </div>
       ) : (
         <div className={styles.actions}>
-          <Button block disabled={toSend === null || edit.pending} onClick={send}>
+          <Button block disabled={toSend === null || edit.pending || !online} onClick={send}>
             {amount === null ? "Guardar cambios" : `Guardar ${amount}`}
           </Button>
           <Button
             variant="ghost"
             block
             leadingIcon="trash-2"
+            disabled={!online}
             onClick={() => setConfirmingDelete(true)}
           >
             Borrar registro

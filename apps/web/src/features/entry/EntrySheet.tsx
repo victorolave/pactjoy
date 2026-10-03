@@ -1,5 +1,6 @@
 import type { MeasureView, TodayRow } from "@pactjoy/app";
 import { type ReactNode, useState } from "react";
+import { useOnline } from "../../app/connectivity-context.tsx";
 import { Button } from "../../ui/Button.tsx";
 import { Card } from "../../ui/Card.tsx";
 import { InlineMessage } from "../../ui/InlineMessage.tsx";
@@ -69,6 +70,7 @@ function RecordShell({
 }: ShellProps) {
   const [note, setNote] = useState("");
   const entry = useQuantityEntry(row.commitmentId, seasonId);
+  const online = useOnline();
 
   useAutoClose(entry.saved, onClose);
 
@@ -97,10 +99,11 @@ function RecordShell({
         {entry.problem !== null && entry.problem.kind !== "noteField" && (
           <InlineMessage tone="error" title={entry.problem.message} />
         )}
+        {!online && <InlineMessage tone="pending" title="Sin conexión: no se puede guardar." />}
         <div className={styles.actions}>
           <Button
             block
-            disabled={toSend === null || entry.pending}
+            disabled={toSend === null || entry.pending || !online}
             onClick={() =>
               toSend !== null &&
               entry.submit(

@@ -1,3 +1,4 @@
+import { BrowserConnectivity } from "../adapters/browser-connectivity.ts";
 import { CryptoIds } from "../adapters/crypto-ids.ts";
 import { GoTrueAuth, type GoTrueAuthOptions } from "../adapters/gotrue-auth.ts";
 import { HttpPactJoyApi } from "../adapters/http-pactjoy-api.ts";
@@ -39,6 +40,7 @@ export function createDependencies(config: AppConfig, env: ComposeEnvironment): 
       fetch: env.fetch,
     }),
     ids: new CryptoIds(),
+    connectivity: new BrowserConnectivity(),
     store,
     sessions,
     sessionEvents,

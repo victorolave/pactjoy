@@ -1,7 +1,9 @@
+import { useOnline } from "../../app/connectivity-context.tsx";
 import { toUiError } from "../../shared/ui-error.ts";
 import { Button } from "../../ui/Button.tsx";
 import { Icon } from "../../ui/icon/Icon.tsx";
 import { Skeleton } from "../../ui/Skeleton.tsx";
+import { OfflineBanner } from "../offline/OfflineBanner.tsx";
 import { useToday } from "./queries.ts";
 import styles from "./TodayScreen.module.css";
 import { NoCircle, NoSeason, NotStarted, PactOpen, RunningToday } from "./TodayStates.tsx";
@@ -62,11 +64,13 @@ function TodayFailure({
 
 export function TodayScreen() {
   const today = useToday();
+  const online = useOnline();
   if (today.isPending) return <TodayLoading />;
   if (today.isError)
     return <TodayFailure error={today.error} onRetry={() => void today.refetch()} />;
   return (
     <div className={styles.screen}>
+      {!online && <OfflineBanner />}
       <TodayContent model={toTodayModel(today.data)} />
     </div>
   );

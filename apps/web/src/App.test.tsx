@@ -6,6 +6,7 @@ import type { AppDependencies } from "./app/dependencies.ts";
 import { createSessionEvents } from "./features/auth/session-events.ts";
 import { SessionManager } from "./features/auth/session-manager.ts";
 import { FakeAuth, fakeSession } from "./testing/fake-auth.ts";
+import { FakeConnectivity } from "./testing/fake-connectivity.ts";
 import { FakePactJoyApi } from "./testing/fake-pactjoy-api.ts";
 import { FixedClock } from "./testing/fixed-clock.ts";
 import { noCircleTodayFixture } from "./testing/fixtures/today.ts";
@@ -20,6 +21,7 @@ function deps(signedIn: boolean): AppDependencies {
     auth,
     api,
     ids: new SequentialIds(),
+    connectivity: new FakeConnectivity(),
     store,
     sessions: new SessionManager(auth, store, new FixedClock(0)),
     sessionEvents: createSessionEvents(),
