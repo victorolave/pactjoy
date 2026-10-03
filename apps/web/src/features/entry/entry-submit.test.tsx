@@ -55,7 +55,7 @@ afterEach(() => vi.useRealTimers());
 const dialogFor = (name: string) => screen.findByRole("dialog", { name });
 
 describe("submitting a quantity (EN-R3)", () => {
-  it("sends the quantity as a decimal string with the note, then confirms and closes at 1200 ms (EN-S7)", async () => {
+  it("sends the quantity as a decimal string with the note, then confirms and stays open (EN-S7)", async () => {
     const { deps } = open([weekRowFixture()], "commitment-2");
     const dialog = await dialogFor("Leer");
     await userEvent.click(within(dialog).getByRole("button", { name: "10 min" }));
@@ -76,9 +76,13 @@ describe("submitting a quantity (EN-R3)", () => {
       },
     ]);
     expect(screen.getByRole("dialog", { name: "Leer" })).toBeInTheDocument();
-    act(() => vi.advanceTimersByTime(1200));
-    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    // No timer closes it: it waits for "Seguir con mi día" (or Escape, or the scrim).
+    act(() => vi.advanceTimersByTime(5000));
+    expect(screen.getByRole("dialog", { name: "Leer" })).toBeInTheDocument();
+    expect(screen.getByText("Registro guardado.")).toBeInTheDocument();
     await waitFor(() => expect(deps.api.calls.getToday).toBe(2));
+    await userEvent.click(screen.getByRole("button", { name: "Seguir con mi día" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("sends no note when none was written", async () => {

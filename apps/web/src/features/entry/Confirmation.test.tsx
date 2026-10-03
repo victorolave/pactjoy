@@ -1,7 +1,7 @@
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { Confirmation, useAutoClose } from "./Confirmation.tsx";
+import { Confirmation } from "./Confirmation.tsx";
 
 describe("Confirmation", () => {
   it("says the registro was saved, what it was, and closes from its button", async () => {
@@ -46,47 +46,15 @@ describe("Confirmation", () => {
   });
 });
 
-describe("useAutoClose", () => {
+describe("Confirmation stays until the user leaves", () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
-  function Probe({ saved, onClose }: { saved: string | null; onClose: () => void }) {
-    useAutoClose(saved, onClose);
-    return null;
-  }
-
-  it("does nothing until something is saved", () => {
+  it("does not close on its own, however long it stays", () => {
     const onClose = vi.fn();
-    render(<Probe saved={null} onClose={onClose} />);
-    act(() => vi.advanceTimersByTime(10_000));
+    render(<Confirmation detail="Leer · 20 min" onClose={onClose} />);
+    act(() => vi.advanceTimersByTime(60_000));
     expect(onClose).not.toHaveBeenCalled();
-  });
-
-  it("keeps its 1200 ms when the callback changes meanwhile (Today refetching re-renders)", () => {
-    const first = vi.fn();
-    const second = vi.fn();
-    const { rerender } = render(<Probe saved="ok" onClose={first} />);
-    act(() => vi.advanceTimersByTime(800));
-    rerender(<Probe saved="ok" onClose={second} />);
-    act(() => vi.advanceTimersByTime(400));
-    expect(first).not.toHaveBeenCalled();
-    expect(second).toHaveBeenCalledTimes(1);
-  });
-
-  it("closes after 1200 ms, and not a moment before", () => {
-    const onClose = vi.fn();
-    render(<Probe saved="ok" onClose={onClose} />);
-    act(() => vi.advanceTimersByTime(1199));
-    expect(onClose).not.toHaveBeenCalled();
-    act(() => vi.advanceTimersByTime(1));
-    expect(onClose).toHaveBeenCalledTimes(1);
-  });
-
-  it("does not close after it was unmounted", () => {
-    const onClose = vi.fn();
-    const { unmount } = render(<Probe saved="ok" onClose={onClose} />);
-    unmount();
-    act(() => vi.advanceTimersByTime(5000));
-    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByText("Registro guardado.")).toBeInTheDocument();
   });
 });

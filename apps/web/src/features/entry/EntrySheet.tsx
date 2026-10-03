@@ -9,7 +9,7 @@ import { Sheet } from "../../ui/Sheet.tsx";
 import { loggedBefore } from "../today/logged-totals.ts";
 import { quantityText, targetPhrase, unitLabel } from "../today/row-labels.ts";
 import { useTodayDates } from "../today/today-date-context.tsx";
-import { Confirmation, useAutoClose } from "./Confirmation.tsx";
+import { Confirmation } from "./Confirmation.tsx";
 import { DraftCard } from "./DraftCard.tsx";
 import { dailyPreview, weeklyPreview } from "./draft-preview.ts";
 import styles from "./entry.module.css";
@@ -100,7 +100,6 @@ function RecordShell({
     }
     onClose();
   };
-  useAutoClose(entry.saved, finish);
 
   if (entry.saved !== null) {
     return (

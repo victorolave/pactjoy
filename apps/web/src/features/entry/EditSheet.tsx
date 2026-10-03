@@ -9,7 +9,7 @@ import { Sheet } from "../../ui/Sheet.tsx";
 import { Tag } from "../../ui/Tag.tsx";
 import { entryText, quantityText, targetPhrase, unitLabel } from "../today/row-labels.ts";
 import { useTodayDates } from "../today/today-date-context.tsx";
-import { Confirmation, useAutoClose } from "./Confirmation.tsx";
+import { Confirmation } from "./Confirmation.tsx";
 import styles from "./entry.module.css";
 import {
   limitMeasureOf,
@@ -70,7 +70,6 @@ function EntryEditor({
   const gain = useEarnedGain(row.points.earned);
   const dates = useTodayDates();
 
-  useAutoClose(edit.saved, onClose);
   useEffect(() => onConfirming(edit.saved !== null), [edit.saved, onConfirming]);
   // A delete closes the sheet and says so in a toast: the entry is gone, so there is nothing to edit.
   // biome-ignore lint/correctness/useExhaustiveDependencies: runs once, when the deletion lands
