@@ -9,6 +9,7 @@ import { RowWithControls } from "../entry/RowWithControls.tsx";
 import { SeasonCard } from "./SeasonCard.tsx";
 import { StandingsPair } from "./StandingsPair.tsx";
 import styles from "./TodayScreen.module.css";
+import { TodayDateContext } from "./today-date-context.tsx";
 import type { TodayModel } from "./today-view-model.ts";
 
 type SeasonModel = Extract<TodayModel, { kind: "pactOpen" | "notStarted" }>;
@@ -79,9 +80,11 @@ function RunningHeader({ model }: { readonly model: RunningModel }) {
       ? null
       : model.dayState === "allDone"
         ? "Hoy ya está cumplido."
-        : model.dayState === "pending"
-          ? "¿Qué quieres cumplir hoy?"
-          : null;
+        : model.dayState === "allLogged"
+          ? "Hoy ya registraste todo."
+          : model.dayState === "pending"
+            ? "¿Qué quieres cumplir hoy?"
+            : null;
   return (
     <header className={styles.header}>
       <div className={styles.meta}>
@@ -119,15 +122,18 @@ function AllDone({ model }: { readonly model: RunningModel }) {
   const done = model.sections.forToday
     .filter((row) => row.opportunity.state === "logged")
     .map((row) => row.habitName);
+  // Only real dones and quantities are celebrated; a day with a "Hoy no salió" is just registered.
+  const achieved = model.dayState === "allDone";
   return (
     <Card tone="warm">
       <div className={styles.allDone}>
-        <span className={styles.allDoneGlyph}>
-          <Icon name="check" />
+        <span className={achieved ? styles.allDoneGlyph : styles.allLoggedGlyph}>
+          <Icon name={achieved ? "check" : "minus"} />
         </span>
         <div>
           <div className={styles.allDoneTitle}>
             {model.counts.logged} de {model.counts.scheduled} compromisos de hoy
+            {achieved ? "" : " registrados"}
           </div>
           <div className={styles.lead}>{listNames(done)}.</div>
         </div>
@@ -140,7 +146,7 @@ function NoCommitments() {
   return (
     <Card tone="warm">
       <div className={styles.empty}>
-        <Illustration alt="Un día sin compromisos" />
+        <Illustration name="cocinar" alt="Un día sin compromisos" />
         <h2 className={styles.sectionTitle}>Hoy no tienes compromisos previstos.</h2>
         <p className={styles.lead}>Lo que queda de la semana sigue disponible abajo.</p>
       </div>
@@ -152,18 +158,20 @@ export function RunningToday({ model }: { readonly model: RunningModel }) {
   const { forToday, otherDays, week } = model.sections;
   const showDayState = model.kind === "active";
   return (
-    <>
+    <TodayDateContext.Provider value={{ today: model.today, refDate: model.refDate }}>
       <RunningHeader model={model} />
       {model.kind === "ended" && (
         <InlineMessage tone="info" title="Temporada terminada">
-          Tus últimos registros siguen visibles. Los que aún están abiertos se pueden ajustar.
+          Los registros abiertos solo se pueden ajustar mientras dure su plazo.
         </InlineMessage>
       )}
-      {showDayState && model.dayState === "allDone" && <AllDone model={model} />}
+      {showDayState && (model.dayState === "allDone" || model.dayState === "allLogged") && (
+        <AllDone model={model} />
+      )}
       {showDayState && model.dayState === "none" && <NoCommitments />}
       {forToday.length > 0 && (
         <Section
-          title="Para hoy"
+          title={model.kind === "ended" ? "Último día" : "Para hoy"}
           meta={
             model.counts.scheduled > 0
               ? `${model.counts.logged} de ${model.counts.scheduled} registrados`
@@ -186,7 +194,7 @@ export function RunningToday({ model }: { readonly model: RunningModel }) {
       {model.standings !== null && (
         <StandingsPair model={model.standings} viewerName={model.greetingName} />
       )}
-      <EntrySheetHost rows={[...forToday, ...week]} />
-    </>
+      <EntrySheetHost rows={[...forToday, ...week]} seasonId={model.seasonId} />
+    </TodayDateContext.Provider>
   );
 }

@@ -12,6 +12,28 @@ export function quantityMeasureOf(measure: MeasureView): ReachQuantity | null {
   return measure as ReachQuantity;
 }
 
+export type LimitQuantity = Quantity & {
+  readonly target: Extract<Quantity["target"], { direction: "limit" }>;
+};
+
+/** The measure when it is a limit quantity (the grid sheet); null for done and reach. */
+export function limitMeasureOf(measure: MeasureView): LimitQuantity | null {
+  if (measure.unit === "done" || measure.target.direction !== "limit") return null;
+  return measure as LimitQuantity;
+}
+
+/** The grid fits up to 12 options; past that, or for a weekly total, a stepper is the honest input. */
+const MAX_GRID_OPTION = 12;
+
+/** Whether a limit is entered on the 0..N grid (whole numbers, per session, a tolerance that fits). */
+export function limitUsesGrid(measure: LimitQuantity): boolean {
+  return (
+    measure.precision === "integer" &&
+    measure.schedule.period === "perSession" &&
+    Math.ceil(Number(measure.target.tolerance)) + 1 <= MAX_GRID_OPTION
+  );
+}
+
 const STEP_BY_UNIT: Partial<Record<Quantity["unit"], string>> = {
   minutes: "5",
   pages: "5",
@@ -62,18 +84,14 @@ export function nudge(raw: string, direction: 1 | -1, measure: Quantity): string
 }
 
 /**
- * The decimal string to send, or null when the text cannot be sent: unreadable, more places than the
- * precision allows (integer takes none, decimal two), or zero unless `allowZero` (a limit's 0).
+ * The decimal string to send, or null when the text cannot be sent: unreadable, or more places than
+ * the precision allows (integer takes none, decimal two). Zero is valid: a reach with a quantity can
+ * record 0 (Notion Mechanics, and the server accepts it).
  */
-export function toSubmitValue(
-  raw: string,
-  precision: Quantity["precision"],
-  { allowZero = false }: { readonly allowZero?: boolean } = {},
-): string | null {
+export function toSubmitValue(raw: string, precision: Quantity["precision"]): string | null {
   const scaled = toScaled(raw);
   if (scaled === null) return null;
   if (precision === "integer" && scaled % 100n !== 0n) return null;
-  if (scaled === 0n && !allowZero) return null;
   return fromScaled(scaled);
 }
 
