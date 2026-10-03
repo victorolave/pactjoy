@@ -84,7 +84,12 @@ describe("pendingYesterday (design 15d)", () => {
         measure: expect.objectContaining({ unit: "minutes" }),
         forDate: dayOf(2),
         graceUntil: dayOf(3),
-        points: { perOpportunity: "35.71", earned: null, limitPercents: null },
+        points: {
+          perOpportunity: "35.71",
+          perOpportunityExact: { numerator: "250", denominator: "7" },
+          earned: null,
+          limitPercents: null,
+        },
       },
     ]);
   });
