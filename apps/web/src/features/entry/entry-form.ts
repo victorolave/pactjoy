@@ -22,6 +22,18 @@ export function limitMeasureOf(measure: MeasureView): LimitQuantity | null {
   return measure as LimitQuantity;
 }
 
+/** The grid fits up to 12 options; past that, or for a weekly total, a stepper is the honest input. */
+const MAX_GRID_OPTION = 12;
+
+/** Whether a limit is entered on the 0..N grid (whole numbers, per session, a tolerance that fits). */
+export function limitUsesGrid(measure: LimitQuantity): boolean {
+  return (
+    measure.precision === "integer" &&
+    measure.schedule.period === "perSession" &&
+    Math.ceil(Number(measure.target.tolerance)) + 1 <= MAX_GRID_OPTION
+  );
+}
+
 const STEP_BY_UNIT: Partial<Record<Quantity["unit"], string>> = {
   minutes: "5",
   pages: "5",

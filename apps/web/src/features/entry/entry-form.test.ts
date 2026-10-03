@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   initialValue,
   isSubmittable,
+  type LimitQuantity,
   limitMeasureOf,
+  limitUsesGrid,
   nudge,
   presetsFor,
   quantityMeasureOf,
@@ -172,5 +174,29 @@ describe("limitMeasureOf", () => {
     expect(limitMeasureOf(limit)).toMatchObject({ target: { direction: "limit", tolerance: "4" } });
     expect(limitMeasureOf(perSession())).toBeNull();
     expect(limitMeasureOf({ unit: "done", schedule: perSession().schedule as never })).toBeNull();
+  });
+});
+
+describe("limitUsesGrid", () => {
+  const limit = (overrides: Partial<Quantity> = {}, tolerance = "4"): LimitQuantity =>
+    ({
+      ...perSession(),
+      target: { direction: "limit", ideal: "2", tolerance },
+      ...overrides,
+    }) as LimitQuantity;
+
+  it("uses the grid for a whole-number per-session limit whose tolerance fits", () => {
+    expect(limitUsesGrid(limit())).toBe(true);
+    expect(limitUsesGrid(limit({}, "11"))).toBe(true);
+  });
+
+  it("falls back to a stepper when the tolerance outgrows the grid", () => {
+    expect(limitUsesGrid(limit({}, "12"))).toBe(false);
+    expect(limitUsesGrid(limit({}, "20"))).toBe(false);
+  });
+
+  it("falls back to a stepper for a weekly total and for decimals", () => {
+    expect(limitUsesGrid(limit({ schedule: { period: "weeklyTotal" } }))).toBe(false);
+    expect(limitUsesGrid(limit({ precision: "decimal" }))).toBe(false);
   });
 });
