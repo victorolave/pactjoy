@@ -143,7 +143,9 @@ describe("Today active: rows (TO-R3, TO-R4, TO-R5)", () => {
   });
 
   it("shows a paused row read-only, with no control (TO-S8)", async () => {
-    renderToday(activeTodayFixture({ rows: [dayRow("Gym", "paused"), dayRow("Meditar", "open")] }));
+    renderToday(
+      activeTodayFixture({ rows: [dayRow("Gym", "paused"), dayRow("Meditar", "logged")] }),
+    );
     expect(await screen.findByText("En pausa")).toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
