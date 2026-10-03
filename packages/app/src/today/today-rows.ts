@@ -1,5 +1,16 @@
-import type { CommitmentId, SeasonDay, WeekProgress } from "@pactjoy/engine";
-import { displayPercent, weekOf, weekProgress } from "@pactjoy/engine";
+import type { CommitmentId, Fraction, SeasonDay, WeekProgress } from "@pactjoy/engine";
+import {
+  displayPercent,
+  displayPoints,
+  displayPointsDecimal,
+  fromInt,
+  opportunityPoints,
+  opportunityValue,
+  progressAtValue,
+  sumPoints,
+  weekOf,
+  weekProgress,
+} from "@pactjoy/engine";
 import type { CommitmentRecord } from "../commitment/commitment.ts";
 import { commitmentToEngine } from "../commitment/to-engine.ts";
 import type { EntryRecord } from "../entry/entry.ts";
@@ -54,12 +65,37 @@ export interface TodayWeekProgress {
   readonly percent: number;
 }
 
+/**
+ * What the row's opportunity is worth, computed by the engine (D12 cut to one
+ * opportunity) so no client scores anything. Only display rounding happens here.
+ */
+export interface TodayPoints {
+  /**
+   * Points one opportunity of this commitment is worth at 100 %, two decimals
+   * ("6.25"); `null` when the season has no active opportunity for it.
+   */
+  readonly perOpportunity: string | null;
+  /**
+   * Whole points the opportunity's entries earned so far; `null` when nothing is
+   * logged, the opportunity is paused or on hold, or the points are only assigned
+   * when the week closes (`weeklyTotal`, design 17b). A logged miss is `0`.
+   */
+  readonly earned: number | null;
+  /**
+   * Per-session limit counted in whole numbers only: the percent that logging
+   * `n` scores, indexed by `n` from 0 to 12, so a client can show each option's
+   * score before it is chosen. `null` for every other row.
+   */
+  readonly limitPercents: readonly number[] | null;
+}
+
 interface TodayRowBase {
   readonly commitmentId: CommitmentId;
   readonly habitName: string;
   readonly privacy: "visible" | "private";
   readonly measure: MeasureView;
   readonly opportunity: TodayOpportunity;
+  readonly points: TodayPoints;
   readonly entries: readonly TodayEntry[];
 }
 
@@ -115,6 +151,37 @@ function weekProgressView(week: Extract<WeekProgress, { status: "scored" }>): To
   };
 }
 
+/** The highest whole number a limit row publishes a percent for (the grid never goes past it). */
+const MAX_LIMIT_OPTION = 12;
+
+/** Every active opportunity of the commitment across the season, pause-aware: D12's denominator. */
+function activeOpportunities(weeks: number, weekAt: (week: number) => WeekProgress): number {
+  let total = 0;
+  for (let week = 0; week < weeks; week++) {
+    const progress = weekAt(week);
+    if (progress.status === "scored") total += progress.sessionsTarget;
+  }
+  return total;
+}
+
+function limitPercentsOf(
+  record: CommitmentRecord,
+  engineCommitment: ReturnType<typeof commitmentToEngine>,
+): readonly number[] | null {
+  const { measure } = record;
+  if (
+    measure.unit === "done" ||
+    measure.target.direction !== "limit" ||
+    measure.precision !== "integer" ||
+    measure.schedule.period !== "perSession"
+  ) {
+    return null;
+  }
+  return Array.from({ length: MAX_LIMIT_OPTION + 1 }, (_, option) =>
+    displayPercent(progressAtValue(engineCommitment, fromInt(option))),
+  );
+}
+
 function stateOf(
   week: WeekProgress,
   refDay: SeasonDay,
@@ -134,9 +201,19 @@ function stateOf(
  * enforces (`entryWindowDeadline` / `checkEntryWindow`), so Today never shows
  * open what recording would reject. Pure over data already loaded in the
  * caller's single read.
+ *
+ * `pointsToday` is what the viewer's entries for the described day earned,
+ * summed exactly and rounded once (day and `timesPerWeek` rows; a `weeklyTotal`
+ * only pays when its week closes).
  */
-export function todayRows(input: TodayRowsInput): readonly TodayRow[] {
+export interface TodayRowsResult {
+  readonly rows: readonly TodayRow[];
+  readonly pointsToday: number;
+}
+
+export function todayRows(input: TodayRowsInput): TodayRowsResult {
   const { season, actualStart, today, refDay } = input;
+  const earnedToday: Fraction[] = [];
   const habitNames = new Map<HabitId, string>(input.habits.map((h) => [h.id, h.name]));
   const engineSeason = {
     lengthWeeks: season.lengthWeeks,
@@ -145,7 +222,7 @@ export function todayRows(input: TodayRowsInput): readonly TodayRow[] {
   const engineEntries = input.entries.map(toEngineEntry);
   const week = weekOf(refDay);
 
-  return input.commitments.map((commitment): TodayRow => {
+  const rows = input.commitments.map((commitment): TodayRow => {
     const habitName = habitNames.get(commitment.habitId);
     if (habitName === undefined) {
       throw new Error(`habit ${commitment.habitId} of commitment ${commitment.id} not found`);
@@ -175,11 +252,39 @@ export function todayRows(input: TodayRowsInput): readonly TodayRow[] {
       mine.some((entry) => entry.day === refDay),
     );
     const held = state === "paused" || state === "onHold";
+    const engineCommitment = commitmentToEngine(commitment);
+    const opportunities = activeOpportunities(season.lengthWeeks, (weekIndex) =>
+      weekProgress({
+        season: engineSeason,
+        commitment: engineCommitment,
+        week: weekIndex,
+        entries: engineEntries.filter((entry) => entry.commitmentId === commitment.id),
+        pauses: input.pauses.filter((pause) => pause.commitmentId === commitment.id),
+        today: refDay,
+      }),
+    );
+    const paysNow = schedule.period === "perSession" && !held;
+    const ofRefDay = engineEntries.filter(
+      (entry) => entry.commitmentId === commitment.id && entry.day === refDay,
+    );
+    const earnedExact =
+      paysNow && ofRefDay.length > 0
+        ? opportunityPoints(engineCommitment, opportunities, ofRefDay)
+        : null;
+    if (earnedExact !== null) earnedToday.push(earnedExact);
     const base: TodayRowBase = {
       commitmentId: commitment.id,
       habitName,
       privacy: commitment.privacy,
       measure: projectMeasure(commitment.measure),
+      points: {
+        perOpportunity:
+          opportunities === 0
+            ? null
+            : displayPointsDecimal(opportunityValue(engineCommitment, opportunities)),
+        earned: earnedExact === null ? null : displayPoints(earnedExact),
+        limitPercents: limitPercentsOf(commitment, engineCommitment),
+      },
       opportunity: {
         state,
         graceUntil: held
@@ -217,4 +322,5 @@ export function todayRows(input: TodayRowsInput): readonly TodayRow[] {
       progress: progress.status === "scored" ? weekProgressView(progress) : null,
     };
   });
+  return { rows, pointsToday: displayPoints(sumPoints(earnedToday)) };
 }

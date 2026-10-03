@@ -202,6 +202,7 @@ export type {
   OpportunityState,
   TodayEntry,
   TodayOpportunity,
+  TodayPoints,
   TodayRow,
   TodayWeekProgress,
 } from "./today/today-rows.ts";

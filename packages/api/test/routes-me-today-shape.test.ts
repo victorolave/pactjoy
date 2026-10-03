@@ -68,6 +68,7 @@ const ROW_KEYS = [
   "scheduledToday",
   ...under("measure", MEASURE),
   ...under("opportunity", ["graceUntil", "state"]),
+  ...under("points", ["earned", "limitPercents", "perOpportunity"]),
   ...under("progress", [
     "percent",
     "sessionsDone",
@@ -110,7 +111,7 @@ const SCORED = [
     "rows[].points",
     "rows[].rank",
   ]),
-  ...under("summary", ["daysLeft", "week", "weekCount", ...under("score", SCORE)]),
+  ...under("summary", ["daysLeft", "pointsToday", "week", "weekCount", ...under("score", SCORE)]),
 ];
 
 async function given(startDate: string, commit: boolean) {

@@ -47,6 +47,8 @@ export interface TodaySummary {
   readonly weekCount: number;
   /** Days after today that still belong to the season; `0` on the last day and after it. */
   readonly daysLeft: number;
+  /** Whole points the viewer's entries for the described day earned (design 15b "+14 pts hoy"). */
+  readonly pointsToday: number;
   readonly score: MemberScoreView;
 }
 
@@ -133,23 +135,25 @@ export async function today(deps: TodayDeps, actor: Actor): Promise<TodayView> {
     };
     const mine = season.commitments.filter((commitment) => commitment.memberId === viewer.id);
     const habits = await repos.habits.getMany(mine.map((commitment) => commitment.habitId));
+    const { rows, pointsToday } = todayRows({
+      season,
+      actualStart: season.actualStart,
+      commitments: mine,
+      habits,
+      entries: data.entries.filter((entry) => entry.memberId === viewer.id),
+      pauses: data.pauses.filter((pause) => pause.memberId === viewer.id),
+      today: day.day,
+      refDay: scoringDay,
+    });
     return {
       state: ended ? "ended" : "active",
       ...base,
-      rows: todayRows({
-        season,
-        actualStart: season.actualStart,
-        commitments: mine,
-        habits,
-        entries: data.entries.filter((entry) => entry.memberId === viewer.id),
-        pauses: data.pauses.filter((pause) => pause.memberId === viewer.id),
-        today: day.day,
-        refDay: scoringDay,
-      }),
+      rows,
       summary: {
         week: (scoringDay - (scoringDay % DAYS_PER_WEEK)) / DAYS_PER_WEEK + 1,
         weekCount: season.lengthWeeks,
         daysLeft: lastDay - scoringDay,
+        pointsToday,
         score: memberScoreView(started, data, viewer),
       },
       standings: standingsView(started, data),
