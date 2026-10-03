@@ -1,5 +1,6 @@
 import type { TodayEntry, TodayRow } from "@pactjoy/app";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
+import { useOnline } from "../../app/connectivity-context.tsx";
 import { longDate } from "../../shared/format.ts";
 import { Button } from "../../ui/Button.tsx";
 import { InlineMessage } from "../../ui/InlineMessage.tsx";
@@ -8,9 +9,17 @@ import { Tag } from "../../ui/Tag.tsx";
 import { entryText, quantityText, targetText, unitLabel } from "../today/row-labels.ts";
 import { Confirmation, useAutoClose } from "./Confirmation.tsx";
 import styles from "./entry.module.css";
-import { nudge, quantityMeasureOf, toSubmitValue } from "./entry-form.ts";
+import {
+  limitMeasureOf,
+  limitUsesGrid,
+  nudge,
+  quantityMeasureOf,
+  toSubmitValue,
+} from "./entry-form.ts";
+import { LimitGrid } from "./LimitGrid.tsx";
 import { NoteField } from "./NoteField.tsx";
 import { QuantityStepper } from "./QuantityStepper.tsx";
+import { useEntryDelete } from "./use-entry-delete.ts";
 import { useEntryEdit } from "./use-entry-edit.ts";
 
 export interface EditSheetProps {
@@ -34,19 +43,34 @@ export function EditSheet(props: EditSheetProps) {
 
 function EntryEditor({ row, entry, onSelect, onClose }: EditSheetProps) {
   const edit = useEntryEdit(entry.entryId);
+  const remove = useEntryDelete(entry.entryId);
+  const online = useOnline();
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [note, setNote] = useState(entry.note ?? "");
   const quantity = entry.value.kind === "quantity" ? entry.value.value : null;
   const [typed, setTyped] = useState(quantity ?? "0");
-  const measure = quantityMeasureOf(row.measure);
+  const [chosen, setChosen] = useState<number | null>(quantity === null ? null : Number(quantity));
+  const reach = quantityMeasureOf(row.measure);
+  const limit = limitMeasureOf(row.measure);
+  const grid = limit !== null && limitUsesGrid(limit);
+  const measure = reach ?? limit;
 
-  useAutoClose(edit.saved, onClose);
+  const finished = edit.saved ?? remove.deleted;
+  useAutoClose(finished, onClose);
   if (edit.saved !== null) return <Confirmation detail={edit.saved} onClose={onClose} />;
+  if (remove.deleted !== null) {
+    return <Confirmation title="Registro borrado." detail={remove.deleted} onClose={onClose} />;
+  }
 
   // What the sheet would send for the value, or null while it cannot be sent.
   const toSend =
     measure === null || quantity === null
       ? entry.value.kind
-      : toSubmitValue(typed, measure.precision);
+      : grid
+        ? chosen === null
+          ? null
+          : toSubmitValue(String(chosen), "integer")
+        : toSubmitValue(typed, measure.precision);
   const amount =
     measure !== null && quantity !== null && toSend !== null ? quantityText(toSend, measure) : null;
   const unit = measure === null ? "" : (unitLabel(measure) ?? "");
@@ -84,12 +108,15 @@ function EntryEditor({ row, entry, onSelect, onClose }: EditSheetProps) {
         </div>
       )}
       {quantity !== null && measure !== null && (
-        <QuantityStepper
-          value={typed}
+        <ValueInput
+          grid={grid}
+          limit={limit}
           unit={unit}
-          presets={[]}
+          typed={typed}
+          chosen={chosen}
           invalid={toSend === null}
-          onChange={setTyped}
+          onTyped={setTyped}
+          onChosen={setChosen}
           onStep={(direction) => setTyped((current) => nudge(current, direction, measure))}
         />
       )}
@@ -112,11 +139,82 @@ function EntryEditor({ row, entry, onSelect, onClose }: EditSheetProps) {
       {edit.problem !== null && edit.problem.kind !== "noteField" && (
         <InlineMessage tone="error" title={edit.problem.message} />
       )}
-      <div className={styles.actions}>
-        <Button block disabled={toSend === null || edit.pending} onClick={send}>
-          {amount === null ? "Guardar cambios" : `Guardar ${amount}`}
-        </Button>
-      </div>
+      {!online && <InlineMessage tone="pending" title="Sin conexión: no se puede guardar." />}
+      {remove.problem !== null && <InlineMessage tone="error" title={remove.problem.message} />}
+      {confirmingDelete ? (
+        <div className={styles.actions}>
+          <p className={styles.confirmationTitle}>¿Borrar este registro?</p>
+          <Button
+            block
+            disabled={remove.pending || !online}
+            onClick={() => remove.remove(`${row.habitName} · ${entryText(entry, row.measure)}`)}
+          >
+            Borrar
+          </Button>
+          <Button variant="ghost" block onClick={() => setConfirmingDelete(false)}>
+            Cancelar
+          </Button>
+        </div>
+      ) : (
+        <div className={styles.actions}>
+          <Button block disabled={toSend === null || edit.pending || !online} onClick={send}>
+            {amount === null ? "Guardar cambios" : `Guardar ${amount}`}
+          </Button>
+          <Button
+            variant="ghost"
+            block
+            leadingIcon="trash-2"
+            disabled={!online}
+            onClick={() => setConfirmingDelete(true)}
+          >
+            Borrar registro
+          </Button>
+        </div>
+      )}
     </div>
+  );
+}
+
+function ValueInput({
+  grid,
+  limit,
+  unit,
+  typed,
+  chosen,
+  invalid,
+  onTyped,
+  onChosen,
+  onStep,
+}: {
+  readonly grid: boolean;
+  readonly limit: ReturnType<typeof limitMeasureOf>;
+  readonly unit: string;
+  readonly typed: string;
+  readonly chosen: number | null;
+  readonly invalid: boolean;
+  readonly onTyped: (value: string) => void;
+  readonly onChosen: (value: number) => void;
+  readonly onStep: (direction: 1 | -1) => void;
+}): ReactNode {
+  if (grid && limit !== null) {
+    return (
+      <LimitGrid
+        unit={unit}
+        ideal={Number(limit.target.ideal)}
+        tolerance={Number(limit.target.tolerance)}
+        value={chosen}
+        onSelect={onChosen}
+      />
+    );
+  }
+  return (
+    <QuantityStepper
+      value={typed}
+      unit={unit}
+      presets={[]}
+      invalid={invalid}
+      onChange={onTyped}
+      onStep={onStep}
+    />
   );
 }

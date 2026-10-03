@@ -1,5 +1,6 @@
 import type { MeasureView, TodayRow } from "@pactjoy/app";
 import { type ReactNode, useState } from "react";
+import { useOnline } from "../../app/connectivity-context.tsx";
 import { Button } from "../../ui/Button.tsx";
 import { Card } from "../../ui/Card.tsx";
 import { InlineMessage } from "../../ui/InlineMessage.tsx";
@@ -12,6 +13,7 @@ import {
   initialValue,
   type LimitQuantity,
   limitMeasureOf,
+  limitUsesGrid,
   nudge,
   presetsFor,
   quantityMeasureOf,
@@ -69,6 +71,7 @@ function RecordShell({
 }: ShellProps) {
   const [note, setNote] = useState("");
   const entry = useQuantityEntry(row.commitmentId, seasonId);
+  const online = useOnline();
 
   useAutoClose(entry.saved, onClose);
 
@@ -97,10 +100,11 @@ function RecordShell({
         {entry.problem !== null && entry.problem.kind !== "noteField" && (
           <InlineMessage tone="error" title={entry.problem.message} />
         )}
+        {!online && <InlineMessage tone="pending" title="Sin conexión: no se puede guardar." />}
         <div className={styles.actions}>
           <Button
             block
-            disabled={toSend === null || entry.pending}
+            disabled={toSend === null || entry.pending || !online}
             onClick={() =>
               toSend !== null &&
               entry.submit(
@@ -116,7 +120,7 @@ function RecordShell({
             <Button
               variant="ghost"
               block
-              disabled={entry.pending}
+              disabled={entry.pending || !online}
               onClick={() =>
                 entry.submit({ kind: "missed" }, null, `${row.habitName} · Hoy no salió`)
               }
@@ -180,7 +184,7 @@ function LimitSheet({
   readonly measure: LimitQuantity;
   readonly onClose: () => void;
 }) {
-  const grid = measure.precision === "integer";
+  const grid = limitUsesGrid(measure);
   // A grid choice is a number; a decimal limit types its value instead and starts at zero.
   const [chosen, setChosen] = useState<number | null>(null);
   const [typed, setTyped] = useState("0");
@@ -188,8 +192,8 @@ function LimitSheet({
   const toSend = grid
     ? chosen === null
       ? null
-      : toSubmitValue(String(chosen), "integer", { allowZero: true })
-    : toSubmitValue(typed, "decimal", { allowZero: true });
+      : toSubmitValue(String(chosen), "integer")
+    : toSubmitValue(typed, measure.precision);
   const weekly = row.kind === "week" && measure.schedule.period === "weeklyTotal";
   const subtitle = weekly
     ? `Esta semana llevas ${quantityText(row.progress?.value ?? "0", measure)}`
@@ -262,6 +266,7 @@ function ProgressCard({
     const current = row.progress?.value ?? "0";
     return (
       <ProgressBar
+        name={`Cantidad de ${row.habitName}`}
         value={Number(current)}
         max={ideal}
         label={`${formatDecimal(current)} / ${formatDecimal(measure.target.ideal)} ${unit}`.trim()}
@@ -274,6 +279,7 @@ function ProgressCard({
   const typed = toSubmitValue(value, measure.precision);
   return (
     <ProgressBar
+      name={`Cantidad de ${row.habitName}`}
       value={Number(typed ?? 0)}
       max={ideal}
       label={`${typed === null ? "0" : formatDecimal(typed)} / ${formatDecimal(measure.target.ideal)} ${unit}`.trim()}
