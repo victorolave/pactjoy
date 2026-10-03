@@ -4,6 +4,7 @@ import { Card } from "../../ui/Card.tsx";
 import { InlineMessage } from "../../ui/InlineMessage.tsx";
 import { Icon } from "../../ui/icon/Icon.tsx";
 import { Illustration } from "../../ui/Placeholder.tsx";
+import { EntrySheetHost } from "../entry/EntrySheetHost.tsx";
 import { RowWithControls } from "../entry/RowWithControls.tsx";
 import { SeasonCard } from "./SeasonCard.tsx";
 import { StandingsPair } from "./StandingsPair.tsx";
@@ -185,6 +186,7 @@ export function RunningToday({ model }: { readonly model: RunningModel }) {
       {model.standings !== null && (
         <StandingsPair model={model.standings} viewerName={model.greetingName} />
       )}
+      <EntrySheetHost rows={[...forToday, ...week]} />
     </>
   );
 }

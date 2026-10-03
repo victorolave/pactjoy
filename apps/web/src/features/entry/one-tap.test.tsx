@@ -103,11 +103,11 @@ describe("Hoy no salió (EN-R2)", () => {
     ).toBeInTheDocument();
   });
 
-  it("is not offered on week rows, which have no register control here (EN-S6)", async () => {
+  it("is not offered on week rows, which only open the sheet (EN-S6)", async () => {
     renderRow(weekRowFixture());
     await screen.findByRole("heading", { name: "Leer" });
     expect(screen.queryByRole("button", { name: /Hoy no salió/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("button")).toHaveLength(1);
   });
 
   it("explains a 422 MissedNotAllowed inline in the row", async () => {
@@ -159,8 +159,8 @@ describe("rows that cannot be written", () => {
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 
-  it("does not offer the one-tap on a quantity row (that opens a sheet)", async () => {
-    renderRow(
+  it("opens the sheet on a quantity row instead of recording at once", async () => {
+    const { deps } = renderRow(
       dayRowFixture({
         habitName: "Correr",
         measure: {
@@ -172,7 +172,8 @@ describe("rows that cannot be written", () => {
         },
       }),
     );
-    await screen.findByRole("heading", { name: "Correr" });
-    expect(screen.queryByRole("button", { name: /Registrar Correr/ })).not.toBeInTheDocument();
+    await userEvent.click(await screen.findByRole("button", { name: "Registrar Correr" }));
+    expect(await screen.findByRole("dialog", { name: "Correr" })).toBeInTheDocument();
+    expect(deps.api.calls.recordEntry).toBe(0);
   });
 });

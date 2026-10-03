@@ -1,6 +1,6 @@
 import type { TodayView } from "@pactjoy/app";
-import { type RenderResult, render } from "@testing-library/react";
-import { MemoryRouter } from "react-router";
+import { act, type RenderResult, render } from "@testing-library/react";
+import { MemoryRouter, useLocation, useNavigate } from "react-router";
 import type { AppDependencies } from "../app/dependencies.ts";
 import { AppProviders } from "../app/providers.tsx";
 import { createQueryClient } from "../app/query-client.ts";
@@ -25,7 +25,19 @@ export interface RenderAppOptions {
   readonly todayFailures?: readonly ApiError[];
 }
 
+/** Lets a test read the URL and press the browser's Back button. */
+function NavigationProbe({ onReady }: { readonly onReady: (back: () => void) => void }) {
+  const navigate = useNavigate();
+  const { pathname, search } = useLocation();
+  onReady(() => navigate(-1));
+  return <span hidden data-testid="location">{`${pathname}${search}`}</span>;
+}
+
 export interface RenderedApp extends RenderResult {
+  /** The browser's Back button. */
+  back(): void;
+  /** Path and query of the current URL. */
+  location(): string;
   readonly deps: AppDependencies & {
     readonly auth: FakeAuth;
     readonly api: FakePactJoyApi;
@@ -53,12 +65,18 @@ export function renderApp({
     sessionEvents: createSessionEvents(),
     queryClient: createQueryClient({ retryQueries: false }),
   };
+  let goBack = () => {};
   const result = render(
     <AppProviders deps={deps}>
       <MemoryRouter initialEntries={[path]}>
+        <NavigationProbe onReady={(back) => (goBack = back)} />
         <AppRoutes />
       </MemoryRouter>
     </AppProviders>,
   );
-  return Object.assign(result, { deps });
+  return Object.assign(result, {
+    deps,
+    back: () => act(() => goBack()),
+    location: () => result.getByTestId("location").textContent ?? "",
+  });
 }
