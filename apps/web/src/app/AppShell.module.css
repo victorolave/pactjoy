@@ -3,6 +3,8 @@
   display: flex;
   flex-direction: column;
   height: var(--shell-height);
+  max-width: var(--app-max-width);
+  margin-inline: auto;
   padding-top: var(--safe-top);
   padding-left: var(--safe-left);
   padding-right: var(--safe-right);

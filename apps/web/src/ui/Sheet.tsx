@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect, useId, useRef } from "react";
 import { cx } from "./cx.ts";
 import { IconButton } from "./IconButton.tsx";
+import styles from "./Sheet.module.css";
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -85,7 +86,11 @@ function OpenSheet({
     >
       <div
         ref={dialog}
-        className={cx("pj-sheet", `pj-sheet--${placement}`)}
+        className={cx(
+          "pj-sheet",
+          `pj-sheet--${placement}`,
+          placement === "bottom" && styles.bottom,
+        )}
         role="dialog"
         aria-modal="true"
         {...(headless ? { "aria-label": title } : { "aria-labelledby": titleId })}

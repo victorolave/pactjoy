@@ -69,6 +69,43 @@ describe("day row (TO-R3)", () => {
     expect(screen.queryByText("3 km")).not.toBeInTheDocument();
   });
 
+  describe("a logged limit row reads 'Hoy: X', not a goal to reach", () => {
+    const limitDay = (
+      unit: "times" | "glasses",
+      quantities: readonly string[],
+      precision = "integer" as const,
+    ) =>
+      quantityDay({
+        habitName: "Café",
+        measure: {
+          unit,
+          customLabel: null,
+          precision,
+          target: { direction: "limit", ideal: "1", tolerance: "3" },
+          schedule: { period: "perSession", frequency: { kind: "specificDays", weekdays: [0] } },
+        },
+        opportunity: { state: "logged", graceUntil: null },
+        entries: quantities.map((value, index) =>
+          entryFixture({ kind: "quantity", value }, { entryId: `e${index}` as Entry["entryId"] }),
+        ),
+      });
+
+    it.each([
+      ["times", ["1"], "Hoy: 1 vez"],
+      ["times", ["1", "2"], "Hoy: 3 veces"],
+      ["glasses", ["2"], "Hoy: 2 vasos"],
+    ] as const)("%s %j -> %s", (unit, quantities, text) => {
+      show(limitDay(unit, quantities));
+      expect(screen.getByText(text)).toBeInTheDocument();
+      expect(screen.queryByText(/Llevas/)).not.toBeInTheDocument();
+    });
+
+    it("keeps the decimal comma", () => {
+      show(limitDay("glasses", ["1.5"], "decimal" as never));
+      expect(screen.getByText("Hoy: 1,5 vasos")).toBeInTheDocument();
+    });
+  });
+
   it("shows the points a logged day earned next to the title, and none before", () => {
     const { rerender } = render(<DayRow row={dayRowFixture()} />);
     expect(screen.queryByText(/pts/)).not.toBeInTheDocument();
