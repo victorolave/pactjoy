@@ -1,17 +1,19 @@
 import type { MeasureView, TodayRow } from "@pactjoy/app";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useState } from "react";
+import { useOnline } from "../../app/connectivity-context.tsx";
 import { Button } from "../../ui/Button.tsx";
 import { Card } from "../../ui/Card.tsx";
 import { InlineMessage } from "../../ui/InlineMessage.tsx";
-import { Illustration } from "../../ui/Placeholder.tsx";
 import { ProgressBar } from "../../ui/ProgressBar.tsx";
 import { Sheet } from "../../ui/Sheet.tsx";
 import { formatDecimal, quantityText, targetText, unitLabel } from "../today/row-labels.ts";
+import { Confirmation, useAutoClose } from "./Confirmation.tsx";
 import styles from "./entry.module.css";
 import {
   initialValue,
   type LimitQuantity,
   limitMeasureOf,
+  limitUsesGrid,
   nudge,
   presetsFor,
   quantityMeasureOf,
@@ -22,9 +24,6 @@ import { LimitGrid } from "./LimitGrid.tsx";
 import { NoteField } from "./NoteField.tsx";
 import { QuantityStepper } from "./QuantityStepper.tsx";
 import { useQuantityEntry } from "./use-quantity-entry.ts";
-
-/** How long the confirmation stays before the sheet closes itself (EN-R6). */
-const CONFIRMATION_MS = 1200;
 
 export interface EntrySheetProps {
   readonly row: TodayRow;
@@ -72,24 +71,14 @@ function RecordShell({
 }: ShellProps) {
   const [note, setNote] = useState("");
   const entry = useQuantityEntry(row.commitmentId, seasonId);
+  const online = useOnline();
 
-  useEffect(() => {
-    if (entry.saved === null) return;
-    const timer = setTimeout(onClose, CONFIRMATION_MS);
-    return () => clearTimeout(timer);
-  }, [entry.saved, onClose]);
+  useAutoClose(entry.saved, onClose);
 
   if (entry.saved !== null) {
     return (
       <Sheet open title={row.habitName} onClose={onClose}>
-        <div className={styles.confirmation}>
-          <Illustration alt="Registro guardado" />
-          <p className={styles.confirmationTitle}>Registro guardado.</p>
-          <p className={styles.subtitle}>{entry.saved}</p>
-          <Button block onClick={onClose}>
-            Seguir con mi día
-          </Button>
-        </div>
+        <Confirmation detail={entry.saved} onClose={onClose} />
       </Sheet>
     );
   }
@@ -111,10 +100,11 @@ function RecordShell({
         {entry.problem !== null && entry.problem.kind !== "noteField" && (
           <InlineMessage tone="error" title={entry.problem.message} />
         )}
+        {!online && <InlineMessage tone="pending" title="Sin conexión: no se puede guardar." />}
         <div className={styles.actions}>
           <Button
             block
-            disabled={toSend === null || entry.pending}
+            disabled={toSend === null || entry.pending || !online}
             onClick={() =>
               toSend !== null &&
               entry.submit(
@@ -130,7 +120,7 @@ function RecordShell({
             <Button
               variant="ghost"
               block
-              disabled={entry.pending}
+              disabled={entry.pending || !online}
               onClick={() =>
                 entry.submit({ kind: "missed" }, null, `${row.habitName} · Hoy no salió`)
               }
@@ -194,7 +184,7 @@ function LimitSheet({
   readonly measure: LimitQuantity;
   readonly onClose: () => void;
 }) {
-  const grid = measure.precision === "integer";
+  const grid = limitUsesGrid(measure);
   // A grid choice is a number; a decimal limit types its value instead and starts at zero.
   const [chosen, setChosen] = useState<number | null>(null);
   const [typed, setTyped] = useState("0");
@@ -202,8 +192,8 @@ function LimitSheet({
   const toSend = grid
     ? chosen === null
       ? null
-      : toSubmitValue(String(chosen), "integer", { allowZero: true })
-    : toSubmitValue(typed, "decimal", { allowZero: true });
+      : toSubmitValue(String(chosen), "integer")
+    : toSubmitValue(typed, measure.precision);
   const weekly = row.kind === "week" && measure.schedule.period === "weeklyTotal";
   const subtitle = weekly
     ? `Esta semana llevas ${quantityText(row.progress?.value ?? "0", measure)}`
@@ -276,6 +266,7 @@ function ProgressCard({
     const current = row.progress?.value ?? "0";
     return (
       <ProgressBar
+        name={`Cantidad de ${row.habitName}`}
         value={Number(current)}
         max={ideal}
         label={`${formatDecimal(current)} / ${formatDecimal(measure.target.ideal)} ${unit}`.trim()}
@@ -288,6 +279,7 @@ function ProgressCard({
   const typed = toSubmitValue(value, measure.precision);
   return (
     <ProgressBar
+      name={`Cantidad de ${row.habitName}`}
       value={Number(typed ?? 0)}
       max={ideal}
       label={`${typed === null ? "0" : formatDecimal(typed)} / ${formatDecimal(measure.target.ideal)} ${unit}`.trim()}

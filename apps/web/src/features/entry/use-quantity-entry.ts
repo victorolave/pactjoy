@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { useIds } from "../../app/ids-context.tsx";
 import type { EntryValueInput } from "../../ports/pactjoy-api.ts";
 import { toUiError, type UiKind } from "../../shared/ui-error.ts";
+import { useTodayDates } from "../today/today-date-context.tsx";
 import { entryFailure } from "./entry-messages.ts";
 import { useRecordEntry } from "./queries.ts";
 
@@ -21,6 +22,7 @@ export interface QuantityEntry {
 export function useQuantityEntry(commitmentId: string, seasonId: string): QuantityEntry {
   const record = useRecordEntry();
   const ids = useIds();
+  const dates = useTodayDates();
   const [saved, setSaved] = useState<string | null>(null);
   const [problem, setProblem] = useState<EntryProblem | null>(null);
   const attempt = useRef<{ readonly signature: string; readonly id: string } | null>(null);
@@ -34,7 +36,14 @@ export function useQuantityEntry(commitmentId: string, seasonId: string): Quanti
     saving.current = true;
     setProblem(null);
     record.mutate(
-      { seasonId, commitmentId, value, note, clientRequestId: id },
+      {
+        seasonId,
+        commitmentId,
+        ...(dates === undefined ? {} : { forDate: dates.refDate }),
+        value,
+        note,
+        clientRequestId: id,
+      },
       {
         onSuccess: () => {
           saving.current = false;

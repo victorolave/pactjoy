@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import type { AuthPort, Session } from "../../ports/auth.ts";
@@ -50,8 +51,21 @@ export function SessionProvider({
   const [session, setSession] = useState<Session | null>(() => store.load());
   const [notice, setNotice] = useState<SessionNotice | null>(null);
 
-  // Another tab refreshes or ends the session: follow it.
-  useEffect(() => store.subscribe(setSession), [store]);
+  // Another tab refreshes or ends the session: follow it. Its sign out ends this tab's data too.
+  const current = useRef(session);
+  current.current = session;
+  useEffect(
+    () =>
+      store.subscribe((next) => {
+        const previous = current.current;
+        setSession(next);
+        // A sign out, or a different user, means the cached data is no longer this user's.
+        if (next === null || (previous !== null && next.userId !== previous.userId)) {
+          onSessionEnd?.();
+        }
+      }),
+    [store, onSessionEnd],
+  );
 
   const expire = useCallback(() => {
     store.clear();
