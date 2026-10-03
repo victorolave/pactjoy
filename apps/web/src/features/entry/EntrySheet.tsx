@@ -1,12 +1,12 @@
 import type { MeasureView, TodayRow } from "@pactjoy/app";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useState } from "react";
 import { Button } from "../../ui/Button.tsx";
 import { Card } from "../../ui/Card.tsx";
 import { InlineMessage } from "../../ui/InlineMessage.tsx";
-import { Illustration } from "../../ui/Placeholder.tsx";
 import { ProgressBar } from "../../ui/ProgressBar.tsx";
 import { Sheet } from "../../ui/Sheet.tsx";
 import { formatDecimal, quantityText, targetText, unitLabel } from "../today/row-labels.ts";
+import { Confirmation, useAutoClose } from "./Confirmation.tsx";
 import styles from "./entry.module.css";
 import {
   initialValue,
@@ -22,9 +22,6 @@ import { LimitGrid } from "./LimitGrid.tsx";
 import { NoteField } from "./NoteField.tsx";
 import { QuantityStepper } from "./QuantityStepper.tsx";
 import { useQuantityEntry } from "./use-quantity-entry.ts";
-
-/** How long the confirmation stays before the sheet closes itself (EN-R6). */
-const CONFIRMATION_MS = 1200;
 
 export interface EntrySheetProps {
   readonly row: TodayRow;
@@ -73,23 +70,12 @@ function RecordShell({
   const [note, setNote] = useState("");
   const entry = useQuantityEntry(row.commitmentId, seasonId);
 
-  useEffect(() => {
-    if (entry.saved === null) return;
-    const timer = setTimeout(onClose, CONFIRMATION_MS);
-    return () => clearTimeout(timer);
-  }, [entry.saved, onClose]);
+  useAutoClose(entry.saved, onClose);
 
   if (entry.saved !== null) {
     return (
       <Sheet open title={row.habitName} onClose={onClose}>
-        <div className={styles.confirmation}>
-          <Illustration alt="Registro guardado" />
-          <p className={styles.confirmationTitle}>Registro guardado.</p>
-          <p className={styles.subtitle}>{entry.saved}</p>
-          <Button block onClick={onClose}>
-            Seguir con mi día
-          </Button>
-        </div>
+        <Confirmation detail={entry.saved} onClose={onClose} />
       </Sheet>
     );
   }
