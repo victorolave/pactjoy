@@ -1,16 +1,17 @@
 import type { MeasureView, TodayRow } from "@pactjoy/app";
 import { type ReactNode, useState } from "react";
 import { useOnline } from "../../app/connectivity-context.tsx";
-import { toScaled } from "../../shared/decimal.ts";
+import { fromScaled, toScaled } from "../../shared/decimal.ts";
+import { pointsText } from "../../shared/format.ts";
 import { Button } from "../../ui/Button.tsx";
-import { Card } from "../../ui/Card.tsx";
 import { InlineMessage } from "../../ui/InlineMessage.tsx";
-import { ProgressBar } from "../../ui/ProgressBar.tsx";
 import { Sheet } from "../../ui/Sheet.tsx";
 import { loggedBefore } from "../today/logged-totals.ts";
-import { formatDecimal, quantityText, targetText, unitLabel } from "../today/row-labels.ts";
+import { quantityText, targetPhrase, unitLabel } from "../today/row-labels.ts";
 import { useTodayDates } from "../today/today-date-context.tsx";
 import { Confirmation, useAutoClose } from "./Confirmation.tsx";
+import { DraftCard } from "./DraftCard.tsx";
+import { dailyPreview, weeklyPreview } from "./draft-preview.ts";
 import styles from "./entry.module.css";
 import {
   initialValue,
@@ -30,13 +31,13 @@ import { useEarnedGain } from "./use-earned-gain.ts";
 import { useQuantityEntry } from "./use-quantity-entry.ts";
 import { useSavedToast } from "./use-saved-toast.ts";
 
+const MINIMUM_MET = "Mínimo cumplido. Un paso más en tu meta.";
+
 export interface EntrySheetProps {
   readonly row: TodayRow;
   readonly seasonId: string;
   readonly onClose: () => void;
 }
-
-const MINIMUM_MET = "Mínimo cumplido. Un paso más en tu meta.";
 
 /** The record sheet: a stepper for a reach quantity, a grid for a limit. Done rows never open one. */
 export function EntrySheet({ row, seasonId, onClose }: EntrySheetProps) {
@@ -54,29 +55,31 @@ interface ShellProps {
   readonly seasonId: string;
   readonly measure: MeasureView;
   readonly subtitle: string;
-  readonly hint?: string;
+  /** "Registrar" for the first entry of the opportunity, "Añadir" when adding to what is logged. */
+  readonly verb?: string;
   /** The decimal string to send, or null while the input cannot be sent. */
   readonly toSend: string | null;
   readonly input: ReactNode;
   readonly card?: ReactNode;
+  /** A line under the card or the input (the legend of the limit grid, the weekly note). */
+  readonly legend?: string | undefined;
   /** The line under the points on the confirmation, when there is one to say. */
   readonly confirmMessage?: string | null;
-  readonly missedAllowed: boolean;
   readonly onClose: () => void;
 }
 
-/** Everything the two record sheets share: note, submit, confirmation, errors, Hoy no salió. */
+/** Everything the two record sheets share: note, submit, confirmation and errors. */
 function RecordShell({
   row,
   seasonId,
   measure,
   subtitle,
-  hint,
+  verb = "Registrar",
   toSend,
   input,
   card,
+  legend,
   confirmMessage = null,
-  missedAllowed,
   onClose,
 }: ShellProps) {
   const [note, setNote] = useState("");
@@ -91,7 +94,7 @@ function RecordShell({
       showSaved(
         gain === null
           ? `Registro guardado. ${entry.saved}`
-          : `Registro guardado. ${row.habitName} · +${gain} pts`,
+          : `Registro guardado. ${row.habitName} · ${pointsText(gain)}`,
         entry.entryId,
       );
     }
@@ -118,9 +121,9 @@ function RecordShell({
     <Sheet open title={row.habitName} onClose={onClose}>
       <div className={styles.sheet}>
         <p className={styles.subtitle}>{subtitle}</p>
-        {hint !== undefined && <p className={styles.subtitle}>{hint}</p>}
         {input}
-        {card !== undefined && <Card tone="sunken">{card}</Card>}
+        {card}
+        {legend !== undefined && <p className={styles.subtitle}>{legend}</p>}
         <NoteField
           value={note}
           onChange={setNote}
@@ -143,20 +146,8 @@ function RecordShell({
               )
             }
           >
-            {amount === null ? "Registrar" : `Registrar ${amount}`}
+            {amount === null ? verb : `${verb} ${amount}`}
           </Button>
-          {missedAllowed && row.kind === "day" && (
-            <Button
-              variant="ghost"
-              block
-              disabled={entry.pending || !online}
-              onClick={() =>
-                entry.submit({ kind: "missed" }, null, `${row.habitName} · Hoy no salió`)
-              }
-            >
-              Hoy no salió
-            </Button>
-          )}
         </div>
       </div>
     </Sheet>
@@ -174,25 +165,49 @@ function ReachSheet({
   readonly measure: ReachQuantity;
   readonly onClose: () => void;
 }) {
-  const [value, setValue] = useState(() => initialValue(measure));
   const dates = useTodayDates();
   // Frozen when the sheet opens: after saving, Today refetches and the row already holds the new entry.
-  const [startTotal] = useState(() => loggedBefore(row, dates?.refDate));
+  const [before] = useState(() => loggedBefore(row, dates?.refDate));
+  const weekly = measure.schedule.period === "weeklyTotal";
+  // A weekly total always starts from its usual value; a day with entries adds on top of them.
+  const adding = !weekly && before > 0n;
+  const [value, setValue] = useState(() =>
+    adding ? (presetsFor(measure)[0] ?? initialValue(measure)) : initialValue(measure),
+  );
   const unit = unitLabel(measure) ?? "";
-  const weekly = row.kind === "week" && measure.schedule.period === "weeklyTotal";
   const toSend = toSubmitValue(value, measure.precision);
-  const minimumMet =
-    toSend !== null &&
-    startTotal + (toScaled(toSend) ?? 0n) >= (toScaled(measure.target.minimum) ?? 0n);
+  const draft = toScaled(toSend ?? "0") ?? 0n;
+  const thresholds = {
+    minimum: toScaled(measure.target.minimum) ?? 0n,
+    ideal: toScaled(measure.target.ideal) ?? 0n,
+    before,
+    draft,
+    unit,
+  };
+  const preview = weekly
+    ? weeklyPreview(thresholds)
+    : dailyPreview({ ...thresholds, perOpportunity: row.points.perOpportunity });
+  const minimumAt =
+    thresholds.ideal === 0n ? 0 : Number(thresholds.minimum) / Number(thresholds.ideal);
+  const subtitle = weekly
+    ? `Esta semana llevas ${quantityText(fromScaled(before), measure)}`
+    : adding
+      ? `Llevas ${quantityText(fromScaled(before), measure)} hoy`
+      : `Hoy · ${targetPhrase(measure)}`;
   return (
     <RecordShell
       row={row}
       seasonId={seasonId}
       measure={measure}
-      subtitle={reachSubtitle(row, measure, weekly, unit)}
+      subtitle={subtitle}
+      verb={adding ? "Añadir" : "Registrar"}
       toSend={toSend}
-      confirmMessage={minimumMet ? MINIMUM_MET : null}
-      missedAllowed
+      confirmMessage={preview.reached ? MINIMUM_MET : null}
+      legend={
+        weekly
+          ? "Durante la semana solo se muestra el progreso. Los puntos se asignan al cerrar la semana."
+          : undefined
+      }
       onClose={onClose}
       input={
         <QuantityStepper
@@ -200,11 +215,19 @@ function ReachSheet({
           unit={unit}
           presets={presetsFor(measure)}
           invalid={toSend === null}
+          {...(adding ? { prefix: "+" } : {})}
           onChange={setValue}
           onStep={(direction) => setValue((current) => nudge(current, direction, measure))}
         />
       }
-      card={<ProgressCard row={row} measure={measure} value={value} weekly={weekly} unit={unit} />}
+      card={
+        <DraftCard
+          name={`Cantidad de ${row.habitName}`}
+          preview={preview}
+          minimumAt={minimumAt}
+          {...(weekly ? { caption: "Progreso de la semana", twoLayers: true } : {})}
+        />
+      }
     />
   );
 }
@@ -233,16 +256,16 @@ function LimitSheet({
   const weekly = row.kind === "week" && measure.schedule.period === "weeklyTotal";
   const subtitle = weekly
     ? `Esta semana llevas ${quantityText(row.progress?.value ?? "0", measure)}`
-    : `Hoy · ${targetText(measure) ?? ""}`;
+    : "Registra lo de hoy, aunque sea 0.";
+  const scored = row.points.limitPercents !== null;
   return (
     <RecordShell
       row={row}
       seasonId={seasonId}
       measure={measure}
       subtitle={subtitle}
-      hint="Registra aunque sea 0."
       toSend={toSend}
-      missedAllowed={false}
+      legend={`${targetPhrase(measure)}.${grid && scored ? " Cada opción muestra lo que puntúa antes de elegirla." : ""}`}
       onClose={onClose}
       input={
         grid ? (
@@ -251,6 +274,7 @@ function LimitSheet({
             ideal={Number(measure.target.ideal)}
             tolerance={Number(measure.target.tolerance)}
             value={chosen}
+            percents={row.points.limitPercents}
             onSelect={setChosen}
           />
         ) : (
@@ -264,62 +288,6 @@ function LimitSheet({
           />
         )
       }
-    />
-  );
-}
-
-function reachSubtitle(
-  row: TodayRow,
-  measure: ReachQuantity,
-  weekly: boolean,
-  unit: string,
-): string {
-  if (weekly && row.kind === "week") {
-    return `Esta semana llevas ${formatDecimal(row.progress?.value ?? "0")} ${unit}`.trim();
-  }
-  return `Hoy · ${targetText(measure) ?? ""}`;
-}
-
-function ProgressCard({
-  row,
-  measure,
-  value,
-  weekly,
-  unit,
-}: {
-  readonly row: TodayRow;
-  readonly measure: ReachQuantity;
-  readonly value: string;
-  readonly weekly: boolean;
-  readonly unit: string;
-}) {
-  const ideal = Number(measure.target.ideal);
-  const marks = [
-    { at: Number(measure.target.minimum), label: `mín. ${formatDecimal(measure.target.minimum)}` },
-    { at: ideal, label: `ideal ${formatDecimal(measure.target.ideal)} ${unit}`.trim() },
-  ];
-  if (weekly && row.kind === "week") {
-    const current = row.progress?.value ?? "0";
-    return (
-      <ProgressBar
-        name={`Cantidad de ${row.habitName}`}
-        value={Number(current)}
-        max={ideal}
-        label={`${formatDecimal(current)} / ${formatDecimal(measure.target.ideal)} ${unit}`.trim()}
-        valueLabel={`${row.progress?.percent ?? 0} %`}
-        marks={marks}
-        hint="Durante la semana solo se muestra el progreso."
-      />
-    );
-  }
-  const typed = toSubmitValue(value, measure.precision);
-  return (
-    <ProgressBar
-      name={`Cantidad de ${row.habitName}`}
-      value={Number(typed ?? 0)}
-      max={ideal}
-      label={`${typed === null ? "0" : formatDecimal(typed)} / ${formatDecimal(measure.target.ideal)} ${unit}`.trim()}
-      marks={marks}
     />
   );
 }

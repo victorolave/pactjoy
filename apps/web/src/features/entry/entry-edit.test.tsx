@@ -80,6 +80,7 @@ describe("editing a logged entry (EN-R7)", () => {
       "/?entry=commitment-2&id=entry-404",
     );
     const dialog = await screen.findByRole("dialog", { name: "Leer" });
-    expect(within(dialog).getByRole("button", { name: "Registrar 20 min" })).toBeInTheDocument();
+    // The row has 25 min logged today, so the new sheet adds on top of them.
+    expect(within(dialog).getByRole("button", { name: "Añadir 10 min" })).toBeInTheDocument();
   });
 });

@@ -253,14 +253,6 @@ describe("failures (EN-R2, EN-R8)", () => {
     expect(deps.api.recordAttempts.map((cmd) => cmd.clientRequestId)).toEqual(["id-1", "id-2"]);
   });
 
-  it("records Hoy no salió from the sheet of a day row (EN-R2)", async () => {
-    const { deps } = open([running()], "commitment-3");
-    const dialog = await dialogFor("Correr");
-    await userEvent.click(within(dialog).getByRole("button", { name: "Hoy no salió" }));
-    await screen.findByText("Registro guardado.");
-    expect(deps.api.recorded[0]).toMatchObject({ value: { kind: "missed" }, note: null });
-  });
-
   it("does not offer Hoy no salió on a week row", async () => {
     open([weekRowFixture()], "commitment-2");
     const dialog = await dialogFor("Leer");

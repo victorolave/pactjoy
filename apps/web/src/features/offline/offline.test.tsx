@@ -97,7 +97,7 @@ describe("writes are disabled offline, and nothing is queued (EN-R9, EN-S17)", (
     expect(deps.api.deleteAttempts).toEqual([]);
   });
 
-  it("disables Hoy no salió in the sheet of a day row too (C-W2)", async () => {
+  it("disables saving in the sheet of a day row too (C-W2)", async () => {
     const { deps } = renderApp({
       online: false,
       path: "/?entry=commitment-3",
@@ -121,8 +121,8 @@ describe("writes are disabled offline, and nothing is queued (EN-R9, EN-S17)", (
       }),
     });
     const dialog = await screen.findByRole("dialog", { name: "Correr" });
-    expect(within(dialog).getByRole("button", { name: "Hoy no salió" })).toBeDisabled();
-    await userEvent.click(within(dialog).getByRole("button", { name: "Hoy no salió" }));
+    expect(within(dialog).getByRole("button", { name: "Registrar 4 km" })).toBeDisabled();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Registrar 4 km" }));
     expect(deps.api.calls.recordEntry).toBe(0);
   });
 

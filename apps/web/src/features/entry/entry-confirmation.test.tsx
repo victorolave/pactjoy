@@ -47,7 +47,7 @@ describe("the confirmation after a save (design 20)", () => {
     await screen.findByRole("dialog", { name: "Leer" });
     deps.api.setToday(activeTodayFixture({ rows: [withEarned(5)] }));
     await save("Registrar 20 min");
-    expect(await within(await sheet()).findByText("+1 pts")).toBeInTheDocument();
+    expect(await within(await sheet()).findByText("+1 pt")).toBeInTheDocument();
   });
 
   it("says the minimum was met when the typed value reaches it", async () => {
