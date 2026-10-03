@@ -38,3 +38,11 @@ export function longDate(isoDate: string, capitalized = true): string {
   const text = `${weekday} ${day} de ${monthName}`;
   return capitalized ? `${text.charAt(0).toUpperCase()}${text.slice(1)}` : text;
 }
+
+/** "2026-10-01" -> "jueves" (calendar date, so the machine's time zone cannot move the day). */
+export function weekdayName(isoDate: string): string | null {
+  const match = ISO_DATE.exec(isoDate);
+  if (match === null) return null;
+  const day = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+  return WEEKDAYS[day.getUTCDay()] ?? null;
+}

@@ -68,3 +68,9 @@ describe("createQueryClient mutation cache (AC-S3)", () => {
     expect(api.calls.recordEntry).toBe(1);
   });
 });
+
+describe("createQueryClient mutations (P1)", () => {
+  it("never pause offline: a write fails at once instead of queueing for later", () => {
+    expect(createQueryClient().getDefaultOptions().mutations?.networkMode).toBe("always");
+  });
+});
