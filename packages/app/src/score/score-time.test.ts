@@ -166,3 +166,42 @@ describe("the season's own time zone decides today", () => {
     expect(ranking).toMatchObject({ ok: true, value: { kind: "ranked" } });
   });
 });
+
+describe("Q16: timesPerWeek counts until the week's close plus grace (engine and entry window agree)", () => {
+  const ONCE_A_WEEK: Frequency = { kind: "timesPerWeek", times: 1 };
+
+  async function recordForDay1(recordedOnDay: number) {
+    const app = createTestApp({ now: localInstant(DAY(0)), timeZone: fixtureTimeZone });
+    const given = await givenActiveSeason(app, reach(ONCE_A_WEEK));
+    const result = await recordEntry(
+      atInstant(app, localInstant(DAY(recordedOnDay))),
+      given.andrea,
+      {
+        seasonId: given.season.id,
+        commitmentId: given.andreaCommitment,
+        forDate: DAY(1),
+        value: { kind: "quantity", value: "30" },
+        clientRequestId: "late-session",
+      },
+    );
+    const score = await memberScore(atInstant(app, localInstant(DAY(40))), given.andrea, {
+      seasonId: given.season.id,
+    });
+    return { result, score };
+  }
+
+  it("scores a session recorded on week end + 1 (the last day the window accepts)", async () => {
+    const { result, score } = await recordForDay1(7); // week 0 ends on day 6
+    expect(result.ok).toBe(true);
+    if (!score.ok || score.value.kind !== "scored") throw new Error("expected a score");
+    // 1 full session out of 4 weekly opportunities: 1000 / 4 = 250.
+    expect(score.value).toMatchObject({ points: 250 });
+  });
+
+  it("rejects week end + 2 in the window, so nothing is stored or scored", async () => {
+    const { result, score } = await recordForDay1(8);
+    expect(result).toEqual({ ok: false, error: { kind: "WindowClosed" } });
+    if (!score.ok || score.value.kind !== "scored") throw new Error("expected a score");
+    expect(score.value).toMatchObject({ points: 0 });
+  });
+});
