@@ -178,7 +178,7 @@ const pending = (row: DayRow): PendingItem => ({
   points: { ...row.points, earned: null },
 });
 
-/** Today is Friday: Dibujar (done) and Correr (km) were due yesterday, Thursday, and are still open. */
+/** Today is Friday: Dibujar (done), Correr (km) and Café (a limit) were due yesterday and are still open. */
 const pendingYesterday = (): TodayView => {
   const dibujar = meditar({
     commitmentId: id("c-dibujar"),
@@ -197,9 +197,10 @@ const pendingYesterday = (): TodayView => {
       schedule: { period: "perSession", frequency: { kind: "specificDays", weekdays: [3, 4] } },
     },
   });
+  const coffee = cafe();
   return activeTodayFixture({
-    rows: [dibujar, running, leer()],
-    pendingYesterday: [pending(dibujar), pending(running)],
+    rows: [dibujar, running, coffee, leer()],
+    pendingYesterday: [pending(dibujar), pending(running), pending(coffee)],
   });
 };
 
@@ -404,7 +405,8 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: "pendingYesterday",
     title: "Pendiente de ayer (15d)",
-    description: "Dibujar y Correr quedaron abiertos ayer; se pueden registrar hasta hoy.",
+    description:
+      "Dibujar (hecho), Correr (cantidad) y Café (tope) quedaron abiertos ayer; se registran hasta hoy.",
     mode: "data",
     today: pendingYesterday,
   },
