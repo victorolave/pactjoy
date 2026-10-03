@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { TodayView } from "@pactjoy/app";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -307,6 +309,21 @@ describe("loading and failure (TO-R9)", () => {
     expect(screen.getByRole("heading", { name: "Hola", level: 1 })).toBeInTheDocument();
     const today = longDate(new Date().toLocaleDateString("en-CA"));
     expect(screen.getByText(today)).toBeInTheDocument();
+  });
+
+  it("keeps the greeting above the error, which fills the space and is centred in it (15f)", async () => {
+    renderApp({
+      today: noCircleTodayFixture(),
+      todayFailures: [new ApiError("Internal", 500, "req-1")],
+    });
+    const alert = await screen.findByRole("alert");
+    expect(screen.getByRole("heading", { name: "Hola", level: 1 })).toBeInTheDocument();
+    expect(alert.className).toMatch(/failure/);
+    const css = readFileSync(join(import.meta.dirname, "TodayScreen.module.css"), "utf8");
+    const block = /\.failure\s*\{([^}]*)\}/.exec(css)?.[1] ?? "";
+    expect(block).toMatch(/flex:\s*1/);
+    expect(block).toMatch(/justify-content:\s*center/);
+    expect(block).toMatch(/align-items:\s*center/);
   });
 
   it("shows the error with Reintentar, and a click refetches and renders (TO-S11)", async () => {
