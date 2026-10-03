@@ -1,12 +1,14 @@
-import type { TodayView } from "@pactjoy/app";
+import type { OpportunityState, TodayView } from "@pactjoy/app";
 import { describe, expect, it } from "vitest";
 import {
   activeTodayFixture,
+  type DayRow,
   dayRowFixture,
   endedTodayFixture,
   noCircleTodayFixture,
   noSeasonTodayFixture,
   pactOpenTodayFixture,
+  weekRowFixture,
 } from "../../testing/fixtures/today.ts";
 import { toTodayModel } from "./today-view-model.ts";
 
@@ -96,9 +98,175 @@ describe("toTodayModel: active and ended", () => {
       weekLabel: "Semana 4 de 4",
     });
   });
+});
 
-  it("carries the rows through untouched for the sections that render them", () => {
-    const rows = [dayRowFixture()];
-    expect(toTodayModel(activeTodayFixture({ rows }))).toMatchObject({ rows });
+const running = (view: TodayView) => {
+  const model = toTodayModel(view);
+  if (model.kind !== "active" && model.kind !== "ended") throw new Error("not a running model");
+  return model;
+};
+
+const row = (state: OpportunityState, overrides: Partial<DayRow> = {}) =>
+  dayRowFixture({ opportunity: { state, graceUntil: null }, ...overrides });
+
+describe("toTodayModel: sections and counts (TO-R3)", () => {
+  it("splits day rows scheduled today from other days, and keeps week rows apart", () => {
+    const today = dayRowFixture({ habitName: "Hoy" });
+    const other = dayRowFixture({ habitName: "Otro día", scheduledToday: false });
+    const week = weekRowFixture();
+    const { sections } = running(activeTodayFixture({ rows: [today, other, week] }));
+    expect(sections.forToday.map((r) => r.habitName)).toEqual(["Hoy"]);
+    expect(sections.otherDays.map((r) => r.habitName)).toEqual(["Otro día"]);
+    expect(sections.week.map((r) => r.habitName)).toEqual(["Leer"]);
+  });
+
+  it("counts the logged of the day rows scheduled today (1 of 3)", () => {
+    const { counts, dayState } = running(
+      activeTodayFixture({ rows: [row("logged"), row("open"), row("open")] }),
+    );
+    expect(counts).toEqual({ logged: 1, scheduled: 3 });
+    expect(dayState).toBe("pending");
+  });
+
+  it("never counts a day not scheduled today as pending", () => {
+    const { counts } = running(
+      activeTodayFixture({
+        rows: [row("logged"), row("open", { scheduledToday: false })],
+      }),
+    );
+    expect(counts).toEqual({ logged: 1, scheduled: 1 });
+  });
+
+  it("does not count paused, on-hold or closed rows: nothing can be registered on them", () => {
+    const { counts } = running(
+      activeTodayFixture({
+        rows: [row("open"), row("paused"), row("onHold"), row("closed")],
+      }),
+    );
+    expect(counts).toEqual({ logged: 0, scheduled: 1 });
+  });
+
+  it("is allDone when every scheduled row is logged (15b)", () => {
+    expect(running(activeTodayFixture({ rows: [row("logged"), row("logged")] })).dayState).toBe(
+      "allDone",
+    );
+  });
+
+  it("has no day commitments when nothing is scheduled today (15c)", () => {
+    const model = running(
+      activeTodayFixture({ rows: [row("open", { scheduledToday: false }), weekRowFixture()] }),
+    );
+    expect(model.counts).toEqual({ logged: 0, scheduled: 0 });
+    expect(model.dayState).toBe("none");
+  });
+
+  it("has no day commitments with no rows at all", () => {
+    expect(running(activeTodayFixture({ rows: [] })).dayState).toBe("none");
+  });
+});
+
+describe("toTodayModel: season card (TO-R6)", () => {
+  it("shows points, consistency, ideal completion, week and days left", () => {
+    expect(running(activeTodayFixture()).season).toEqual({
+      points: "540",
+      consistency: "75 %",
+      idealCompletion: "54 %",
+      week: 1,
+      weekCount: 4,
+      weekLabel: "Semana 1 de 4",
+      daysLeftLabel: "Quedan 23 días",
+    });
+  });
+
+  it("shows a dash for a null ideal completion", () => {
+    const view = activeTodayFixture();
+    const score = view.summary.score;
+    if (score.kind !== "scored" || score.scope !== "own") throw new Error("fixture changed");
+    const next = activeTodayFixture({
+      summary: { ...view.summary, score: { ...score, consistency: null, idealCompletion: null } },
+    });
+    expect(running(next).season).toMatchObject({ consistency: "-", idealCompletion: "-" });
+  });
+
+  it("words days left: one, none, and ended", () => {
+    const view = activeTodayFixture();
+    const left = (daysLeft: number) =>
+      running(activeTodayFixture({ summary: { ...view.summary, daysLeft } })).season.daysLeftLabel;
+    expect(left(1)).toBe("Queda 1 día");
+    expect(left(0)).toBe("Último día");
+    expect(running(endedTodayFixture()).season.daysLeftLabel).toBe("La temporada terminó");
+  });
+});
+
+describe("toTodayModel: standings pair (TO-R7)", () => {
+  const rows = (...entries: Array<[string, number, number]>) => ({
+    kind: "ranked" as const,
+    eligibleParticipantCount: entries.length,
+    rows: entries.map(([displayName, rank, points]) => ({
+      memberId: (displayName === "Victor" ? "member-victor" : `member-${displayName}`) as never,
+      displayName,
+      rank,
+      points,
+    })),
+  });
+
+  it("pairs the viewer with the member just ahead and says the gap", () => {
+    const { standings } = running(activeTodayFixture());
+    expect(standings).toEqual({
+      kind: "pair",
+      rank: 2,
+      participantCount: 2,
+      viewerPoints: 540,
+      otherName: "Andrea",
+      otherPoints: 620,
+      difference: 80,
+    });
+  });
+
+  it("with three, the viewer second, pairs with rank 1 (TO-S14)", () => {
+    const { standings } = running(
+      activeTodayFixture({
+        standings: rows(["Andrea", 1, 620], ["Victor", 2, 540], ["Lu", 3, 300]),
+      }),
+    );
+    expect(standings).toMatchObject({
+      kind: "pair",
+      rank: 2,
+      participantCount: 3,
+      otherName: "Andrea",
+      difference: 80,
+    });
+  });
+
+  it("when the viewer leads, pairs with the member behind", () => {
+    const { standings } = running(
+      activeTodayFixture({ standings: rows(["Victor", 1, 700], ["Andrea", 2, 650]) }),
+    );
+    expect(standings).toMatchObject({
+      kind: "pair",
+      rank: 1,
+      otherName: "Andrea",
+      otherPoints: 650,
+      difference: 50,
+    });
+  });
+
+  it("shows a zero gap when points are tied", () => {
+    const { standings } = running(
+      activeTodayFixture({ standings: rows(["Andrea", 1, 500], ["Victor", 1, 500]) }),
+    );
+    expect(standings).toMatchObject({ kind: "pair", rank: 1, difference: 0 });
+  });
+
+  it("with a single participant shows only the viewer", () => {
+    const { standings } = running(activeTodayFixture({ standings: rows(["Victor", 1, 540]) }));
+    expect(standings).toEqual({ kind: "solo", points: 540 });
+  });
+
+  it("shows nothing when the viewer is not ranked", () => {
+    const { standings } = running(
+      activeTodayFixture({ standings: rows(["Andrea", 1, 620], ["Lu", 2, 300]) }),
+    );
+    expect(standings).toBeNull();
   });
 });
