@@ -34,6 +34,18 @@
   padding-top: var(--space-5);
 }
 
+.dayOff {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding-block: var(--space-1);
+}
+
+.dayOff > img {
+  align-self: stretch;
+}
+
 .emptyTitle {
   margin: 0;
   font: var(--font-h2);

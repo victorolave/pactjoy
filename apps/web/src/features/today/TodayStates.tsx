@@ -6,6 +6,7 @@ import { Icon } from "../../ui/icon/Icon.tsx";
 import { Illustration } from "../../ui/Placeholder.tsx";
 import { EntrySheetHost } from "../entry/EntrySheetHost.tsx";
 import { RowWithControls } from "../entry/RowWithControls.tsx";
+import { dayOffText } from "./day-off-copy.ts";
 import { SeasonCard } from "./SeasonCard.tsx";
 import { StandingsPair } from "./StandingsPair.tsx";
 import styles from "./TodayScreen.module.css";
@@ -142,13 +143,21 @@ function AllDone({ model }: { readonly model: RunningModel }) {
   );
 }
 
-function NoCommitments() {
+/** A day with nothing scheduled (design 15c): the cooking illustration at 130 and where the week stands. */
+function NoCommitments({ model }: { readonly model: RunningModel }) {
+  const text = dayOffText(model.sections.week, model.sections.otherDays, model.refDate);
   return (
     <Card tone="warm">
-      <div className={styles.empty}>
-        <Illustration name="cocinar" alt="Un día sin compromisos" />
+      <div className={styles.dayOff}>
+        <Illustration
+          name="cocinar"
+          size="md"
+          alt="Una persona prepara una ensalada en la cocina"
+        />
         <h2 className={styles.sectionTitle}>Hoy no tienes compromisos previstos.</h2>
-        <p className={styles.lead}>Lo que queda de la semana sigue disponible abajo.</p>
+        <p className={styles.lead}>
+          {text === "" ? "Lo que queda de la semana sigue disponible abajo." : text}
+        </p>
       </div>
     </Card>
   );
@@ -168,7 +177,7 @@ export function RunningToday({ model }: { readonly model: RunningModel }) {
       {showDayState && (model.dayState === "allDone" || model.dayState === "allLogged") && (
         <AllDone model={model} />
       )}
-      {showDayState && model.dayState === "none" && <NoCommitments />}
+      {showDayState && model.dayState === "none" && <NoCommitments model={model} />}
       {forToday.length > 0 && (
         <Section
           title={model.kind === "ended" ? "Último día" : "Para hoy"}

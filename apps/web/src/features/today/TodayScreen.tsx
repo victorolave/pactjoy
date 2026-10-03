@@ -1,5 +1,6 @@
 import { useOnline } from "../../app/connectivity-context.tsx";
 import { ApiError } from "../../ports/api-error.ts";
+import { longDate } from "../../shared/format.ts";
 import { toUiError } from "../../shared/ui-error.ts";
 import { Button } from "../../ui/Button.tsx";
 import { Icon } from "../../ui/icon/Icon.tsx";
@@ -26,11 +27,22 @@ function TodayContent({ model }: { readonly model: TodayModel }) {
   }
 }
 
+/**
+ * The greeting and the date paint at once (design 15e): they need no server. The name does, so the
+ * skeleton greets without one; the rows are placeholders.
+ */
 function TodayLoading() {
+  const date = longDate(new Date().toLocaleDateString("en-CA"));
   return (
-    <div className={styles.screen} role="status" aria-busy="true" aria-label="Cargando Hoy">
-      <Skeleton shape="line" lines={2} />
-      <Skeleton shape="card" lines={3} />
+    <div className={styles.screen}>
+      <header className={styles.header}>
+        <div className={styles.meta}>{date}</div>
+        <h1 className={styles.title}>Hola</h1>
+      </header>
+      <div className={styles.screen} role="status" aria-busy="true" aria-label="Cargando Hoy">
+        <Skeleton shape="line" />
+        <Skeleton shape="card" lines={3} />
+      </div>
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { ApiError } from "../../ports/api-error.ts";
+import { longDate } from "../../shared/format.ts";
 import {
   activeTodayFixture,
   type DayRow,
@@ -149,10 +150,14 @@ describe("Today active: rows (TO-R3, TO-R4, TO-R5)", () => {
       await screen.findByRole("heading", { name: "Hoy no tienes compromisos previstos." }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Para hoy" })).not.toBeInTheDocument();
-    expect(screen.getByRole("img", { name: "Un día sin compromisos" })).toHaveAttribute(
-      "src",
-      expect.stringContaining("cocinar"),
-    );
+    const picture = screen.getByRole("img", {
+      name: "Una persona prepara una ensalada en la cocina",
+    });
+    expect(picture).toHaveAttribute("src", expect.stringContaining("cocinar"));
+    // 130 high and full width in the design, not the sheet-sized box and not the natural size.
+    expect(picture).toHaveAttribute("data-size", "md");
+    // The copy says where the week stands (15c).
+    expect(screen.getByText("Leer va 2 de 3 esta semana.")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Esta semana" })).toBeInTheDocument();
     expect(screen.getByText("2 de 3 esta semana")).toBeInTheDocument();
   });
@@ -244,6 +249,13 @@ describe("loading and failure (TO-R9)", () => {
     renderToday(noCircleTodayFixture());
     const loading = screen.getByRole("status", { name: "Cargando Hoy" });
     expect(loading).toHaveAttribute("aria-busy", "true");
+  });
+
+  it("paints the greeting and the date at once, before the server answers (15e)", () => {
+    renderToday(noCircleTodayFixture());
+    expect(screen.getByRole("heading", { name: "Hola", level: 1 })).toBeInTheDocument();
+    const today = longDate(new Date().toLocaleDateString("en-CA"));
+    expect(screen.getByText(today)).toBeInTheDocument();
   });
 
   it("shows the error with Reintentar, and a click refetches and renders (TO-S11)", async () => {
