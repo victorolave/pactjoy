@@ -4,7 +4,7 @@
 
 **PactJoy**: a social habits app. Personal (hobby) project; if it works it could become a product, but that decision is not being made yet.
 
-Status: MVP specification and design are complete; stack chosen (2026-09-24). Phase 1 done (2026-09-27): `packages/engine` implements the full scoring engine and passes all 96 worked-example rows. Phase 2 in progress: `packages/app` use cases done (2026-09-30, change `app-foundation`, S0–S9). Postgres adapter done in code (ADR-0010); no API or UI yet; hosted Supabase setup pending.
+Status (2026-10-02): MVP specification and design are complete; stack chosen (2026-09-24). Phase 1 done: `packages/engine` implements the full scoring engine and passes all 96 worked-example rows. Phase 2 (backend) done in code: `packages/app` use cases (`app-foundation`), Postgres adapter (ADR-0010) and the API (`packages/api` + the `api` Edge Function, ADR-0011), plus follow-ups (pact integrity, per-circle display names, viewer read models). No UI yet. Runs against local Supabase; hosted setup is pending (see Next steps). Tests: engine 385, app 840, api 524, db 330 (real Postgres).
 
 The author works in Spanish: reply in Spanish. Code, commits and repository docs are in English.
 
@@ -65,6 +65,8 @@ One term per concept, used the same way in the rules, the code and conversations
 | Estados 🌱🌿🌳🎓                                  | `HabitStage`: `new` / `developing` / `integrated` / `graduated` | Habit maturity                                                                       |
 | Clasificación                                     | `standings`                                                     | Season ranking by points                                                             |
 | Sugerencia de ánimo                               | `encouragementNudge`                                            | Voluntary suggestion to support a member                                             |
+| Nombre visible                                   | `displayName`                                                   | A member's visible name within one circle (`Member.displayName`, per circle)         |
+| Revisión del pacto                                | `pactRevision`                                                  | Counter that changes only when the pact content changes; unlike `season.version`, approvals do not bump it |
 | Reacción                                          | `Reaction`                                                      | ❤️ 🙌 🔥 👏                                                                          |
 
 ## Repository (decided 2026-09-24)
@@ -81,7 +83,7 @@ One term per concept, used the same way in the rules, the code and conversations
 
 - **Client:** PWA with Vite + React + vite-plugin-pwa (SPA, no SSR). iPhone only in season 1. Native/Expo was ruled out because of the Apple Developer cost (99 USD/year); migrating later only replaces the client.
 - **Backend:** Supabase (Postgres, Auth, Storage, Edge Functions, pg_cron). Static hosting for the frontend.
-- **API:** Supabase Edge Functions (Deno runtime), structured as if it were Nest: one module per use case, thin controllers, ports injected by hand. NestJS is ruled out for now: it needs an always-on server (~5 USD/month) or one that sleeps and breaks scheduled jobs. To verify when reaching that layer: how Edge Functions import monorepo packages (import map or relative paths).
+- **API:** Supabase Edge Functions (Deno runtime), structured as if it were Nest: one module per use case, thin controllers, ports injected by hand. NestJS is ruled out for now: it needs an always-on server (~5 USD/month) or one that sleeps and breaks scheduled jobs. Edge Functions import the monorepo packages through a `deno.json` import map (ADR-0011). Still unverified: that `supabase functions deploy` bundles those out-of-tree imports (ops step S0.2).
 - **Language:** TypeScript everywhere. Monorepo with pnpm workspaces.
 
 ### Guiding principle: high decoupling
@@ -100,7 +102,8 @@ In practice:
 - `packages/engine`: pure domain (scoring, pause, proration, streaks). No dependencies. Exact fractions with BigInt, never `float`. Injected clock.
 - `packages/app`: use cases; they depend on ports (repositories, clock, notifier, file storage).
 - `packages/db`: Postgres adapter.
-- `supabase/functions`: thin HTTP adapter (a single `api` function with a router) that validates the JWT and calls use cases.
+- `packages/api`: HTTP layer as framework-free handlers, router and presenters over the use cases (ADR-0011).
+- `supabase/functions`: thin Deno shell (a single `api` function) that validates the JWT and delegates to `packages/api`.
 - `apps/web`: the PWA; talks to its own `api` interface and never writes to tables directly.
 
 Rules so that a future migration (e.g. to NestJS) only replaces adapters:
@@ -123,10 +126,13 @@ Full detail in the Mechanics page in Notion.
 ## Next steps
 
 1. ~~`packages/engine` + tests~~: done. Public API in `packages/engine/src/index.ts`; decisions in ADR-0004 to ADR-0006.
-2. ~~`packages/app` use cases~~: done (change `app-foundation`, S0–S9 merged 2026-09-30). The entry, circle and season ports document the contracts the Postgres adapter must meet. `packages/app` owns converting real time into `SeasonDay` (ADR-0004), the 48 h pause auto-approval and notifications. Next, in order:
-   - B: Postgres adapter and schema (`packages/db`): done in code; hosted Supabase setup pending (ADR-0010 operational checklist). Migrations in `supabase/migrations`, tests against real Postgres.
-   - C: the `api` function.
-   - A2: pause workflow; it must wire `pauseGraceExtensionDays`, currently hard-coded to 0.
+2. ~~`packages/app` use cases~~: done (change `app-foundation`, S0–S9 merged 2026-09-30). `packages/app` owns converting real time into `SeasonDay` (ADR-0004), the 48 h pause auto-approval and notifications.
+3. ~~B: Postgres adapter and schema (`packages/db`)~~: done in code, with migrations in `supabase/migrations` and tests against real Postgres. Hosted setup is pending (ADR-0010 operational checklist): the decision is to stay on local Supabase for now and spike Neon before moving to the cloud.
+4. ~~C: the API~~: done (change `api-edge-function-auth`, PRs #76–#108; ADR-0011 records decisions Q1–Q15), plus merged follow-ups: pact integrity, unique active circle, circle display names (`PATCH /circles/:circleId/members/me`) and viewer read models (`GET /me/today`, viewer-aware `GET /seasons/:seasonId` with `pactRevision`).
+5. Next: PWA following the design batches (Today and Entry first), Vite + React, run locally against the API.
+6. Later, in order:
+   - A2: pause workflow; it must wire `pauseGraceExtensionDays`, currently hard-coded to 0 in the entry use cases. D: scheduled jobs (they trigger use cases).
    - A3: social.
-   - D: scheduled jobs.
-3. PWA following the design batches (Today and Entry first).
+   - E: account deletion.
+
+Pending product question Q16: the `timesPerWeek` late-entry window differs between `packages/app` and the engine.
