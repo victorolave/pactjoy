@@ -30,6 +30,15 @@ describe("offline banner (TO-R10)", () => {
     expect(screen.queryByText(/se enviará|pendiente|al volver/i)).not.toBeInTheDocument();
   });
 
+  it("shows the sin-conexion illustration with the banner", async () => {
+    renderApp({ online: false, today: activeTodayFixture({ rows: openRows() }) });
+    await screen.findByText(OFFLINE);
+    expect(screen.getByRole("img", { name: "Sin conexión" })).toHaveAttribute(
+      "src",
+      expect.stringContaining("sin-conexion"),
+    );
+  });
+
   it("is not shown while online", async () => {
     renderApp({ today: activeTodayFixture({ rows: openRows() }) });
     await screen.findByRole("heading", { name: "Meditar" });

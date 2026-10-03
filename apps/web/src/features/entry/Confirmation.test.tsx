@@ -9,7 +9,10 @@ describe("Confirmation", () => {
     render(<Confirmation detail="Leer · 20 min" onClose={onClose} />);
     expect(screen.getByText("Registro guardado.")).toBeInTheDocument();
     expect(screen.getByText("Leer · 20 min")).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: "Registro guardado" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Registro guardado" })).toHaveAttribute(
+      "src",
+      expect.stringContaining("registro-guardado"),
+    );
     await userEvent.click(screen.getByRole("button", { name: "Seguir con mi día" }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });

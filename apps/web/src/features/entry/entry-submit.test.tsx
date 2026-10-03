@@ -7,6 +7,7 @@ import {
   activeTodayFixture,
   type DayRow,
   dayRowFixture,
+  endedTodayFixture,
   type WeekRow,
   weekRowFixture,
 } from "../../testing/fixtures/today.ts";
@@ -68,6 +69,7 @@ describe("submitting a quantity (EN-R3)", () => {
       {
         seasonId: "season-1",
         commitmentId: "commitment-2",
+        forDate: "2026-10-02",
         value: { kind: "quantity", value: "10" },
         note: "x",
         clientRequestId: "id-1",
@@ -147,6 +149,31 @@ describe("submitting a quantity (EN-R3)", () => {
     release();
     await screen.findByText("Registro guardado.");
     expect(deps.api.recorded).toHaveLength(1);
+  });
+});
+
+describe("the day a sheet entry lands on (C-W4)", () => {
+  it("sends the day on display, and the last season day after the season ended", async () => {
+    const { deps } = open([weekRowFixture()], "commitment-2");
+    const dialog = await dialogFor("Leer");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Registrar 20 min" }));
+    await screen.findByText("Registro guardado.");
+    expect(deps.api.recorded[0]?.forDate).toBe("2026-10-02");
+  });
+
+  it("uses the season's last day in the grace period", async () => {
+    const { deps } = renderApp({
+      path: "/?entry=commitment-2",
+      today: endedTodayFixture({
+        rows: [
+          weekRowFixture({ opportunity: { state: "open", graceUntil: "2026-10-26" as never } }),
+        ],
+      }),
+    });
+    const dialog = await dialogFor("Leer");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Registrar 20 min" }));
+    await screen.findByText("Registro guardado.");
+    expect(deps.api.recorded[0]?.forDate).toBe("2026-10-25");
   });
 });
 

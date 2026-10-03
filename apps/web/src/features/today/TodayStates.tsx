@@ -146,7 +146,7 @@ function NoCommitments() {
   return (
     <Card tone="warm">
       <div className={styles.empty}>
-        <Illustration alt="Un día sin compromisos" />
+        <Illustration name="cocinar" alt="Un día sin compromisos" />
         <h2 className={styles.sectionTitle}>Hoy no tienes compromisos previstos.</h2>
         <p className={styles.lead}>Lo que queda de la semana sigue disponible abajo.</p>
       </div>
@@ -158,7 +158,7 @@ export function RunningToday({ model }: { readonly model: RunningModel }) {
   const { forToday, otherDays, week } = model.sections;
   const showDayState = model.kind === "active";
   return (
-    <TodayDateContext.Provider value={model.today}>
+    <TodayDateContext.Provider value={{ today: model.today, refDate: model.refDate }}>
       <RunningHeader model={model} />
       {model.kind === "ended" && (
         <InlineMessage tone="info" title="Temporada terminada">

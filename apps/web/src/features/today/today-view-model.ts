@@ -1,4 +1,5 @@
 import type { TodayView } from "@pactjoy/app";
+import { addDays } from "../../shared/date.ts";
 import { longDate } from "../../shared/format.ts";
 
 type Seasoned = Extract<TodayView, { state: "pactOpen" | "notStarted" | "active" | "ended" }>;
@@ -42,6 +43,8 @@ export type TodayModel =
        */
       readonly dayState: "pending" | "allDone" | "allLogged" | "none";
       readonly today: string;
+      /** The day the rows describe: today, or the last season day once ended. */
+      readonly refDate: string;
       readonly season: SeasonCardModel;
       readonly standings: StandingsPairModel | null;
     };
@@ -123,6 +126,15 @@ function standingsPair(view: Running): StandingsPairModel | null {
   };
 }
 
+const DAYS_PER_WEEK = 7;
+
+/** The rows describe today, or the season's last day once it is over (its grace period). */
+function refDateOf(view: Running): string {
+  const start = view.season.actualStart;
+  if (view.state !== "ended" || start === null) return view.today;
+  return addDays(start, view.season.lengthWeeks * DAYS_PER_WEEK - 1);
+}
+
 function dayStateOf(
   registrable: readonly DayRow[],
   logged: number,
@@ -154,6 +166,7 @@ function running(view: Running): TodayModel {
     },
     counts: { logged, scheduled: registrable.length },
     today: view.today,
+    refDate: refDateOf(view),
     dayState: dayStateOf(registrable, logged),
     season: seasonCard(view),
     standings: standingsPair(view),

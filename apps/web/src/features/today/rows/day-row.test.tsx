@@ -105,7 +105,7 @@ describe("day row (TO-R3)", () => {
 
   it("says the weekday for an entry that belongs to yesterday (B-W1)", () => {
     render(
-      <TodayDateContext.Provider value="2026-10-02">
+      <TodayDateContext.Provider value={{ today: "2026-10-02", refDate: "2026-10-02" }}>
         <DayRow
           row={dayRowFixture({
             opportunity: {
