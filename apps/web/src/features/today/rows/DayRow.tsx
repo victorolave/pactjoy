@@ -7,9 +7,11 @@ import { RowFrame } from "./RowFrame.tsx";
 export function DayRow({
   row,
   action,
+  below,
 }: {
   readonly row: DayTodayRow;
   readonly action?: ReactNode;
+  readonly below?: ReactNode;
 }) {
   const { state } = row.opportunity;
   const logged = state === "logged" && row.entries.length > 0;
@@ -27,6 +29,7 @@ export function DayRow({
       details={logged ? [] : [detail]}
       badges={row.privacy === "private" ? <Tag>Privado</Tag> : undefined}
       action={action}
+      below={below}
     />
   );
 }

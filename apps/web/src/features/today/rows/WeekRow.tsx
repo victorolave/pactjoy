@@ -53,9 +53,11 @@ function barOf(row: WeekTodayRow, progress: Progress): ReactNode {
 export function WeekRow({
   row,
   action,
+  below,
 }: {
   readonly row: WeekTodayRow;
   readonly action?: ReactNode;
+  readonly below?: ReactNode;
 }) {
   const { progress } = row;
   const closed = row.opportunity.state === "closed";
@@ -69,7 +71,12 @@ export function WeekRow({
       ]}
       badges={row.privacy === "private" ? <Tag>Privado</Tag> : undefined}
       action={action}
-      below={progress === null ? undefined : barOf(row, progress)}
+      below={
+        <>
+          {progress === null ? undefined : barOf(row, progress)}
+          {below}
+        </>
+      }
     />
   );
 }

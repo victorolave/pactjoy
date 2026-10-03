@@ -10,7 +10,12 @@ const MAX_QUERY_RETRIES = 2;
  * safe to retry only by the user, with the same clientRequestId). Every settled mutation
  * invalidates Today: the server recomputes, the client never guesses points (AC-R4).
  */
-export function createQueryClient(): QueryClient {
+export function createQueryClient({
+  retryQueries = true,
+}: {
+  /** Tests turn this off so a scripted failure surfaces at once instead of after backoff. */
+  readonly retryQueries?: boolean;
+} = {}): QueryClient {
   const client: QueryClient = new QueryClient({
     mutationCache: new MutationCache({
       onSettled: () => {
@@ -21,8 +26,9 @@ export function createQueryClient(): QueryClient {
       queries: {
         staleTime: STALE_TIME_MS,
         refetchOnWindowFocus: true,
-        retry: (failureCount, error) =>
-          failureCount < MAX_QUERY_RETRIES && toUiError(error).retryable,
+        retry: retryQueries
+          ? (failureCount, error) => failureCount < MAX_QUERY_RETRIES && toUiError(error).retryable
+          : false,
       },
       mutations: { retry: 0 },
     },

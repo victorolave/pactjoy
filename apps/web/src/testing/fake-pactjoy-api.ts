@@ -20,6 +20,10 @@ export class FakePactJoyApi implements PactJoyApi {
     editEntry: 0,
     deleteEntry: 0,
   };
+  /** Every recordEntry call, including the ones that were scripted to fail. */
+  readonly recordAttempts: RecordEntryCommand[] = [];
+  /** Every deleteEntry call, including the ones that were scripted to fail. */
+  readonly deleteAttempts: string[] = [];
   readonly recorded: RecordEntryCommand[] = [];
   readonly edited: EditEntryCommand[] = [];
   readonly deleted: string[] = [];
@@ -27,6 +31,7 @@ export class FakePactJoyApi implements PactJoyApi {
   #today: TodayView;
   readonly #failures = new Map<Method, ApiError[]>();
   readonly #idByRequest = new Map<string, string>();
+  readonly #gates = new Map<Method, Promise<void>>();
 
   constructor(today: TodayView) {
     this.#today = today;
@@ -41,13 +46,28 @@ export class FakePactJoyApi implements PactJoyApi {
     this.#failures.set(method, [...(this.#failures.get(method) ?? []), error]);
   }
 
+  /** The next call to `method` waits until the returned function is called (to test pending UI). */
+  hold(method: Method): () => void {
+    let release = () => {};
+    this.#gates.set(
+      method,
+      new Promise<void>((resolve) => {
+        release = resolve;
+      }),
+    );
+    return release;
+  }
+
   async getToday(_signal?: AbortSignal): Promise<TodayView> {
     this.#enter("getToday");
     return this.#today;
   }
 
   async recordEntry(cmd: RecordEntryCommand): Promise<RecordedEntry> {
+    const gate = this.#takeGate("recordEntry");
+    this.recordAttempts.push(cmd);
     this.#enter("recordEntry");
+    await gate;
     this.recorded.push(cmd);
     const existing = this.#idByRequest.get(cmd.clientRequestId);
     if (existing !== undefined) return { entryId: existing, replayed: true };
@@ -62,8 +82,15 @@ export class FakePactJoyApi implements PactJoyApi {
   }
 
   async deleteEntry(entryId: string): Promise<void> {
+    this.deleteAttempts.push(entryId);
     this.#enter("deleteEntry");
     this.deleted.push(entryId);
+  }
+
+  #takeGate(method: Method): Promise<void> | undefined {
+    const gate = this.#gates.get(method);
+    this.#gates.delete(method);
+    return gate;
   }
 
   #enter(method: Method): void {

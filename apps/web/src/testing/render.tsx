@@ -1,9 +1,9 @@
 import type { TodayView } from "@pactjoy/app";
-import { QueryClient } from "@tanstack/react-query";
 import { type RenderResult, render } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import type { AppDependencies } from "../app/dependencies.ts";
 import { AppProviders } from "../app/providers.tsx";
+import { createQueryClient } from "../app/query-client.ts";
 import { AppRoutes } from "../app/routes.tsx";
 import { createSessionEvents } from "../features/auth/session-events.ts";
 import { SessionManager } from "../features/auth/session-manager.ts";
@@ -51,7 +51,7 @@ export function renderApp({
     store,
     sessions: new SessionManager(auth, store, new FixedClock(0)),
     sessionEvents: createSessionEvents(),
-    queryClient: new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+    queryClient: createQueryClient({ retryQueries: false }),
   };
   const result = render(
     <AppProviders deps={deps}>
