@@ -60,20 +60,35 @@ export function ProgressBar({
           <span className="pj-progress__value">{text}</span>
         </div>
       )}
-      <div
-        className={`pj-progress__track ${styles.track}`}
-        data-track={track}
-        role="progressbar"
-        aria-valuemin={0}
-        aria-valuemax={max}
-        aria-label={name}
-        aria-valuenow={Math.max(0, Math.min(value, max))}
-        aria-valuetext={text}
-      >
+      <div className={styles.trackWrap}>
         <div
-          className="pj-progress__fill"
-          style={{ width: `${fraction(value, max) * 100}%`, background: fill }}
-        />
+          className={`pj-progress__track ${styles.track}`}
+          data-track={track}
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={max}
+          aria-label={name}
+          aria-valuenow={Math.max(0, Math.min(value, max))}
+          aria-valuetext={text}
+        >
+          <div
+            className="pj-progress__fill"
+            style={{ width: `${fraction(value, max) * 100}%`, background: fill }}
+          />
+        </div>
+        {marks.map((mark, index) => {
+          const at = fraction(mark.at, max);
+          // The end of the bar needs no tick; the others show where a threshold sits (design 15a).
+          return at > 0 && at < 1 ? (
+            <span
+              // biome-ignore lint/suspicious/noArrayIndexKey: static list
+              key={index}
+              className={styles.tick}
+              style={{ left: `${at * 100}%` }}
+              aria-hidden="true"
+            />
+          ) : null;
+        })}
       </div>
       {marks.length > 0 && (
         <div className={styles.marks}>

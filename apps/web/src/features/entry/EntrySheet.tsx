@@ -1,5 +1,5 @@
-import type { MeasureView, TodayRow } from "@pactjoy/app";
-import { type ReactNode, useState } from "react";
+import type { MeasureView, PendingYesterdayItem, TodayRow } from "@pactjoy/app";
+import { type ReactNode, useRef, useState } from "react";
 import { useOnline } from "../../app/connectivity-context.tsx";
 import { fromScaled, toScaled } from "../../shared/decimal.ts";
 import { pointsText } from "../../shared/format.ts";
@@ -7,9 +7,16 @@ import { Button } from "../../ui/Button.tsx";
 import { InlineMessage } from "../../ui/InlineMessage.tsx";
 import { Sheet } from "../../ui/Sheet.tsx";
 import { loggedBefore } from "../today/logged-totals.ts";
-import { quantityText, targetPhrase, unitLabel } from "../today/row-labels.ts";
+import {
+  isWeekBound,
+  quantityText,
+  targetPhrase,
+  unitLabel,
+  WEEK_POINTS_NOTE,
+} from "../today/row-labels.ts";
 import { useTodayDates } from "../today/today-date-context.tsx";
-import { Confirmation, useAutoClose } from "./Confirmation.tsx";
+import { Confirmation } from "./Confirmation.tsx";
+import { type DayChoice, useDayChoice } from "./DayPicker.tsx";
 import { DraftCard } from "./DraftCard.tsx";
 import { dailyPreview, weeklyPreview } from "./draft-preview.ts";
 import styles from "./entry.module.css";
@@ -36,17 +43,41 @@ const MINIMUM_MET = "Mínimo cumplido. Un paso más en tu meta.";
 export interface EntrySheetProps {
   readonly row: TodayRow;
   readonly seasonId: string;
+  /** What yesterday left open for this commitment, when it did: enables the Hoy / Ayer choice. */
+  readonly pending?: PendingYesterdayItem | undefined;
+  /** Opened from the De ayer card: start on Ayer. */
+  readonly startOnYesterday?: boolean;
   readonly onClose: () => void;
 }
 
 /** The record sheet: a stepper for a reach quantity, a grid for a limit. Done rows never open one. */
-export function EntrySheet({ row, seasonId, onClose }: EntrySheetProps) {
+export function EntrySheet({
+  row,
+  seasonId,
+  pending,
+  startOnYesterday = false,
+  onClose,
+}: EntrySheetProps) {
   const reach = quantityMeasureOf(row.measure);
-  if (reach !== null)
-    return <ReachSheet row={row} seasonId={seasonId} measure={reach} onClose={onClose} />;
   const limit = limitMeasureOf(row.measure);
-  if (limit !== null)
-    return <LimitSheet row={row} seasonId={seasonId} measure={limit} onClose={onClose} />;
+  const choice = useDayChoice(row, pending, startOnYesterday);
+  if (reach !== null) {
+    return (
+      <ReachSheet row={row} seasonId={seasonId} measure={reach} choice={choice} onClose={onClose} />
+    );
+  }
+  if (limit !== null) {
+    return (
+      <LimitSheet
+        row={row}
+        seasonId={seasonId}
+        measure={limit}
+        choice={choice}
+        pending={pending}
+        onClose={onClose}
+      />
+    );
+  }
   return null;
 }
 
@@ -65,6 +96,8 @@ interface ShellProps {
   readonly legend?: string | undefined;
   /** The line under the points on the confirmation, when there is one to say. */
   readonly confirmMessage?: string | null;
+  /** Hoy / Ayer and where the registro lands, when yesterday is open (design 21). */
+  readonly choice: DayChoice;
   readonly onClose: () => void;
 }
 
@@ -80,16 +113,23 @@ function RecordShell({
   card,
   legend,
   confirmMessage = null,
+  choice,
   onClose,
 }: ShellProps) {
   const [note, setNote] = useState("");
-  const entry = useQuantityEntry(row.commitmentId, seasonId);
+  const entry = useQuantityEntry(row.commitmentId, seasonId, choice.forDate);
   const online = useOnline();
   const showSaved = useSavedToast();
-  const gain = useEarnedGain(row.points.earned);
+  const todayGain = useEarnedGain(row.points.earned);
+  // The server answers with today's points only: a registro of yesterday shows none here.
+  const gain = choice.yesterday ? null : todayGain;
 
   // Closing after a save leaves the toast with Deshacer behind (design 20): the sheet is gone by then.
+  const closed = useRef(false);
   const finish = () => {
+    // Escape and the button in the same tick, or a timer and a tap, close once and toast once.
+    if (closed.current) return;
+    closed.current = true;
     if (entry.saved !== null && entry.entryId !== null) {
       showSaved(
         gain === null
@@ -100,7 +140,6 @@ function RecordShell({
     }
     onClose();
   };
-  useAutoClose(entry.saved, finish);
 
   if (entry.saved !== null) {
     return (
@@ -121,6 +160,7 @@ function RecordShell({
     <Sheet open title={row.habitName} onClose={onClose}>
       <div className={styles.sheet}>
         <p className={styles.subtitle}>{subtitle}</p>
+        {choice.picker}
         {input}
         {card}
         {legend !== undefined && <p className={styles.subtitle}>{legend}</p>}
@@ -142,11 +182,11 @@ function RecordShell({
               entry.submit(
                 { kind: "quantity", value: toSend },
                 note.trim() === "" ? null : note,
-                `${row.habitName} · ${amount}`,
+                `${row.habitName} · ${amount}${choice.yesterday ? " · ayer" : ""}`,
               )
             }
           >
-            {amount === null ? verb : `${verb} ${amount}`}
+            {amount === null ? verb : `${verb} ${amount}${choice.yesterday ? " de ayer" : ""}`}
           </Button>
         </div>
       </div>
@@ -158,17 +198,22 @@ function ReachSheet({
   row,
   seasonId,
   measure,
+  choice,
   onClose,
 }: {
   readonly row: TodayRow;
   readonly seasonId: string;
   readonly measure: ReachQuantity;
+  readonly choice: DayChoice;
   readonly onClose: () => void;
 }) {
   const dates = useTodayDates();
   // Frozen when the sheet opens: after saving, Today refetches and the row already holds the new entry.
-  const [before] = useState(() => loggedBefore(row, dates?.refDate));
+  const [todayBefore] = useState(() => loggedBefore(row, dates?.refDate));
+  // Yesterday had nothing logged (that is why it is pending): it never adds on top of today's.
+  const before = choice.yesterday ? 0n : todayBefore;
   const weekly = measure.schedule.period === "weeklyTotal";
+  const weekBound = isWeekBound(measure);
   // A weekly total always starts from its usual value; a day with entries adds on top of them.
   const adding = !weekly && before > 0n;
   const [value, setValue] = useState(() =>
@@ -177,36 +222,57 @@ function ReachSheet({
   const unit = unitLabel(measure) ?? "";
   const toSend = toSubmitValue(value, measure.precision);
   const draft = toScaled(toSend ?? "0") ?? 0n;
+  // A week row is judged against the week's own (pause-prorated) thresholds, not the commitment's.
+  const effective =
+    row.kind === "week" && row.progress?.target.direction === "reach"
+      ? row.progress.target
+      : measure.target;
   const thresholds = {
-    minimum: toScaled(measure.target.minimum) ?? 0n,
-    ideal: toScaled(measure.target.ideal) ?? 0n,
+    minimum: toScaled(effective.minimum) ?? 0n,
+    ideal: toScaled(effective.ideal) ?? 0n,
     before,
     draft,
     unit,
   };
   const preview = weekly
     ? weeklyPreview(thresholds)
-    : dailyPreview({ ...thresholds, perOpportunity: row.points.perOpportunity });
+    : // A timesPerWeek session counts at week close: the preview shows no points for it.
+      dailyPreview({
+        ...thresholds,
+        perOpportunityExact: weekBound ? null : row.points.perOpportunityExact,
+      });
   const minimumAt =
     thresholds.ideal === 0n ? 0 : Number(thresholds.minimum) / Number(thresholds.ideal);
+  const phrase = targetPhrase(measure);
   const subtitle = weekly
     ? `Esta semana llevas ${quantityText(fromScaled(before), measure)}`
-    : adding
-      ? `Llevas ${quantityText(fromScaled(before), measure)} hoy`
-      : `Hoy · ${targetPhrase(measure)}`;
+    : choice.yesterday
+      ? `${phrase.charAt(0).toUpperCase()}${phrase.slice(1)}`
+      : adding
+        ? `Llevas ${quantityText(fromScaled(before), measure)} hoy`
+        : `Hoy · ${phrase}`;
   return (
     <RecordShell
       row={row}
       seasonId={seasonId}
       measure={measure}
       subtitle={subtitle}
+      choice={choice}
       verb={adding ? "Añadir" : "Registrar"}
       toSend={toSend}
-      confirmMessage={preview.reached ? MINIMUM_MET : null}
+      confirmMessage={
+        weekBound
+          ? `${preview.reached ? `${MINIMUM_MET} ` : ""}${WEEK_POINTS_NOTE}`
+          : preview.reached
+            ? MINIMUM_MET
+            : null
+      }
       legend={
         weekly
-          ? "Durante la semana solo se muestra el progreso. Los puntos se asignan al cerrar la semana."
-          : undefined
+          ? `Durante la semana solo se muestra el progreso. ${WEEK_POINTS_NOTE}`
+          : weekBound
+            ? WEEK_POINTS_NOTE
+            : undefined
       }
       onClose={onClose}
       input={
@@ -236,11 +302,15 @@ function LimitSheet({
   row,
   seasonId,
   measure,
+  choice,
+  pending,
   onClose,
 }: {
   readonly row: TodayRow;
   readonly seasonId: string;
   readonly measure: LimitQuantity;
+  readonly choice: DayChoice;
+  readonly pending: PendingYesterdayItem | undefined;
   readonly onClose: () => void;
 }) {
   const grid = limitUsesGrid(measure);
@@ -256,14 +326,19 @@ function LimitSheet({
   const weekly = row.kind === "week" && measure.schedule.period === "weeklyTotal";
   const subtitle = weekly
     ? `Esta semana llevas ${quantityText(row.progress?.value ?? "0", measure)}`
-    : "Registra lo de hoy, aunque sea 0.";
-  const scored = row.points.limitPercents !== null;
+    : `Registra lo de ${choice.yesterday ? "ayer" : "hoy"}, aunque sea 0.`;
+  const percents =
+    choice.yesterday && pending !== undefined
+      ? pending.points.limitPercents
+      : row.points.limitPercents;
+  const scored = percents !== null;
   return (
     <RecordShell
       row={row}
       seasonId={seasonId}
       measure={measure}
       subtitle={subtitle}
+      choice={choice}
       toSend={toSend}
       legend={`${targetPhrase(measure)}.${grid && scored ? " Cada opción muestra lo que puntúa antes de elegirla." : ""}`}
       onClose={onClose}
@@ -274,7 +349,7 @@ function LimitSheet({
             ideal={Number(measure.target.ideal)}
             tolerance={Number(measure.target.tolerance)}
             value={chosen}
-            percents={row.points.limitPercents}
+            percents={percents}
             onSelect={setChosen}
           />
         ) : (

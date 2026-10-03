@@ -10,16 +10,18 @@ export interface TodayRowCardProps {
   readonly action?: ReactNode;
   /** Content under the row (an inline error). Only shown for rows that can still be written. */
   readonly below?: ReactNode;
+  /** The tap's own fill, before the server's row shows the entry: a day row looks registered. */
+  readonly optimisticDone?: boolean;
 }
 
-export function TodayRowCard({ row, action, below }: TodayRowCardProps) {
+export function TodayRowCard({ row, action, below, optimisticDone = false }: TodayRowCardProps) {
   const { state } = row.opportunity;
   if (state === "paused" || state === "onHold") return <PausedRow row={row} />;
   const writable =
     (state === "open" || state === "logged") && !(row.kind === "day" && !row.scheduledToday);
   const controls = writable ? { action, below } : {};
   return row.kind === "day" ? (
-    <DayRow row={row} {...controls} />
+    <DayRow row={row} optimisticDone={optimisticDone} {...controls} />
   ) : (
     <WeekRow row={row} {...controls} />
   );

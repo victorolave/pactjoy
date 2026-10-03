@@ -37,6 +37,11 @@ describe("offline banner (TO-R10)", () => {
       "src",
       expect.stringContaining("sin-conexion"),
     );
+    // 150 high and full width in the design (15g), not the natural size.
+    expect(screen.getByRole("img", { name: "Sin conexión" })).toHaveAttribute(
+      "data-size",
+      "banner",
+    );
   });
 
   it("is not shown while online", async () => {

@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "./Button.tsx";
+import { IconButton } from "./IconButton.tsx";
+import styles from "./Toast.module.css";
 
 /** How long a plain toast stays up (the design's prototype uses 4 s). */
 const DEFAULT_DURATION_MS = 4000;
@@ -32,6 +34,12 @@ export function Toast({
   // does not restart the countdown.
   const dismiss = useRef(onDismiss);
   dismiss.current = onDismiss;
+  // Where focus was when the toast appeared: closing it by hand hands focus back there.
+  const opener = useRef(document.activeElement);
+  const close = () => {
+    dismiss.current?.();
+    if (opener.current instanceof HTMLElement && opener.current.isConnected) opener.current.focus();
+  };
   // Hovering or focusing the toast pauses the countdown; leaving it counts a full time again.
   const [held, setHeld] = useState(false);
 
@@ -58,6 +66,9 @@ export function Toast({
           {actionLabel}
         </Button>
       )}
+      <span className={styles.close}>
+        <IconButton icon="x" label="Cerrar aviso" onClick={close} />
+      </span>
     </div>
   );
 }
