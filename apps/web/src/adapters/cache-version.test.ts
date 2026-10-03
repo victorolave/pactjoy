@@ -4,6 +4,7 @@ import {
   dayRowFixture,
   entryFixture,
   noSeasonTodayFixture,
+  pendingItemFixture,
   weekRowFixture,
 } from "../testing/fixtures/today.ts";
 import { CACHE_VERSION } from "./query-persister.ts";
@@ -32,6 +33,7 @@ function hash(text: string): string {
 
 const complete = [
   activeTodayFixture({
+    pendingYesterday: [pendingItemFixture()],
     rows: [
       dayRowFixture({ entries: [entryFixture({ kind: "quantity", value: "3" })] }),
       weekRowFixture({ entries: [entryFixture({ kind: "done" })] }),
@@ -48,7 +50,7 @@ const paths = [...new Set(complete.flatMap((view) => shape(view)))].sort();
  * drops it. This pins the shape and the version together, so changing one without the other fails.
  * If you changed the Today fixtures' shape on purpose: bump CACHE_VERSION, then update both here.
  */
-const PINNED = { hash: "e3b56467", version: "2" };
+const PINNED = { hash: "e3d8c9cd", version: "4" };
 
 describe("saved Today cache version", () => {
   it("changes whenever the shape of Today changes", () => {

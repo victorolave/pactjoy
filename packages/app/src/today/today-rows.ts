@@ -4,18 +4,22 @@ import {
   displayPoints,
   displayPointsDecimal,
   fromInt,
-  opportunityPoints,
+  gt,
+  opportunityPointsAt,
   opportunityValue,
   progressAtValue,
   sumPoints,
-  weekBoundGraceDeadline,
   weekOf,
   weekProgress,
 } from "@pactjoy/engine";
 import type { CommitmentRecord } from "../commitment/commitment.ts";
 import { commitmentToEngine } from "../commitment/to-engine.ts";
 import type { EntryRecord } from "../entry/entry.ts";
-import { checkEntryWindow, entryWindowDeadline } from "../entry/entry-window.ts";
+import {
+  checkEntryWindow,
+  entryWindowDeadline,
+  PAUSE_GRACE_EXTENSION_DAYS,
+} from "../entry/entry-window.ts";
 import type { Habit } from "../habit/habit.ts";
 import type { MemberPauseRequest } from "../pause/pause-request.repository.ts";
 import {
@@ -77,6 +81,11 @@ export interface TodayPoints {
    */
   readonly perOpportunity: string | null;
   /**
+   * The same value, exact: `numerator / denominator` as BigInt strings. A client previewing a draft
+   * multiplies THIS and rounds once; multiplying the rounded `perOpportunity` would round twice.
+   */
+  readonly perOpportunityExact: { readonly numerator: string; readonly denominator: string } | null;
+  /**
    * Whole points the opportunity's entries earned; `null` when nothing is logged, the opportunity
    * is paused or on hold, or it is not COUNTED yet: a week-bound opportunity (`timesPerWeek`,
    * `weeklyTotal`) counts from week close plus grace, as in the season score. A logged miss is `0`.
@@ -119,13 +128,7 @@ export interface TodayRowsInput {
   readonly refDay: SeasonDay;
 }
 
-/**
- * Pause grace extension (B7) is hard-coded to 0 until `app-pause-workflow`
- * (A2), exactly as `recordEntry` does, so Today and recording agree.
- */
-const PAUSE_GRACE_EXTENSION_DAYS = 0;
-
-function dateOfDay(actualStart: LocalDate, day: number): LocalDate {
+export function dateOfDay(actualStart: LocalDate, day: number): LocalDate {
   return localDateOfEpochDay(epochDay(actualStart) + day);
 }
 
@@ -155,8 +158,21 @@ function weekProgressView(week: Extract<WeekProgress, { status: "scored" }>): To
 /** The highest whole number a limit row publishes a percent for (the grid never goes past it). */
 const MAX_LIMIT_OPTION = 12;
 
+/** One opportunity's value as the two views the clients get: a 2-decimal display and the exact fraction. */
+export function perOpportunityViews(
+  engineCommitment: ReturnType<typeof commitmentToEngine>,
+  opportunities: number,
+): Pick<TodayPoints, "perOpportunity" | "perOpportunityExact"> {
+  if (opportunities === 0) return { perOpportunity: null, perOpportunityExact: null };
+  const value = opportunityValue(engineCommitment, opportunities);
+  return {
+    perOpportunity: displayPointsDecimal(value),
+    perOpportunityExact: { numerator: value.num.toString(), denominator: value.den.toString() },
+  };
+}
+
 /** Every active opportunity of the commitment across the season, pause-aware: D12's denominator. */
-function activeOpportunities(weeks: number, weekAt: (week: number) => WeekProgress): number {
+export function activeOpportunities(weeks: number, weekAt: (week: number) => WeekProgress): number {
   let total = 0;
   for (let week = 0; week < weeks; week++) {
     const progress = weekAt(week);
@@ -165,7 +181,7 @@ function activeOpportunities(weeks: number, weekAt: (week: number) => WeekProgre
   return total;
 }
 
-function limitPercentsOf(
+export function limitPercentsOf(
   record: CommitmentRecord,
   engineCommitment: ReturnType<typeof commitmentToEngine>,
 ): readonly number[] | null {
@@ -178,6 +194,10 @@ function limitPercentsOf(
   ) {
     return null;
   }
+  // The table covers whole numbers 0..MAX_LIMIT_OPTION plus the open end one past the tolerance. A wider
+  // tolerance has no complete table: it publishes none (the client then types the number instead of
+  // picking it from a grid), never a table that stops short.
+  if (gt(measure.target.tolerance, fromInt(MAX_LIMIT_OPTION - 1))) return null;
   return Array.from({ length: MAX_LIMIT_OPTION + 1 }, (_, option) =>
     displayPercent(progressAtValue(engineCommitment, fromInt(option))),
   );
@@ -203,9 +223,9 @@ function stateOf(
  * open what recording would reject. Pure over data already loaded in the
  * caller's single read.
  *
- * `pointsToday` is what the viewer's entries for the described day earned,
- * summed exactly and rounded once (day and `timesPerWeek` rows; a `weeklyTotal`
- * only pays when its week closes).
+ * `pointsToday` is the points of the slots today's entries filled: each day row's `earned`
+ * (the slot's own value, or the one a make-up entry covered; 0 when no slot was free), summed
+ * exactly and rounded once. Week-bound opportunities are not in it until their week is counted.
  */
 export interface TodayRowsResult {
   readonly rows: readonly TodayRow[];
@@ -265,25 +285,27 @@ export function todayRows(input: TodayRowsInput): TodayRowsResult {
       }),
     );
     // Only COUNTED opportunities show points, by the engine's own rule (R1): a day-bound one once it
-    // has an entry, a week-bound one (timesPerWeek or weeklyTotal) from week close plus grace. So
-    // the row can never show what the season score does not yet include.
+    // has an entry. A week-bound one (timesPerWeek, weeklyTotal) counts from its week's close plus
+    // grace, which is always AFTER the day a row describes (the row's day is inside its own week), so
+    // it can never pay on the row: its points show up in the season card when the week is counted.
     const weekBound =
       schedule.period === "weeklyTotal" || schedule.frequency.kind === "timesPerWeek";
-    const paysNow =
-      !held &&
-      (!weekBound ||
-        refDay >=
-          weekBoundGraceDeadline(
-            engineCommitment,
-            input.pauses.filter((pause) => pause.commitmentId === commitment.id),
-            week,
-          ));
+    const paysNow = !held && !weekBound;
     const ofRefDay = engineEntries.filter(
       (entry) => entry.commitmentId === commitment.id && entry.day === refDay,
     );
+    // What the ENGINE assigned: the slot the day's entries filled (their own, or a make-up covering a
+    // free one), at that slot's progress. An extra-day entry with no free slot filled none: it earns 0,
+    // exactly as the season score has it. `pointsToday` is therefore "points earned by today's slots".
+    const filled =
+      progress.status === "scored"
+        ? progress.slots.find((slot) => slot.filledFrom === refDay && slot.value !== null)
+        : undefined;
     const earnedExact =
       paysNow && ofRefDay.length > 0
-        ? opportunityPoints(engineCommitment, opportunities, ofRefDay)
+        ? filled === undefined
+          ? fromInt(0)
+          : opportunityPointsAt(engineCommitment, opportunities, filled.progress)
         : null;
     if (earnedExact !== null) earnedToday.push(earnedExact);
     const base: TodayRowBase = {
@@ -292,10 +314,7 @@ export function todayRows(input: TodayRowsInput): TodayRowsResult {
       privacy: commitment.privacy,
       measure: projectMeasure(commitment.measure),
       points: {
-        perOpportunity:
-          opportunities === 0
-            ? null
-            : displayPointsDecimal(opportunityValue(engineCommitment, opportunities)),
+        ...perOpportunityViews(engineCommitment, opportunities),
         earned: earnedExact === null ? null : displayPoints(earnedExact),
         limitPercents: limitPercentsOf(commitment, engineCommitment),
       },
