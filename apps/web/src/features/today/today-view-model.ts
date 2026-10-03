@@ -4,8 +4,10 @@ import { longDate } from "../../shared/format.ts";
 type Seasoned = Extract<TodayView, { state: "pactOpen" | "notStarted" | "active" | "ended" }>;
 type Running = Extract<TodayView, { state: "active" | "ended" }>;
 type Row = Running["rows"][number];
-type DayRow = Extract<Row, { kind: "day" }>;
-type WeekRow = Extract<Row, { kind: "week" }>;
+export type DayTodayRow = Extract<Row, { kind: "day" }>;
+export type WeekTodayRow = Extract<Row, { kind: "week" }>;
+type DayRow = DayTodayRow;
+type WeekRow = WeekTodayRow;
 
 /** What the Today screen renders, derived once from the server's view. Pure. */
 export type TodayModel =
