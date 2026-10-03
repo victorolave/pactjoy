@@ -107,6 +107,26 @@ describe("SessionManager.getAccessToken", () => {
   });
 });
 
+describe("a refresh rejected because another tab already rotated the token (AU-R4)", () => {
+  it("keeps the session and uses the newer one the other tab stored", async () => {
+    setup(10);
+    const release = auth.holdRefresh();
+    auth.failNextWith("InvalidSession");
+    const pending = manager.getAccessToken();
+    store.emitExternal(fakeSession({ accessToken: "access-other", refreshToken: "refresh-other" }));
+    release();
+    await expect(pending).resolves.toBe("access-other");
+    expect(store.load()?.refreshToken).toBe("refresh-other");
+  });
+
+  it("still clears when the stored token is the one that was rejected", async () => {
+    setup(10);
+    auth.failNextWith("InvalidSession");
+    await expect(manager.forceRefresh()).resolves.toEqual({ status: "rejected" });
+    expect(store.load()).toBeNull();
+  });
+});
+
 describe("SessionManager.forceRefresh and signOut", () => {
   beforeEach(() => setup(3600));
 
