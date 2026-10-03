@@ -1,0 +1,18 @@
+.marks {
+  position: relative;
+  height: var(--space-4);
+  font: var(--font-meta);
+  color: var(--text-secondary);
+}
+
+.mark {
+  position: absolute;
+  top: 0;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+
+/* The last mark sits at the end of the bar: keep it inside the card instead of centring on it. */
+.mark[data-edge="end"] {
+  transform: translateX(-100%);
+}
