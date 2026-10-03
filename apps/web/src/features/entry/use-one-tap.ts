@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { useIds } from "../../app/ids-context.tsx";
 import { useToasts } from "../../app/toast-context.tsx";
 import type { RecordEntryCommand } from "../../ports/pactjoy-api.ts";
+import { useTodayDates } from "../today/today-date-context.tsx";
 import { entryFailure } from "./entry-messages.ts";
 import { useDeleteEntry, useRecordEntry } from "./queries.ts";
 
@@ -25,6 +26,7 @@ export function useOneTap(commitmentId: string, seasonId: string): OneTap {
   const remove = useDeleteEntry();
   const toasts = useToasts();
   const ids = useIds();
+  const dates = useTodayDates();
   const [message, setMessage] = useState<string | null>(null);
   // Set synchronously on the first tap: React state would still say "idle" for a fast second tap.
   const saving = useRef(false);
@@ -79,6 +81,7 @@ export function useOneTap(commitmentId: string, seasonId: string): OneTap {
       {
         seasonId,
         commitmentId,
+        ...(dates === undefined ? {} : { forDate: dates.refDate }),
         value: { kind },
         note: null,
         clientRequestId: ids.newId(),
