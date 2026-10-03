@@ -4,7 +4,7 @@ import { ProgressBar } from "./ProgressBar.tsx";
 
 describe("ProgressBar", () => {
   it("exposes value, range and a readable text to assistive tech", () => {
-    render(<ProgressBar value={2} max={3} label="Correr" valueLabel="2 de 3" />);
+    render(<ProgressBar name="Progreso" value={2} max={3} label="Correr" valueLabel="2 de 3" />);
     const bar = screen.getByRole("progressbar");
     expect(bar).toHaveAttribute("aria-valuenow", "2");
     expect(bar).toHaveAttribute("aria-valuemax", "3");
@@ -14,22 +14,52 @@ describe("ProgressBar", () => {
   });
 
   it("clamps the fill between empty and full", () => {
-    const { rerender } = render(<ProgressBar value={5} max={2} />);
+    const { rerender } = render(<ProgressBar name="Progreso" value={5} max={2} />);
     expect(screen.getByRole("progressbar").firstElementChild).toHaveStyle({ width: "100%" });
-    rerender(<ProgressBar value={-1} max={2} />);
+    rerender(<ProgressBar name="Progreso" value={-1} max={2} />);
     expect(screen.getByRole("progressbar").firstElementChild).toHaveStyle({ width: "0%" });
-    rerender(<ProgressBar value={1} max={4} />);
+    rerender(<ProgressBar name="Progreso" value={1} max={4} />);
     expect(screen.getByRole("progressbar").firstElementChild).toHaveStyle({ width: "25%" });
   });
 
+  it("is named, so assistive tech knows what the bar measures", () => {
+    render(<ProgressBar name="Lectura de la semana" value={1} max={2} />);
+    expect(screen.getByRole("progressbar", { name: "Lectura de la semana" })).toBeInTheDocument();
+  });
+
+  it("reports a value clamped to its range, not past it", () => {
+    const { rerender } = render(<ProgressBar name="Progreso" value={5} max={2} />);
+    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "2");
+    rerender(<ProgressBar name="Progreso" value={-1} max={2} />);
+    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "0");
+    rerender(<ProgressBar name="Progreso" value={1} max={2} />);
+    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "1");
+  });
+
+  it("shows two marks that share a label", () => {
+    render(
+      <ProgressBar
+        name="Progreso"
+        value={1}
+        max={4}
+        marks={[
+          { at: 1, label: "igual" },
+          { at: 2, label: "igual" },
+        ]}
+      />,
+    );
+    expect(screen.getAllByText("igual")).toHaveLength(2);
+  });
+
   it("shows an empty bar when max is zero instead of dividing by it", () => {
-    render(<ProgressBar value={1} max={0} />);
+    render(<ProgressBar name="Progreso" value={1} max={0} />);
     expect(screen.getByRole("progressbar").firstElementChild).toHaveStyle({ width: "0%" });
   });
 
   it("labels the minimum and ideal marks and places them along the bar", () => {
     render(
       <ProgressBar
+        name="Progreso"
         value={10}
         max={30}
         marks={[
@@ -45,7 +75,7 @@ describe("ProgressBar", () => {
   });
 
   it("renders no marks when none are given", () => {
-    render(<ProgressBar value={1} max={2} hint="Va bien" />);
+    render(<ProgressBar name="Progreso" value={1} max={2} hint="Va bien" />);
     expect(screen.getByText("Va bien")).toBeInTheDocument();
     expect(screen.queryByText(/mín\./)).not.toBeInTheDocument();
   });
