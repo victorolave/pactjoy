@@ -4,7 +4,7 @@
 
 **PactJoy**: a social habits app. Personal (hobby) project; if it works it could become a product, but that decision is not being made yet.
 
-Status (2026-10-02): MVP specification and design are complete; stack chosen (2026-09-24). Phase 1 done: `packages/engine` implements the full scoring engine and passes all 96 worked-example rows. Phase 2 (backend) done in code: `packages/app` use cases (`app-foundation`), Postgres adapter (ADR-0010) and the API (`packages/api` + the `api` Edge Function, ADR-0011), plus follow-ups (pact integrity, per-circle display names, viewer read models). No UI yet. Runs against local Supabase; hosted setup is pending (see Next steps). Tests: engine 385, app 840, api 524, db 330 (real Postgres).
+Status (2026-10-03): MVP specification and design are complete; stack chosen (2026-09-24). Phase 1 done: `packages/engine` implements the full scoring engine and passes all 96 worked-example rows. Phase 2 (backend) done in code: `packages/app` use cases (`app-foundation`), Postgres adapter (ADR-0010) and the API (`packages/api` + the `api` Edge Function, ADR-0011), plus follow-ups (pact integrity, per-circle display names, viewer read models). Phase 3 started: `apps/web` PWA with Today and Entry (design batches 0–1, change `pwa-today-entry`, ADR-0012). Runs against local Supabase; hosted setup is pending (see Next steps). Tests: engine 387, app 842, api 524, db 330 (real Postgres), web 694.
 
 The author works in Spanish: reply in Spanish. Code, commits and repository docs are in English.
 
@@ -104,7 +104,7 @@ In practice:
 - `packages/db`: Postgres adapter.
 - `packages/api`: HTTP layer as framework-free handlers, router and presenters over the use cases (ADR-0011).
 - `supabase/functions`: thin Deno shell (a single `api` function) that validates the JWT and delegates to `packages/api`.
-- `apps/web`: the PWA; talks to its own `api` interface and never writes to tables directly.
+- `apps/web`: the PWA (Vite + React, ADR-0012); talks to its own `api` interface and never writes to tables directly. Screens depend on ports (`PactJoyApi`, `AuthPort`); fetch, GoTrue, storage and TanStack Query live in `src/adapters`. The vendored design-system CSS (`src/design/vendor/`) and brand assets (`src/design/brand/`) are not covered by the AGPL (`TRADEMARKS.md`).
 
 Rules so that a future migration (e.g. to NestJS) only replaces adapters:
 
@@ -129,10 +129,10 @@ Full detail in the Mechanics page in Notion.
 2. ~~`packages/app` use cases~~: done (change `app-foundation`, S0–S9 merged 2026-09-30). `packages/app` owns converting real time into `SeasonDay` (ADR-0004), the 48 h pause auto-approval and notifications.
 3. ~~B: Postgres adapter and schema (`packages/db`)~~: done in code, with migrations in `supabase/migrations` and tests against real Postgres. Hosted setup is pending (ADR-0010 operational checklist): the decision is to stay on local Supabase for now and spike Neon before moving to the cloud.
 4. ~~C: the API~~: done (change `api-edge-function-auth`, PRs #76–#108; ADR-0011 records decisions Q1–Q15), plus merged follow-ups: pact integrity, unique active circle, circle display names (`PATCH /circles/:circleId/members/me`) and viewer read models (`GET /me/today`, viewer-aware `GET /seasons/:seasonId` with `pactRevision`).
-5. Next: PWA following the design batches (Today and Entry first), Vite + React, run locally against the API.
+5. ~~PWA, Today and Entry (design batches 0–1)~~: done (change `pwa-today-entry`, PRs #141–#200; ADR-0012). Next: run it end to end on local Supabase with the dev seed, then the remaining design batches (2–5).
 6. Later, in order:
    - A2: pause workflow; it must wire `pauseGraceExtensionDays`, currently hard-coded to 0 in the entry use cases. D: scheduled jobs (they trigger use cases).
    - A3: social.
    - E: account deletion.
 
-Product question Q16 decided (2026-10-02): `timesPerWeek` sessions count until the week closes plus grace (weekly window, per Mechanics); the engine fix is merged (#140).
+Product question Q16 decided (2026-10-02): `timesPerWeek` sessions count until the week closes plus grace (weekly window, per Mechanics); the engine fix is merged (#140) and the web client sends `forDate` for the day the user saw.
