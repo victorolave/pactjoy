@@ -12,6 +12,8 @@ const WANTED = [
   "allLoggedWithMiss",
   "endedInGrace",
   "weekRowsOnly",
+  "pendingYesterday",
+  "pendingYesterdayNothingToday",
   "loading",
   "error",
   "offline",

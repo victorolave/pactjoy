@@ -7,6 +7,7 @@ import {
   entryFixture,
   noCircleTodayFixture,
   noSeasonTodayFixture,
+  type PendingItem,
   pactOpenTodayFixture,
   type WeekRow,
   weekRowFixture,
@@ -167,6 +168,61 @@ const mixed = (): TodayView =>
     ],
   });
 
+const pending = (row: DayRow): PendingItem => ({
+  commitmentId: row.commitmentId as PendingItem["commitmentId"],
+  habitName: row.habitName,
+  privacy: row.privacy,
+  measure: row.measure,
+  forDate: date("2026-10-01"),
+  graceUntil: date("2026-10-02"),
+  points: { ...row.points, earned: null },
+});
+
+/** Today is Friday: Dibujar (done) and Correr (km) were due yesterday, Thursday, and are still open. */
+const pendingYesterday = (): TodayView => {
+  const dibujar = meditar({
+    commitmentId: id("c-dibujar"),
+    habitName: "Dibujar",
+    measure: {
+      unit: "done",
+      schedule: { period: "perSession", frequency: { kind: "specificDays", weekdays: [1, 3, 4] } },
+    },
+  });
+  const running = correr({
+    measure: {
+      unit: "km",
+      customLabel: null,
+      precision: "decimal",
+      target: { direction: "reach", minimum: "3", ideal: "5" },
+      schedule: { period: "perSession", frequency: { kind: "specificDays", weekdays: [3, 4] } },
+    },
+  });
+  return activeTodayFixture({
+    rows: [dibujar, running, leer()],
+    pendingYesterday: [pending(dibujar), pending(running)],
+  });
+};
+
+/** Today is Sunday: nothing is scheduled, but Saturday's Estirar is still open. */
+const pendingYesterdayNothingToday = (): TodayView => {
+  const estirar = meditar({
+    commitmentId: id("c-estirar"),
+    habitName: "Estirar",
+    scheduledToday: false,
+    measure: {
+      unit: "done",
+      schedule: { period: "perSession", frequency: { kind: "specificDays", weekdays: [5] } },
+    },
+  });
+  return activeTodayFixture({
+    today: date("2026-10-04"),
+    rows: [estirar, ingles()],
+    pendingYesterday: [
+      { ...pending(estirar), forDate: date("2026-10-03"), graceUntil: date("2026-10-04") },
+    ],
+  });
+};
+
 export const SCENARIOS: readonly Scenario[] = [
   {
     id: "noCircle",
@@ -297,6 +353,20 @@ export const SCENARIOS: readonly Scenario[] = [
     description: "N veces por semana y totales semanales, sin días concretos.",
     mode: "data",
     today: () => activeTodayFixture({ rows: [leer(), ingles(), caminar()] }),
+  },
+  {
+    id: "pendingYesterday",
+    title: "Pendiente de ayer (15d)",
+    description: "Dibujar y Correr quedaron abiertos ayer; se pueden registrar hasta hoy.",
+    mode: "data",
+    today: pendingYesterday,
+  },
+  {
+    id: "pendingYesterdayNothingToday",
+    title: "Pendiente de ayer, nada hoy",
+    description: "Un domingo sin compromisos, con Estirar del sábado todavía abierto.",
+    mode: "data",
+    today: pendingYesterdayNothingToday,
   },
   {
     id: "loading",

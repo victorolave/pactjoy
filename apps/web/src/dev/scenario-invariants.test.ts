@@ -67,6 +67,32 @@ describe("scenarios only describe what the server can produce", () => {
     expect(Math.abs(data.summary.pointsToday - dayBound)).toBeLessThanOrEqual(1);
   });
 
+  it.each(views)(
+    "%s: pending yesterday items are day-bound, for yesterday, open until today",
+    (_id, view) => {
+      const data = running(view);
+      if (data === null) return;
+      if (data.state === "ended") expect(data.pendingYesterday).toEqual([]);
+      const yesterday = new Date(`${data.today}T00:00:00Z`);
+      yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+      const iso = yesterday.toISOString().slice(0, 10);
+      for (const item of data.pendingYesterday) {
+        const { schedule } = item.measure;
+        expect(schedule.period).toBe("perSession");
+        if (schedule.period !== "perSession") continue;
+        expect(schedule.frequency.kind).toBe("specificDays");
+        if (schedule.frequency.kind === "specificDays") {
+          expect(schedule.frequency.weekdays).toContain(weekdayOf(iso) as never);
+        }
+        expect(item.forDate).toBe(iso);
+        expect(item.graceUntil).toBe(data.today);
+        expect(item.points.earned).toBeNull();
+        // Nothing is pending for an opportunity that already has an entry today's rows show for it.
+        expect(item.privacy === "visible" || item.privacy === "private").toBe(true);
+      }
+    },
+  );
+
   it.each(views)("%s: limitPercents only on a per-session integer limit", (_id, view) => {
     for (const row of running(view)?.rows ?? []) {
       if (row.points.limitPercents === null) continue;
