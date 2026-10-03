@@ -20,6 +20,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@fontsource/nunito-sans':
+        specifier: ^5.3.0
+        version: 5.3.0
       '@tanstack/react-query':
         specifier: ^5.104.0
         version: 5.104.0(react@19.3.0)
@@ -269,6 +272,9 @@ packages:
     peerDependenciesMeta:
       '@noble/hashes':
         optional: true
+
+  '@fontsource/nunito-sans@5.3.0':
+    resolution: {integrity: sha512-CctNhebQ2YYJUwVMCAkHexQg7yedfz9s8JzaETALyc9QIQuDFRlNTWXux9H5PsNLgptPkrzRDomAdLJt1sDFpQ==}
 
   '@grpc/grpc-js@1.14.5':
     resolution: {integrity: sha512-7VZM+SVdEcUUqSQeNI3zM8Qs/BhQKZndPo2h5VkYkAM8Iz0wJIa8mKV5ekQGqG8UUsnkQ0NMxIxwkIHYvj0qOw==}
@@ -1741,6 +1747,8 @@ snapshots:
   '@csstools/css-tokenizer@4.0.2': {}
 
   '@exodus/bytes@1.16.0': {}
+
+  '@fontsource/nunito-sans@5.3.0': {}
 
   '@grpc/grpc-js@1.14.5':
     dependencies:

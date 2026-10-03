@@ -1,6 +1,9 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.5.14/schema.json",
   "extends": "//",
+  "files": {
+    "includes": ["**", "!src/design/vendor"]
+  },
   "css": {
     "parser": {
       "cssModules": true

@@ -1,0 +1,24 @@
+/* VENDORED FILE, DO NOT EDIT: re-vendor it from the source instead.
+ * Source: Claude Design project 239122e1-7217-4b6b-ac98-3383f1876fc6, _ds/pactjoy-design-system-32903670-ae91-4b25-8e1e-6054197166b5/tokens/motion.css
+ * Vendored: 2026-10-03, verbatim except HTML-entity decoding of the read_file output.
+ * The name, logo and visual identity are not under the AGPL-3.0: see TRADEMARKS.md.
+ * The sha256 of the body below this header is recorded in MANIFEST.json. */
+
+/* Motion tokens — Brand Book §20. Confirm first, adorn after. */
+:root{
+--motion-fast:120ms; /* @kind other */
+--motion-base:200ms; /* @kind other */
+--motion-panel:280ms; /* @kind other */
+--motion-progress:420ms; /* @kind other */
+--motion-celebrate:700ms; /* @kind other */
+--motion-reduced:100ms; /* @kind other */
+--ease-standard:cubic-bezier(0.2,0,0,1); /* @kind other */
+--ease-exit:cubic-bezier(0.4,0,1,1); /* @kind other */
+}
+@media (prefers-reduced-motion:reduce){:root{
+--motion-fast:0ms; /* @kind other */
+--motion-base:100ms; /* @kind other */
+--motion-panel:100ms; /* @kind other */
+--motion-progress:0ms; /* @kind other */
+--motion-celebrate:0ms; /* @kind other */
+}}

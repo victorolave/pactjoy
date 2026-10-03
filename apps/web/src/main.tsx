@@ -3,6 +3,8 @@ import { createRoot } from "react-dom/client";
 import { App } from "./App.tsx";
 import { ConfigErrorScreen } from "./ConfigErrorScreen.tsx";
 import { ConfigError, loadConfigFromEnv } from "./config.ts";
+import "./design/fonts.ts";
+import "./design/index.css";
 
 const container = document.getElementById("root");
 if (container === null) throw new Error("Missing #root element");

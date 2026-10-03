@@ -8,7 +8,7 @@ The following are **not** licensed under the AGPL and remain the property of Vic
 - the PactJoy logo and symbol;
 - the PactJoy visual identity and design system (colors, typography, illustrations and UI design assets).
 
-This includes the brand files in [`.github/assets/`](.github/assets/) (logo and symbol), even though they live in this repository.
+This includes the brand files in [`.github/assets/`](.github/assets/) (logo and symbol) and the vendored design-system CSS in [`apps/web/src/design/vendor/`](apps/web/src/design/vendor/), even though they live in this repository.
 
 ## What you can do
 

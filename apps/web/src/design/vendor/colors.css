@@ -1,0 +1,39 @@
+/* VENDORED FILE, DO NOT EDIT: re-vendor it from the source instead.
+ * Source: Claude Design project 239122e1-7217-4b6b-ac98-3383f1876fc6, _ds/pactjoy-design-system-32903670-ae91-4b25-8e1e-6054197166b5/tokens/colors.css
+ * Vendored: 2026-10-03, verbatim except HTML-entity decoding of the read_file output.
+ * The name, logo and visual identity are not under the AGPL-3.0: see TRADEMARKS.md.
+ * The sha256 of the body below this header is recorded in MANIFEST.json. */
+
+/* PactJoy color — values proposed in Brand Book v1.0 (sRGB). */
+:root{
+/* Brand core */
+--pj-orange:#FFAD33;--pj-coral:#FF6252;--pj-pink:#F44778;--pj-purple:#9954B8;--pj-ink:#252329;--pj-cream:#FFF9F2;--pj-white:#FFFFFF;
+/* Orange scale */
+--orange-50:#FFFBF5;--orange-100:#FFF4E4;--orange-200:#FFE8C6;--orange-300:#FFD89D;--orange-400:#FFC36A;--orange-500:#FFAD33;--orange-600:#D89431;--orange-700:#B17B2F;--orange-800:#85602D;--orange-900:#5C462C;
+/* Coral scale */
+--coral-50:#FFF7F6;--coral-100:#FFEBE9;--coral-200:#FFD3CF;--coral-300:#FFB4AC;--coral-400:#FF8C81;--coral-500:#FF6252;--coral-600:#D8574B;--coral-700:#B14B43;--coral-800:#853F3B;--coral-900:#5C3333;
+/* Pink scale */
+--pink-50:#FEF6F8;--pink-100:#FEE7ED;--pink-200:#FCCBD9;--pink-300:#FAA7BE;--pink-400:#F7799C;--pink-500:#F44778;--pink-600:#CF416A;--pink-700:#A93A5C;--pink-800:#80334C;--pink-900:#592C3D;
+/* Purple scale */
+--purple-50:#FAF6FB;--purple-100:#F2E9F6;--purple-200:#E2CFEB;--purple-300:#CEADDD;--purple-400:#B582CB;--purple-500:#9954B8;--purple-600:#844B9E;--purple-700:#6F4285;--purple-800:#583968;--purple-900:#422F4D;
+/* Ink neutrals (900 = Ink) */
+--ink-50:#F8F6F8;--ink-100:#EDE9EE;--ink-200:#D7D1D9;--ink-300:#BCB3BE;--ink-400:#A095A3;--ink-500:#837686;--ink-600:#685C6C;--ink-700:#514755;--ink-800:#3B343F;--ink-900:#252329;
+/* Cream / earth (50 = Cream). Dark tones are earth, never a substitute for Ink text. */
+--cream-50:#FFF9F2;--cream-100:#FFF1E1;--cream-200:#FFE3C5;--cream-300:#F3CCA5;--cream-400:#D6AD84;--cream-500:#B68C66;--cream-600:#936D4B;--cream-700:#745337;--cream-800:#553C28;--cream-900:#382719;
+/* Functional (solid, never gradient) */
+--pj-action:#FF6252;--pj-action-hover:#FF7A6B;--pj-action-press:#FF8C81;/* Coral fill + Ink text. Coral fails as text on Cream (2.8:1) → text uses action-text */
+--pj-action-text:#B14B43;--pj-action-focus:#D8574B;
+--pj-success:#24704C;--pj-error:#B3261E;--pj-muted:#69616A;--pj-border:#928894;--pj-hairline:#E5DDD7;--pj-cream-alt:#F5EDE6;
+/* Gradient — identity & accents only. Never behind informative text, CTA, body, error or unlabeled progress. */
+--gradient-together:linear-gradient(110deg,#FFAD33 0%,#FF6252 42%,#F44778 78%,#9954B8 100%); /* @kind color */
+--gradient-together-soft:linear-gradient(110deg,rgba(255,173,51,.12) 0%,rgba(255,98,82,.12) 42%,rgba(244,71,120,.12) 78%,rgba(153,84,184,.12) 100%); /* @kind color */
+
+/* Semantic aliases */
+--surface-page:var(--pj-cream);--surface-card:var(--pj-white);--surface-sunken:var(--pj-cream-alt);--surface-inverse:var(--pj-ink);--surface-warm:var(--cream-100);
+--surface-success:#E8F2EC;--surface-error:#FBEAE8;--surface-highlight:var(--orange-100);
+--text-primary:var(--pj-ink);--text-secondary:var(--pj-muted);--text-inverse:var(--pj-cream);--text-on-action:var(--pj-ink);
+--text-link:var(--pj-action-text);--text-link-inverse:var(--pj-coral);/* on Ink: Coral 5.27:1; Coral-700 fails (2.93:1) */--text-success:var(--pj-success);--text-error:var(--pj-error);
+--border-control:var(--pj-border);--border-subtle:var(--pj-hairline);--border-strong:var(--pj-ink);
+--focus-ring:var(--pj-action-focus);
+--icon-default:var(--pj-ink);--icon-muted:var(--pj-muted);
+}

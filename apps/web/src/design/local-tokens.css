@@ -1,0 +1,8 @@
+/* App-only tokens: layout values the design system does not define. Raw values live only here. */
+:root {
+  --shell-height: 100dvh;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+}

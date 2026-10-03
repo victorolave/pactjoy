@@ -1,0 +1,7 @@
+/* Vendored design system first (order matters), then app-only tokens. */
+@import "./vendor/colors.css";
+@import "./vendor/typography.css";
+@import "./vendor/spacing.css";
+@import "./vendor/motion.css";
+@import "./vendor/base.css";
+@import "./local-tokens.css";

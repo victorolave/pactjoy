@@ -1,0 +1,14 @@
+{
+  "source": {
+    "projectId": "239122e1-7217-4b6b-ac98-3383f1876fc6",
+    "folder": "_ds/pactjoy-design-system-32903670-ae91-4b25-8e1e-6054197166b5"
+  },
+  "vendoredOn": "2026-10-03",
+  "files": {
+    "colors.css": "1ed7c9b7f8049a818de9468517d61624438cdc7484da7867f81b30e76a4e8db6",
+    "typography.css": "18f9f67e008ec452eb65cfc01bb65f5413997f433c2249327ebc16bc629f20b6",
+    "spacing.css": "b4e377d0ac9a359402b71c6d58a28b62bc8a8b500102210c05434c661cead964",
+    "motion.css": "f2520fe158b727fa0d06cbacfa47d20103ec36980159104b15ef79d27d3368ff",
+    "base.css": "fbce3041d8285fb54b4d7f4d1f939b5597ecf31d52afa574ce4737b6092364de"
+  }
+}
