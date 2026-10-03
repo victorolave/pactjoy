@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
 
 const COMMITMENT = "entry";
@@ -55,7 +55,16 @@ export function useEntrySheet(): EntrySheetRoute {
       ),
     [setParams],
   );
+  // Closing goes back one history step: twice in a tick (Escape and a button) must not go back two.
+  // The guard re-arms whenever the location changes.
+  const closing = useRef(false);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: re-arm on every location change
+  useEffect(() => {
+    closing.current = false;
+  }, [key, params]);
   const close = useCallback(() => {
+    if (closing.current) return;
+    closing.current = true;
     if (key !== "default") {
       navigate(-1);
       return;

@@ -14,6 +14,7 @@ const WANTED = [
   "weekRowsOnly",
   "pendingYesterday",
   "pendingYesterdayNothingToday",
+  "yesterdayMixed",
   "loading",
   "error",
   "offline",

@@ -9,6 +9,7 @@ import {
   noSeasonTodayFixture,
   type PendingItem,
   pactOpenTodayFixture,
+  pointsFixture,
   type WeekRow,
   weekRowFixture,
 } from "../testing/fixtures/today.ts";
@@ -50,7 +51,7 @@ const correr = (overrides: Partial<DayRow> = {}): DayRow =>
       target: { direction: "reach", minimum: "3", ideal: "5" },
       schedule: { period: "perSession", frequency: { kind: "specificDays", weekdays: [1, 4] } },
     },
-    points: { perOpportunity: "12.5", earned: null, limitPercents: null },
+    points: pointsFixture({ perOpportunity: "12.5", earned: null, limitPercents: null }),
     ...overrides,
   });
 
@@ -68,11 +69,11 @@ const cafe = (overrides: Partial<DayRow> = {}): DayRow =>
         frequency: { kind: "specificDays", weekdays: [0, 1, 2, 3, 4, 5, 6] },
       },
     },
-    points: {
+    points: pointsFixture({
       perOpportunity: "3.57",
       earned: null,
       limitPercents: [100, 100, 100, 75, 50, 0, 0, 0, 0, 0, 0, 0, 0],
-    },
+    }),
     ...overrides,
   });
 
@@ -81,7 +82,7 @@ const leer = (overrides: Partial<WeekRow> = {}): WeekRow =>
   weekRowFixture({
     commitmentId: id("c-leer"),
     habitName: "Leer",
-    points: { perOpportunity: "6.25", earned: null, limitPercents: null },
+    points: pointsFixture({ perOpportunity: "6.25", earned: null, limitPercents: null }),
     ...overrides,
   });
 
@@ -103,7 +104,7 @@ const ingles = (overrides: Partial<WeekRow> = {}): WeekRow =>
       sessionsTarget: 1,
       percent: 60,
     },
-    points: { perOpportunity: "31.25", earned: null, limitPercents: null },
+    points: pointsFixture({ perOpportunity: "31.25", earned: null, limitPercents: null }),
     ...overrides,
   });
 
@@ -125,7 +126,7 @@ const caminar = (overrides: Partial<WeekRow> = {}): WeekRow =>
       sessionsTarget: 1,
       percent: 50,
     },
-    points: { perOpportunity: "20", earned: null, limitPercents: null },
+    points: pointsFixture({ perOpportunity: "20", earned: null, limitPercents: null }),
     ...overrides,
   });
 
@@ -178,7 +179,7 @@ const pending = (row: DayRow): PendingItem => ({
   points: { ...row.points, earned: null },
 });
 
-/** Today is Friday: Dibujar (done) and Correr (km) were due yesterday, Thursday, and are still open. */
+/** Today is Friday: Dibujar (done), Correr (km) and Café (a limit) were due yesterday and are still open. */
 const pendingYesterday = (): TodayView => {
   const dibujar = meditar({
     commitmentId: id("c-dibujar"),
@@ -197,10 +198,58 @@ const pendingYesterday = (): TodayView => {
       schedule: { period: "perSession", frequency: { kind: "specificDays", weekdays: [3, 4] } },
     },
   });
+  const coffee = cafe();
   return activeTodayFixture({
-    rows: [dibujar, running, leer()],
-    pendingYesterday: [pending(dibujar), pending(running)],
+    rows: [dibujar, running, coffee, leer()],
+    pendingYesterday: [pending(dibujar), pending(running), pending(coffee)],
   });
+};
+
+const yesterdayEntry = (value: DayRow["entries"][number]["value"], entryId: string) =>
+  entryFixture(value, { entryId: id(entryId), forDate: date("2026-10-01") });
+
+/**
+ * Today is Friday. Dibujar is still pending from yesterday; Correr was registered yesterday (4 km) and
+ * again today (3 km), and Meditar was marked as missed yesterday: each in its own place.
+ */
+const mixedYesterday = (): TodayView => {
+  const dibujar = meditar({
+    commitmentId: id("c-dibujar"),
+    habitName: "Dibujar",
+    measure: {
+      unit: "done",
+      schedule: { period: "perSession", frequency: { kind: "specificDays", weekdays: [3, 4] } },
+    },
+  });
+  const running = correr({
+    opportunity: { state: "logged", graceUntil: date("2026-10-03") },
+    measure: {
+      unit: "km",
+      customLabel: null,
+      precision: "decimal",
+      target: { direction: "reach", minimum: "3", ideal: "5" },
+      schedule: { period: "perSession", frequency: { kind: "specificDays", weekdays: [3, 4] } },
+    },
+    entries: [
+      yesterdayEntry({ kind: "quantity", value: "4" }, "e-correr-ayer"),
+      entryFixture({ kind: "quantity", value: "3" }, { entryId: id("e-correr-hoy") }),
+    ],
+    points: pointsFixture({ perOpportunity: "12.5", earned: 8, limitPercents: null }),
+  });
+  const meditado = meditar({
+    entries: [yesterdayEntry({ kind: "missed" }, "e-meditar-ayer")],
+    measure: {
+      unit: "done",
+      schedule: { period: "perSession", frequency: { kind: "specificDays", weekdays: [3, 4] } },
+    },
+  });
+  return withSummary(
+    activeTodayFixture({
+      rows: [dibujar, running, meditado],
+      pendingYesterday: [pending(dibujar)],
+    }),
+    8,
+  );
 };
 
 /** Today is Sunday: nothing is scheduled, but Saturday's Estirar is still open. */
@@ -357,9 +406,18 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: "pendingYesterday",
     title: "Pendiente de ayer (15d)",
-    description: "Dibujar y Correr quedaron abiertos ayer; se pueden registrar hasta hoy.",
+    description:
+      "Dibujar (hecho), Correr (cantidad) y Café (tope) quedaron abiertos ayer; se registran hasta hoy.",
     mode: "data",
     today: pendingYesterday,
+  },
+  {
+    id: "yesterdayMixed",
+    title: "Ayer: pendiente y registrado",
+    description:
+      "Dibujar pendiente; Correr registrado ayer y hoy; Meditar marcado como no salió ayer.",
+    mode: "data",
+    today: mixedYesterday,
   },
   {
     id: "pendingYesterdayNothingToday",

@@ -54,6 +54,10 @@
                 "message": "Production src must not import test doubles; only src/testing/**, tests and test/** may."
               },
               {
+                "group": ["**/dev/**", "**/dev"],
+                "message": "The dev-only gallery is reached only through src/config.ts (loadDevToday); production code never imports it."
+              },
+              {
                 "group": ["lucide-react"],
                 "message": "Icons are confined to src/ui/icon/**."
               },
@@ -102,6 +106,10 @@
                     "message": "Production src must not import test doubles."
                   },
                   {
+                    "group": ["**/dev/**", "**/dev"],
+                    "message": "The dev-only gallery is reached only through src/config.ts (loadDevToday); production code never imports it."
+                  },
+                  {
                     "group": ["lucide-react"],
                     "message": "Icons are confined to src/ui/icon/**."
                   }
@@ -144,6 +152,10 @@
                   {
                     "group": ["**/testing/**", "**/testing"],
                     "message": "Production src must not import test doubles."
+                  },
+                  {
+                    "group": ["**/dev/**", "**/dev"],
+                    "message": "The dev-only gallery is reached only through src/config.ts (loadDevToday); production code never imports it."
                   },
                   {
                     "group": ["@tanstack/*"],

@@ -5,10 +5,23 @@ import type { Entry } from "../entry/entry.ts";
 import { frac, fromInt } from "../fraction/fraction.ts";
 import {
   opportunityPoints,
+  opportunityPointsAt,
   opportunityValue,
   progressAtValue,
   sumPoints,
 } from "./opportunity-points.ts";
+
+describe("opportunityPointsAt", () => {
+  it("is the value times a given progress: the same as scoring entries that reach it", () => {
+    expect(opportunityPointsAt(reading, 40, frac(2n, 3n))).toEqual(
+      opportunityPoints(reading, 40, [minutes(20)]),
+    );
+  });
+
+  it("is zero without a season opportunity", () => {
+    expect(opportunityPointsAt(reading, 0, fromInt(1))).toEqual(fromInt(0));
+  });
+});
 
 describe("sumPoints", () => {
   it("adds exactly, so rounding can happen once afterwards", () => {

@@ -177,7 +177,11 @@ export function RunningToday({ model }: { readonly model: RunningModel }) {
         <AllDone model={model} />
       )}
       {showDayState && model.dayState === "none" && <NoCommitments model={model} />}
-      <PendingYesterday items={model.pendingYesterday} seasonId={model.seasonId} />
+      <PendingYesterday
+        items={model.pendingYesterday}
+        registered={model.yesterdayRegistered}
+        seasonId={model.seasonId}
+      />
       {forToday.length > 0 && (
         <Section
           title={model.kind === "ended" ? "Último día" : "Para hoy"}
@@ -204,7 +208,7 @@ export function RunningToday({ model }: { readonly model: RunningModel }) {
         <StandingsPair model={model.standings} viewerName={model.greetingName} />
       )}
       <EntrySheetHost
-        rows={[...forToday, ...otherDays, ...week]}
+        rows={model.sheetRows}
         seasonId={model.seasonId}
         pendingYesterday={model.pendingYesterday}
       />
