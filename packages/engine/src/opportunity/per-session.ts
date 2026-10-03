@@ -4,7 +4,7 @@
  * missed-day coverage).
  */
 import type { Season, SeasonDay, Weekday } from "../calendar/season-calendar.ts";
-import { seasonDay } from "../calendar/season-calendar.ts";
+import { seasonDay, weekOf } from "../calendar/season-calendar.ts";
 import type { Target } from "../commitment/commitment.ts";
 import type { Entry } from "../entry/entry.ts";
 import type { GraceDeadlineFor } from "../entry/grace-period.ts";
@@ -44,7 +44,7 @@ export function sumEntryValues(entries: readonly Entry[]): Fraction {
 
 /** The last day of the week that `day` falls in (weeks count from the season start). */
 function weekEndOf(day: SeasonDay): SeasonDay {
-  return seasonDay(day - (day % DAYS_PER_WEEK) + (DAYS_PER_WEEK - 1));
+  return seasonDay(weekOf(day) * DAYS_PER_WEEK + (DAYS_PER_WEEK - 1));
 }
 
 /**
