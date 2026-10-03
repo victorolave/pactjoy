@@ -1,0 +1,70 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.glyph {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--touch-target);
+  height: var(--touch-target);
+  border-radius: var(--radius-control);
+  background: var(--surface-warm);
+  color: var(--pj-ink);
+}
+
+.glyphDone {
+  background: var(--surface-success);
+  color: var(--pj-success);
+}
+
+.glyphMuted {
+  background: var(--surface-card);
+  color: var(--text-secondary);
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font: 700 var(--type-body-size) / var(--type-label-line) var(--font-sans);
+}
+
+.detail {
+  margin: 0;
+  font: var(--font-small);
+  color: var(--text-secondary);
+}
+
+.status {
+  margin: 0;
+  font: var(--font-label);
+  font-size: var(--type-small-size);
+  color: var(--text-success);
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.action {
+  flex: none;
+}

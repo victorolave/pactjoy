@@ -1,0 +1,24 @@
+/* One full-height column: scrolling content, then the tab bar pinned below it (WF-R6). */
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: var(--shell-height);
+  padding-top: var(--safe-top);
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+  box-sizing: border-box;
+  background: var(--surface-page);
+}
+
+.content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-2) var(--layout-margin-mobile) var(--space-5);
+}
+
+.tabs {
+  flex: none;
+  padding-bottom: var(--safe-bottom);
+  background: var(--surface-card);
+}

@@ -5,10 +5,11 @@
   },
   "vendoredOn": "2026-10-03",
   "files": {
+    "base.css": "fbce3041d8285fb54b4d7f4d1f939b5597ecf31d52afa574ce4737b6092364de",
     "colors.css": "1ed7c9b7f8049a818de9468517d61624438cdc7484da7867f81b30e76a4e8db6",
-    "typography.css": "18f9f67e008ec452eb65cfc01bb65f5413997f433c2249327ebc16bc629f20b6",
-    "spacing.css": "b4e377d0ac9a359402b71c6d58a28b62bc8a8b500102210c05434c661cead964",
+    "components.css": "b91e6555f3b713f7a7ceee0083704f032a52ae47a9fca69dbc828ea87690a555",
     "motion.css": "f2520fe158b727fa0d06cbacfa47d20103ec36980159104b15ef79d27d3368ff",
-    "base.css": "fbce3041d8285fb54b4d7f4d1f939b5597ecf31d52afa574ce4737b6092364de"
+    "spacing.css": "b4e377d0ac9a359402b71c6d58a28b62bc8a8b500102210c05434c661cead964",
+    "typography.css": "18f9f67e008ec452eb65cfc01bb65f5413997f433c2249327ebc16bc629f20b6"
   }
 }

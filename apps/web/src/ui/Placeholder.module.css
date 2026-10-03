@@ -1,0 +1,36 @@
+/* Neutral stand-ins for brand imagery, which is not committed (WF-R5, P5). */
+.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  background: var(--surface-sunken);
+  color: var(--icon-muted);
+  border: var(--border-width) dashed var(--border-subtle);
+}
+
+.illustration {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius-card);
+}
+
+.image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.logoImage {
+  display: block;
+  height: var(--icon-lg);
+  width: auto;
+}
+
+.imageCompact {
+  display: block;
+  max-width: 100%;
+  height: calc(var(--space-8) * 2);
+  margin: 0 auto;
+  object-fit: contain;
+}
