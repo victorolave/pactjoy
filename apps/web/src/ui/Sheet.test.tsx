@@ -95,6 +95,22 @@ describe("Sheet", () => {
     expect(register).toHaveFocus();
   });
 
+  it("still closes on Escape and traps Tab after focus fell onto non-focusable content", async () => {
+    const onClose = vi.fn();
+    render(
+      <Sheet open title="Leer" onClose={onClose} actions={<button type="button">Registrar</button>}>
+        <p>Texto sin foco</p>
+      </Sheet>,
+    );
+    await userEvent.click(screen.getByText("Texto sin foco"));
+    expect(screen.getByRole("dialog")).not.toContainElement(document.activeElement as HTMLElement);
+    await userEvent.tab();
+    expect(screen.getByRole("dialog")).toContainElement(document.activeElement as HTMLElement);
+    await userEvent.click(screen.getByText("Texto sin foco"));
+    await userEvent.keyboard("{Escape}");
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it("returns focus to the control that opened it", async () => {
     render(<Harness />);
     const opener = screen.getByRole("button", { name: "Abrir" });

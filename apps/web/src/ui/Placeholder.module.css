@@ -15,12 +15,6 @@
   border-radius: var(--radius-card);
 }
 
-.logo {
-  height: var(--icon-lg);
-  aspect-ratio: 1;
-  border-radius: var(--radius-pill);
-}
-
 .image {
   display: block;
   max-width: 100%;
@@ -31,4 +25,12 @@
   display: block;
   height: var(--icon-lg);
   width: auto;
+}
+
+.imageCompact {
+  display: block;
+  max-width: 100%;
+  height: calc(var(--space-8) * 2);
+  margin: 0 auto;
+  object-fit: contain;
 }
