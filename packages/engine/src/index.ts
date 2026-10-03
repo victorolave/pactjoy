@@ -14,6 +14,11 @@
  * - `scoreMember` + `ScoreInput`/`MemberScore`/`CommitmentScoreEntry`/
  *   `Streak`: the engine's single entry point and everything needed to
  *   type its result.
+ * - `opportunityPoints`/`opportunityValue`/`progressAtValue`: what ONE
+ *   opportunity is worth (D12 cut down to a single opportunity), so Today can
+ *   show "+4 pts" and each limit option's score without a client re-deriving
+ *   the rule. This supersedes the "single-opportunity preview isn't a
+ *   confirmed app need" note under "Deliberately NOT exported" below.
  * - `canRequestPause` + `PauseCheck`: D9's pure pause-request cap check,
  *   called before the app records a new pause request.
  * - `rankStandings` + `StandingsParticipant`/`StandingsRow`: builds the
@@ -87,7 +92,7 @@ export {
   isValidWeightPercent,
 } from "./commitment/commitment.ts";
 
-export { displayPercent, displayPoints } from "./display/display.ts";
+export { displayPercent, displayPoints, displayPointsDecimal } from "./display/display.ts";
 export type { Entry } from "./entry/entry.ts";
 export { graceDeadline } from "./entry/grace-period.ts";
 export type { Fraction } from "./fraction/fraction.ts";
@@ -107,6 +112,12 @@ export type { PauseCheck } from "./pause/pause-cap.ts";
 export { canRequestPause } from "./pause/pause-cap.ts";
 export type { CommitmentScoreEntry, MemberScore, ScoreInput } from "./scoring/member-score.ts";
 export { scoreMember } from "./scoring/member-score.ts";
+export {
+  opportunityPoints,
+  opportunityValue,
+  progressAtValue,
+  sumPoints,
+} from "./scoring/opportunity-points.ts";
 export type { Streak } from "./scoring/streak.ts";
 export type { MemberId, StandingsParticipant, StandingsRow } from "./standings/standings.ts";
 export { rankStandings } from "./standings/standings.ts";
