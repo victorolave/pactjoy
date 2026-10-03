@@ -1,0 +1,5 @@
+/* The design's stepper buttons (17, 22): 52 px squares. button.large outranks the vendored rule. */
+button.large {
+  width: var(--stepper-button);
+  height: var(--stepper-button);
+}

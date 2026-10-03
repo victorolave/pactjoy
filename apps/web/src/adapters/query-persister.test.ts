@@ -5,6 +5,7 @@ import {
 } from "@tanstack/react-query-persist-client";
 import { describe, expect, it } from "vitest";
 import { todayKey } from "../shared/query-keys.ts";
+import { activeTodayFixture } from "../testing/fixtures/today.ts";
 import { MemoryStorage } from "../testing/memory-storage.ts";
 import {
   bustFor,
@@ -27,6 +28,61 @@ async function save(storage: Storage, fill: (client: QueryClient) => void) {
   await new Promise((resolve) => setTimeout(resolve, 20));
   return persister;
 }
+
+describe("a saved Today from before the shape changed is dropped, not rendered", () => {
+  const RESTORED_WITHOUT_POINTS = {
+    state: "active",
+    summary: { week: 1, weekCount: 4, daysLeft: 2, score: { kind: "scored" } },
+    rows: [{ kind: "day", habitName: "Meditar", entries: [] }],
+  };
+
+  async function restoreFrom(saved: unknown) {
+    const storage = new MemoryStorage();
+    await save(storage, (client) => client.setQueryData(todayKey, saved));
+    const reloaded = new QueryClient();
+    await persistQueryClientRestore({
+      queryClient: reloaded,
+      ...persistOptionsFor(createTodayPersister(storage, { throttleMs: 0 }), bustFor("user-1")),
+    });
+    return { reloaded, storage };
+  }
+
+  it("drops a Today whose rows carry no points, and clears the saved copy", async () => {
+    const { reloaded, storage } = await restoreFrom(RESTORED_WITHOUT_POINTS);
+    expect(reloaded.getQueryData(todayKey)).toBeUndefined();
+    expect(storage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  it("drops a Today whose summary has no pointsToday", async () => {
+    const { reloaded } = await restoreFrom({
+      ...RESTORED_WITHOUT_POINTS,
+      rows: [],
+    });
+    expect(reloaded.getQueryData(todayKey)).toBeUndefined();
+  });
+
+  it("drops a Today whose points lack the exact per-opportunity value (version 3 saved copies)", async () => {
+    const view = activeTodayFixture();
+    // A version 3 row: everything a row carries, but no exact per-opportunity value.
+    const pointsV3 = { perOpportunity: "8", earned: null, limitPercents: null };
+    const { reloaded } = await restoreFrom({
+      ...view,
+      rows: view.rows.map((row) => ({ ...row, points: pointsV3 })),
+    });
+    expect(reloaded.getQueryData(todayKey)).toBeUndefined();
+  });
+
+  it("keeps a current Today", async () => {
+    const current = activeTodayFixture();
+    const { reloaded } = await restoreFrom(current);
+    expect(reloaded.getQueryData(todayKey)).toEqual(current);
+  });
+
+  it("keeps a Today with no rows to check, like noCircle", async () => {
+    const { reloaded } = await restoreFrom(TODAY);
+    expect(reloaded.getQueryData(todayKey)).toEqual(TODAY);
+  });
+});
 
 describe("createTodayPersister (TO-R10)", () => {
   it("restores the last Today after a reload", async () => {

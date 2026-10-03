@@ -46,6 +46,16 @@ export function sumPoints(points: readonly Fraction[]): Fraction {
   return sum(points);
 }
 
+/** What an opportunity earns at an exact `progress`: its value times it (a slot's own progress). */
+export function opportunityPointsAt(
+  commitment: Commitment,
+  activeOpportunities: number,
+  progress: Fraction,
+): Fraction {
+  if (activeOpportunities <= 0) return fromInt(0);
+  return mul(opportunityValue(commitment, activeOpportunities), progress);
+}
+
 /**
  * Points that the entries of ONE opportunity earn: they are summed first (D4,
  * same-day entries add up; `done` counts 1, `missed` 0), then scored. Zero

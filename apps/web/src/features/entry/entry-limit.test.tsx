@@ -74,13 +74,47 @@ describe("limit sheet (EN-R5)", () => {
   it("asks how many, and says the thresholds and that 0 counts", async () => {
     open([coffee()], "commitment-5");
     const dialog = await screen.findByRole("dialog", { name: "Café" });
+    expect(within(dialog).getByText("Registra lo de hoy, aunque sea 0.")).toBeInTheDocument();
     expect(
-      within(dialog).getByText("Hoy · ideal hasta 2 · tolerancia 4 veces"),
+      within(dialog).getByText("ideal hasta 2, tolerancia hasta 4 veces."),
     ).toBeInTheDocument();
-    expect(within(dialog).getByText("Registra aunque sea 0.")).toBeInTheDocument();
     expect(
       within(dialog).getByRole("radiogroup", { name: "Cantidad de veces" }),
     ).toBeInTheDocument();
+  });
+
+  it("shows what each option scores, from the server, and 5+ for the open end (design 18)", async () => {
+    const row = coffee();
+    open(
+      [
+        {
+          ...row,
+          points: {
+            ...row.points,
+            limitPercents: [100, 100, 100, 75, 50, 0, 0, 0, 0, 0, 0, 0, 0],
+          },
+        },
+      ],
+      "commitment-5",
+    );
+    const dialog = await screen.findByRole("dialog", { name: "Café" });
+    expect(
+      within(dialog).getByText(
+        "ideal hasta 2, tolerancia hasta 4 veces. Cada opción muestra lo que puntúa antes de elegirla.",
+      ),
+    ).toBeInTheDocument();
+    const options = within(dialog)
+      .getAllByRole("radio")
+      .map((radio) => radio.textContent);
+    // Each option says its zone and what it scores: "0", "Ideal", "100 %".
+    expect(options).toEqual([
+      "0Ideal100 %",
+      "1Ideal100 %",
+      "2Ideal100 %",
+      "3Tolerancia75 %",
+      "4Tolerancia50 %",
+      "5+Excede0 %",
+    ]);
   });
 
   it("sends the chosen option as the quantity (EN-S9)", async () => {
@@ -160,7 +194,7 @@ describe("limit sheet (EN-R5)", () => {
     const input = within(dialog).getByRole("textbox", { name: "Cantidad" });
     expect(input).toHaveValue("0");
     await userEvent.click(within(dialog).getByRole("button", { name: "Más" }));
-    expect(input).toHaveValue("0.5");
+    expect(input).toHaveValue("0,5");
     await userEvent.click(within(dialog).getByRole("button", { name: "Menos" }));
     await userEvent.click(within(dialog).getByRole("button", { name: "Registrar 0 h" }));
     await screen.findByText("Registro guardado.");

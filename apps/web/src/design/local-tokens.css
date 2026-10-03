@@ -5,7 +5,23 @@
   --safe-right: env(safe-area-inset-right, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
-  /* Illustration boxes from the design: the confirmation uses 200, empty states 130. */
+  /* Illustration boxes from the design: 200 square (confirmation), 130 and 150 high (empty, offline). */
   --illustration-lg: 200px;
   --illustration-md: 130px;
+  --illustration-banner: 150px;
+  --border-width-control: 1.5px;
+  /* The check's fill and pop in the prototype (design 16, 20): 160 ms, none under reduced motion. */
+  --motion-check: 160ms;
+  /* Loading skeleton of Today (design 15e). */
+  --motion-pulse: 900ms;
+  --skeleton-title-width: 120px;
+  --skeleton-title-height: 20px;
+  --skeleton-line-title: 14px;
+  --skeleton-line-meta: 12px;
+  --skeleton-radius: 6px;
+  --skeleton-row-tall: 112px;
+  --skeleton-row-short: 80px;
+  /* Entry sheets (design 17, 22): 52 px stepper buttons, a 48 px quantity. */
+  --stepper-button: 52px;
+  --font-quantity: 800 48px / 52px var(--font-sans);
 }
