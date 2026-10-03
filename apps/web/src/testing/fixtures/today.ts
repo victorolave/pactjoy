@@ -67,6 +67,17 @@ export const dayRowFixture = (overrides: Partial<DayRow> = {}): DayRow => ({
   ...overrides,
 });
 
+export type Entry = DayRow["entries"][number];
+
+/** One of the viewer's entries for today (2026-10-02). */
+export const entryFixture = (value: Entry["value"], overrides: Partial<Entry> = {}): Entry => ({
+  entryId: "entry-1" as Entry["entryId"],
+  forDate: TODAY,
+  value,
+  note: null,
+  ...overrides,
+});
+
 /** A week row: 3 sessions a week of reading, 2 done so far. */
 export const weekRowFixture = (overrides: Partial<WeekRow> = {}): WeekRow => ({
   kind: "week",

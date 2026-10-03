@@ -7,6 +7,8 @@ export interface ProgressMark {
 }
 
 export interface ProgressBarProps {
+  /** What the bar measures, for assistive tech. */
+  readonly name: string;
   readonly value: number;
   readonly max: number;
   readonly label?: string;
@@ -27,6 +29,7 @@ const fraction = (value: number, max: number): number =>
   max > 0 ? Math.max(0, Math.min(1, value / max)) : 0;
 
 export function ProgressBar({
+  name,
   value,
   max,
   label,
@@ -49,7 +52,8 @@ export function ProgressBar({
         role="progressbar"
         aria-valuemin={0}
         aria-valuemax={max}
-        aria-valuenow={value}
+        aria-label={name}
+        aria-valuenow={Math.max(0, Math.min(value, max))}
         aria-valuetext={text}
       >
         <div
@@ -59,11 +63,13 @@ export function ProgressBar({
       </div>
       {marks.length > 0 && (
         <div className={styles.marks}>
-          {marks.map((mark) => {
+          {marks.map((mark, index) => {
             const at = fraction(mark.at, max);
             return (
               <span
-                key={mark.label}
+                // Two marks can share a label; the list is static, so index plus label is stable.
+                // biome-ignore lint/suspicious/noArrayIndexKey: see above
+                key={`${index}-${mark.label}`}
                 className={styles.mark}
                 style={{ left: `${at * 100}%` }}
                 {...(at === 1 ? { "data-edge": "end" } : {})}
