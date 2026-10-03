@@ -9,6 +9,7 @@ import { createSessionEvents } from "./features/auth/session-events.ts";
 import { SessionManager } from "./features/auth/session-manager.ts";
 import { FakeAuth, fakeSession } from "./testing/fake-auth.ts";
 import { FakeConnectivity } from "./testing/fake-connectivity.ts";
+import { FakeHaptics } from "./testing/fake-haptics.ts";
 import { FakePactJoyApi } from "./testing/fake-pactjoy-api.ts";
 import { FixedClock } from "./testing/fixed-clock.ts";
 import { activeTodayFixture, noCircleTodayFixture } from "./testing/fixtures/today.ts";
@@ -25,6 +26,7 @@ function deps(signedIn: boolean): AppDependencies {
     auth,
     api,
     ids: new SequentialIds(),
+    haptics: new FakeHaptics(),
     connectivity: new FakeConnectivity(),
     store,
     sessions: new SessionManager(auth, store, new FixedClock(0)),
