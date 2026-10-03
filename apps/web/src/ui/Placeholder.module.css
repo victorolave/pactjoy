@@ -15,12 +15,6 @@
   border-radius: var(--radius-card);
 }
 
-.logo {
-  height: var(--icon-lg);
-  aspect-ratio: 1;
-  border-radius: var(--radius-pill);
-}
-
 .image {
   display: block;
   max-width: 100%;

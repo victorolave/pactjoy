@@ -16,15 +16,27 @@ describe("Illustration (WF-R5, WF-S4)", () => {
   });
 });
 
-describe("Logo (WF-R5)", () => {
-  it("renders a neutral placeholder named PactJoy without live-text wordmark", () => {
+describe("Logo (official brand files)", () => {
+  it("is the official horizontal logo by default, named PactJoy, never live text", () => {
     const { container } = render(<Logo />);
-    expect(screen.getByRole("img", { name: "PactJoy" })).toBeInTheDocument();
-    expect(container.querySelector("img")).toBeNull();
+    expect(screen.getByRole("img", { name: "PactJoy" })).toHaveAttribute(
+      "src",
+      expect.stringContaining("pactjoy-horizontal-proposed"),
+    );
     expect(container).not.toHaveTextContent("PactJoy");
   });
 
-  it("renders the logo file when a src is provided", () => {
+  it("can be the symbol alone, a different file from the horizontal logo", () => {
+    const { unmount } = render(<Logo />);
+    const horizontal = screen.getByRole("img", { name: "PactJoy" }).getAttribute("src");
+    unmount();
+    render(<Logo variant="symbol" />);
+    const symbol = screen.getByRole("img", { name: "PactJoy" }).getAttribute("src");
+    expect(symbol).toBeTruthy();
+    expect(symbol).not.toBe(horizontal);
+  });
+
+  it("renders another logo file when a src is provided", () => {
     const { container } = render(<Logo src="/assets/logo.svg" />);
     expect(container.querySelector("img")).toHaveAttribute("src", "/assets/logo.svg");
   });
