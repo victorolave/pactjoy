@@ -63,6 +63,15 @@ describe("quantityText", () => {
     expect(quantityText("0.5", { ...minutes, unit: "hours" })).toBe("0,5 h");
   });
 
+  it("uses the singular for exactly one", () => {
+    expect(quantityText("1", { ...minutes, unit: "times" })).toBe("1 vez");
+    expect(quantityText("2", { ...minutes, unit: "times" })).toBe("2 veces");
+    expect(quantityText("1", { ...minutes, unit: "glasses" })).toBe("1 vaso");
+    expect(quantityText("1", { ...minutes, unit: "pages" })).toBe("1 pág.");
+    expect(quantityText("1", minutes)).toBe("1 min");
+    expect(quantityText("1.5", { ...minutes, unit: "times" })).toBe("1,5 veces");
+  });
+
   it("is just the number for a done measure", () => {
     expect(quantityText("1", dayRowFixture().measure)).toBe("1");
   });

@@ -18,9 +18,12 @@ export function unitLabel(measure: MeasureView): string | null {
   return UNIT_LABELS[measure.unit];
 }
 
-/** "30 min", or just the number for a done measure. */
+const SINGULAR: Readonly<Record<string, string>> = { veces: "vez", vasos: "vaso", "págs.": "pág." };
+
+/** "30 min", "1 vez", or just the number for a done measure. */
 export function quantityText(value: string, measure: MeasureView): string {
-  const unit = unitLabel(measure);
+  const label = unitLabel(measure);
+  const unit = value === "1" && label !== null ? (SINGULAR[label] ?? label) : label;
   const number = formatDecimal(value);
   return unit === null || unit === "" ? number : `${number} ${unit}`;
 }
