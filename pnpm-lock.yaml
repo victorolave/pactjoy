@@ -27,6 +27,9 @@ importers:
         specifier: ^19.3.0
         version: 19.3.0(react@19.3.0)
     devDependencies:
+      '@pactjoy/app':
+        specifier: workspace:*
+        version: link:../../packages/app
       '@testing-library/jest-dom':
         specifier: ^6.9.1
         version: 6.9.1
