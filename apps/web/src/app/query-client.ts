@@ -30,7 +30,9 @@ export function createQueryClient({
           ? (failureCount, error) => failureCount < MAX_QUERY_RETRIES && toUiError(error).retryable
           : false,
       },
-      mutations: { retry: 0 },
+      // "always": offline a write fails at once with NetworkError instead of pausing and queueing
+      // itself to run later (P1: no write queue).
+      mutations: { retry: 0, networkMode: "always" },
     },
   });
   return client;
