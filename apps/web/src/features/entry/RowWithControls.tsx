@@ -25,7 +25,6 @@ export function RowWithControls({
   const firstEntry = row.entries[0];
   const offersEdit =
     firstEntry !== undefined &&
-    limitMeasureOf(row.measure) === null &&
     (row.opportunity.state === "open" || row.opportunity.state === "logged") &&
     !(row.kind === "day" && !row.scheduledToday);
   return (

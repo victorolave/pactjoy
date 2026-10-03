@@ -1,5 +1,5 @@
 import type { TodayEntry, TodayRow } from "@pactjoy/app";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { longDate } from "../../shared/format.ts";
 import { Button } from "../../ui/Button.tsx";
 import { InlineMessage } from "../../ui/InlineMessage.tsx";
@@ -8,7 +8,8 @@ import { Tag } from "../../ui/Tag.tsx";
 import { entryText, quantityText, targetText, unitLabel } from "../today/row-labels.ts";
 import { Confirmation, useAutoClose } from "./Confirmation.tsx";
 import styles from "./entry.module.css";
-import { nudge, quantityMeasureOf, toSubmitValue } from "./entry-form.ts";
+import { limitMeasureOf, nudge, quantityMeasureOf, toSubmitValue } from "./entry-form.ts";
+import { LimitGrid } from "./LimitGrid.tsx";
 import { NoteField } from "./NoteField.tsx";
 import { QuantityStepper } from "./QuantityStepper.tsx";
 import { useEntryEdit } from "./use-entry-edit.ts";
@@ -37,7 +38,11 @@ function EntryEditor({ row, entry, onSelect, onClose }: EditSheetProps) {
   const [note, setNote] = useState(entry.note ?? "");
   const quantity = entry.value.kind === "quantity" ? entry.value.value : null;
   const [typed, setTyped] = useState(quantity ?? "0");
-  const measure = quantityMeasureOf(row.measure);
+  const [chosen, setChosen] = useState<number | null>(quantity === null ? null : Number(quantity));
+  const reach = quantityMeasureOf(row.measure);
+  const limit = limitMeasureOf(row.measure);
+  const grid = limit !== null && limit.precision === "integer";
+  const measure = reach ?? limit;
 
   useAutoClose(edit.saved, onClose);
   if (edit.saved !== null) return <Confirmation detail={edit.saved} onClose={onClose} />;
@@ -46,7 +51,11 @@ function EntryEditor({ row, entry, onSelect, onClose }: EditSheetProps) {
   const toSend =
     measure === null || quantity === null
       ? entry.value.kind
-      : toSubmitValue(typed, measure.precision);
+      : grid
+        ? chosen === null
+          ? null
+          : toSubmitValue(String(chosen), "integer", { allowZero: true })
+        : toSubmitValue(typed, measure.precision, { allowZero: limit !== null });
   const amount =
     measure !== null && quantity !== null && toSend !== null ? quantityText(toSend, measure) : null;
   const unit = measure === null ? "" : (unitLabel(measure) ?? "");
@@ -84,12 +93,15 @@ function EntryEditor({ row, entry, onSelect, onClose }: EditSheetProps) {
         </div>
       )}
       {quantity !== null && measure !== null && (
-        <QuantityStepper
-          value={typed}
+        <ValueInput
+          grid={grid}
+          limit={limit}
           unit={unit}
-          presets={[]}
+          typed={typed}
+          chosen={chosen}
           invalid={toSend === null}
-          onChange={setTyped}
+          onTyped={setTyped}
+          onChosen={setChosen}
           onStep={(direction) => setTyped((current) => nudge(current, direction, measure))}
         />
       )}
@@ -118,5 +130,49 @@ function EntryEditor({ row, entry, onSelect, onClose }: EditSheetProps) {
         </Button>
       </div>
     </div>
+  );
+}
+
+function ValueInput({
+  grid,
+  limit,
+  unit,
+  typed,
+  chosen,
+  invalid,
+  onTyped,
+  onChosen,
+  onStep,
+}: {
+  readonly grid: boolean;
+  readonly limit: ReturnType<typeof limitMeasureOf>;
+  readonly unit: string;
+  readonly typed: string;
+  readonly chosen: number | null;
+  readonly invalid: boolean;
+  readonly onTyped: (value: string) => void;
+  readonly onChosen: (value: number) => void;
+  readonly onStep: (direction: 1 | -1) => void;
+}): ReactNode {
+  if (grid && limit !== null) {
+    return (
+      <LimitGrid
+        unit={unit}
+        ideal={Number(limit.target.ideal)}
+        tolerance={Number(limit.target.tolerance)}
+        value={chosen}
+        onSelect={onChosen}
+      />
+    );
+  }
+  return (
+    <QuantityStepper
+      value={typed}
+      unit={unit}
+      presets={[]}
+      invalid={invalid}
+      onChange={onTyped}
+      onStep={onStep}
+    />
   );
 }
