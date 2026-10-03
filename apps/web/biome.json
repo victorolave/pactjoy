@@ -159,6 +159,7 @@
     {
       "includes": [
         "src/testing/**",
+        "src/dev/**",
         "src/**/*.test.ts",
         "src/**/*.test.tsx",
         "test/**",
