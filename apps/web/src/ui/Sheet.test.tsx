@@ -49,6 +49,20 @@ describe("Sheet", () => {
     expect(screen.getByRole("button", { name: "Registrar" })).toBeInTheDocument();
   });
 
+  it("can drop its header: only the grabber, still named for assistive tech, still closable by Escape", async () => {
+    const onClose = vi.fn();
+    render(
+      <Sheet open headless title="Leer" onClose={onClose}>
+        <button type="button">Seguir con mi día</button>
+      </Sheet>,
+    );
+    expect(screen.getByRole("dialog", { name: "Leer" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Leer" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Cerrar" })).not.toBeInTheDocument();
+    await userEvent.keyboard("{Escape}");
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it("moves focus inside when it opens", async () => {
     render(<Harness />);
     await userEvent.click(screen.getByRole("button", { name: "Abrir" }));

@@ -1,8 +1,10 @@
 import type {
+  PendingYesterdayItem,
   StandingsView,
   TodayBase,
   TodayEntry,
   TodayOpportunity,
+  TodayPoints,
   TodayRow,
   TodayView,
   TodayWeekProgress,
@@ -57,6 +59,33 @@ function presentProgress(progress: TodayWeekProgress | null): TodayWeekProgress 
   };
 }
 
+function presentPoints(points: TodayPoints): TodayPoints {
+  return {
+    perOpportunity: points.perOpportunity,
+    perOpportunityExact:
+      points.perOpportunityExact === null
+        ? null
+        : {
+            numerator: points.perOpportunityExact.numerator,
+            denominator: points.perOpportunityExact.denominator,
+          },
+    earned: points.earned,
+    limitPercents: points.limitPercents === null ? null : [...points.limitPercents],
+  };
+}
+
+function presentPending(item: PendingYesterdayItem): PendingYesterdayItem {
+  return {
+    commitmentId: item.commitmentId,
+    habitName: item.habitName,
+    privacy: item.privacy,
+    measure: item.measure,
+    forDate: item.forDate,
+    graceUntil: item.graceUntil,
+    points: presentPoints(item.points),
+  };
+}
+
 function presentRow(row: TodayRow): TodayRow {
   const common = {
     commitmentId: row.commitmentId,
@@ -64,6 +93,7 @@ function presentRow(row: TodayRow): TodayRow {
     privacy: row.privacy,
     measure: row.measure,
     opportunity: presentOpportunity(row.opportunity),
+    points: presentPoints(row.points),
     entries: row.entries.map(presentTodayEntry),
   };
   return row.kind === "day"
@@ -92,9 +122,11 @@ function presentActive(view: Active): Active {
       week: view.summary.week,
       weekCount: view.summary.weekCount,
       daysLeft: view.summary.daysLeft,
+      pointsToday: view.summary.pointsToday,
       score: presentMemberScore(view.summary.score),
     },
     rows: view.rows.map(presentRow),
+    pendingYesterday: view.pendingYesterday.map(presentPending),
     standings: presentRanked(view.standings),
   };
 }
