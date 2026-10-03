@@ -1,0 +1,12 @@
+/* VENDORED FILE, DO NOT EDIT: re-vendor it from the source instead.
+ * Source: Claude Design project 239122e1-7217-4b6b-ac98-3383f1876fc6, _ds/pactjoy-design-system-32903670-ae91-4b25-8e1e-6054197166b5/tokens/base.css
+ * Vendored: 2026-10-03, verbatim except HTML-entity decoding of the read_file output.
+ * The name, logo and visual identity are not under the AGPL-3.0: see TRADEMARKS.md.
+ * The sha256 of the body below this header is recorded in MANIFEST.json. */
+
+/* Minimal element defaults so consumers get brand type + surfaces. */
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--surface-page);color:var(--text-primary);font:var(--font-body);-webkit-font-smoothing:antialiased}
+a{color:var(--text-link);text-underline-offset:2px}
+a:hover{color:var(--pj-action-hover)}
+:focus-visible{outline:var(--focus-width) solid var(--focus-ring);outline-offset:var(--focus-offset)}
