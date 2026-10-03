@@ -24,6 +24,9 @@ function PendingItem({
   // No write queue (P1): every write control is off until the network is back.
   const online = useOnline();
   const isDone = item.measure.unit === "done";
+  // Once the tap went out (or its entry exists) the item can take no second registro, whichever
+  // button it came from: both controls rest while it is still listed (as `RowWithControls` does).
+  const sent = oneTap.optimisticDone || oneTap.entryId !== null;
   return (
     <div className={styles.entry}>
       <div className={styles.line}>
@@ -37,14 +40,14 @@ function PendingItem({
               {/* The same one-tap circle as Today: it fills at once, the server confirms. */}
               <CheckCircle
                 label={`Registrar ${item.habitName} de ayer`}
-                pressed={oneTap.optimisticDone}
-                disabled={!online}
-                onClick={oneTap.optimisticDone ? () => {} : oneTap.done}
+                pressed={sent}
+                disabled={!online || sent}
+                onClick={oneTap.done}
               />
               <IconButton
                 icon="x"
                 label={`Ayer no salió: ${item.habitName}`}
-                disabled={oneTap.pending || !online}
+                disabled={oneTap.pending || sent || !online}
                 onClick={oneTap.missed}
               />
             </>

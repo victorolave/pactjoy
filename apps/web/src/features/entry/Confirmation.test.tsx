@@ -6,10 +6,12 @@ import { Confirmation } from "./Confirmation.tsx";
 describe("Confirmation", () => {
   it("says the registro was saved, what it was, and closes from its button", async () => {
     const onClose = vi.fn();
-    render(<Confirmation detail="Leer · 20 min" onClose={onClose} />);
+    const { container } = render(<Confirmation detail="Leer · 20 min" onClose={onClose} />);
     expect(screen.getByText("Registro guardado.")).toBeInTheDocument();
     expect(screen.getByText("Leer · 20 min")).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: "Registro guardado" })).toHaveAttribute(
+    // Decorative: the text beside it says it, so the picture has an empty alt.
+    expect(container.querySelector("img")).toHaveAttribute("alt", "");
+    expect(container.querySelector("img")).toHaveAttribute(
       "src",
       expect.stringContaining("registro-guardado"),
     );
@@ -18,11 +20,15 @@ describe("Confirmation", () => {
   });
 
   it("draws the illustration in its own 200 box, not at the sheet's full width (design 20)", () => {
+    const { container } = render(<Confirmation detail="Leer" onClose={() => {}} />);
+    expect(container.querySelector("img")).toHaveAttribute("data-size", "lg");
+  });
+
+  it("is a status region that takes focus when it appears", () => {
     render(<Confirmation detail="Leer" onClose={() => {}} />);
-    expect(screen.getByRole("img", { name: "Registro guardado" })).toHaveAttribute(
-      "data-size",
-      "lg",
-    );
+    const status = screen.getByRole("status");
+    expect(status).toHaveFocus();
+    expect(status).toHaveAttribute("tabindex", "-1");
   });
 
   it("shows the points the server gave, and the closing line", () => {
