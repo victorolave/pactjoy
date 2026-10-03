@@ -36,39 +36,39 @@ describe("ErrorBoundary", () => {
     expect(screen.getByRole("button", { name: "Reintentar" })).toBeInTheDocument();
   });
 
-  it("clears the saved Today and the query cache, then reloads, on Reintentar", async () => {
+  it("clears the saved Today and the query cache, then goes back to the start, on Reintentar", async () => {
     const storage = new MemoryStorage();
     storage.setItem(STORAGE_KEY, "{}");
     const queryClient = new QueryClient();
     queryClient.setQueryData(["today"], { state: "noCircle" });
-    const reload = vi.fn();
+    const restart = vi.fn();
     render(
       <ErrorBoundary
         persister={createTodayPersister(storage, { throttleMs: 0 })}
         queryClient={queryClient}
-        reload={reload}
+        restart={restart}
       >
         <Boom />
       </ErrorBoundary>,
     );
     await userEvent.click(screen.getByRole("button", { name: "Reintentar" }));
-    await waitFor(() => expect(reload).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(restart).toHaveBeenCalledTimes(1));
     expect(storage.getItem(STORAGE_KEY)).toBeNull();
     expect(queryClient.getQueryData(["today"])).toBeUndefined();
   });
 
-  it("still reloads when the saved copy cannot be removed", async () => {
+  it("still goes back to the start when the saved copy cannot be removed", async () => {
     const persister = createTodayPersister(null);
     persister.removeClient = async () => {
       throw new Error("blocked");
     };
-    const reload = vi.fn();
+    const restart = vi.fn();
     render(
-      <ErrorBoundary persister={persister} queryClient={new QueryClient()} reload={reload}>
+      <ErrorBoundary persister={persister} queryClient={new QueryClient()} restart={restart}>
         <Boom />
       </ErrorBoundary>,
     );
     await userEvent.click(screen.getByRole("button", { name: "Reintentar" }));
-    await waitFor(() => expect(reload).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(restart).toHaveBeenCalledTimes(1));
   });
 });

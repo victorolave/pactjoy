@@ -13,25 +13,28 @@ export interface EntryDelete {
 }
 
 export function useEntryDelete(entryId: string): EntryDelete {
-  const del = useDeleteEntry();
   const [deleted, setDeleted] = useState<string | null>(null);
   const [problem, setProblem] = useState<EntryProblem | null>(null);
   const removing = useRef(false);
+  const confirmation = useRef("");
 
-  const remove: EntryDelete["remove"] = (confirmation) => {
+  const del = useDeleteEntry({
+    onSuccess: () => {
+      removing.current = false;
+      setDeleted(confirmation.current);
+    },
+    onError: (error) => {
+      removing.current = false;
+      setProblem({ message: entryFailure(error, "borrar").message, kind: toUiError(error).kind });
+    },
+  });
+
+  const remove: EntryDelete["remove"] = (text) => {
     if (removing.current) return;
     removing.current = true;
+    confirmation.current = text;
     setProblem(null);
-    del.mutate(entryId, {
-      onSuccess: () => {
-        removing.current = false;
-        setDeleted(confirmation);
-      },
-      onError: (error) => {
-        removing.current = false;
-        setProblem({ message: entryFailure(error, "borrar").message, kind: toUiError(error).kind });
-      },
-    });
+    del.mutate(entryId);
   };
 
   return { pending: del.isPending, deleted, problem, remove };

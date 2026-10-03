@@ -77,7 +77,8 @@ export function loadConfig(env: Env): AppConfig {
  * (checked by test/prod-bundle.test.ts).
  */
 export const loadDevToday: (() => Promise<{ default: ComponentType }>) | null = import.meta.env.DEV
-  ? () => import("./dev/DevToday.tsx")
+  ? // biome-ignore lint/style/noRestrictedImports: the ONE door to src/dev, dropped from production builds
+    () => import("./dev/DevToday.tsx")
   : null;
 
 /** Reads the build-time environment. Call it once, from the composition root. */
