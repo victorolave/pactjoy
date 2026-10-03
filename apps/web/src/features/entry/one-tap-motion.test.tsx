@@ -8,6 +8,7 @@ import {
   type DayRow,
   dayRowFixture,
   entryFixture,
+  pointsFixture,
 } from "../../testing/fixtures/today.ts";
 import { renderApp } from "../../testing/render.tsx";
 
@@ -16,7 +17,7 @@ const logged = (): DayRow => ({
   ...open(),
   opportunity: { state: "logged", graceUntil: "2026-10-03" as never },
   entries: [entryFixture({ kind: "done" })],
-  points: { perOpportunity: "8", earned: 8, limitPercents: null },
+  points: pointsFixture({ perOpportunity: "8", earned: 8, limitPercents: null }),
 });
 
 const render = (row: DayRow) => renderApp({ today: activeTodayFixture({ rows: [row] }) });

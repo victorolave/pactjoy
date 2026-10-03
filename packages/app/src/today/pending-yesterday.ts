@@ -1,7 +1,11 @@
 import type { CommitmentId, SeasonDay } from "@pactjoy/engine";
-import { displayPointsDecimal, opportunityValue, weekOf, weekProgress } from "@pactjoy/engine";
+import { weekOf, weekProgress } from "@pactjoy/engine";
 import { commitmentToEngine } from "../commitment/to-engine.ts";
-import { checkEntryWindow, entryWindowDeadline } from "../entry/entry-window.ts";
+import {
+  checkEntryWindow,
+  entryWindowDeadline,
+  PAUSE_GRACE_EXTENSION_DAYS,
+} from "../entry/entry-window.ts";
 import type { MeasureView } from "../score/commitment-projection.ts";
 import { projectMeasure } from "../score/commitment-projection.ts";
 import { startWeekdayOf, toEngineEntry } from "../score/score-input.ts";
@@ -10,6 +14,7 @@ import {
   activeOpportunities,
   dateOfDay,
   limitPercentsOf,
+  perOpportunityViews,
   type TodayPoints,
   type TodayRowsInput,
 } from "./today-rows.ts";
@@ -31,8 +36,6 @@ export interface PendingYesterdayItem {
   /** `earned` is always `null` here (nothing is logged); the rest drives the sheet like a row's. */
   readonly points: TodayPoints;
 }
-
-const PAUSE_GRACE_EXTENSION_DAYS = 0;
 
 /**
  * Day-bound (`specificDays`) opportunities of yesterday that are still open to register, from the
@@ -114,10 +117,7 @@ export function pendingYesterday(input: TodayRowsInput): readonly PendingYesterd
           entryWindowDeadline(schedule, yesterday, PAUSE_GRACE_EXTENSION_DAYS),
         ),
         points: {
-          perOpportunity:
-            opportunities === 0
-              ? null
-              : displayPointsDecimal(opportunityValue(engineCommitment, opportunities)),
+          ...perOpportunityViews(engineCommitment, opportunities),
           earned: null,
           limitPercents: limitPercentsOf(commitment, engineCommitment),
         },

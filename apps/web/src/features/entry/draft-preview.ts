@@ -1,4 +1,4 @@
-import { fromScaled, toScaled } from "../../shared/decimal.ts";
+import { fromScaled } from "../../shared/decimal.ts";
 import { formatDecimal } from "../today/row-labels.ts";
 
 /**
@@ -20,8 +20,11 @@ export interface DailyDraft {
   /** What the sheet would add, scaled x100. */
   readonly draft: bigint;
   readonly unit: string;
-  /** Points of one opportunity at 100 %, two decimals; `null` when the server gave none. */
-  readonly perOpportunity: string | null;
+  /**
+   * Points of one opportunity at 100 %, EXACT (BigInt strings from the engine); `null` when the server
+   * gave none. Rounding the 2-decimal display value instead would round twice and disagree by a point.
+   */
+  readonly perOpportunityExact: { readonly numerator: string; readonly denominator: string } | null;
 }
 
 export interface DraftPreview {
@@ -49,14 +52,19 @@ const roundDiv = (numerator: bigint, denominator: bigint): bigint =>
   (2n * numerator + denominator) / (2n * denominator);
 
 const percentOf = (value: bigint, ideal: bigint): bigint =>
-  roundDiv(HUNDRED * (value < ideal ? value : ideal), ideal);
+  ideal === 0n ? 0n : roundDiv(HUNDRED * (value < ideal ? value : ideal), ideal);
 
 /** Whole points one opportunity pays for `total`: 0 below the minimum, then value / ideal, capped. */
-function pointsAt(perOpportunity: bigint, total: bigint, minimum: bigint, ideal: bigint): bigint {
-  if (total < minimum) return 0n;
+function pointsAt(
+  perOpportunity: { readonly numerator: bigint; readonly denominator: bigint },
+  total: bigint,
+  minimum: bigint,
+  ideal: bigint,
+): bigint {
+  if (ideal === 0n || total < minimum) return 0n;
   const capped = total < ideal ? total : ideal;
-  // perOpportunity is x100 and capped / ideal is a pure ratio, so the quotient is points x100.
-  return roundDiv(perOpportunity * capped, ideal * HUNDRED);
+  // (numerator / denominator) points x (capped / ideal) of the way: one rounding, half up.
+  return roundDiv(perOpportunity.numerator * capped, perOpportunity.denominator * ideal);
 }
 
 export function dailyPreview(input: DailyDraft): DraftPreview {
@@ -79,7 +87,11 @@ export function dailyPreview(input: DailyDraft): DraftPreview {
   } else {
     lines.push(`Ideal alcanzado. Por encima de ${text(ideal)} ${unit} no suma más puntos.`);
   }
-  const perOpportunity = input.perOpportunity === null ? null : toScaled(input.perOpportunity);
+  const exact = input.perOpportunityExact;
+  const perOpportunity =
+    exact === null
+      ? null
+      : { numerator: BigInt(exact.numerator), denominator: BigInt(exact.denominator) };
   const gain =
     perOpportunity === null
       ? null
@@ -97,7 +109,7 @@ export function dailyPreview(input: DailyDraft): DraftPreview {
   };
 }
 
-export type WeeklyDraft = Omit<DailyDraft, "perOpportunity">;
+export type WeeklyDraft = Omit<DailyDraft, "perOpportunityExact">;
 
 /** A weekly total shows progress only: the week's points are assigned when it closes (design 17b). */
 export function weeklyPreview(input: WeeklyDraft): DraftPreview {

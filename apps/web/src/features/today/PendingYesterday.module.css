@@ -24,21 +24,29 @@
   color: var(--text-secondary);
 }
 
-.item {
+/* One line per item (a conscious deviation from 15d): name and day left, circular buttons right. */
+.entry {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-2);
+  padding: var(--space-4);
+  border-radius: var(--radius-control);
+  background: var(--surface-card);
 }
 
-.entry {
+.line {
   display: flex;
   align-items: center;
   align-self: stretch;
   gap: var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-control);
-  background: var(--surface-card);
+}
+
+.actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .text {

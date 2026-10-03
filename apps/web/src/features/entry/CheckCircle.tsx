@@ -1,4 +1,3 @@
-import { cx } from "../../ui/cx.ts";
 import { Icon } from "../../ui/icon/Icon.tsx";
 import styles from "./check-circle.module.css";
 
@@ -15,7 +14,7 @@ export function CheckCircle({ label, pressed, disabled = false, onClick }: Check
   return (
     <button
       type="button"
-      className={cx(styles.circle, pressed && styles.circlePressed)}
+      className={styles.circle}
       aria-label={label}
       aria-pressed={pressed}
       disabled={disabled}
