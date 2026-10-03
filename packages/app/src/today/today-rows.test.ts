@@ -90,7 +90,12 @@ describe("today rows: day rows (TD-R4, TD-R6)", () => {
         },
         scheduledToday: true,
         opportunity: { state: "open", graceUntil: dayOf(3) },
-        points: { perOpportunity: "250", earned: null, limitPercents: null },
+        points: {
+          perOpportunity: "250",
+          perOpportunityExact: { numerator: "250", denominator: "1" },
+          earned: null,
+          limitPercents: null,
+        },
         entries: [],
       },
     ]);

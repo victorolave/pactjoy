@@ -1,5 +1,5 @@
 import type { MeasureView, PendingYesterdayItem, TodayRow } from "@pactjoy/app";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 import { useOnline } from "../../app/connectivity-context.tsx";
 import { fromScaled, toScaled } from "../../shared/decimal.ts";
 import { pointsText } from "../../shared/format.ts";
@@ -125,7 +125,11 @@ function RecordShell({
   const gain = choice.yesterday ? null : todayGain;
 
   // Closing after a save leaves the toast with Deshacer behind (design 20): the sheet is gone by then.
+  const closed = useRef(false);
   const finish = () => {
+    // Escape and the button in the same tick, or a timer and a tap, close once and toast once.
+    if (closed.current) return;
+    closed.current = true;
     if (entry.saved !== null && entry.entryId !== null) {
       showSaved(
         gain === null
@@ -218,9 +222,14 @@ function ReachSheet({
   const unit = unitLabel(measure) ?? "";
   const toSend = toSubmitValue(value, measure.precision);
   const draft = toScaled(toSend ?? "0") ?? 0n;
+  // A week row is judged against the week's own (pause-prorated) thresholds, not the commitment's.
+  const effective =
+    row.kind === "week" && row.progress?.target.direction === "reach"
+      ? row.progress.target
+      : measure.target;
   const thresholds = {
-    minimum: toScaled(measure.target.minimum) ?? 0n,
-    ideal: toScaled(measure.target.ideal) ?? 0n,
+    minimum: toScaled(effective.minimum) ?? 0n,
+    ideal: toScaled(effective.ideal) ?? 0n,
     before,
     draft,
     unit,
@@ -230,7 +239,7 @@ function ReachSheet({
     : // A timesPerWeek session counts at week close: the preview shows no points for it.
       dailyPreview({
         ...thresholds,
-        perOpportunity: weekBound ? null : row.points.perOpportunity,
+        perOpportunityExact: weekBound ? null : row.points.perOpportunityExact,
       });
   const minimumAt =
     thresholds.ideal === 0n ? 0 : Number(thresholds.minimum) / Number(thresholds.ideal);
@@ -317,7 +326,7 @@ function LimitSheet({
   const weekly = row.kind === "week" && measure.schedule.period === "weeklyTotal";
   const subtitle = weekly
     ? `Esta semana llevas ${quantityText(row.progress?.value ?? "0", measure)}`
-    : "Registra lo de hoy, aunque sea 0.";
+    : `Registra lo de ${choice.yesterday ? "ayer" : "hoy"}, aunque sea 0.`;
   const percents =
     choice.yesterday && pending !== undefined
       ? pending.points.limitPercents

@@ -7,6 +7,7 @@ import {
   type DayRow,
   dayRowFixture,
   entryFixture,
+  pointsFixture,
   type WeekRow,
   weekRowFixture,
 } from "../../testing/fixtures/today.ts";
@@ -40,7 +41,7 @@ const readingDay = (overrides: Partial<DayRow> = {}): DayRow =>
       target: { direction: "reach", minimum: "10", ideal: "30" },
       schedule: { period: "perSession", frequency: { kind: "specificDays", weekdays: [4] } },
     },
-    points: { perOpportunity: "6.25", earned: null, limitPercents: null },
+    points: pointsFixture({ perOpportunity: "6.25", earned: null, limitPercents: null }),
     ...overrides,
   });
 
