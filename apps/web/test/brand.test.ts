@@ -7,6 +7,17 @@ import { describe, expect, it } from "vitest";
 const BRAND = resolve(import.meta.dirname, "../src/design/brand");
 const svgs = readdirSync(BRAND).filter((name) => name.endsWith(".svg"));
 
+describe("illustrations", () => {
+  const names = ["cocinar", "registro-guardado", "sin-conexion"];
+
+  it.each(names)("%s.webp is a real WebP image", (name) => {
+    const bytes = readFileSync(join(BRAND, `${name}.webp`));
+    expect(bytes.subarray(0, 4).toString("ascii")).toBe("RIFF");
+    expect(bytes.subarray(8, 12).toString("ascii")).toBe("WEBP");
+    expect(bytes.length).toBeLessThan(100 * 1024);
+  });
+});
+
 describe("brand SVGs", () => {
   it("has the official horizontal logo and the symbol", () => {
     expect(svgs.sort()).toEqual(["pactjoy-horizontal-proposed.svg", "pactjoy-symbol-gradient.svg"]);
