@@ -11,7 +11,11 @@ import type { Clock } from "../time/clock.port.ts";
 import { toSeasonDay } from "../time/season-calendar.ts";
 import type { TimeZone } from "../time/time-zone.port.ts";
 import type { EntryRecord } from "./entry.ts";
-import { checkEntryWindow, type EntryWindowError } from "./entry-window.ts";
+import {
+  checkEntryWindow,
+  type EntryWindowError,
+  PAUSE_GRACE_EXTENSION_DAYS,
+} from "./entry-window.ts";
 
 export type OwnEntryError =
   | { readonly kind: "EntryNotFound" }
@@ -86,7 +90,7 @@ export async function loadMutableEntry(
     today: today.day,
     lengthWeeks: season.lengthWeeks,
     // B7: the real extension source arrives with change A2 (app-pause-workflow).
-    pauseGraceExtensionDays: 0,
+    pauseGraceExtensionDays: PAUSE_GRACE_EXTENSION_DAYS,
   });
   return closed ? err(closed) : ok({ entry, season, circle, commitment, memberId: member.id });
 }

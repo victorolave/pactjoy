@@ -68,7 +68,14 @@ const ROW_KEYS = [
   "scheduledToday",
   ...under("measure", MEASURE),
   ...under("opportunity", ["graceUntil", "state"]),
-  ...under("points", ["earned", "limitPercents", "perOpportunity"]),
+  ...under("points", [
+    "earned",
+    "limitPercents",
+    "perOpportunity",
+    "perOpportunityExact",
+    "perOpportunityExact.denominator",
+    "perOpportunityExact.numerator",
+  ]),
   ...under("progress", [
     "percent",
     "sessionsDone",
@@ -194,7 +201,14 @@ describe("GET /me/today emits exactly the documented keys (ADR-0011)", () => {
         "measure",
         MEASURE.filter((key) => key !== "schedule.frequency.times"),
       ),
-      ...under("points", ["earned", "limitPercents", "perOpportunity"]),
+      ...under("points", [
+        "earned",
+        "limitPercents",
+        "perOpportunity",
+        "perOpportunityExact",
+        "perOpportunityExact.denominator",
+        "perOpportunityExact.numerator",
+      ]),
     ];
     expect(keys(items[0])).toEqual([...PENDING].sort());
   });
