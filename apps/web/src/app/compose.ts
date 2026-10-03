@@ -1,7 +1,9 @@
+import { BrowserConnectivity } from "../adapters/browser-connectivity.ts";
 import { CryptoIds } from "../adapters/crypto-ids.ts";
 import { GoTrueAuth, type GoTrueAuthOptions } from "../adapters/gotrue-auth.ts";
 import { HttpPactJoyApi } from "../adapters/http-pactjoy-api.ts";
 import { LocalStorageTokenStore } from "../adapters/local-storage-token-store.ts";
+import { createTodayPersister } from "../adapters/query-persister.ts";
 import { SystemClock } from "../adapters/system-clock.ts";
 import type { AppConfig } from "../config.ts";
 import { createSessionEvents } from "../features/auth/session-events.ts";
@@ -39,9 +41,11 @@ export function createDependencies(config: AppConfig, env: ComposeEnvironment): 
       fetch: env.fetch,
     }),
     ids: new CryptoIds(),
+    connectivity: new BrowserConnectivity(),
     store,
     sessions,
     sessionEvents,
     queryClient: createQueryClient(),
+    persister: createTodayPersister(),
   };
 }
