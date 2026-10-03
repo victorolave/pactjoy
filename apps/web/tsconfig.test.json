@@ -13,6 +13,7 @@
     "test/**/*.ts",
     "scripts/**/*.ts",
     "vite.config.ts",
+    "pwa.ts",
     "vitest.config.ts"
   ]
 }

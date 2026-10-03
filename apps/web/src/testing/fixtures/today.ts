@@ -45,7 +45,7 @@ export const noSeasonTodayFixture = (): TodayView => ({
   circle: base().circle,
 });
 
-export const pactOpenTodayFixture = (): TodayView => ({
+export const pactOpenTodayFixture = (): Season => ({
   state: "pactOpen",
   ...base(),
   season: { ...base().season, actualStart: null },
@@ -64,6 +64,17 @@ export const dayRowFixture = (overrides: Partial<DayRow> = {}): DayRow => ({
   },
   opportunity: { state: "open", graceUntil: localDate("2026-10-03") },
   entries: [],
+  ...overrides,
+});
+
+export type Entry = DayRow["entries"][number];
+
+/** One of the viewer's entries for today (2026-10-02). */
+export const entryFixture = (value: Entry["value"], overrides: Partial<Entry> = {}): Entry => ({
+  entryId: "entry-1" as Entry["entryId"],
+  forDate: TODAY,
+  value,
+  note: null,
   ...overrides,
 });
 
