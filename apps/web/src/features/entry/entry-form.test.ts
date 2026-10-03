@@ -3,6 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   initialValue,
   isSubmittable,
+  type LimitQuantity,
+  limitMeasureOf,
+  limitUsesGrid,
   nudge,
   presetsFor,
   quantityMeasureOf,
@@ -128,8 +131,14 @@ describe("isSubmittable and toSubmitValue (EN-R3)", () => {
     expect(toSubmitValue("10,5", "decimal")).toBe("10.5");
   });
 
-  it("blocks zero and anything unreadable (EN-S8)", () => {
-    expect(isSubmittable("0", "integer")).toBe(false);
+  it("accepts zero: a reach with a quantity can record 0 (Notion Mechanics)", () => {
+    expect(isSubmittable("0", "integer")).toBe(true);
+    expect(isSubmittable("0", "decimal")).toBe(true);
+    expect(toSubmitValue("0", "integer")).toBe("0");
+    expect(toSubmitValue("0.00", "decimal")).toBe("0");
+  });
+
+  it("blocks anything unreadable", () => {
     expect(isSubmittable("", "integer")).toBe(false);
     expect(isSubmittable("abc", "decimal")).toBe(false);
     expect(isSubmittable("-5", "integer")).toBe(false);
@@ -153,5 +162,41 @@ describe("quantityMeasureOf", () => {
       target: { direction: "limit", ideal: "1", tolerance: "3" },
     };
     expect(quantityMeasureOf(limit)).toBeNull();
+  });
+});
+
+describe("limitMeasureOf", () => {
+  it("returns limit quantities and nothing for done or reach", () => {
+    const limit: Quantity = {
+      ...perSession(),
+      target: { direction: "limit", ideal: "2", tolerance: "4" },
+    };
+    expect(limitMeasureOf(limit)).toMatchObject({ target: { direction: "limit", tolerance: "4" } });
+    expect(limitMeasureOf(perSession())).toBeNull();
+    expect(limitMeasureOf({ unit: "done", schedule: perSession().schedule as never })).toBeNull();
+  });
+});
+
+describe("limitUsesGrid", () => {
+  const limit = (overrides: Partial<Quantity> = {}, tolerance = "4"): LimitQuantity =>
+    ({
+      ...perSession(),
+      target: { direction: "limit", ideal: "2", tolerance },
+      ...overrides,
+    }) as LimitQuantity;
+
+  it("uses the grid for a whole-number per-session limit whose tolerance fits", () => {
+    expect(limitUsesGrid(limit())).toBe(true);
+    expect(limitUsesGrid(limit({}, "11"))).toBe(true);
+  });
+
+  it("falls back to a stepper when the tolerance outgrows the grid", () => {
+    expect(limitUsesGrid(limit({}, "12"))).toBe(false);
+    expect(limitUsesGrid(limit({}, "20"))).toBe(false);
+  });
+
+  it("falls back to a stepper for a weekly total and for decimals", () => {
+    expect(limitUsesGrid(limit({ schedule: { period: "weeklyTotal" } }))).toBe(false);
+    expect(limitUsesGrid(limit({ precision: "decimal" }))).toBe(false);
   });
 });

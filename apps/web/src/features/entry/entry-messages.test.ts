@@ -48,4 +48,14 @@ describe("entryFailure", () => {
       retryable: false,
     });
   });
+
+  it("words a delete failure with borrar", () => {
+    expect(entryFailure(new ApiError("NetworkError", 0, null), "borrar")).toEqual({
+      message: "No pudimos borrar el registro.",
+      retryable: true,
+    });
+    expect(entryFailure(new ApiError("EntryNotFound", 404, null), "borrar").message).toBe(
+      "Ese registro ya no existe.",
+    );
+  });
 });
