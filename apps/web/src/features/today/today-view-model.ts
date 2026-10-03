@@ -23,6 +23,7 @@ export type TodayModel =
   | {
       readonly kind: "active" | "ended";
       /** The viewer's per-circle display name, or null when the standings do not list them. */
+      readonly seasonId: string;
       readonly greetingName: string | null;
       readonly dateLabel: string;
       readonly weekLabel: string;
@@ -124,6 +125,7 @@ function running(view: Running): TodayModel {
   const logged = registrable.filter((row) => row.opportunity.state === "logged").length;
   return {
     kind: view.state,
+    seasonId: view.season.id,
     greetingName:
       view.standings.rows.find((row) => row.memberId === view.viewerId)?.displayName ?? null,
     dateLabel: longDate(view.today),

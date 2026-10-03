@@ -4,7 +4,7 @@ import { Card } from "../../ui/Card.tsx";
 import { InlineMessage } from "../../ui/InlineMessage.tsx";
 import { Icon } from "../../ui/icon/Icon.tsx";
 import { Illustration } from "../../ui/Placeholder.tsx";
-import { TodayRowCard } from "./rows/TodayRowCard.tsx";
+import { RowWithControls } from "../entry/RowWithControls.tsx";
 import { SeasonCard } from "./SeasonCard.tsx";
 import { StandingsPair } from "./StandingsPair.tsx";
 import styles from "./TodayScreen.module.css";
@@ -170,14 +170,14 @@ export function RunningToday({ model }: { readonly model: RunningModel }) {
           }
         >
           {forToday.map((row) => (
-            <TodayRowCard key={row.commitmentId} row={row} />
+            <RowWithControls key={row.commitmentId} row={row} seasonId={model.seasonId} />
           ))}
         </Section>
       )}
       {(week.length > 0 || otherDays.length > 0) && (
         <Section title="Esta semana">
           {[...week, ...otherDays].map((row) => (
-            <TodayRowCard key={row.commitmentId} row={row} />
+            <RowWithControls key={row.commitmentId} row={row} seasonId={model.seasonId} />
           ))}
         </Section>
       )}
