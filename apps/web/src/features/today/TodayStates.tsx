@@ -186,7 +186,7 @@ export function RunningToday({ model }: { readonly model: RunningModel }) {
       {model.standings !== null && (
         <StandingsPair model={model.standings} viewerName={model.greetingName} />
       )}
-      <EntrySheetHost rows={[...forToday, ...week]} />
+      <EntrySheetHost rows={[...forToday, ...week]} seasonId={model.seasonId} />
     </>
   );
 }
