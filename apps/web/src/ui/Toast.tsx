@@ -11,6 +11,8 @@ export interface ToastProps {
   readonly tone?: "default" | "error";
   readonly actionLabel?: string;
   readonly onAction?: () => void;
+  /** The action cannot run right now (offline: no write queue). */
+  readonly actionDisabled?: boolean;
   /** Called when the time is up. The owner of the toast removes it. */
   readonly onDismiss?: () => void;
   /** `null` keeps the toast until the user acts (use for errors that offer a retry). */
@@ -22,6 +24,7 @@ export function Toast({
   tone = "default",
   actionLabel,
   onAction,
+  actionDisabled = false,
   onDismiss,
   durationMs = actionLabel === undefined ? DEFAULT_DURATION_MS : ACTION_DURATION_MS,
 }: ToastProps) {
@@ -51,7 +54,7 @@ export function Toast({
     >
       <span className="pj-toast__msg">{message}</span>
       {actionLabel !== undefined && (
-        <Button variant="ghost" size="sm" onClick={onAction}>
+        <Button variant="ghost" size="sm" disabled={actionDisabled} onClick={onAction}>
           {actionLabel}
         </Button>
       )}

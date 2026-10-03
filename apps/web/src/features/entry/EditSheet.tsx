@@ -9,7 +9,13 @@ import { Tag } from "../../ui/Tag.tsx";
 import { entryText, quantityText, targetText, unitLabel } from "../today/row-labels.ts";
 import { Confirmation, useAutoClose } from "./Confirmation.tsx";
 import styles from "./entry.module.css";
-import { limitMeasureOf, nudge, quantityMeasureOf, toSubmitValue } from "./entry-form.ts";
+import {
+  limitMeasureOf,
+  limitUsesGrid,
+  nudge,
+  quantityMeasureOf,
+  toSubmitValue,
+} from "./entry-form.ts";
 import { LimitGrid } from "./LimitGrid.tsx";
 import { NoteField } from "./NoteField.tsx";
 import { QuantityStepper } from "./QuantityStepper.tsx";
@@ -46,7 +52,7 @@ function EntryEditor({ row, entry, onSelect, onClose }: EditSheetProps) {
   const [chosen, setChosen] = useState<number | null>(quantity === null ? null : Number(quantity));
   const reach = quantityMeasureOf(row.measure);
   const limit = limitMeasureOf(row.measure);
-  const grid = limit !== null && limit.precision === "integer";
+  const grid = limit !== null && limitUsesGrid(limit);
   const measure = reach ?? limit;
 
   const finished = edit.saved ?? remove.deleted;
@@ -63,8 +69,8 @@ function EntryEditor({ row, entry, onSelect, onClose }: EditSheetProps) {
       : grid
         ? chosen === null
           ? null
-          : toSubmitValue(String(chosen), "integer", { allowZero: true })
-        : toSubmitValue(typed, measure.precision, { allowZero: limit !== null });
+          : toSubmitValue(String(chosen), "integer")
+        : toSubmitValue(typed, measure.precision);
   const amount =
     measure !== null && quantity !== null && toSend !== null ? quantityText(toSend, measure) : null;
   const unit = measure === null ? "" : (unitLabel(measure) ?? "");

@@ -15,6 +15,15 @@ export function ConnectivityProvider({
   );
 }
 
+/** Like useOnline, but "online" when there is no provider (for shared UI that may sit outside one). */
+export function useOptionalOnline(): boolean {
+  const connectivity = useContext(ConnectivityContext);
+  return useSyncExternalStore(
+    (notify) => connectivity?.subscribe(notify) ?? (() => {}),
+    () => connectivity?.isOnline() ?? true,
+  );
+}
+
 /** Whether the app can reach the network. Writes are disabled when it cannot (P1: no write queue). */
 export function useOnline(): boolean {
   const connectivity = useContext(ConnectivityContext);

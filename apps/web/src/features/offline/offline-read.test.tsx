@@ -56,6 +56,19 @@ describe("reading Today offline (TO-R10)", () => {
     expect(screen.queryByText(OFFLINE)).not.toBeInTheDocument();
   });
 
+  it("does not show another user's saved Today (C-W5)", async () => {
+    const storage = new MemoryStorage();
+    seedPersistedToday(storage, withRows(), 5 * 60 * 1000, "user-2");
+    renderApp({
+      storage,
+      online: false,
+      today: noCircleTodayFixture(),
+      todayFailures: [NETWORK()],
+    });
+    expect(await screen.findByRole("alert")).toHaveTextContent("No pudimos cargar tu día.");
+    expect(screen.queryByRole("heading", { name: "Meditar" })).not.toBeInTheDocument();
+  });
+
   it("prefers fresh data over the saved Today once the server answers", async () => {
     const storage = new MemoryStorage();
     seedPersistedToday(storage, withRows());

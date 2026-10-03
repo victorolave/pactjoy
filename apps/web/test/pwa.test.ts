@@ -69,7 +69,7 @@ describe("service worker (WF-R7)", () => {
 
   it("precaches the shell and the fonts", () => {
     const patterns = (workbox.globPatterns ?? []).join(" ");
-    for (const extension of ["js", "css", "html", "woff2", "svg", "png", "webmanifest"]) {
+    for (const extension of ["js", "css", "html", "woff2", "svg", "png", "webp", "webmanifest"]) {
       expect(patterns, extension).toContain(extension);
     }
     expect(workbox.navigateFallback).toBe("/index.html");
