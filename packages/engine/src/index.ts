@@ -117,6 +117,7 @@ export type { CommitmentScoreEntry, MemberScore, ScoreInput } from "./scoring/me
 export { scoreMember, weekBoundGraceDeadline } from "./scoring/member-score.ts";
 export {
   opportunityPoints,
+  opportunityPointsAt,
   opportunityValue,
   progressAtValue,
   sumPoints,

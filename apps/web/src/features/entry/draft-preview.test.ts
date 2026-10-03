@@ -2,7 +2,83 @@ import { describe, expect, it } from "vitest";
 import { dailyPreview, weeklyPreview } from "./draft-preview.ts";
 
 /** Leer in the design: minimum 10, ideal 30 min, 250 points over 40 sessions = 6.25 each. */
-const reading = { minimum: 1000n, ideal: 3000n, unit: "min", perOpportunity: "6.25" };
+const reading = {
+  minimum: 1000n,
+  ideal: 3000n,
+  unit: "min",
+  perOpportunityExact: { numerator: "25", denominator: "4" },
+};
+
+/** Independent reference: exact rational points of one slot, rounded once, half up. */
+function reference(
+  weight: number,
+  opportunities: number,
+  value: bigint,
+  minimum: bigint,
+  ideal: bigint,
+): number {
+  if (value < minimum) return 0;
+  const capped = value < ideal ? value : ideal;
+  // weight x 10 points over `opportunities`, times capped / ideal: one fraction, one rounding.
+  const numerator = BigInt(weight * 10) * capped;
+  const denominator = BigInt(opportunities) * ideal;
+  return Number((2n * numerator + denominator) / (2n * denominator));
+}
+
+describe("dailyPreview rounds once, from the exact value (review B-W1)", () => {
+  it("agrees with a single rounding of the exact fraction over a grid of weights, counts and ideals", () => {
+    let checked = 0;
+    for (const weight of [5, 10, 15, 25, 35, 40, 60, 75, 100]) {
+      for (const opportunities of [3, 7, 8, 12, 13, 24, 28, 40, 56, 84]) {
+        // The exact value of one opportunity: weight x 10 / opportunities, reduced or not.
+        const exact = { numerator: String(weight * 10), denominator: String(opportunities) };
+        for (const ideal of [500n, 1000n, 3000n, 4500n, 15000n]) {
+          const minimum = ideal / 3n;
+          for (const draftValue of [minimum, (minimum + ideal) / 2n, ideal - 100n, ideal]) {
+            const preview = dailyPreview({
+              minimum,
+              ideal,
+              unit: "min",
+              perOpportunityExact: exact,
+              before: 0n,
+              draft: draftValue,
+            });
+            expect(preview.gain).toBe(reference(weight, opportunities, draftValue, minimum, ideal));
+            checked += 1;
+          }
+        }
+      }
+    }
+    expect(checked).toBe(9 * 10 * 5 * 4);
+  });
+
+  it("computes from the exact fraction itself (150/7 points, half of the way to the ideal)", () => {
+    const exact = { numerator: "150", denominator: "7" };
+    const preview = dailyPreview({
+      minimum: 1000n,
+      ideal: 3000n,
+      unit: "min",
+      perOpportunityExact: exact,
+      before: 0n,
+      draft: 1500n,
+    });
+    // 150/7 x 1500/3000 = 10.714... -> 11. The grid above is what pins agreement with one rounding.
+    expect(preview.gain).toBe(11);
+  });
+
+  it("guards an ideal of zero instead of dividing by it", () => {
+    const preview = dailyPreview({
+      minimum: 0n,
+      ideal: 0n,
+      unit: "min",
+      perOpportunityExact: { numerator: "25", denominator: "4" },
+      before: 0n,
+      draft: 100n,
+    });
+    expect(preview.gain).toBe(0);
+    expect(Number.isFinite(preview.fill)).toBe(true);
+  });
+});
 
 describe("dailyPreview (design 17 and 22)", () => {
   it("below the minimum says how much is missing, earns nothing and keeps the bar neutral", () => {
@@ -46,9 +122,9 @@ describe("dailyPreview (design 17 and 22)", () => {
   });
 
   it("has no points to show when the server gave none for the opportunity", () => {
-    expect(dailyPreview({ ...reading, perOpportunity: null, before: 0n, draft: 2000n }).gain).toBe(
-      null,
-    );
+    expect(
+      dailyPreview({ ...reading, perOpportunityExact: null, before: 0n, draft: 2000n }).gain,
+    ).toBe(null);
   });
 });
 

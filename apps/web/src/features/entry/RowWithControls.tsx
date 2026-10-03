@@ -2,6 +2,7 @@ import type { TodayRow } from "@pactjoy/app";
 import { useEffect, useState } from "react";
 import { useOnline } from "../../app/connectivity-context.tsx";
 import { Button } from "../../ui/Button.tsx";
+import { Centered } from "../../ui/Centered.tsx";
 import { IconButton } from "../../ui/IconButton.tsx";
 import { InlineMessage } from "../../ui/InlineMessage.tsx";
 import { Sheet } from "../../ui/Sheet.tsx";
@@ -44,6 +45,11 @@ export function RowWithControls({
   const offersMissed = isDone && windowOpen;
   const missedOpen = state === "open" && !oneTap.optimisticDone;
   // The server's own row takes over from the optimistic fill once it shows the entry.
+  // The undo question is about one entry: when there is none any more it closes for good, and must
+  // not come back if an entry shows up again later.
+  useEffect(() => {
+    if (undoId === null) setConfirmingUndo(false);
+  }, [undoId]);
   const { settle, optimisticDone } = oneTap;
   useEffect(() => {
     if (optimisticDone && doneEntry !== undefined) settle();
@@ -101,15 +107,17 @@ export function RowWithControls({
                 aria-hidden={missedOpen ? undefined : true}
               >
                 <div className={styles.collapseInner}>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    aria-label={`Hoy no salió: ${row.habitName}`}
-                    disabled={!missedOpen || oneTap.pending || !online}
-                    onClick={oneTap.missed}
-                  >
-                    Hoy no salió
-                  </Button>
+                  <Centered>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      aria-label={`Hoy no salió: ${row.habitName}`}
+                      disabled={!missedOpen || oneTap.pending || !online}
+                      onClick={oneTap.missed}
+                    >
+                      Hoy no salió
+                    </Button>
+                  </Centered>
                 </div>
               </div>
             )}
