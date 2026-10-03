@@ -1,10 +1,10 @@
 import { toUiError } from "../../shared/ui-error.ts";
 import { Button } from "../../ui/Button.tsx";
-import { InlineMessage } from "../../ui/InlineMessage.tsx";
+import { Icon } from "../../ui/icon/Icon.tsx";
 import { Skeleton } from "../../ui/Skeleton.tsx";
 import { useToday } from "./queries.ts";
 import styles from "./TodayScreen.module.css";
-import { NoCircle, NoSeason, NotStarted, PactOpen, RunningHeader } from "./TodayStates.tsx";
+import { NoCircle, NoSeason, NotStarted, PactOpen, RunningToday } from "./TodayStates.tsx";
 import { type TodayModel, toTodayModel } from "./today-view-model.ts";
 
 function TodayContent({ model }: { readonly model: TodayModel }) {
@@ -19,7 +19,7 @@ function TodayContent({ model }: { readonly model: TodayModel }) {
       return <NotStarted model={model} />;
     case "active":
     case "ended":
-      return <RunningHeader model={model} />;
+      return <RunningToday model={model} />;
   }
 }
 
@@ -41,19 +41,22 @@ function TodayFailure({
 }) {
   const { retryable } = toUiError(error);
   return (
-    <InlineMessage
-      tone="error"
-      title={retryable ? "No pudimos cargar Hoy" : "Algo salió mal"}
-      action={
-        retryable ? (
-          <Button size="sm" variant="secondary" onClick={onRetry}>
-            Reintentar
-          </Button>
-        ) : undefined
-      }
-    >
-      {retryable ? "Revisa tu conexión e inténtalo de nuevo." : "Inténtalo de nuevo más tarde."}
-    </InlineMessage>
+    <div className={styles.failure} role="alert">
+      <span className={styles.failureGlyph}>
+        <Icon name="cloud-off" size="lg" />
+      </span>
+      <p className={styles.sectionTitle}>
+        {retryable ? "No pudimos cargar tu día." : "Algo salió mal"}
+      </p>
+      <p className={styles.lead}>
+        {retryable ? "Revisa tu conexión e inténtalo de nuevo." : "Inténtalo de nuevo más tarde."}
+      </p>
+      {retryable && (
+        <Button leadingIcon="rotate-cw" onClick={onRetry}>
+          Reintentar
+        </Button>
+      )}
+    </div>
   );
 }
 

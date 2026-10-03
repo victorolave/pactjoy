@@ -1,6 +1,12 @@
 import type { ReactNode } from "react";
 import { longDate } from "../../shared/format.ts";
+import { Card } from "../../ui/Card.tsx";
+import { InlineMessage } from "../../ui/InlineMessage.tsx";
+import { Icon } from "../../ui/icon/Icon.tsx";
 import { Illustration } from "../../ui/Placeholder.tsx";
+import { TodayRowCard } from "./rows/TodayRowCard.tsx";
+import { SeasonCard } from "./SeasonCard.tsx";
+import { StandingsPair } from "./StandingsPair.tsx";
 import styles from "./TodayScreen.module.css";
 import type { TodayModel } from "./today-view-model.ts";
 
@@ -63,7 +69,18 @@ export function NotStarted({ model }: { readonly model: SeasonModel }) {
   );
 }
 
-export function RunningHeader({ model }: { readonly model: RunningModel }) {
+const listNames = (names: readonly string[]): string =>
+  new Intl.ListFormat("es", { style: "long", type: "conjunction" }).format(names);
+
+function RunningHeader({ model }: { readonly model: RunningModel }) {
+  const subtitle =
+    model.kind === "ended"
+      ? null
+      : model.dayState === "allDone"
+        ? "Hoy ya está cumplido."
+        : model.dayState === "pending"
+          ? "¿Qué quieres cumplir hoy?"
+          : null;
   return (
     <header className={styles.header}>
       <div className={styles.meta}>
@@ -72,6 +89,102 @@ export function RunningHeader({ model }: { readonly model: RunningModel }) {
       <h1 className={styles.title}>
         {model.greetingName === null ? "Hola" : `Hola, ${model.greetingName}`}
       </h1>
+      {subtitle !== null && <p className={styles.lead}>{subtitle}</p>}
     </header>
+  );
+}
+
+function Section({
+  title,
+  meta,
+  children,
+}: {
+  readonly title: string;
+  readonly meta?: string | undefined;
+  readonly children: ReactNode;
+}) {
+  return (
+    <section className={styles.section}>
+      <div className={styles.sectionHead}>
+        <h2 className={styles.sectionTitle}>{title}</h2>
+        {meta !== undefined && <span className={styles.meta}>{meta}</span>}
+      </div>
+      <div className={styles.rows}>{children}</div>
+    </section>
+  );
+}
+
+function AllDone({ model }: { readonly model: RunningModel }) {
+  const done = model.sections.forToday
+    .filter((row) => row.opportunity.state === "logged")
+    .map((row) => row.habitName);
+  return (
+    <Card tone="warm">
+      <div className={styles.allDone}>
+        <span className={styles.allDoneGlyph}>
+          <Icon name="check" />
+        </span>
+        <div>
+          <div className={styles.allDoneTitle}>
+            {model.counts.logged} de {model.counts.scheduled} compromisos de hoy
+          </div>
+          <div className={styles.lead}>{listNames(done)}.</div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function NoCommitments() {
+  return (
+    <Card tone="warm">
+      <div className={styles.empty}>
+        <Illustration alt="Un día sin compromisos" />
+        <h2 className={styles.sectionTitle}>Hoy no tienes compromisos previstos.</h2>
+        <p className={styles.lead}>Lo que queda de la semana sigue disponible abajo.</p>
+      </div>
+    </Card>
+  );
+}
+
+export function RunningToday({ model }: { readonly model: RunningModel }) {
+  const { forToday, otherDays, week } = model.sections;
+  const showDayState = model.kind === "active";
+  return (
+    <>
+      <RunningHeader model={model} />
+      {model.kind === "ended" && (
+        <InlineMessage tone="info" title="Temporada terminada">
+          Tus últimos registros siguen visibles. Los que aún están abiertos se pueden ajustar.
+        </InlineMessage>
+      )}
+      {showDayState && model.dayState === "allDone" && <AllDone model={model} />}
+      {showDayState && model.dayState === "none" && <NoCommitments />}
+      {forToday.length > 0 && (
+        <Section
+          title="Para hoy"
+          meta={
+            model.counts.scheduled > 0
+              ? `${model.counts.logged} de ${model.counts.scheduled} registrados`
+              : undefined
+          }
+        >
+          {forToday.map((row) => (
+            <TodayRowCard key={row.commitmentId} row={row} />
+          ))}
+        </Section>
+      )}
+      {(week.length > 0 || otherDays.length > 0) && (
+        <Section title="Esta semana">
+          {[...week, ...otherDays].map((row) => (
+            <TodayRowCard key={row.commitmentId} row={row} />
+          ))}
+        </Section>
+      )}
+      <SeasonCard model={model.season} />
+      {model.standings !== null && (
+        <StandingsPair model={model.standings} viewerName={model.greetingName} />
+      )}
+    </>
   );
 }
