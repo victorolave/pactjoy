@@ -13,6 +13,24 @@ describe("ProgressBar", () => {
     expect(screen.getByText("2 de 3")).toBeInTheDocument();
   });
 
+  it("fills with the neutral ink below the minimum and with the gradient from it", () => {
+    const { rerender } = render(<ProgressBar name="Lectura" value={5} max={30} minimum={10} />);
+    expect(screen.getByRole("progressbar").firstElementChild).toHaveStyle({
+      background: "var(--ink-400)",
+    });
+    rerender(<ProgressBar name="Lectura" value={10} max={30} minimum={10} />);
+    expect(screen.getByRole("progressbar").firstElementChild).toHaveStyle({
+      background: "var(--gradient-together)",
+    });
+  });
+
+  it("keeps the gradient when there is no minimum to measure against", () => {
+    render(<ProgressBar name="Lectura" value={1} max={30} />);
+    expect(screen.getByRole("progressbar").firstElementChild).toHaveStyle({
+      background: "var(--gradient-together)",
+    });
+  });
+
   it("clamps the fill between empty and full", () => {
     const { rerender } = render(<ProgressBar name="Progreso" value={5} max={2} />);
     expect(screen.getByRole("progressbar").firstElementChild).toHaveStyle({ width: "100%" });

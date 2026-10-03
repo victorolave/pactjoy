@@ -1,3 +1,13 @@
+/* The design's bar is 8 high on the sunken surface (white inside a sunken card). */
+div.track {
+  height: var(--space-2);
+  background: var(--surface-sunken);
+}
+
+div.track[data-track="white"] {
+  background: var(--pj-white);
+}
+
 .marks {
   position: relative;
   height: var(--space-4);

@@ -161,7 +161,11 @@ describe("Today active: rows (TO-R3, TO-R4, TO-R5)", () => {
     renderToday(activeTodayFixture({ rows: [dayRow("Meditar", "open"), weekRowFixture()] }));
     expect(await screen.findByRole("heading", { name: "Esta semana" })).toBeInTheDocument();
     expect(screen.getByText("2 de 3 esta semana")).toBeInTheDocument();
-    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "67");
+    // A session row's bar is today's amount against the ideal (nothing logged today yet).
+    const bar = screen.getByRole("progressbar");
+    expect(bar).toHaveAttribute("aria-valuenow", "0");
+    expect(bar).toHaveAttribute("aria-valuemax", "30");
+    expect(screen.queryByText("67 %")).not.toBeInTheDocument();
   });
 
   it("shows a paused row read-only, with no control (TO-S8)", async () => {

@@ -17,7 +17,16 @@ export interface ProgressBarProps {
   /** Labelled positions, e.g. the minimum and the ideal of a commitment. */
   readonly marks?: readonly ProgressMark[];
   readonly tone?: "gradient" | "ink" | "success";
+  /**
+   * Where the commitment's minimum sits on the same scale as `value`. Below it the fill is the
+   * neutral ink-400 (nothing counts yet); the gradient starts only once it is reached (design 17).
+   */
+  readonly minimum?: number;
+  /** The track colour: the page's sunken surface, or white inside a sunken card. */
+  readonly track?: "sunken" | "white";
 }
+
+const NEUTRAL_FILL = "var(--ink-400)";
 
 const FILL = {
   gradient: "var(--gradient-together)",
@@ -37,7 +46,11 @@ export function ProgressBar({
   hint,
   marks = [],
   tone = "gradient",
+  minimum,
+  track = "sunken",
 }: ProgressBarProps) {
+  const belowMinimum = minimum !== undefined && value < minimum;
+  const fill = tone === "gradient" && belowMinimum ? NEUTRAL_FILL : FILL[tone];
   const text = valueLabel ?? `${value} de ${max}`;
   return (
     <div className="pj-progress">
@@ -48,7 +61,8 @@ export function ProgressBar({
         </div>
       )}
       <div
-        className="pj-progress__track"
+        className={`pj-progress__track ${styles.track}`}
+        data-track={track}
         role="progressbar"
         aria-valuemin={0}
         aria-valuemax={max}
@@ -58,7 +72,7 @@ export function ProgressBar({
       >
         <div
           className="pj-progress__fill"
-          style={{ width: `${fraction(value, max) * 100}%`, background: FILL[tone] }}
+          style={{ width: `${fraction(value, max) * 100}%`, background: fill }}
         />
       </div>
       {marks.length > 0 && (

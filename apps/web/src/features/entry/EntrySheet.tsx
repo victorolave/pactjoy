@@ -7,6 +7,7 @@ import { Card } from "../../ui/Card.tsx";
 import { InlineMessage } from "../../ui/InlineMessage.tsx";
 import { ProgressBar } from "../../ui/ProgressBar.tsx";
 import { Sheet } from "../../ui/Sheet.tsx";
+import { loggedBefore } from "../today/logged-totals.ts";
 import { formatDecimal, quantityText, targetText, unitLabel } from "../today/row-labels.ts";
 import { useTodayDates } from "../today/today-date-context.tsx";
 import { Confirmation, useAutoClose } from "./Confirmation.tsx";
@@ -22,7 +23,6 @@ import {
   type ReachQuantity,
   toSubmitValue,
 } from "./entry-form.ts";
-import { loggedBefore } from "./entry-totals.ts";
 import { LimitGrid } from "./LimitGrid.tsx";
 import { NoteField } from "./NoteField.tsx";
 import { QuantityStepper } from "./QuantityStepper.tsx";

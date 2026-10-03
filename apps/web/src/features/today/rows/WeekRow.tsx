@@ -1,9 +1,10 @@
 import type { ReactNode } from "react";
-import { ProgressBar, type ProgressMark } from "../../../ui/ProgressBar.tsx";
+import { ProgressBar } from "../../../ui/ProgressBar.tsx";
 import { Tag } from "../../../ui/Tag.tsx";
-import { formatDecimal, scheduleText, targetText, unitLabel } from "../row-labels.ts";
+import { formatDecimal, reachMarks, scheduleText, targetText, unitLabel } from "../row-labels.ts";
 import type { WeekTodayRow } from "../today-view-model.ts";
 import { RowFrame } from "./RowFrame.tsx";
+import { SessionBar } from "./SessionBar.tsx";
 
 type Progress = NonNullable<WeekTodayRow["progress"]>;
 
@@ -22,38 +23,17 @@ function detailOf(row: WeekTodayRow, progress: Progress): string {
 }
 
 function barOf(row: WeekTodayRow, progress: Progress): ReactNode {
-  const valueLabel = `${progress.percent} %`;
-  // Sessions are scored by the server: the bar shows its percent as is.
-  if (row.measure.schedule.period === "perSession") {
-    return (
-      <ProgressBar
-        name={`Progreso de ${row.habitName}`}
-        value={progress.percent}
-        max={100}
-        valueLabel={valueLabel}
-      />
-    );
-  }
-  // A weekly reach total reads against its ideal, with the minimum marked.
+  // A session row shows today's amount against its minimum and ideal (design proto).
+  if (row.measure.schedule.period === "perSession") return <SessionBar row={row} />;
+  // A weekly reach total reads against its ideal, with the minimum marked and no percent.
   if (progress.target.direction !== "reach") return undefined;
-  const unit = unitLabel(row.measure);
-  const marks: ProgressMark[] = [
-    {
-      at: Number(progress.target.minimum),
-      label: `mín. ${formatDecimal(progress.target.minimum)}`,
-    },
-    {
-      at: Number(progress.target.ideal),
-      label: `ideal ${formatDecimal(progress.target.ideal)}${unit === null || unit === "" ? "" : ` ${unit}`}`,
-    },
-  ];
   return (
     <ProgressBar
       name={`Progreso de ${row.habitName}`}
       value={Number(progress.value ?? "0")}
       max={Number(progress.target.ideal)}
-      valueLabel={valueLabel}
-      marks={marks}
+      minimum={Number(progress.target.minimum)}
+      marks={reachMarks(row.measure)}
     />
   );
 }

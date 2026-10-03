@@ -4,6 +4,7 @@ import { entryText, quantityText, scheduleText, sumQuantities, targetText } from
 import { useTodayDate } from "../today-date-context.tsx";
 import type { DayTodayRow } from "../today-view-model.ts";
 import { RowFrame } from "./RowFrame.tsx";
+import { SessionBar } from "./SessionBar.tsx";
 
 export function DayRow({
   row,
@@ -50,7 +51,12 @@ export function DayRow({
       details={logged ? lines(true) : [detail]}
       badges={row.privacy === "private" ? <Tag>Privado</Tag> : undefined}
       action={action}
-      below={below}
+      below={
+        <>
+          <SessionBar row={row} />
+          {below}
+        </>
+      }
     />
   );
 }
