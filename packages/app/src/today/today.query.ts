@@ -48,7 +48,11 @@ export interface TodaySummary {
   readonly weekCount: number;
   /** Days after today that still belong to the season; `0` on the last day and after it. */
   readonly daysLeft: number;
-  /** Whole points the viewer's entries for the described day earned (design 15b "+14 pts hoy"). */
+  /**
+   * Whole points of the slots today's entries filled (the day's row `earned` values, summed exactly
+   * and rounded once). A make-up entry counts for the slot it covered; one with no free slot adds 0.
+   * Week-bound opportunities are not in it until the week is counted. (Design 15b "+14 pts hoy".)
+   */
   readonly pointsToday: number;
   readonly score: MemberScoreView;
 }

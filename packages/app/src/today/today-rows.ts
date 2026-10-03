@@ -158,7 +158,6 @@ function weekProgressView(week: Extract<WeekProgress, { status: "scored" }>): To
 /** The highest whole number a limit row publishes a percent for (the grid never goes past it). */
 const MAX_LIMIT_OPTION = 12;
 
-/** Every active opportunity of the commitment across the season, pause-aware: D12's denominator. */
 /** One opportunity's value as the two views the clients get: a 2-decimal display and the exact fraction. */
 export function perOpportunityViews(
   engineCommitment: ReturnType<typeof commitmentToEngine>,
@@ -172,6 +171,7 @@ export function perOpportunityViews(
   };
 }
 
+/** Every active opportunity of the commitment across the season, pause-aware: D12's denominator. */
 export function activeOpportunities(weeks: number, weekAt: (week: number) => WeekProgress): number {
   let total = 0;
   for (let week = 0; week < weeks; week++) {
@@ -223,9 +223,9 @@ function stateOf(
  * open what recording would reject. Pure over data already loaded in the
  * caller's single read.
  *
- * `pointsToday` is what the viewer's entries for the described day earned,
- * summed exactly and rounded once (day and `timesPerWeek` rows; a `weeklyTotal`
- * only pays when its week closes).
+ * `pointsToday` is the points of the slots today's entries filled: each day row's `earned`
+ * (the slot's own value, or the one a make-up entry covered; 0 when no slot was free), summed
+ * exactly and rounded once. Week-bound opportunities are not in it until their week is counted.
  */
 export interface TodayRowsResult {
   readonly rows: readonly TodayRow[];

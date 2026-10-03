@@ -1,7 +1,16 @@
-import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createTodayPersister } from "../../adapters/query-persister.ts";
+import { AppProviders } from "../../app/providers.tsx";
+import { createQueryClient } from "../../app/query-client.ts";
 import { ApiError } from "../../ports/api-error.ts";
+import { FakeAuth, fakeSession } from "../../testing/fake-auth.ts";
+import { FakeConnectivity } from "../../testing/fake-connectivity.ts";
+import { FakeHaptics } from "../../testing/fake-haptics.ts";
+import { FakePactJoyApi } from "../../testing/fake-pactjoy-api.ts";
+import { FixedClock } from "../../testing/fixed-clock.ts";
 import {
   activeTodayFixture,
   type DayRow,
@@ -11,7 +20,13 @@ import {
   pointsFixture,
   weekRowFixture,
 } from "../../testing/fixtures/today.ts";
+import { MemoryStorage } from "../../testing/memory-storage.ts";
+import { MemoryTokenStore } from "../../testing/memory-token-store.ts";
 import { renderApp } from "../../testing/render.tsx";
+import { SequentialIds } from "../../testing/sequential-ids.ts";
+import { createSessionEvents } from "../auth/session-events.ts";
+import { SessionManager } from "../auth/session-manager.ts";
+import { EntrySheet } from "./EntrySheet.tsx";
 
 beforeEach(() => vi.useFakeTimers({ shouldAdvanceTime: true }));
 afterEach(() => vi.useRealTimers());
@@ -229,9 +244,32 @@ describe("after a save, the confirmation is announced and focused (WA-W5)", () =
 });
 
 describe("closing is idempotent (WA-S4)", () => {
-  it("Escape and the button in the same tick close once and leave one toast", async () => {
-    const row = weekRowFixture();
-    renderApp({ path: "/?entry=commitment-2", today: activeTodayFixture({ rows: [row] }) });
+  it("Escape and the button in the same tick call onClose once, and toast once", async () => {
+    // The sheet is rendered on its own with a close that does NOT unmount it, so nothing but the
+    // guard stops the second call (a router's synchronous navigate would hide its absence).
+    const auth = new FakeAuth();
+    const store = new MemoryTokenStore(fakeSession());
+    const api = new FakePactJoyApi(activeTodayFixture({ rows: [weekRowFixture()] }));
+    const deps = {
+      auth,
+      api,
+      ids: new SequentialIds(),
+      haptics: new FakeHaptics(),
+      connectivity: new FakeConnectivity(true),
+      store,
+      sessions: new SessionManager(auth, store, new FixedClock(0)),
+      sessionEvents: createSessionEvents(),
+      queryClient: createQueryClient({ retryQueries: false }),
+      persister: createTodayPersister(new MemoryStorage(), { throttleMs: 0 }),
+    };
+    const onClose = vi.fn();
+    render(
+      <AppProviders deps={deps}>
+        <MemoryRouter>
+          <EntrySheet row={weekRowFixture()} seasonId="season-1" onClose={onClose} />
+        </MemoryRouter>
+      </AppProviders>,
+    );
     const dialog = await screen.findByRole("dialog", { name: "Leer" });
     await userEvent.click(within(dialog).getByRole("button", { name: "Registrar 20 min" }));
     const cta = await screen.findByRole("button", { name: "Seguir con mi día" });
@@ -239,7 +277,10 @@ describe("closing is idempotent (WA-S4)", () => {
       fireEvent.click(cta);
       fireEvent.keyDown(document, { key: "Escape" });
     });
-    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
-    expect(screen.getAllByRole("status")).toHaveLength(1);
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(
+      screen.getAllByRole("status").filter((el) => el.textContent?.includes("Leer · +")),
+    ).toHaveLength(0);
+    expect(api.recorded).toHaveLength(1);
   });
 });
