@@ -32,21 +32,20 @@
   height: var(--illustration-lg);
 }
 
+/* Full-width boxes: the image keeps its proportions inside the design's height. */
 .imageSized[data-size="md"] {
-  width: var(--illustration-md);
+  width: 100%;
   height: var(--illustration-md);
+}
+
+.imageSized[data-size="banner"] {
+  width: 100%;
+  height: var(--illustration-banner);
+  margin: calc(var(--space-2) * -1) 0;
 }
 
 .logoImage {
   display: block;
   height: var(--icon-lg);
   width: auto;
-}
-
-.imageCompact {
-  display: block;
-  max-width: 100%;
-  height: calc(var(--space-8) * 2);
-  margin: 0 auto;
-  object-fit: contain;
 }

@@ -2,13 +2,15 @@ import type { TodayEntry, TodayRow } from "@pactjoy/app";
 import { type ReactNode, useEffect, useState } from "react";
 import { useOnline } from "../../app/connectivity-context.tsx";
 import { useToasts } from "../../app/toast-context.tsx";
-import { longDate } from "../../shared/format.ts";
+import { addDays } from "../../shared/date.ts";
+import { longDate, weekdayName } from "../../shared/format.ts";
 import { Button } from "../../ui/Button.tsx";
 import { InlineMessage } from "../../ui/InlineMessage.tsx";
 import { Sheet } from "../../ui/Sheet.tsx";
 import { Tag } from "../../ui/Tag.tsx";
-import { entryText, quantityText, targetText, unitLabel } from "../today/row-labels.ts";
-import { Confirmation, useAutoClose } from "./Confirmation.tsx";
+import { entryText, quantityText, targetPhrase, unitLabel } from "../today/row-labels.ts";
+import { useTodayDates } from "../today/today-date-context.tsx";
+import { Confirmation } from "./Confirmation.tsx";
 import styles from "./entry.module.css";
 import {
   limitMeasureOf,
@@ -67,8 +69,14 @@ function EntryEditor({
 
   const toasts = useToasts();
   const gain = useEarnedGain(row.points.earned);
+  const dates = useTodayDates();
+  // A day-bound entry of another day (yesterday's) ends at its own day's grace, not the row's.
+  const dayBound = row.kind === "day";
+  const changeUntil =
+    dayBound && dates !== undefined && entry.forDate !== dates.refDate
+      ? addDays(entry.forDate, 1)
+      : row.opportunity.graceUntil;
 
-  useAutoClose(edit.saved, onClose);
   useEffect(() => onConfirming(edit.saved !== null), [edit.saved, onConfirming]);
   // A delete closes the sheet and says so in a toast: the entry is gone, so there is nothing to edit.
   // biome-ignore lint/correctness/useExhaustiveDependencies: runs once, when the deletion lands
@@ -111,7 +119,7 @@ function EntryEditor({
   return (
     <div className={styles.sheet}>
       <p className={styles.subtitle}>
-        {longDate(entry.forDate)} · {entryText(entry, row.measure)}
+        {longDate(entry.forDate)} · {entryText(entry, row.measure, dates?.refDate)}
       </p>
       {row.entries.length > 1 && (
         <div className={styles.presets}>
@@ -140,17 +148,19 @@ function EntryEditor({
         />
       )}
       {measure !== null && quantity !== null && (
-        <p className={styles.subtitle}>{`Hoy · ${targetText(measure) ?? ""}`}</p>
+        <p
+          className={styles.subtitle}
+        >{`${scopeOf(row, entry, dates?.today)} · ${targetPhrase(measure)}`}</p>
       )}
       <NoteField
         value={note}
         onChange={setNote}
         {...(noteError === undefined ? {} : { error: noteError })}
       />
-      {row.opportunity.graceUntil !== null && (
+      {changeUntil !== null && (
         <InlineMessage
           tone="info"
-          title={`Puedes cambiarlo hasta el ${longDate(row.opportunity.graceUntil, false)}.`}
+          title={`Puedes cambiarlo hasta el ${longDate(changeUntil, false)}.`}
         >
           Después del periodo de gracia, el registro queda bloqueado.
         </InlineMessage>
@@ -192,6 +202,14 @@ function EntryEditor({
       )}
     </div>
   );
+}
+
+/** What the thresholds under the form apply to: a weekly total's week, today, or another day. */
+function scopeOf(row: TodayRow, entry: TodayEntry, today: string | undefined): string {
+  if (row.measure.schedule.period === "weeklyTotal") return "Esta semana";
+  if (today === undefined || entry.forDate === today) return "Hoy";
+  const day = weekdayName(entry.forDate) ?? "ese día";
+  return `${day.charAt(0).toUpperCase()}${day.slice(1)}`;
 }
 
 function ValueInput({

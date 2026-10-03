@@ -23,6 +23,11 @@
   color: var(--pj-ink);
 }
 
+/* The tile turns green over the design's 200 ms. */
+.glyph {
+  transition: background-color var(--motion-base) var(--ease-standard);
+}
+
 .glyphDone {
   background: var(--surface-success);
   color: var(--pj-success);
@@ -52,7 +57,32 @@
   gap: var(--space-2);
 }
 
+/* "+8 pts" rises 8 px with a fade from t = 80 ms, 200 ms long (design 16, 20). */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(var(--space-2));
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
 .points {
+  display: inline-block;
+  animation: rise var(--motion-base) var(--ease-standard) 80ms both;
   font: var(--font-label);
   font-size: var(--type-small-size);
   color: var(--text-success);
@@ -80,4 +110,15 @@
 
 .action {
   flex: none;
+}
+
+/* Reduced motion: the same end state with a short fade, no rise (design 20). */
+@media (prefers-reduced-motion: reduce) {
+  .points {
+    animation: fade var(--motion-reduced) linear both;
+  }
+
+  .glyph {
+    transition-duration: var(--motion-reduced);
+  }
 }

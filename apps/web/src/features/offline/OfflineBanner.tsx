@@ -8,7 +8,7 @@ export const OFFLINE_MESSAGE =
 export function OfflineBanner() {
   return (
     <>
-      <Illustration name="sin-conexion" alt="Sin conexión" compact />
+      <Illustration name="sin-conexion" alt="Sin conexión" size="banner" />
       <InlineMessage tone="pending" title={OFFLINE_MESSAGE} />
     </>
   );
