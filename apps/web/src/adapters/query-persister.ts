@@ -9,6 +9,11 @@ export const STORAGE_KEY = "pactjoy.today-cache";
 /** Offline reads show the last Today for at most a day. */
 export const MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const THROTTLE_MS = 1000;
+/** Bump when the saved Today's shape changes, so an old saved copy is dropped instead of misread. */
+export const CACHE_VERSION = "1";
+
+/** The saved Today belongs to one user of one cache version: anything else is not restored. */
+export const bustFor = (userId: string | null): string => `${CACHE_VERSION}:${userId ?? "anon"}`;
 
 /** Reading the `localStorage` property itself can throw (blocked storage, some private modes). */
 const defaultStorage = (): Storage | null => {
@@ -45,10 +50,12 @@ export function createTodayPersister(
 /** Only a Today that loaded is kept: no other query, no failure, no pending request. */
 export function persistOptionsFor(
   persister: Persister,
+  buster: string,
 ): PersistQueryClientProviderProps["persistOptions"] {
   return {
     persister,
     maxAge: MAX_AGE_MS,
+    buster,
     dehydrateOptions: {
       // Writes are never queued or replayed (P1): a pending mutation must not survive a reload.
       shouldDehydrateMutation: () => false,

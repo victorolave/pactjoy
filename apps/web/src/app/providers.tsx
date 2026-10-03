@@ -1,7 +1,8 @@
-import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import type { QueryClient } from "@tanstack/react-query";
+import { type Persister, PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { type ReactNode, useCallback, useMemo } from "react";
-import { persistOptionsFor } from "../adapters/query-persister.ts";
-import { SessionProvider } from "../features/auth/session-context.tsx";
+import { bustFor, persistOptionsFor } from "../adapters/query-persister.ts";
+import { SessionProvider, useSession } from "../features/auth/session-context.tsx";
 import { ApiProvider } from "./api-context.tsx";
 import { ConnectivityProvider } from "./connectivity-context.tsx";
 import type { AppDependencies } from "./dependencies.ts";
@@ -21,16 +22,15 @@ export function AppProviders({
     queryClient.clear();
     void persister.removeClient();
   }, [queryClient, persister]);
-  const persistOptions = useMemo(() => persistOptionsFor(persister), [persister]);
   return (
-    <PersistQueryClientProvider client={queryClient} persistOptions={persistOptions}>
-      <SessionProvider
-        auth={deps.auth}
-        store={deps.store}
-        manager={deps.sessions}
-        expired={deps.sessionEvents}
-        onSessionEnd={onSessionEnd}
-      >
+    <SessionProvider
+      auth={deps.auth}
+      store={deps.store}
+      manager={deps.sessions}
+      expired={deps.sessionEvents}
+      onSessionEnd={onSessionEnd}
+    >
+      <PersistedQueries client={queryClient} persister={persister}>
         <ApiProvider api={deps.api}>
           <IdsProvider ids={deps.ids}>
             <ConnectivityProvider connectivity={deps.connectivity}>
@@ -38,7 +38,29 @@ export function AppProviders({
             </ConnectivityProvider>
           </IdsProvider>
         </ApiProvider>
-      </SessionProvider>
+      </PersistedQueries>
+    </SessionProvider>
+  );
+}
+
+/** The saved Today is scoped to the signed-in user: another user's copy is never restored. */
+function PersistedQueries({
+  client,
+  persister,
+  children,
+}: {
+  readonly client: QueryClient;
+  readonly persister: Persister;
+  readonly children: ReactNode;
+}) {
+  const userId = useSession().session?.userId ?? null;
+  const persistOptions = useMemo(
+    () => persistOptionsFor(persister, bustFor(userId)),
+    [persister, userId],
+  );
+  return (
+    <PersistQueryClientProvider client={client} persistOptions={persistOptions}>
+      {children}
     </PersistQueryClientProvider>
   );
 }
