@@ -11,7 +11,7 @@ export const STORAGE_KEY = "pactjoy.today-cache";
 export const MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const THROTTLE_MS = 1000;
 /** Bump when the saved Today's shape changes, so an old saved copy is dropped instead of misread. */
-export const CACHE_VERSION = "2";
+export const CACHE_VERSION = "3";
 
 /** The saved Today belongs to one user of one cache version: anything else is not restored. */
 export const bustFor = (userId: string | null): string => `${CACHE_VERSION}:${userId ?? "anon"}`;
@@ -36,7 +36,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 /**
  * A minimal shape check on top of the version buster: a running Today must carry what the screens
- * read without a guard (`points` on every row, `pointsToday` in the summary). The buster already drops
+ * read without a guard (`points` on every row, `pointsToday` in the summary, `pendingYesterday`). The buster already drops
  * old copies; this keeps a copy that slipped past it from crashing the app. States with no rows
  * (noCircle, noSeason, pactOpen, notStarted) have nothing to check.
  */
@@ -47,7 +47,10 @@ export function isCurrentToday(today: unknown): boolean {
   if (!Array.isArray(rows) || !isRecord(summary) || typeof summary.pointsToday !== "number") {
     return false;
   }
-  return rows.every((row) => isRecord(row) && isRecord(row.points));
+  return (
+    Array.isArray(today.pendingYesterday) &&
+    rows.every((row) => isRecord(row) && isRecord(row.points))
+  );
 }
 
 const hasCurrentShape = (client: PersistedClient): boolean =>

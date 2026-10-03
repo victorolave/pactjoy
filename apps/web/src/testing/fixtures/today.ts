@@ -68,6 +68,23 @@ export const dayRowFixture = (overrides: Partial<DayRow> = {}): DayRow => ({
   ...overrides,
 });
 
+export type PendingItem = Active["pendingYesterday"][number];
+
+/** A day-bound opportunity of yesterday (Thursday 2026-10-01) with nothing logged, open until today. */
+export const pendingItemFixture = (overrides: Partial<PendingItem> = {}): PendingItem => ({
+  commitmentId: "commitment-7" as PendingItem["commitmentId"],
+  habitName: "Dibujar",
+  privacy: "visible",
+  measure: {
+    unit: "done",
+    schedule: { period: "perSession", frequency: { kind: "specificDays", weekdays: [1, 3, 5] } },
+  },
+  forDate: localDate("2026-10-01"),
+  graceUntil: localDate("2026-10-02"),
+  points: { perOpportunity: "8", earned: null, limitPercents: null },
+  ...overrides,
+});
+
 export type Entry = DayRow["entries"][number];
 
 /** One of the viewer's entries for today (2026-10-02). */
@@ -131,6 +148,7 @@ export const activeTodayFixture = (overrides: Partial<Active> = {}): Active => (
   ...base(),
   summary: { week: 1, weekCount: 4, daysLeft: 23, pointsToday: 0, score: ownScore() },
   rows: [dayRowFixture(), weekRowFixture()],
+  pendingYesterday: [],
   standings: STANDINGS,
   ...overrides,
 });
@@ -142,6 +160,7 @@ export const endedTodayFixture = (overrides: Partial<Active> = {}): Active => ({
   today: localDate("2026-10-27"),
   summary: { week: 4, weekCount: 4, daysLeft: 0, pointsToday: 0, score: ownScore() },
   rows: [weekRowFixture({ opportunity: { state: "closed", graceUntil: localDate("2026-10-26") } })],
+  pendingYesterday: [],
   standings: STANDINGS,
   ...overrides,
 });

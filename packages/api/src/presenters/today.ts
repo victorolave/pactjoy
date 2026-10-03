@@ -1,4 +1,5 @@
 import type {
+  PendingYesterdayItem,
   StandingsView,
   TodayBase,
   TodayEntry,
@@ -66,6 +67,18 @@ function presentPoints(points: TodayPoints): TodayPoints {
   };
 }
 
+function presentPending(item: PendingYesterdayItem): PendingYesterdayItem {
+  return {
+    commitmentId: item.commitmentId,
+    habitName: item.habitName,
+    privacy: item.privacy,
+    measure: item.measure,
+    forDate: item.forDate,
+    graceUntil: item.graceUntil,
+    points: presentPoints(item.points),
+  };
+}
+
 function presentRow(row: TodayRow): TodayRow {
   const common = {
     commitmentId: row.commitmentId,
@@ -106,6 +119,7 @@ function presentActive(view: Active): Active {
       score: presentMemberScore(view.summary.score),
     },
     rows: view.rows.map(presentRow),
+    pendingYesterday: view.pendingYesterday.map(presentPending),
     standings: presentRanked(view.standings),
   };
 }

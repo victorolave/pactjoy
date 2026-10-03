@@ -125,7 +125,7 @@ export interface TodayRowsInput {
  */
 const PAUSE_GRACE_EXTENSION_DAYS = 0;
 
-function dateOfDay(actualStart: LocalDate, day: number): LocalDate {
+export function dateOfDay(actualStart: LocalDate, day: number): LocalDate {
   return localDateOfEpochDay(epochDay(actualStart) + day);
 }
 
@@ -156,7 +156,7 @@ function weekProgressView(week: Extract<WeekProgress, { status: "scored" }>): To
 const MAX_LIMIT_OPTION = 12;
 
 /** Every active opportunity of the commitment across the season, pause-aware: D12's denominator. */
-function activeOpportunities(weeks: number, weekAt: (week: number) => WeekProgress): number {
+export function activeOpportunities(weeks: number, weekAt: (week: number) => WeekProgress): number {
   let total = 0;
   for (let week = 0; week < weeks; week++) {
     const progress = weekAt(week);
@@ -165,7 +165,7 @@ function activeOpportunities(weeks: number, weekAt: (week: number) => WeekProgre
   return total;
 }
 
-function limitPercentsOf(
+export function limitPercentsOf(
   record: CommitmentRecord,
   engineCommitment: ReturnType<typeof commitmentToEngine>,
 ): readonly number[] | null {
