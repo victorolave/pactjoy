@@ -16,12 +16,44 @@ const isRecord = (value: unknown): value is Json =>
 
 const INVALID_CODE_ERRORS = new Set(["otp_expired", "otp_disabled", "invalid_credentials"]);
 
+type Classifier = (status: number, body: Json | null) => AuthErrorCode;
+
+const errorCodeIn = (body: Json | null): string =>
+  typeof body?.error_code === "string" ? body.error_code : "";
+
+/** GoTrue codes that mean the refresh token itself is dead (the only way a session ends). */
+const REFRESH_REJECTED_CODES = new Set([
+  "refresh_token_not_found",
+  "refresh_token_already_used",
+  "session_not_found",
+]);
+const REJECTION_STATUSES = new Set([400, 401, 403]);
+
+/**
+ * Refresh has its own table. A Kong 401 (wrong apikey, no GoTrue body) or a `bad_json` 400 is a
+ * gateway or config fault, not a dead session, so it must stay transient (`Unknown`). The
+ * sign-in codes (InvalidEmail, InvalidCode) never apply to a refresh.
+ */
+const classifyRefresh: Classifier = (status, body) => {
+  const errorCode = errorCodeIn(body);
+  if (status === 429 || errorCode.includes("rate_limit")) return "RateLimited";
+  if (REJECTION_STATUSES.has(status) && REFRESH_REJECTED_CODES.has(errorCode)) {
+    return "InvalidSession";
+  }
+  return "Unknown";
+};
+
+const classifySignIn =
+  (onBadRequest: AuthErrorCode): Classifier =>
+  (status, body) =>
+    errorCodeOf(status, body, onBadRequest);
+
 function errorCodeOf(
   status: number,
   body: Json | null,
   onBadRequest: AuthErrorCode,
 ): AuthErrorCode {
-  const errorCode = typeof body?.error_code === "string" ? body.error_code : "";
+  const errorCode = errorCodeIn(body);
   if (status === 429 || errorCode.includes("rate_limit")) return "RateLimited";
   if (errorCode === "validation_failed" || errorCode === "email_address_invalid") {
     return "InvalidEmail";
@@ -40,11 +72,15 @@ export class GoTrueAuth implements AuthPort {
   }
 
   async requestCode(email: string): Promise<void> {
-    await this.#post("/otp", { email, create_user: true }, "Unknown");
+    await this.#post("/otp", { email, create_user: true }, classifySignIn("Unknown"));
   }
 
   async verifyCode(email: string, code: string): Promise<Session> {
-    const body = await this.#post("/verify", { type: "email", email, token: code }, "InvalidCode");
+    const body = await this.#post(
+      "/verify",
+      { type: "email", email, token: code },
+      classifySignIn("InvalidCode"),
+    );
     return this.#toSession(body);
   }
 
@@ -52,7 +88,7 @@ export class GoTrueAuth implements AuthPort {
     const body = await this.#post(
       "/token?grant_type=refresh_token",
       { refresh_token: refreshToken },
-      "InvalidSession",
+      classifyRefresh,
     );
     return this.#toSession(body);
   }
@@ -66,13 +102,13 @@ export class GoTrueAuth implements AuthPort {
     }
   }
 
-  async #post(path: string, payload: Json, onBadRequest: AuthErrorCode): Promise<Json> {
+  async #post(path: string, payload: Json, classify: Classifier): Promise<Json> {
     const response = await this.#send(path, payload, null).catch(() => {
       throw new AuthError("Network");
     });
     const parsed: unknown = await response.json().catch(() => null);
     const body = isRecord(parsed) ? parsed : null;
-    if (!response.ok) throw new AuthError(errorCodeOf(response.status, body, onBadRequest));
+    if (!response.ok) throw new AuthError(classify(response.status, body));
     return body ?? {};
   }
 

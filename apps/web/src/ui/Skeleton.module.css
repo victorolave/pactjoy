@@ -1,0 +1,41 @@
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.block {
+  background: var(--ink-100);
+  border-radius: var(--radius-control);
+  animation: shimmer var(--motion-celebrate) var(--ease-standard) infinite alternate;
+}
+
+.line {
+  height: var(--space-4);
+}
+
+.card {
+  height: var(--space-8);
+  border-radius: var(--radius-card);
+}
+
+.circle {
+  width: var(--control-height-sm);
+  height: var(--control-height-sm);
+  border-radius: var(--radius-pill);
+}
+
+@keyframes shimmer {
+  from {
+    opacity: 0.55;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .block {
+    animation: none;
+  }
+}

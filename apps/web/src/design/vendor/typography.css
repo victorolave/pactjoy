@@ -1,0 +1,33 @@
+/* VENDORED FILE, DO NOT EDIT: re-vendor it from the source instead.
+ * Source: Claude Design project 239122e1-7217-4b6b-ac98-3383f1876fc6, _ds/pactjoy-design-system-32903670-ae91-4b25-8e1e-6054197166b5/tokens/typography.css
+ * Vendored: 2026-10-03, verbatim except HTML-entity decoding of the read_file output.
+ * The name, logo and visual identity are not under the AGPL-3.0: see TRADEMARKS.md.
+ * The sha256 of the body below this header is recorded in MANIFEST.json. */
+
+/* Type scale from Brand Book §16 (design px). Sentence case, no justified paragraphs. */
+:root{
+--font-sans:"Nunito Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+--weight-regular:400;--weight-semibold:600;--weight-bold:700;--weight-extrabold:800;
+--type-display-lg-size:64px;--type-display-lg-line:68px;--type-display-lg-track:-0.025em;
+--type-display-size:40px;--type-display-line:44px;--type-display-track:-0.02em;
+--type-h1-size:32px;--type-h1-line:38px;--type-h1-track:-0.015em;
+--type-h2-size:24px;--type-h2-line:30px;--type-h2-track:-0.01em;
+--type-h3-size:20px;--type-h3-line:26px;
+--type-lead-size:18px;--type-lead-line:28px;
+--type-body-size:16px;--type-body-line:24px;
+--type-small-size:14px;--type-small-line:20px;
+--type-label-size:16px;--type-label-line:20px;
+--type-meta-size:12px;--type-meta-line:16px;--type-meta-track:0.01em;
+--type-eyebrow-track:0.12em;
+/* Shorthands */
+--font-display-lg:800 64px/68px var(--font-sans);
+--font-display:800 40px/44px var(--font-sans);
+--font-h1:800 32px/38px var(--font-sans);
+--font-h2:700 24px/30px var(--font-sans);
+--font-h3:700 20px/26px var(--font-sans);
+--font-lead:400 18px/28px var(--font-sans);
+--font-body:400 16px/24px var(--font-sans);
+--font-small:400 14px/20px var(--font-sans);
+--font-label:700 16px/20px var(--font-sans);
+--font-meta:600 12px/16px var(--font-sans);
+}

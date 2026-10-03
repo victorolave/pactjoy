@@ -57,7 +57,11 @@ describe("SessionManager.getAccessToken", () => {
       manager.forceRefresh(),
     ]);
     release();
-    await expect(calls).resolves.toEqual(["access-2", "access-2", "access-2"]);
+    await expect(calls).resolves.toEqual([
+      "access-2",
+      "access-2",
+      { status: "ok", token: "access-2" },
+    ]);
     expect(auth.refreshed).toHaveLength(1);
   });
 
@@ -78,11 +82,21 @@ describe("SessionManager.getAccessToken", () => {
     },
   );
 
-  it("keeps the session across a transient failure on forceRefresh, answering no token", async () => {
+  it.each(["Network", "RateLimited", "Unknown"] as const)(
+    "reports a transient %s failure on forceRefresh and keeps the session",
+    async (code) => {
+      setup(3600);
+      auth.failNextWith(code);
+      await expect(manager.forceRefresh()).resolves.toEqual({ status: "transient" });
+      expect(store.load()).not.toBeNull();
+    },
+  );
+
+  it("reports a rejection on forceRefresh and clears the session", async () => {
     setup(3600);
-    auth.failNextWith("Unknown");
-    await expect(manager.forceRefresh()).resolves.toBeNull();
-    expect(store.load()).not.toBeNull();
+    auth.failNextWith("InvalidSession");
+    await expect(manager.forceRefresh()).resolves.toEqual({ status: "rejected" });
+    expect(store.load()).toBeNull();
   });
 
   it("keeps the session but serves no token when it already expired and refresh is transient", async () => {
@@ -93,16 +107,36 @@ describe("SessionManager.getAccessToken", () => {
   });
 });
 
+describe("a refresh rejected because another tab already rotated the token (AU-R4)", () => {
+  it("keeps the session and uses the newer one the other tab stored", async () => {
+    setup(10);
+    const release = auth.holdRefresh();
+    auth.failNextWith("InvalidSession");
+    const pending = manager.getAccessToken();
+    store.emitExternal(fakeSession({ accessToken: "access-other", refreshToken: "refresh-other" }));
+    release();
+    await expect(pending).resolves.toBe("access-other");
+    expect(store.load()?.refreshToken).toBe("refresh-other");
+  });
+
+  it("still clears when the stored token is the one that was rejected", async () => {
+    setup(10);
+    auth.failNextWith("InvalidSession");
+    await expect(manager.forceRefresh()).resolves.toEqual({ status: "rejected" });
+    expect(store.load()).toBeNull();
+  });
+});
+
 describe("SessionManager.forceRefresh and signOut", () => {
   beforeEach(() => setup(3600));
 
   it("refreshes even when the token is fresh", async () => {
-    await expect(manager.forceRefresh()).resolves.toBe("access-2");
+    await expect(manager.forceRefresh()).resolves.toEqual({ status: "ok", token: "access-2" });
   });
 
-  it("returns null and clears when there is no session to refresh", async () => {
+  it("reports a rejection when there is no session to refresh", async () => {
     store.clear();
-    await expect(manager.forceRefresh()).resolves.toBeNull();
+    await expect(manager.forceRefresh()).resolves.toEqual({ status: "rejected" });
     expect(auth.refreshed).toEqual([]);
   });
 

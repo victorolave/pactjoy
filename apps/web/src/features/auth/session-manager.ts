@@ -1,14 +1,9 @@
-import { AuthError, type AuthPort, type Session } from "../../ports/auth.ts";
+import { AuthError, type AuthPort, type RefreshResult, type Session } from "../../ports/auth.ts";
 import type { Clock } from "../../ports/clock.ts";
 import type { TokenStore } from "../../ports/token-store.ts";
 
 /** Refresh when fewer than this many seconds remain on the access token. */
 const REFRESH_WINDOW_SECONDS = 60;
-
-type RefreshOutcome =
-  | { readonly status: "ok"; readonly token: string }
-  | { readonly status: "transient" }
-  | { readonly status: "rejected" };
 
 /**
  * Owns the session lifecycle: serves a fresh access token, refreshes ahead of expiry with a
@@ -19,7 +14,7 @@ export class SessionManager {
   readonly #auth: AuthPort;
   readonly #store: TokenStore;
   readonly #clock: Clock;
-  #inflight: Promise<RefreshOutcome> | null = null;
+  #inflight: Promise<RefreshResult> | null = null;
 
   constructor(auth: AuthPort, store: TokenStore, clock: Clock) {
     this.#auth = auth;
@@ -40,10 +35,9 @@ export class SessionManager {
     return null;
   }
 
-  /** Refreshes now (after a 401). Resolves the new token, or null when it cannot. */
-  async forceRefresh(): Promise<string | null> {
-    const outcome = await this.#refresh();
-    return outcome.status === "ok" ? outcome.token : null;
+  /** Refreshes now (after a 401). Says whether it worked, failed transiently or was rejected. */
+  forceRefresh(): Promise<RefreshResult> {
+    return this.#refresh();
   }
 
   async signOut(): Promise<void> {
@@ -52,7 +46,7 @@ export class SessionManager {
     if (session !== null) await this.#auth.signOut(session.accessToken);
   }
 
-  #refresh(): Promise<RefreshOutcome> {
+  #refresh(): Promise<RefreshResult> {
     if (this.#inflight !== null) return this.#inflight;
     const session = this.#store.load();
     if (session === null) return Promise.resolve({ status: "rejected" });
@@ -63,7 +57,7 @@ export class SessionManager {
     return run;
   }
 
-  async #run(session: Session): Promise<RefreshOutcome> {
+  async #run(session: Session): Promise<RefreshResult> {
     try {
       const next = await this.#auth.refresh(session.refreshToken);
       this.#store.save(next);
@@ -72,6 +66,11 @@ export class SessionManager {
       // Only a definitive rejection ends the session. Network, 429 and 5xx keep it: a blip must
       // not sign the user out.
       if (error instanceof AuthError && error.code === "InvalidSession") {
+        // Refresh tokens rotate: another tab may have used this one and stored its successor.
+        const stored = this.#store.load();
+        if (stored !== null && stored.refreshToken !== session.refreshToken) {
+          return { status: "ok", token: stored.accessToken };
+        }
         this.#store.clear();
         return { status: "rejected" };
       }

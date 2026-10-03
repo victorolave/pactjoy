@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { join, relative, resolve } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
@@ -39,6 +39,26 @@ function pactjoyViolations(text: string): string[] {
   );
 }
 
+const RELATIVE_SPECIFIER = `["'\`](\\.{1,2}\\/[^"'\`]*|\\.{1,2})["'\`]`;
+const RELATIVE_STATEMENTS = [
+  new RegExp(`\\b(?:import|export)\\b[^;"'\`]*?\\bfrom\\s*${RELATIVE_SPECIFIER}`, "g"),
+  new RegExp(`\\bimport\\s*${RELATIVE_SPECIFIER}`, "g"),
+  new RegExp(`\\b(?:import|require)\\s*\\(\\s*${RELATIVE_SPECIFIER}\\s*\\)`, "g"),
+];
+
+/**
+ * Relative specifiers that resolve outside `root`: `../../../../packages/api/src/x` would dodge
+ * the `@pactjoy/*` rule above, so reaching a sibling package by path is rejected too.
+ */
+function escapesRoot(file: string, text: string, root: string): string[] {
+  return RELATIVE_STATEMENTS.flatMap((pattern) =>
+    [...text.matchAll(pattern)].flatMap((match) => {
+      const target = resolve(dirname(file), match[1] ?? "");
+      return target === root || target.startsWith(root + sep) ? [] : [match[0]];
+    }),
+  );
+}
+
 const GLOBAL_ACCESS =
   /\b(?:globalThis|window|self)\s*\.\s*(?:fetch|localStorage|sessionStorage|indexedDB|navigator)\b/;
 const GLOBAL_ALLOWED = /^src\/adapters\/|^src\/main\.tsx$/;
@@ -73,7 +93,41 @@ describe("pactjoyViolations (the scanner itself)", () => {
   });
 });
 
+describe("escapesRoot (the scanner itself)", () => {
+  const root = "/repo/apps/web";
+  const file = "/repo/apps/web/src/adapters/x.ts";
+
+  it.each([
+    'import { x } from "../../../../packages/api/src/x";',
+    'import type { T } from "../../../../packages/app/src/index.ts";',
+    'export * from "../../../../packages/db/src/index.ts";',
+    'const m = await import("../../../../packages/engine/src/index.ts");',
+    'const m = require("../../../../packages/api");',
+    'import "../../../../packages/api/src/side-effect";',
+  ])("rejects a path into packages/: %s", (code) => {
+    expect(escapesRoot(file, code, root)).toHaveLength(1);
+  });
+
+  it.each([
+    'import { a } from "./a.ts";',
+    'import { b } from "../ports/b.ts";',
+    'import { c } from "../../test/c.ts";',
+    'import { d } from "react";',
+  ])("accepts an import that stays inside apps/web: %s", (code) => {
+    expect(escapesRoot(file, code, root)).toEqual([]);
+  });
+});
+
 describe("apps/web boundaries", () => {
+  it("no relative import leaves apps/web (sibling packages are reached only by type, via @pactjoy/app)", () => {
+    const offenders = files.flatMap((file) =>
+      escapesRoot(file, readFileSync(file, "utf8"), WEB_ROOT).map(
+        (statement) => `${rel(file)}: ${statement}`,
+      ),
+    );
+    expect(offenders).toEqual([]);
+  });
+
   it("scans real files", () => {
     expect(files.length).toBeGreaterThan(0);
   });

@@ -146,6 +146,43 @@ describe("GoTrueAuth.refresh and signOut", () => {
     }
   });
 
+  it("never ends the session for a gateway or config failure (only GoTrue's own codes do)", async () => {
+    const cases: Array<[string, Response, string]> = [
+      [
+        "Kong 401, wrong apikey, no GoTrue body",
+        json(401, { message: "Invalid authentication credentials" }),
+        "Unknown",
+      ],
+      ["Kong 401 with an empty body", new Response(null, { status: 401 }), "Unknown"],
+      ["400 bad_json", json(400, { error_code: "bad_json", msg: "bad" }), "Unknown"],
+      ["400 without a body", new Response(null, { status: 400 }), "Unknown"],
+      ["404 from a wrong base url", json(404, { message: "not found" }), "Unknown"],
+      ["rejection code on a 5xx", json(500, { error_code: "refresh_token_not_found" }), "Unknown"],
+    ];
+    for (const [label, response, code] of cases) {
+      await expect(build(response).auth.refresh("r"), label).rejects.toMatchObject({ code });
+    }
+  });
+
+  it("accepts a 403 carrying a GoTrue rejection code and session_not_found on a 400", async () => {
+    await expect(
+      build(json(403, { error_code: "refresh_token_not_found" })).auth.refresh("r"),
+    ).rejects.toMatchObject({ code: "InvalidSession" });
+    await expect(
+      build(json(400, { error_code: "session_not_found" })).auth.refresh("r"),
+    ).rejects.toMatchObject({ code: "InvalidSession" });
+  });
+
+  it("never reports InvalidEmail or InvalidCode for a refresh", async () => {
+    for (const errorCode of ["validation_failed", "email_address_invalid", "otp_expired"]) {
+      const error = await build(json(400, { error_code: errorCode }))
+        .auth.refresh("r")
+        .catch((e: unknown) => e);
+      expect(error).toBeInstanceOf(AuthError);
+      expect((error as AuthError).code).toBe("Unknown");
+    }
+  });
+
   it("signs out with a Bearer token", async () => {
     const { auth, fetchStub } = build(new Response(null, { status: 204 }));
     await expect(auth.signOut("access-1")).resolves.toBeUndefined();
