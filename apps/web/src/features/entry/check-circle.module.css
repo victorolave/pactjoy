@@ -53,8 +53,6 @@
 .collapseInner {
   min-height: 0;
   overflow: hidden;
-  display: flex;
-  justify-content: center;
 }
 
 /* Reduced motion: the same end state with a short fade, no scale. */

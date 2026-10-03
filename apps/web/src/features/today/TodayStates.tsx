@@ -8,6 +8,7 @@ import { EntrySheetHost } from "../entry/EntrySheetHost.tsx";
 import { RowWithControls } from "../entry/RowWithControls.tsx";
 import { allDoneDetail } from "./all-done-copy.ts";
 import { dayOffText } from "./day-off-copy.ts";
+import { PendingYesterday } from "./PendingYesterday.tsx";
 import { SeasonCard } from "./SeasonCard.tsx";
 import { StandingsPair } from "./StandingsPair.tsx";
 import styles from "./TodayScreen.module.css";
@@ -176,6 +177,11 @@ export function RunningToday({ model }: { readonly model: RunningModel }) {
         <AllDone model={model} />
       )}
       {showDayState && model.dayState === "none" && <NoCommitments model={model} />}
+      <PendingYesterday
+        items={model.pendingYesterday}
+        registered={model.yesterdayRegistered}
+        seasonId={model.seasonId}
+      />
       {forToday.length > 0 && (
         <Section
           title={model.kind === "ended" ? "Último día" : "Para hoy"}
@@ -201,7 +207,11 @@ export function RunningToday({ model }: { readonly model: RunningModel }) {
       {model.standings !== null && (
         <StandingsPair model={model.standings} viewerName={model.greetingName} />
       )}
-      <EntrySheetHost rows={[...forToday, ...week]} seasonId={model.seasonId} />
+      <EntrySheetHost
+        rows={model.sheetRows}
+        seasonId={model.seasonId}
+        pendingYesterday={model.pendingYesterday}
+      />
     </TodayDateContext.Provider>
   );
 }

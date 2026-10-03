@@ -164,10 +164,30 @@ describe("weekProgress - specificDays slots (WP-S5)", () => {
   it("returns one slot per scheduled day with its own state", () => {
     const result = scored(study, { entries: [buildQuantityEntry("study", 0, fromInt(5))] });
     expect(result.slots).toEqual([
-      { day: 0, value: fromInt(5), progress: fromInt(1), consistent: true },
-      { day: 2, value: null, progress: fromInt(0), consistent: false },
+      { day: 0, filledFrom: 0, value: fromInt(5), progress: fromInt(1), consistent: true },
+      { day: 2, filledFrom: null, value: null, progress: fromInt(0), consistent: false },
     ]);
     expect([result.sessionsDone, result.sessionsTarget]).toEqual([1, 2]);
+  });
+
+  it("says which day filled a slot: an extra-day make-up fills the first free one, and only if one is free", () => {
+    // study is scheduled on days 0 and 2. Day 1 (not scheduled) covers the missing day 2...
+    const covered = scored(study, {
+      entries: [
+        buildQuantityEntry("study", 0, fromInt(5)),
+        buildQuantityEntry("study", 1, fromInt(5)),
+      ],
+    });
+    expect(covered.slots.map((slot) => slot.filledFrom)).toEqual([0, 1]);
+    // ...but once both slots have their own entries, day 3 fills none.
+    const full = scored(study, {
+      entries: [
+        buildQuantityEntry("study", 0, fromInt(5)),
+        buildQuantityEntry("study", 2, fromInt(5)),
+        buildQuantityEntry("study", 3, fromInt(5)),
+      ],
+    });
+    expect(full.slots.map((slot) => slot.filledFrom)).toEqual([0, 2]);
   });
 
   it("drops a paused scheduled day without proration", () => {

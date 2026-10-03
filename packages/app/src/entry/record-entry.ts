@@ -23,7 +23,11 @@ import {
   type StoredEntry,
 } from "./entry.ts";
 import { type EntryValueError, validateEntryValue } from "./entry-value.ts";
-import { checkEntryWindow, type EntryWindowError } from "./entry-window.ts";
+import {
+  checkEntryWindow,
+  type EntryWindowError,
+  PAUSE_GRACE_EXTENSION_DAYS,
+} from "./entry-window.ts";
 
 export interface RecordEntryDeps {
   readonly uow: UnitOfWork<Repositories>;
@@ -185,7 +189,7 @@ export async function recordEntry(
         today: today.day,
         lengthWeeks: season.lengthWeeks,
         // B7: the real extension source arrives with change A2 (app-pause-workflow).
-        pauseGraceExtensionDays: 0,
+        pauseGraceExtensionDays: PAUSE_GRACE_EXTENSION_DAYS,
       });
       if (closed) {
         return err(closed);

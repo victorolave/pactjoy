@@ -40,6 +40,8 @@ export interface WeekProgressInput {
  */
 export interface WeekSlot {
   readonly day: SeasonDay;
+  /** The day whose entries filled this slot (its own, or a make-up's); `null` when none did. */
+  readonly filledFrom: SeasonDay | null;
   readonly value: Fraction | null;
   readonly progress: Fraction;
   readonly consistent: boolean;
@@ -97,6 +99,7 @@ export function weekProgress(input: WeekProgressInput): WeekProgress {
     if (session === undefined) throw new Error("weekProgress: slot without a session");
     return {
       day,
+      filledFrom: session.filledFrom ?? null,
       value: session.value,
       progress: session.progress,
       consistent: session.consistent,
