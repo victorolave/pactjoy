@@ -2,7 +2,7 @@ import type { TodayRow } from "@pactjoy/app";
 import { IconButton } from "../../ui/IconButton.tsx";
 import { InlineMessage } from "../../ui/InlineMessage.tsx";
 import { TodayRowCard } from "../today/rows/TodayRowCard.tsx";
-import { quantityMeasureOf } from "./entry-form.ts";
+import { limitMeasureOf, quantityMeasureOf } from "./entry-form.ts";
 import { useEntrySheet } from "./use-entry-sheet.ts";
 import { useOneTap } from "./use-one-tap.ts";
 
@@ -21,7 +21,7 @@ export function RowWithControls({
   const offersSheet =
     row.opportunity.state === "open" &&
     !(row.kind === "day" && !row.scheduledToday) &&
-    quantityMeasureOf(row.measure) !== null;
+    (quantityMeasureOf(row.measure) !== null || limitMeasureOf(row.measure) !== null);
   return (
     <TodayRowCard
       row={row}
