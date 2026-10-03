@@ -68,6 +68,14 @@ const ROW_KEYS = [
   "scheduledToday",
   ...under("measure", MEASURE),
   ...under("opportunity", ["graceUntil", "state"]),
+  ...under("points", [
+    "earned",
+    "limitPercents",
+    "perOpportunity",
+    "perOpportunityExact",
+    "perOpportunityExact.denominator",
+    "perOpportunityExact.numerator",
+  ]),
   ...under("progress", [
     "percent",
     "sessionsDone",
@@ -100,6 +108,7 @@ const SCORE = [
   "scope",
 ];
 const SCORED = [
+  "pendingYesterday",
   ...under("rows", []).concat(ROW_KEYS.map((k) => `rows[].${k}`)),
   ...under("standings", [
     "eligibleParticipantCount",
@@ -110,7 +119,7 @@ const SCORED = [
     "rows[].points",
     "rows[].rank",
   ]),
-  ...under("summary", ["daysLeft", "week", "weekCount", ...under("score", SCORE)]),
+  ...under("summary", ["daysLeft", "pointsToday", "week", "weekCount", ...under("score", SCORE)]),
 ];
 
 async function given(startDate: string, commit: boolean) {
@@ -172,6 +181,36 @@ describe("GET /me/today emits exactly the documented keys (ADR-0011)", () => {
     expect(res.json.data.rows.map((r: { kind: string }) => r.kind)).toEqual(["day", "week"]);
     const entries = ENTRY.map((k) => `rows[].entries[].${k}`);
     expect(keys(res.json.data)).toEqual([...BASE, ...SCORED, "rows[].entries", ...entries].sort());
+  });
+
+  it("active with a pending yesterday item (design 15d)", async () => {
+    const { call, setNow } = await given("2023-11-14", true);
+    // Two days in: yesterday's daily opportunity has no entry and its grace is open today.
+    setNow(instant(Date.UTC(2023, 10, 16, 17)));
+    const res = await call("GET", "/me/today", "andrea");
+    const items = res.json.data.pendingYesterday;
+    expect(items).toHaveLength(1);
+    const PENDING = [
+      "commitmentId",
+      "forDate",
+      "graceUntil",
+      "habitName",
+      "privacy",
+      // A pending item is always day-bound: weekdays, never times.
+      ...under(
+        "measure",
+        MEASURE.filter((key) => key !== "schedule.frequency.times"),
+      ),
+      ...under("points", [
+        "earned",
+        "limitPercents",
+        "perOpportunity",
+        "perOpportunityExact",
+        "perOpportunityExact.denominator",
+        "perOpportunityExact.numerator",
+      ]),
+    ];
+    expect(keys(items[0])).toEqual([...PENDING].sort());
   });
 
   it("ended", async () => {

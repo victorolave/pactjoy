@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { frac, fromInt } from "../fraction/fraction.ts";
-import { displayPercent, displayPoints } from "./display.ts";
+import { displayPercent, displayPoints, displayPointsDecimal } from "./display.ts";
+
+describe("displayPointsDecimal", () => {
+  it("rounds half-up to two decimals and drops trailing zeros", () => {
+    expect(displayPointsDecimal(frac(25n, 4n))).toBe("6.25");
+    expect(displayPointsDecimal(frac(200n, 3n))).toBe("66.67");
+    expect(displayPointsDecimal(fromInt(8))).toBe("8");
+    expect(displayPointsDecimal(frac(5n, 2n))).toBe("2.5");
+  });
+});
 
 describe("displayPoints", () => {
   it("rounds an exact fraction half-up to a whole point", () => {

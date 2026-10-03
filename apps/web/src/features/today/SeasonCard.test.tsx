@@ -25,6 +25,13 @@ describe("SeasonCard (TO-R6)", () => {
     expect(screen.getByText("Quedan 19 días")).toBeInTheDocument();
   });
 
+  it("is flush and draws the gradient strip on its own top edge, so nothing clips it", () => {
+    const { container } = render(<SeasonCard model={model} />);
+    expect(container.firstElementChild).toHaveClass("pj-card--flush");
+    const strip = container.querySelector('[aria-hidden="true"]');
+    expect(strip?.className).toMatch(/seasonBar/);
+  });
+
   it("shows a dash where the server has nothing counted yet", () => {
     render(<SeasonCard model={{ ...model, consistency: "-", idealCompletion: "-" }} />);
     expect(screen.getByText("Consistencia -")).toBeInTheDocument();

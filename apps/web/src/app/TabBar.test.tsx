@@ -35,6 +35,11 @@ describe("TabBar", () => {
     expect(current.map((a) => a.textContent)).toEqual([label]);
   });
 
+  it("never underlines its links (the vendored styles assume buttons)", () => {
+    renderAt("/");
+    for (const link of screen.getAllByRole("link")) expect(link.className).toMatch(/item/);
+  });
+
   it("does not mark Hoy as current on another route", () => {
     renderAt("/profile");
     expect(screen.getByRole("link", { name: "Hoy" })).not.toHaveAttribute("aria-current");

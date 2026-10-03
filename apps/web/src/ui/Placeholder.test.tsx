@@ -31,6 +31,23 @@ describe("Illustration with an official image", () => {
     expect(container.querySelector("img")).toHaveAttribute("src", "/otra.png");
   });
 
+  it("draws a contained square of the asked size instead of the full width (design 20: 200)", () => {
+    const { container } = render(<Illustration alt="Imagen" name="registro-guardado" size="lg" />);
+    const image = container.querySelector("img");
+    expect(image).toHaveAttribute("data-size", "lg");
+    expect(image?.className).toMatch(/imageSized/);
+  });
+
+  it.each(["md", "banner"] as const)("offers the full-width %s box of the design", (size) => {
+    const { container } = render(<Illustration alt="Imagen" name="cocinar" size={size} />);
+    expect(container.querySelector("img")).toHaveAttribute("data-size", size);
+  });
+
+  it("has no size on an image that fills its width", () => {
+    const { container } = render(<Illustration alt="Imagen" name="cocinar" />);
+    expect(container.querySelector("img")).not.toHaveAttribute("data-size");
+  });
+
   it("still draws the neutral placeholder with neither a name nor a src", () => {
     const { container } = render(<Illustration alt="Imagen" />);
     expect(container.querySelector("img")).toBeNull();

@@ -23,6 +23,21 @@ describe("deleting an entry (EN-R7, EN-S12)", () => {
     await waitFor(() => expect(deps.api.calls.getToday).toBe(2));
   });
 
+  it("closes the sheet instead of turning into a new-entry sheet, and clears the URL (design 16b)", async () => {
+    const { location } = renderToday(
+      [reading([quantity("25", "entry-1")])],
+      "/?entry=commitment-2&id=entry-1",
+    );
+    const dialog = await screen.findByRole("dialog", { name: "Leer" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "Borrar registro" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Borrar" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(location()).toBe("/");
+    // No giant illustration for a deletion: just the toast.
+    expect(screen.queryByRole("img", { name: /Registro borrado/ })).not.toBeInTheDocument();
+    expect(await screen.findByRole("status")).toHaveTextContent("Registro borrado.");
+  });
+
   it("goes back to the form when the user changes their mind", async () => {
     const { deps } = renderToday([reading([quantity("25")])]);
     const dialog = await openEdit("Leer");

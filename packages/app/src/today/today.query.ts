@@ -11,6 +11,7 @@ import type { CircleId, SeasonId } from "../shared/ids.ts";
 import type { LocalDate } from "../time/local-date.ts";
 import { toSeasonDay } from "../time/season-calendar.ts";
 import type { TimeZoneId } from "../time/time-zone.port.ts";
+import { type PendingYesterdayItem, pendingYesterday } from "./pending-yesterday.ts";
 import { type TodayRow, todayRows } from "./today-rows.ts";
 
 export type TodayDeps = ScoreQueryDeps;
@@ -47,6 +48,12 @@ export interface TodaySummary {
   readonly weekCount: number;
   /** Days after today that still belong to the season; `0` on the last day and after it. */
   readonly daysLeft: number;
+  /**
+   * Whole points of the slots today's entries filled (the day's row `earned` values, summed exactly
+   * and rounded once). A make-up entry counts for the slot it covered; one with no free slot adds 0.
+   * Week-bound opportunities are not in it until the week is counted. (Design 15b "+14 pts hoy".)
+   */
+  readonly pointsToday: number;
   readonly score: MemberScoreView;
 }
 
@@ -63,6 +70,8 @@ export type TodayView =
       readonly summary: TodaySummary;
       /** One per commitment of the viewer, in season order. */
       readonly rows: readonly TodayRow[];
+      /** Day-bound opportunities of yesterday still open to register (design 15d). */
+      readonly pendingYesterday: readonly PendingYesterdayItem[];
       readonly standings: Extract<StandingsView, { kind: "ranked" }>;
     } & TodayBase);
 
@@ -133,23 +142,27 @@ export async function today(deps: TodayDeps, actor: Actor): Promise<TodayView> {
     };
     const mine = season.commitments.filter((commitment) => commitment.memberId === viewer.id);
     const habits = await repos.habits.getMany(mine.map((commitment) => commitment.habitId));
+    const rowsInput = {
+      season,
+      actualStart: season.actualStart,
+      commitments: mine,
+      habits,
+      entries: data.entries.filter((entry) => entry.memberId === viewer.id),
+      pauses: data.pauses.filter((pause) => pause.memberId === viewer.id),
+      today: day.day,
+      refDay: scoringDay,
+    };
+    const { rows, pointsToday } = todayRows(rowsInput);
     return {
       state: ended ? "ended" : "active",
       ...base,
-      rows: todayRows({
-        season,
-        actualStart: season.actualStart,
-        commitments: mine,
-        habits,
-        entries: data.entries.filter((entry) => entry.memberId === viewer.id),
-        pauses: data.pauses.filter((pause) => pause.memberId === viewer.id),
-        today: day.day,
-        refDay: scoringDay,
-      }),
+      rows,
+      pendingYesterday: pendingYesterday(rowsInput),
       summary: {
         week: (scoringDay - (scoringDay % DAYS_PER_WEEK)) / DAYS_PER_WEEK + 1,
         weekCount: season.lengthWeeks,
         daysLeft: lastDay - scoringDay,
+        pointsToday,
         score: memberScoreView(started, data, viewer),
       },
       standings: standingsView(started, data),

@@ -29,3 +29,16 @@ export function displayPoints(f: Fraction): number {
 export function displayPercent(f: Fraction): number {
   return Number(roundHalfUp(mul(f, HUNDRED)));
 }
+
+/**
+ * Rounds an exact points `Fraction` half-up to two decimals, as the shortest
+ * decimal string ("6.25", "8", "2.5"). For what one opportunity is worth,
+ * which is a fraction of a point, where a whole number would lose the detail
+ * a client needs to preview a draft. Same single rounding boundary (D10).
+ */
+export function displayPointsDecimal(f: Fraction): string {
+  const hundredths = roundHalfUp(mul(f, HUNDRED));
+  const whole = hundredths / 100n;
+  const cents = (hundredths % 100n).toString().padStart(2, "0").replace(/0+$/, "");
+  return cents === "" ? whole.toString() : `${whole}.${cents}`;
+}

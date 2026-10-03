@@ -10,6 +10,8 @@ export interface SheetProps {
   readonly title: string;
   readonly onClose: () => void;
   readonly placement?: "bottom" | "center";
+  /** No title row and no close button, only the grabber (the confirmation, design 20). `title` still names the dialog. */
+  readonly headless?: boolean;
   readonly children?: ReactNode;
   /** Buttons stacked under the content. */
   readonly actions?: ReactNode;
@@ -23,6 +25,7 @@ function OpenSheet({
   title,
   onClose,
   placement = "bottom",
+  headless = false,
   children,
   actions,
 }: Omit<SheetProps, "open">) {
@@ -85,15 +88,17 @@ function OpenSheet({
         className={cx("pj-sheet", `pj-sheet--${placement}`)}
         role="dialog"
         aria-modal="true"
-        aria-labelledby={titleId}
+        {...(headless ? { "aria-label": title } : { "aria-labelledby": titleId })}
       >
         {placement === "bottom" && <span className="pj-sheet__grab" />}
-        <div className="pj-sheet__head">
-          <h2 id={titleId} className="pj-sheet__title">
-            {title}
-          </h2>
-          <IconButton icon="x" label="Cerrar" onClick={onClose} />
-        </div>
+        {!headless && (
+          <div className="pj-sheet__head">
+            <h2 id={titleId} className="pj-sheet__title">
+              {title}
+            </h2>
+            <IconButton icon="x" label="Cerrar" onClick={onClose} />
+          </div>
+        )}
         {children}
         {actions !== undefined && <div className="pj-sheet__actions">{actions}</div>}
       </div>
