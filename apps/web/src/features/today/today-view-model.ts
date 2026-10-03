@@ -36,7 +36,12 @@ export type TodayModel =
         readonly week: readonly WeekRow[];
       };
       readonly counts: { readonly logged: number; readonly scheduled: number };
-      readonly dayState: "pending" | "allDone" | "none";
+      /**
+       * `allDone`: everything for today is registered and each row has a real done or quantity.
+       * `allLogged`: everything is registered but some day was marked "Hoy no salió": not a success.
+       */
+      readonly dayState: "pending" | "allDone" | "allLogged" | "none";
+      readonly today: string;
       readonly season: SeasonCardModel;
       readonly standings: StandingsPairModel | null;
     };
@@ -118,6 +123,18 @@ function standingsPair(view: Running): StandingsPairModel | null {
   };
 }
 
+function dayStateOf(
+  registrable: readonly DayRow[],
+  logged: number,
+): "pending" | "allDone" | "allLogged" | "none" {
+  if (registrable.length === 0) return "none";
+  if (logged !== registrable.length) return "pending";
+  // Only a row whose every entry is a "Hoy no salió" fails to count as achieved.
+  const achieved = (row: DayRow) =>
+    !row.entries.every((entry) => entry.value.kind === "missed") || row.entries.length === 0;
+  return registrable.every(achieved) ? "allDone" : "allLogged";
+}
+
 function running(view: Running): TodayModel {
   const days = view.rows.filter((row): row is DayRow => row.kind === "day");
   const forToday = days.filter((row) => row.scheduledToday);
@@ -136,8 +153,8 @@ function running(view: Running): TodayModel {
       week: view.rows.filter((row): row is WeekRow => row.kind === "week"),
     },
     counts: { logged, scheduled: registrable.length },
-    dayState:
-      registrable.length === 0 ? "none" : logged === registrable.length ? "allDone" : "pending",
+    today: view.today,
+    dayState: dayStateOf(registrable, logged),
     season: seasonCard(view),
     standings: standingsPair(view),
   };
