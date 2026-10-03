@@ -222,8 +222,9 @@ export function planWeek(
   if (frequency.kind === "timesPerWeek") {
     const n = prorateSessionCount(frequency.times, activeDays);
     if (n === null) return plan(excludedStatus(paused, onHold, weekDays));
-    const deadlineFor: GraceDeadlineFor = (day) =>
-      rejectionExtendedDeadline(pauses, day, day, graceDeadline(day));
+    // Q16: timesPerWeek sessions close with the week, like weeklyTotal.
+    const deadlineFor: GraceDeadlineFor = (end) =>
+      rejectionExtendedDeadline(pauses, weekStart, end, graceDeadline(end));
     return plan({
       status: "scored",
       sessions: timesPerWeekSessions(target, n, eligible, deadlineFor),

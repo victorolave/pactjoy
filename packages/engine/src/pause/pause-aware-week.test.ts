@@ -255,7 +255,7 @@ describe("pauseAwareWeekSessions — a rejection extends grace for its affected 
         times: 3,
       },
     );
-    // request covering day 0, rejected on day 5 -> day 0's own deadline (normally day 1) extends to day 6.
+    // request covering day 0, rejected on day 8 -> the week's deadline (Q16, normally day 7) extends to day 9.
     const rejected = [
       buildPauseRequest(
         "gym",
@@ -263,12 +263,12 @@ describe("pauseAwareWeekSessions — a rejection extends grace for its affected 
         { kind: "fixed", lastDay: seasonDay(0) },
         {
           kind: "rejected",
-          decidedOn: seasonDay(5),
+          decidedOn: seasonDay(8),
         },
       ),
     ];
     const entries = [
-      buildDoneEntry("gym", 0, seasonDay(6)), // recorded day 6 — late under the normal day-1 deadline
+      buildDoneEntry("gym", 0, seasonDay(9)), // recorded day 9 — late under the normal week deadline (day 7)
       buildDoneEntry("gym", 1),
       buildDoneEntry("gym", 2),
     ];
@@ -292,7 +292,7 @@ describe("pauseAwareWeekSessions — a rejection extends grace for its affected 
       },
     );
     const entries = [
-      buildDoneEntry("gym", 0, seasonDay(6)), // still late, no extension applies
+      buildDoneEntry("gym", 0, seasonDay(9)), // still late (past day 7), no extension applies
       buildDoneEntry("gym", 1),
       buildDoneEntry("gym", 2),
     ];

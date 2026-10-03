@@ -42,21 +42,28 @@ export function sumEntryValues(entries: readonly Entry[]): Fraction {
   return sum(entries.map(entryValue));
 }
 
+/** The last day of the week that `day` falls in (weeks count from the season start). */
+function weekEndOf(day: SeasonDay): SeasonDay {
+  return seasonDay(day - (day % DAYS_PER_WEEK) + (DAYS_PER_WEEK - 1));
+}
+
 /**
- * Groups entries by day, discarding any entry recorded after its own day's
- * grace deadline first (the design's data flow: `entries → isOnTime →
- * assign`) — a late entry never reaches D4's same-day sum or D5's
- * missed-day coverage. `deadlineFor` defaults to {@link graceDeadline};
- * `pause/pause-aware-week.ts` overrides it to extend grace after a
- * rejection, without ever rewriting an entry's own `recordedOn`.
+ * Groups entries by day, discarding any entry recorded after the grace
+ * deadline of its opportunity first (the design's data flow: `entries →
+ * isOnTime → assign`) — a late entry never reaches D4's same-day sum or D5's
+ * missed-day coverage. `deadlineOf` resolves that deadline per entry: its own
+ * day for `specificDays`, the week's close for `timesPerWeek` (Q16). Callers
+ * build it from a {@link GraceDeadlineFor}, which `pause/pause-aware-week.ts`
+ * overrides to extend grace after a rejection, without ever rewriting an
+ * entry's own `recordedOn`.
  */
 function groupByDay(
   entries: readonly Entry[],
-  deadlineFor: GraceDeadlineFor = graceDeadline,
+  deadlineOf: (entry: Entry) => SeasonDay,
 ): Map<number, Entry[]> {
   const byDay = new Map<number, Entry[]>();
   for (const entry of entries) {
-    if (!isOnTime(entry, deadlineFor(entry.day))) continue;
+    if (!isOnTime(entry, deadlineOf(entry))) continue;
     const existing = byDay.get(entry.day);
     if (existing) {
       existing.push(entry);
@@ -77,7 +84,10 @@ const EMPTY_SESSION: SessionResult = { value: null, progress: fromInt(0), consis
  * The week's `timesPerWeek` opportunities: sessions may fall on any day
  * (same-day entries summed per D4), and when more than `times` sessions
  * occur, only the best `times` count (D4) — extras neither lower nor
- * duplicate the score. Always returns exactly `times` results, zero-filling
+ * duplicate the score. Q16: these sessions only count once the week closes,
+ * so an entry is on time until the week's last day plus grace (`deadlineFor`
+ * receives the week's end day, as in `weeklyTotalResult`), not its own day's.
+ * Always returns exactly `times` results, zero-filling
  * any unoccupied slot.
  */
 export function timesPerWeekSessions(
@@ -86,7 +96,9 @@ export function timesPerWeekSessions(
   weekEntries: readonly Entry[],
   deadlineFor: GraceDeadlineFor = graceDeadline,
 ): readonly SessionResult[] {
-  const sessionValues = [...groupByDay(weekEntries, deadlineFor).values()].map(sumEntryValues);
+  const sessionValues = [
+    ...groupByDay(weekEntries, (entry) => deadlineFor(weekEndOf(entry.day))).values(),
+  ].map(sumEntryValues);
   const scored = sessionValues
     .map((value) => toSessionResult(target, value))
     .sort((a, b) => compare(b.progress, a.progress));
@@ -121,7 +133,7 @@ export function specificDaysSessions(
   weekEntries: readonly Entry[],
   deadlineFor: GraceDeadlineFor = graceDeadline,
 ): readonly SessionResult[] {
-  const byDay = groupByDay(weekEntries, deadlineFor);
+  const byDay = groupByDay(weekEntries, (entry) => deadlineFor(entry.day));
   const scheduledDays = scheduledWeekdays.map((weekday) => dayForWeekday(season, week, weekday));
   const scheduledSet = new Set<number>(scheduledDays);
   const slotValues = new Map<number, Fraction | null>(

@@ -88,26 +88,45 @@ describe("timesPerWeekSessions", () => {
     expect(sessions[0]?.value).toEqual(parseDecimal("30"));
   });
 
-  it("discards a late entry: recorded after its own opportunity's grace deadline (D4 grace gate)", () => {
-    const entries = [buildDoneEntry("gym", 0, 2)]; // day 0, recorded day 2 — deadline is day 1
-    const sessions = timesPerWeekSessions(booleanTarget, 1, entries);
-    expect(sessions[0]?.progress).toEqual(fromInt(0));
-    expect(sessions[0]?.consistent).toBe(false);
-  });
-
-  it("counts an on-time entry recorded on the last day of grace", () => {
-    const entries = [buildDoneEntry("gym", 0, 1)]; // day 0, recorded day 1 — exactly the deadline
+  it("Q16: counts a session recorded after its own day's grace, within the week's close plus grace", () => {
+    const entries = [buildDoneEntry("gym", 1, 5)]; // day 1, recorded day 5 — week closes day 6, deadline day 7
     const sessions = timesPerWeekSessions(booleanTarget, 1, entries);
     expect(sessions[0]?.progress).toEqual(fromInt(1));
     expect(sessions[0]?.consistent).toBe(true);
   });
 
-  it("honors a custom deadlineFor policy instead of the default graceDeadline — without touching recordedOn", () => {
-    const entry = buildDoneEntry("gym", 0, 5); // day 0, recorded day 5 — normally long past deadline (day 1)
+  it("Q16: counts a session recorded on the last day of the week's grace (day 7)", () => {
+    const entries = [buildDoneEntry("gym", 0, 7)];
+    const sessions = timesPerWeekSessions(booleanTarget, 1, entries);
+    expect(sessions[0]?.progress).toEqual(fromInt(1));
+  });
+
+  it("Q16: discards a session recorded after the week's close plus grace (day 8)", () => {
+    const entries = [buildDoneEntry("gym", 0, 8)];
+    const sessions = timesPerWeekSessions(booleanTarget, 1, entries);
+    expect(sessions[0]?.progress).toEqual(fromInt(0));
+    expect(sessions[0]?.consistent).toBe(false);
+  });
+
+  it("Q16: the week window is the entry's own week (week 1 closes on day 13)", () => {
+    expect(
+      timesPerWeekSessions(booleanTarget, 1, [buildDoneEntry("gym", 8, 14)])[0]?.progress,
+    ).toEqual(fromInt(1));
+    expect(
+      timesPerWeekSessions(booleanTarget, 1, [buildDoneEntry("gym", 8, 15)])[0]?.progress,
+    ).toEqual(fromInt(0));
+  });
+
+  it("honors a custom deadlineFor policy, receiving the week's end day — without touching recordedOn", () => {
+    const entry = buildDoneEntry("gym", 0, 9); // normally past the week's deadline (day 7)
     const originalRecordedOn = entry.recordedOn;
-    const alwaysLate: (day: ReturnType<typeof seasonDay>) => ReturnType<typeof seasonDay> = () =>
-      seasonDay(5); // extend day 0's deadline out to day 5
-    const sessions = timesPerWeekSessions(booleanTarget, 1, [entry], alwaysLate);
+    const received: number[] = [];
+    const extended: (day: ReturnType<typeof seasonDay>) => ReturnType<typeof seasonDay> = (end) => {
+      received.push(end);
+      return seasonDay(9);
+    };
+    const sessions = timesPerWeekSessions(booleanTarget, 1, [entry], extended);
+    expect(received).toEqual([6]);
     expect(sessions[0]?.progress).toEqual(fromInt(1)); // now on time, per the custom policy
     expect(entry.recordedOn).toBe(originalRecordedOn); // the entry itself was never rewritten
   });
