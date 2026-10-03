@@ -21,8 +21,7 @@ export function RowWithControls({
   const offersSheet =
     row.opportunity.state === "open" &&
     !(row.kind === "day" && !row.scheduledToday) &&
-    quantityMeasureOf(row.measure) !== null &&
-    row.measure.schedule.period !== "weeklyTotal";
+    quantityMeasureOf(row.measure) !== null;
   return (
     <TodayRowCard
       row={row}

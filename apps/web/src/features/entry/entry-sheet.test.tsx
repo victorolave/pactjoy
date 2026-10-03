@@ -27,6 +27,26 @@ const running = (overrides: Partial<DayRow> = {}) =>
     ...overrides,
   });
 
+const english = (): WeekRow =>
+  weekRowFixture({
+    commitmentId: "commitment-4" as WeekRow["commitmentId"],
+    habitName: "Inglés",
+    measure: {
+      unit: "minutes",
+      customLabel: null,
+      precision: "integer",
+      target: { direction: "reach", minimum: "60", ideal: "150" },
+      schedule: { period: "weeklyTotal" },
+    },
+    progress: {
+      value: "90",
+      target: { direction: "reach", minimum: "60", ideal: "150" },
+      sessionsDone: 0,
+      sessionsTarget: 1,
+      percent: 40,
+    },
+  });
+
 const renderRows = (rows: TodayRow[], path = "/") =>
   renderApp({ path, today: activeTodayFixture({ rows }) });
 
@@ -130,5 +150,51 @@ describe("the quantity form (EN-R3)", () => {
     await userEvent.clear(input);
     await userEvent.type(input, "15");
     expect(input).not.toHaveAttribute("aria-invalid");
+  });
+});
+
+describe("weekly total sheet (EN-R4, EN-S10)", () => {
+  it("shows the server's progress for the week, not a computed preview", async () => {
+    renderRows([english()], "/?entry=commitment-4");
+    const dialog = await screen.findByRole("dialog", { name: "Inglés" });
+    expect(within(dialog).getByText("Esta semana llevas 90 min")).toBeInTheDocument();
+    expect(within(dialog).getByText("40 %")).toBeInTheDocument();
+    expect(within(dialog).getByText("90 / 150 min")).toBeInTheDocument();
+    expect(
+      within(dialog).getByText("Durante la semana solo se muestra el progreso."),
+    ).toBeInTheDocument();
+  });
+
+  it("does not move that progress while the user steps the number", async () => {
+    renderRows([english()], "/?entry=commitment-4");
+    const dialog = await screen.findByRole("dialog", { name: "Inglés" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "Más" }));
+    expect(within(dialog).getByText("90 / 150 min")).toBeInTheDocument();
+    expect(within(dialog).getByText("40 %")).toBeInTheDocument();
+  });
+
+  it("starts on 30 with 15, 30 and 45 as shortcuts", async () => {
+    renderRows([english()], "/?entry=commitment-4");
+    const dialog = await screen.findByRole("dialog", { name: "Inglés" });
+    expect(within(dialog).getByRole("textbox", { name: "Cantidad" })).toHaveValue("30");
+    for (const preset of ["15 min", "30 min", "45 min"]) {
+      expect(within(dialog).getByRole("button", { name: preset })).toBeInTheDocument();
+    }
+  });
+
+  it("starts a week with nothing logged at zero progress", async () => {
+    const row = english();
+    renderRows(
+      [
+        {
+          ...row,
+          progress: row.progress === null ? null : { ...row.progress, value: null, percent: 0 },
+        },
+      ],
+      "/?entry=commitment-4",
+    );
+    const dialog = await screen.findByRole("dialog", { name: "Inglés" });
+    expect(within(dialog).getByText("Esta semana llevas 0 min")).toBeInTheDocument();
+    expect(within(dialog).getByText("0 / 150 min")).toBeInTheDocument();
   });
 });
