@@ -16,15 +16,48 @@ describe("Illustration (WF-R5, WF-S4)", () => {
   });
 });
 
-describe("Logo (WF-R5)", () => {
-  it("renders a neutral placeholder named PactJoy without live-text wordmark", () => {
-    const { container } = render(<Logo />);
-    expect(screen.getByRole("img", { name: "PactJoy" })).toBeInTheDocument();
+describe("Illustration with an official image", () => {
+  it.each(["registro-guardado", "sin-conexion", "cocinar"] as const)(
+    "shows the %s illustration by name",
+    (name) => {
+      const { container } = render(<Illustration alt="Imagen" name={name} />);
+      expect(container.querySelector("img")).toHaveAttribute("src", expect.stringContaining(name));
+      expect(screen.getByRole("img", { name: "Imagen" })).toBeInTheDocument();
+    },
+  );
+
+  it("lets an explicit src win over a name", () => {
+    const { container } = render(<Illustration alt="Imagen" name="cocinar" src="/otra.png" />);
+    expect(container.querySelector("img")).toHaveAttribute("src", "/otra.png");
+  });
+
+  it("still draws the neutral placeholder with neither a name nor a src", () => {
+    const { container } = render(<Illustration alt="Imagen" />);
     expect(container.querySelector("img")).toBeNull();
+  });
+});
+
+describe("Logo (official brand files)", () => {
+  it("is the official horizontal logo by default, named PactJoy, never live text", () => {
+    const { container } = render(<Logo />);
+    expect(screen.getByRole("img", { name: "PactJoy" })).toHaveAttribute(
+      "src",
+      expect.stringContaining("pactjoy-horizontal-proposed"),
+    );
     expect(container).not.toHaveTextContent("PactJoy");
   });
 
-  it("renders the logo file when a src is provided", () => {
+  it("can be the symbol alone, a different file from the horizontal logo", () => {
+    const { unmount } = render(<Logo />);
+    const horizontal = screen.getByRole("img", { name: "PactJoy" }).getAttribute("src");
+    unmount();
+    render(<Logo variant="symbol" />);
+    const symbol = screen.getByRole("img", { name: "PactJoy" }).getAttribute("src");
+    expect(symbol).toBeTruthy();
+    expect(symbol).not.toBe(horizontal);
+  });
+
+  it("renders another logo file when a src is provided", () => {
     const { container } = render(<Logo src="/assets/logo.svg" />);
     expect(container.querySelector("img")).toHaveAttribute("src", "/assets/logo.svg");
   });
