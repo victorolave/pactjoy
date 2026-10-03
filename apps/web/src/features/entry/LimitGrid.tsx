@@ -27,30 +27,52 @@ export interface LimitGridProps {
   readonly ideal: number;
   readonly tolerance: number;
   readonly value: number | null;
+  /**
+   * What each whole number scores, in percent, indexed by the number: the server's (`limitPercents`).
+   * Without it an option says its zone instead.
+   */
+  readonly percents?: readonly number[] | null;
   readonly onSelect: (value: number) => void;
 }
 
 /**
  * A grid of every quantity, 0 included and just as big, so logging "none" costs the same two taps as
- * logging 3. Each option says its zone only: points are the server's (P3).
+ * logging 3. Each option shows what it scores before it is chosen (design 18); the last one past the
+ * tolerance reads "5+".
  */
-export function LimitGrid({ unit, ideal, tolerance, value, onSelect }: LimitGridProps) {
+export function LimitGrid({
+  unit,
+  ideal,
+  tolerance,
+  value,
+  percents = null,
+  onSelect,
+}: LimitGridProps) {
+  const options = optionsWith(tolerance, value);
+  // The open end is the grid's own last option, not a stored value that happens to lie outside it.
+  const last = limitOptions(tolerance).at(-1);
   return (
     <div className={styles.grid} role="radiogroup" aria-label={`Cantidad de ${unit}`}>
-      {optionsWith(tolerance, value).map((option) => (
-        // biome-ignore lint/a11y/useSemanticElements: a button-based radio group, like the design system's
-        <button
-          key={option}
-          type="button"
-          role="radio"
-          aria-checked={value === option}
-          className={cx(styles.option, value === option && styles.optionOn)}
-          onClick={() => onSelect(option)}
-        >
-          <span className={styles.optionNumber}>{option}</span>
-          <span className={styles.optionZone}>{zoneOf(option, ideal, tolerance)}</span>
-        </button>
-      ))}
+      {options.map((option) => {
+        const percent = percents?.[option];
+        const open = option === last && option > tolerance;
+        return (
+          // biome-ignore lint/a11y/useSemanticElements: a button-based radio group, like the design system's
+          <button
+            key={option}
+            type="button"
+            role="radio"
+            aria-checked={value === option}
+            className={cx(styles.option, value === option && styles.optionOn)}
+            onClick={() => onSelect(option)}
+          >
+            <span className={styles.optionNumber}>{open ? `${option}+` : option}</span>
+            <span className={styles.optionZone}>
+              {percent === undefined ? zoneOf(option, ideal, tolerance) : `${percent} %`}
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 }

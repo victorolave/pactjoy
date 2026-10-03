@@ -8,4 +8,7 @@
   /* Illustration boxes from the design: the confirmation uses 200, empty states 130. */
   --illustration-lg: 200px;
   --illustration-md: 130px;
+  /* Entry sheets (design 17, 22): 52 px stepper buttons, a 48 px quantity. */
+  --stepper-button: 52px;
+  --font-quantity: 800 48px / 52px var(--font-sans);
 }

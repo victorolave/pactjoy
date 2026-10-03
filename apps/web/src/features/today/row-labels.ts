@@ -52,6 +52,17 @@ export function targetText(measure: MeasureView): string | null {
     : `ideal hasta ${formatDecimal(target.ideal)} · tolerancia ${formatDecimal(target.tolerance)}${suffix}`;
 }
 
+/** The thresholds as a sentence for a sheet: "mínimo 10 min, ideal 30 min", "ideal hasta 2, tolerancia hasta 4 veces". */
+export function targetPhrase(measure: MeasureView): string {
+  if (measure.unit === "done") return "";
+  const { target } = measure;
+  const unit = unitLabel(measure);
+  const suffix = unit === null || unit === "" ? "" : ` ${unit}`;
+  return target.direction === "reach"
+    ? `mínimo ${formatDecimal(target.minimum)}${suffix}, ideal ${formatDecimal(target.ideal)}${suffix}`
+    : `ideal hasta ${formatDecimal(target.ideal)}, tolerancia hasta ${formatDecimal(target.tolerance)}${suffix}`;
+}
+
 /** The labelled minimum and ideal under a progress bar: "mín. 10" and "ideal 30 min". */
 export function reachMarks(measure: MeasureView): ProgressMark[] {
   if (measure.unit === "done" || measure.target.direction !== "reach") return [];

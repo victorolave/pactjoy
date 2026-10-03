@@ -26,10 +26,32 @@ describe("LimitGrid (EN-R5)", () => {
     expect(labels).toEqual(["0", "1", "2", "3", "4", "5"]);
   });
 
-  it("labels each option with its zone: ideal, tolerance, or over (no per-option points, P3)", () => {
+  it("labels each option with its zone when the server gave no scores", () => {
     grid(null);
     const zones = screen.getAllByRole("radio").map((radio) => radio.textContent?.slice(1));
-    expect(zones).toEqual(["Ideal", "Ideal", "Ideal", "Tolerancia", "Tolerancia", "Excede"]);
+    // The last option is the open end: "5+".
+    expect(zones).toEqual(["Ideal", "Ideal", "Ideal", "Tolerancia", "Tolerancia", "+Excede"]);
+  });
+
+  it("shows what each option scores, from the server, and reads 5+ on the open end (design 18)", () => {
+    render(
+      <LimitGrid
+        unit="cafés"
+        ideal={2}
+        tolerance={4}
+        value={null}
+        percents={[100, 100, 100, 75, 50, 0]}
+        onSelect={() => {}}
+      />,
+    );
+    expect(screen.getAllByRole("radio").map((radio) => radio.textContent)).toEqual([
+      "0100 %",
+      "1100 %",
+      "2100 %",
+      "375 %",
+      "450 %",
+      "5+0 %",
+    ]);
   });
 
   it("marks only the selected option", () => {
