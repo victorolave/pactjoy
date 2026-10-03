@@ -10,6 +10,7 @@ import { useSavedToast } from "./use-saved-toast.ts";
 
 const SAVED = "Registro guardado. Un paso más en tu meta.";
 const MISSED_SAVED = "Anotado: hoy no salió.";
+const MISSED_YESTERDAY = "Anotado: ayer no salió.";
 
 /** How long the fill waits for the refetched Today to show the entry before it lets go. */
 const SETTLE_MS = 4000;
@@ -35,8 +36,12 @@ export interface OneTap {
  * The one-tap flow for a done/not done day row: record, then a toast to undo. A retry of the same
  * tap reuses its clientRequestId, so it is an idempotent replay on the server (EN-R1).
  */
-export function useOneTap(commitmentId: string, seasonId: string): OneTap {
-  const record = useRecordEntry();
+export function useOneTap(
+  commitmentId: string,
+  seasonId: string,
+  /** The day the registro is for; the day on display unless it is yesterday's (design 15d). */
+  forDate?: string,
+): OneTap {
   const toasts = useToasts();
   const showSaved = useSavedToast();
   const ids = useIds();
@@ -47,6 +52,35 @@ export function useOneTap(commitmentId: string, seasonId: string): OneTap {
   const [entryId, setEntryId] = useState<string | null>(null);
   // Set synchronously on the first tap: React state would still say "idle" for a fast second tap.
   const saving = useRef(false);
+  // What the answer says about the tap in flight: read by the mutation's own callbacks.
+  const inFlight = useRef<string>(SAVED);
+
+  // The callbacks belong to the mutation, not to each `mutate` call: the toast still appears when the
+  // row that tapped has moved or unmounted (a check in De ayer whose item leaves the list).
+  const record = useRecordEntry({
+    onSuccess: ({ entryId: created }) => {
+      saving.current = false;
+      setEntryId(created);
+      showSaved(inFlight.current, created);
+    },
+    onError: (error, command) => {
+      saving.current = false;
+      setOptimisticDone(false);
+      const failure = entryFailure(error);
+      if (!failure.retryable) {
+        setMessage(failure.message);
+        return;
+      }
+      const saved = inFlight.current;
+      toasts.show({
+        message: failure.message,
+        tone: "error",
+        durationMs: null,
+        actionLabel: "Reintentar",
+        onAction: () => send(command, saved),
+      });
+    },
+  });
 
   // After a success the server's row should show the entry within a refetch; if it never does (the
   // entry vanished elsewhere), the fill lets go instead of lying.
@@ -58,35 +92,16 @@ export function useOneTap(commitmentId: string, seasonId: string): OneTap {
 
   const send = (command: RecordEntryCommand, saved: string): void => {
     saving.current = true;
+    inFlight.current = saved;
     setMessage(null);
+    // The entry of the PREVIOUS tap is not this one's: undo must never reach for a stale id.
+    setEntryId(null);
     if (command.value.kind === "done") {
       // The visual starts on the tap, not on the answer; only the data waits for the server.
       setOptimisticDone(true);
       haptics.tap();
     }
-    record.mutate(command, {
-      onSuccess: ({ entryId: created }) => {
-        saving.current = false;
-        setEntryId(created);
-        showSaved(saved, created);
-      },
-      onError: (error) => {
-        saving.current = false;
-        setOptimisticDone(false);
-        const failure = entryFailure(error);
-        if (!failure.retryable) {
-          setMessage(failure.message);
-          return;
-        }
-        toasts.show({
-          message: failure.message,
-          tone: "error",
-          durationMs: null,
-          actionLabel: "Reintentar",
-          onAction: () => send(command, saved),
-        });
-      },
-    });
+    record.mutate(command);
   };
 
   const start = (kind: "done" | "missed"): void => {
@@ -95,12 +110,16 @@ export function useOneTap(commitmentId: string, seasonId: string): OneTap {
       {
         seasonId,
         commitmentId,
-        ...(dates === undefined ? {} : { forDate: dates.refDate }),
+        ...(forDate !== undefined
+          ? { forDate }
+          : dates === undefined
+            ? {}
+            : { forDate: dates.refDate }),
         value: { kind },
         note: null,
         clientRequestId: ids.newId(),
       },
-      kind === "done" ? SAVED : MISSED_SAVED,
+      kind === "done" ? SAVED : forDate === undefined ? MISSED_SAVED : MISSED_YESTERDAY,
     );
   };
 

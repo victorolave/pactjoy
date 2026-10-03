@@ -27,6 +27,7 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "lt",
   "lte",
   "opportunityPoints",
+  "opportunityPointsAt",
   "opportunityValue",
   "parseDecimal",
   "progressAtValue",

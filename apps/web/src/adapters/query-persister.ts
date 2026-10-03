@@ -11,7 +11,7 @@ export const STORAGE_KEY = "pactjoy.today-cache";
 export const MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const THROTTLE_MS = 1000;
 /** Bump when the saved Today's shape changes, so an old saved copy is dropped instead of misread. */
-export const CACHE_VERSION = "3";
+export const CACHE_VERSION = "4";
 
 /** The saved Today belongs to one user of one cache version: anything else is not restored. */
 export const bustFor = (userId: string | null): string => `${CACHE_VERSION}:${userId ?? "anon"}`;
@@ -49,7 +49,9 @@ export function isCurrentToday(today: unknown): boolean {
   }
   return (
     Array.isArray(today.pendingYesterday) &&
-    rows.every((row) => isRecord(row) && isRecord(row.points))
+    rows.every(
+      (row) => isRecord(row) && isRecord(row.points) && "perOpportunityExact" in row.points,
+    )
   );
 }
 
