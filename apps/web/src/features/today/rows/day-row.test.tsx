@@ -5,6 +5,7 @@ import {
   dayRowFixture,
   type Entry,
   entryFixture,
+  pointsFixture,
 } from "../../../testing/fixtures/today.ts";
 import { TodayDateContext } from "../today-date-context.tsx";
 import { DayRow } from "./DayRow.tsx";
@@ -54,7 +55,7 @@ describe("day row (TO-R3)", () => {
     expect(screen.getByText("ideal hasta 1 · tolerancia 3 veces")).toBeInTheDocument();
   });
 
-  it("shows what was logged, and every entry of the day", () => {
+  it("sums several quantities of today into one line (design 22)", () => {
     show(
       quantityDay({
         opportunity: { state: "logged", graceUntil: null },
@@ -64,8 +65,24 @@ describe("day row (TO-R3)", () => {
         ],
       }),
     );
-    expect(screen.getByText("3 km")).toBeInTheDocument();
-    expect(screen.getByText("2,5 km")).toBeInTheDocument();
+    expect(screen.getByText("Llevas 5,5 km hoy")).toBeInTheDocument();
+    expect(screen.queryByText("3 km")).not.toBeInTheDocument();
+  });
+
+  it("shows the points a logged day earned next to the title, and none before", () => {
+    const { rerender } = render(<DayRow row={dayRowFixture()} />);
+    expect(screen.queryByText(/pts/)).not.toBeInTheDocument();
+    rerender(
+      <DayRow
+        row={dayRowFixture({
+          opportunity: { state: "logged", graceUntil: null },
+          entries: [entryFixture({ kind: "done" })],
+          points: pointsFixture({ perOpportunity: "8", earned: 8, limitPercents: null }),
+        })}
+      />,
+    );
+    expect(screen.getByText("+8 pts")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Meditar" })).toBeInTheDocument();
   });
 
   it("says a done row is registered", () => {

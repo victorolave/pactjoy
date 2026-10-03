@@ -1,0 +1,92 @@
+.circle {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-height);
+  height: var(--control-height);
+  padding: 0;
+  border: var(--border-width-control) solid var(--border-control);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  /* The prototype fills the background over 160 ms; the border and the tick colour switch at once. */
+  transition: background-color var(--motion-check) var(--ease-standard);
+}
+
+/* The tick scales .8 to 1 as the circle fills (design 20: "El check aparece y escala de .8 a 1"). */
+.circle[aria-pressed="true"] svg {
+  stroke-width: 2.4;
+  animation: pop var(--motion-check) var(--ease-standard) both;
+}
+
+@keyframes pop {
+  from {
+    transform: scale(0.8);
+  }
+
+  to {
+    transform: scale(1);
+  }
+}
+
+/* Hoy no salió collapses with the tap instead of vanishing when the server answers. */
+.collapse {
+  display: grid;
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transition:
+    grid-template-rows var(--motion-base) var(--ease-standard),
+    margin-top var(--motion-base) var(--ease-standard),
+    opacity var(--motion-base) var(--ease-standard);
+}
+
+/* Closed it takes no room: the row's own gap above it is pulled back too. */
+.collapse[data-open="false"] {
+  grid-template-rows: 0fr;
+  margin-top: calc(var(--space-3) * -1);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.collapseInner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Reduced motion: the same end state with a short fade, no scale. */
+@media (prefers-reduced-motion: reduce) {
+  .circle {
+    transition: background-color var(--motion-reduced) linear;
+  }
+
+  .circle[aria-pressed="true"] svg {
+    animation: none;
+  }
+
+  .collapse {
+    transition: opacity var(--motion-reduced) linear;
+  }
+}
+
+.circle:disabled {
+  border-color: var(--ink-200);
+  color: var(--ink-300);
+  cursor: not-allowed;
+}
+
+.circle[aria-pressed="true"] {
+  border-color: var(--pj-success);
+  background: var(--pj-success);
+  color: var(--pj-white);
+}
+
+.circle[aria-pressed="true"]:disabled {
+  opacity: 0.6;
+}
+
+.circle:focus-visible {
+  outline: var(--focus-width) solid var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}

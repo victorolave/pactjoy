@@ -27,6 +27,7 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "lt",
   "lte",
   "opportunityPoints",
+  "opportunityPointsAt",
   "opportunityValue",
   "parseDecimal",
   "progressAtValue",
@@ -34,6 +35,7 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "scoreMember",
   "seasonDay",
   "sumPoints",
+  "weekBoundGraceDeadline",
   "weekOf",
   "weekProgress",
 ].sort();

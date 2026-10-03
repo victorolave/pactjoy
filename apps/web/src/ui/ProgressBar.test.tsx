@@ -13,6 +13,41 @@ describe("ProgressBar", () => {
     expect(screen.getByText("2 de 3")).toBeInTheDocument();
   });
 
+  it("fills with the neutral ink below the minimum and with the gradient from it", () => {
+    const { rerender } = render(<ProgressBar name="Lectura" value={5} max={30} minimum={10} />);
+    expect(screen.getByRole("progressbar").firstElementChild).toHaveStyle({
+      background: "var(--ink-400)",
+    });
+    rerender(<ProgressBar name="Lectura" value={10} max={30} minimum={10} />);
+    expect(screen.getByRole("progressbar").firstElementChild).toHaveStyle({
+      background: "var(--gradient-together)",
+    });
+  });
+
+  it("draws a tick where a threshold sits inside the bar, and none at its end (design 15a)", () => {
+    const { container } = render(
+      <ProgressBar
+        name="Lectura"
+        value={0}
+        max={30}
+        marks={[
+          { at: 10, label: "mín. 10" },
+          { at: 30, label: "ideal 30 min" },
+        ]}
+      />,
+    );
+    const ticks = container.querySelectorAll('[aria-hidden="true"]');
+    expect(ticks).toHaveLength(1);
+    expect(ticks[0]).toHaveStyle({ left: `${(10 / 30) * 100}%` });
+  });
+
+  it("keeps the gradient when there is no minimum to measure against", () => {
+    render(<ProgressBar name="Lectura" value={1} max={30} />);
+    expect(screen.getByRole("progressbar").firstElementChild).toHaveStyle({
+      background: "var(--gradient-together)",
+    });
+  });
+
   it("clamps the fill between empty and full", () => {
     const { rerender } = render(<ProgressBar name="Progreso" value={5} max={2} />);
     expect(screen.getByRole("progressbar").firstElementChild).toHaveStyle({ width: "100%" });

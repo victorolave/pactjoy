@@ -15,18 +15,28 @@
   flex: 1;
   align-items: baseline;
   justify-content: center;
-  gap: var(--space-2);
+  gap: var(--space-1);
+  min-width: 0;
 }
 
+/* The unit sits right after the number: the input is only as wide as what is typed. */
 .number {
-  width: 100%;
   min-width: 0;
+  max-width: 100%;
+  padding: 0;
   border: 0;
   background: transparent;
   color: var(--text-primary);
-  font: var(--font-display);
+  font: var(--font-quantity);
   letter-spacing: var(--type-display-track);
+  font-variant-numeric: tabular-nums;
   text-align: center;
+}
+
+.prefix {
+  font: var(--font-quantity);
+  letter-spacing: var(--type-display-track);
+  color: var(--text-primary);
 }
 
 .number[aria-invalid="true"] {
@@ -49,6 +59,21 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+}
+
+/* "Se guardará para el jueves 1…" under the Hoy / Ayer selector (design 21). */
+.dayNote {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-control);
+  background: var(--surface-sunken);
+  font: var(--font-small);
+}
+
+.dayNote p {
+  margin: 0;
 }
 
 .sheet {
@@ -122,8 +147,9 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--space-1);
-  height: var(--space-8);
+  gap: 0;
+  min-height: var(--space-8);
+  padding: var(--space-2) 0;
   border: var(--border-width) solid var(--border-control);
   border-radius: var(--radius-control);
   background: transparent;
@@ -144,6 +170,80 @@
 
 .optionZone {
   font: var(--font-meta);
+  color: var(--text-secondary);
+}
+
+.optionOn .optionZone {
+  color: inherit;
+}
+
+/* What the sheet says about the value being typed (design 17, 17b, 22). */
+.draft {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-control);
+  background: var(--surface-sunken);
+}
+
+.draftHead {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font: var(--font-small);
+}
+
+.draftHead b {
+  font-variant-numeric: tabular-nums;
+}
+
+.draftGain {
+  font-weight: 700;
+  color: var(--text-success);
+}
+
+.draftMuted {
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.draftTrack {
+  position: relative;
+  height: var(--space-2);
+  border-radius: var(--space-1);
+  background: var(--pj-white);
+}
+
+.draftFill,
+.draftBefore {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  border-radius: var(--space-1);
+  transition: width var(--motion-base) var(--ease-standard);
+}
+
+/* The weekly bar's second layer: what the week already had, darker than what this adds. */
+.draftBefore {
+  border-radius: var(--space-1) 0 0 var(--space-1);
+  background: var(--pj-ink);
+  opacity: 0.25;
+}
+
+.draftTick {
+  position: absolute;
+  top: calc(var(--space-1) * -0.75);
+  bottom: calc(var(--space-1) * -0.75);
+  width: calc(var(--space-1) / 2);
+  background: var(--text-primary);
+}
+
+.draftLine {
+  margin: 0;
+  font: var(--font-small);
+  color: var(--text-secondary);
 }
 
 @media (prefers-reduced-motion: reduce) {

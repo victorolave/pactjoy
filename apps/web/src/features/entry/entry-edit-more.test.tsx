@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { ApiError } from "../../ports/api-error.ts";
 import {
   coffee,
+  entryId,
   meditation,
   quantity,
   reading,
@@ -21,6 +22,60 @@ describe("what the edit sheet tells and lists (EN-R7)", () => {
     expect(
       within(dialog).getByText("Después del periodo de gracia, el registro queda bloqueado."),
     ).toBeInTheDocument();
+  });
+
+  it("frames the thresholds as today on a day row, never as 'Hoy' on a weekly total", async () => {
+    renderToday([reading([quantity("25")])], "/?entry=commitment-2&id=entry-1");
+    const today = await screen.findByRole("dialog", { name: "Leer" });
+    expect(within(today).getByText("Hoy · mínimo 10 min, ideal 30 min")).toBeInTheDocument();
+  });
+
+  it("says 'Esta semana' for a weekly total (the old copy said Hoy)", async () => {
+    const weekly = reading([quantity("90")], {
+      measure: {
+        unit: "minutes",
+        customLabel: null,
+        precision: "integer",
+        target: { direction: "reach", minimum: "60", ideal: "150" },
+        schedule: { period: "weeklyTotal" },
+      },
+    });
+    renderToday([weekly], "/?entry=commitment-2&id=entry-1");
+    const dialog = await screen.findByRole("dialog", { name: "Leer" });
+    expect(
+      within(dialog).getByText("Esta semana · mínimo 60 min, ideal 150 min"),
+    ).toBeInTheDocument();
+    expect(within(dialog).queryByText(/^Hoy ·/)).not.toBeInTheDocument();
+  });
+
+  it("names the weekday for an entry of another day", async () => {
+    const yesterday = reading([
+      entryFixture(
+        { kind: "quantity", value: "25" },
+        { entryId: entryId("entry-1"), forDate: "2026-10-01" as never },
+      ),
+    ]);
+    renderToday([yesterday], "/?entry=commitment-2&id=entry-1");
+    const dialog = await screen.findByRole("dialog", { name: "Leer" });
+    expect(within(dialog).getByText("Jueves · mínimo 10 min, ideal 30 min")).toBeInTheDocument();
+  });
+
+  it("writes a stored decimal with a comma, and sends it with a dot", async () => {
+    const hours = reading([quantity("2.5")], {
+      measure: {
+        unit: "hours",
+        customLabel: null,
+        precision: "decimal",
+        target: { direction: "reach", minimum: "1", ideal: "3" },
+        schedule: { period: "perSession", frequency: { kind: "timesPerWeek", times: 3 } },
+      },
+    });
+    const { deps } = renderToday([hours], "/?entry=commitment-2&id=entry-1");
+    const dialog = await screen.findByRole("dialog", { name: "Leer" });
+    expect(within(dialog).getByRole("textbox", { name: "Cantidad" })).toHaveValue("2,5");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Guardar 2,5 h" }));
+    await screen.findByText("Registro guardado.");
+    expect(deps.api.edited[0]?.value).toEqual({ kind: "quantity", value: "2.5" });
   });
 
   it("lists every entry of the row and edits the one chosen (EN-S13)", async () => {

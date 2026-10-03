@@ -1,0 +1,5 @@
+/* The design's success surface for a card: the vendored stylesheet has no such tone. */
+.success {
+  background: var(--surface-success);
+  border-color: transparent;
+}
