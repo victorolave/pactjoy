@@ -3,6 +3,8 @@ import { Button } from "../../ui/Button.tsx";
 import { Illustration } from "../../ui/Placeholder.tsx";
 import styles from "./entry.module.css";
 
+const DEFAULT_TITLE = "Registro guardado.";
+
 /** How long the confirmation stays before the sheet closes itself (EN-R6). */
 const CONFIRMATION_MS = 1200;
 
@@ -16,7 +18,7 @@ export function useAutoClose(saved: string | null, onClose: () => void): void {
 }
 
 export function Confirmation({
-  title = "Registro guardado.",
+  title = DEFAULT_TITLE,
   detail,
   onClose,
 }: {
@@ -26,7 +28,10 @@ export function Confirmation({
 }) {
   return (
     <div className={styles.confirmation}>
-      <Illustration alt={title.replace(/\.$/, "")} />
+      <Illustration
+        alt={title.replace(/\.$/, "")}
+        {...(title === DEFAULT_TITLE ? { name: "registro-guardado" as const } : {})}
+      />
       <p className={styles.confirmationTitle}>{title}</p>
       <p className={styles.subtitle}>{detail}</p>
       <Button block onClick={onClose}>
