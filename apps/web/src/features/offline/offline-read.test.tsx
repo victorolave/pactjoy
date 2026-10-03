@@ -30,9 +30,11 @@ describe("reading Today offline (TO-R10)", () => {
       todayFailures: [NETWORK()],
     });
     expect(await screen.findByRole("heading", { name: "Meditar" })).toBeInTheDocument();
-    expect(screen.getByText(OFFLINE)).toBeInTheDocument();
+    // The heading comes from the persisted cache; the request and the banner settle after it, so
+    // wait for them instead of reading them in the same tick (it raced under CPU load).
+    expect(await screen.findByText(OFFLINE)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Registrar Meditar" })).toBeDisabled();
-    expect(deps.api.calls.getToday).toBe(1);
+    await waitFor(() => expect(deps.api.calls.getToday).toBe(1));
   });
 
   it("keeps the saved Today when only the request fails and the browser still says online", async () => {

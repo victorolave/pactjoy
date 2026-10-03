@@ -6,6 +6,12 @@ import type { DayTodayRow } from "../today-view-model.ts";
 import { RowFrame } from "./RowFrame.tsx";
 import { SessionBar } from "./SessionBar.tsx";
 
+/** "Llevas X hoy" for a reach (progress toward a goal); "Hoy: X" for a limit (an amount, not a goal). */
+const dayTotalText = (amount: string, measure: DayTodayRow["measure"]): string =>
+  measure.unit !== "done" && measure.target.direction === "limit"
+    ? `Hoy: ${amount}`
+    : `Llevas ${amount} hoy`;
+
 export function DayRow({
   row,
   action,
@@ -28,6 +34,7 @@ export function DayRow({
       .filter((entry) => (entry.value.kind === "missed") === missed)
       .map((entry) => entryText(entry, row.measure, today));
   // Logged rows weigh one line: several quantities of today read "Llevas 35 min hoy" (design 22).
+  // A limit is not a goal to reach, so it reads "Hoy: 1 vez" instead.
   const quantities = row.entries.filter((entry) => entry.value.kind === "quantity");
   const sumsUp =
     achieved &&
@@ -39,7 +46,7 @@ export function DayRow({
     : row.entries.length === 0
       ? ["Registrado hoy"]
       : sumsUp
-        ? [`Llevas ${quantityText(sumQuantities(quantities), row.measure)} hoy`]
+        ? [dayTotalText(quantityText(sumQuantities(quantities), row.measure), row.measure)]
         : lines(false);
   const detail = !row.scheduledToday
     ? "No toca hoy"

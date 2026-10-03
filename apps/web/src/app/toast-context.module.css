@@ -4,5 +4,7 @@
   left: var(--layout-margin-mobile);
   right: var(--layout-margin-mobile);
   bottom: calc(var(--safe-bottom) + var(--space-8) + var(--space-4));
+  max-width: calc(var(--app-max-width) - 2 * var(--layout-margin-mobile));
+  margin-inline: auto;
   z-index: 40;
 }

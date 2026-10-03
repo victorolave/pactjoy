@@ -1,0 +1,5 @@
+/* A bottom sheet keeps the app's column on wide screens instead of spanning the desktop. */
+.bottom {
+  max-width: var(--app-max-width);
+  margin-inline: auto;
+}

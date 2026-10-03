@@ -18,3 +18,24 @@ describe("the shell's top spacing", () => {
     expect(Number(padding?.[1])).toBeGreaterThanOrEqual(4);
   });
 });
+
+describe("the shell's width", () => {
+  it("caps the column at the app max-width token and centres it", () => {
+    expect(block("shell")).toContain("max-width: var(--app-max-width)");
+    expect(block("shell")).toContain("margin-inline: auto");
+  });
+
+  it("defines the token at the iPhone-first 480 px", () => {
+    const tokens = readFileSync(join(import.meta.dirname, "../design/local-tokens.css"), "utf8");
+    expect(tokens).toContain("--app-max-width: 480px");
+  });
+
+  it("caps the toasts and the bottom sheets to the same column", () => {
+    for (const file of ["toast-context.module.css", "../ui/Sheet.module.css"]) {
+      const other = readFileSync(join(import.meta.dirname, file), "utf8");
+      expect(other).toContain("max-width");
+      expect(other).toContain("--app-max-width");
+      expect(other).toContain("margin-inline: auto");
+    }
+  });
+});

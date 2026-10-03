@@ -1,6 +1,8 @@
 /* App-only tokens: layout values the design system does not define. Raw values live only here. */
 :root {
   --shell-height: 100dvh;
+  /* iPhone-first column: on wider screens the app stays this wide and centred (screens, tab bar, toasts, sheets). */
+  --app-max-width: 480px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
