@@ -33,7 +33,7 @@ describe("LimitGrid (EN-R5)", () => {
     expect(zones).toEqual(["Ideal", "Ideal", "Ideal", "Tolerancia", "Tolerancia", "+Excede"]);
   });
 
-  it("shows what each option scores, from the server, and reads 5+ on the open end (design 18)", () => {
+  it("shows the zone and what each option scores, from the server, and reads 5+ on the open end", () => {
     render(
       <LimitGrid
         unit="cafés"
@@ -45,12 +45,12 @@ describe("LimitGrid (EN-R5)", () => {
       />,
     );
     expect(screen.getAllByRole("radio").map((radio) => radio.textContent)).toEqual([
-      "0100 %",
-      "1100 %",
-      "2100 %",
-      "375 %",
-      "450 %",
-      "5+0 %",
+      "0Ideal100 %",
+      "1Ideal100 %",
+      "2Ideal100 %",
+      "3Tolerancia75 %",
+      "4Tolerancia50 %",
+      "5+Excede0 %",
     ]);
   });
 

@@ -11,6 +11,7 @@ import { SessionManager } from "../features/auth/session-manager.ts";
 import type { ApiError } from "../ports/api-error.ts";
 import { FakeAuth, fakeSession } from "./fake-auth.ts";
 import { FakeConnectivity } from "./fake-connectivity.ts";
+import { FakeHaptics } from "./fake-haptics.ts";
 import { FakePactJoyApi } from "./fake-pactjoy-api.ts";
 import { FixedClock } from "./fixed-clock.ts";
 import { activeTodayFixture } from "./fixtures/today.ts";
@@ -49,6 +50,7 @@ export interface RenderedApp extends RenderResult {
     readonly auth: FakeAuth;
     readonly api: FakePactJoyApi;
     readonly connectivity: FakeConnectivity;
+    readonly haptics: FakeHaptics;
     readonly store: MemoryTokenStore;
   };
 }
@@ -70,6 +72,7 @@ export function renderApp({
     auth,
     api,
     ids: new SequentialIds(),
+    haptics: new FakeHaptics(),
     connectivity: new FakeConnectivity(online),
     store,
     sessions: new SessionManager(auth, store, new FixedClock(0)),

@@ -257,9 +257,12 @@ describe("HTTP over Postgres: concurrency", () => {
       call("POST", `/seasons/${seasonId}/entries`, "u1", entry),
       call("POST", `/seasons/${seasonId}/entries`, "u1", entry),
     ]);
-    const [first, second] = statuses(race);
-    expect(first).toBe(201);
-    expect([200, 409]).toContain(second);
+    // One call creates (201). The other is a replay of it (200) or loses the race (409): which of the
+    // two answers first is timing, so the outcome is an unordered pair, never "the lower status is 201".
+    const codes = statuses(race);
+    expect(codes.filter((status) => status === 201)).toHaveLength(1);
+    const other = codes.find((status) => status !== 201);
+    expect([200, 409]).toContain(other);
     const [row] = await admin`select count(*)::int as n from pactjoy.entries`;
     expect(row?.n).toBe(1);
   });

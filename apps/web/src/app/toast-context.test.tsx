@@ -26,6 +26,22 @@ const setup = (toast: Parameters<typeof Trigger>[0]["toast"]) =>
     </ToastProvider>,
   );
 
+describe("closing a toast", () => {
+  beforeEach(() => vi.useFakeTimers({ shouldAdvanceTime: true }));
+  afterEach(() => vi.useRealTimers());
+
+  it("hides it without running its action, and hands focus back to where it was", async () => {
+    const onAction = vi.fn();
+    setup({ message: "Registro guardado.", actionLabel: "Deshacer", onAction });
+    const opener = screen.getByRole("button", { name: "mostrar" });
+    await userEvent.click(opener);
+    await userEvent.click(screen.getByRole("button", { name: "Cerrar aviso" }));
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(onAction).not.toHaveBeenCalled();
+    expect(opener).toHaveFocus();
+  });
+});
+
 describe("ToastProvider", () => {
   beforeEach(() => vi.useFakeTimers({ shouldAdvanceTime: true }));
   afterEach(() => vi.useRealTimers());

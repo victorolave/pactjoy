@@ -1,17 +1,30 @@
 import type { ReactNode } from "react";
+import { fromScaled } from "../../../shared/decimal.ts";
 import { ProgressBar } from "../../../ui/ProgressBar.tsx";
 import { Tag } from "../../../ui/Tag.tsx";
-import { formatDecimal, reachMarks, scheduleText, targetText, unitLabel } from "../row-labels.ts";
+import { loggedToday } from "../logged-totals.ts";
+import {
+  formatDecimal,
+  quantityText,
+  reachMarks,
+  scheduleText,
+  targetText,
+  unitLabel,
+} from "../row-labels.ts";
+import { useTodayDates } from "../today-date-context.tsx";
 import type { WeekTodayRow } from "../today-view-model.ts";
 import { RowFrame } from "./RowFrame.tsx";
 import { SessionBar } from "./SessionBar.tsx";
 
 type Progress = NonNullable<WeekTodayRow["progress"]>;
 
-function detailOf(row: WeekTodayRow, progress: Progress): string {
+function detailOf(row: WeekTodayRow, progress: Progress, today: string | undefined): string {
   const { measure } = row;
   if (measure.schedule.period === "perSession") {
-    return `${progress.sessionsDone} de ${progress.sessionsTarget} esta semana`;
+    const week = `${progress.sessionsDone} de ${progress.sessionsTarget} esta semana`;
+    const logged = loggedToday(row, today);
+    // Design 22: "2 de 5 esta semana · llevas 25 min hoy".
+    return logged > 0n ? `${week} · llevas ${quantityText(fromScaled(logged), measure)} hoy` : week;
   }
   const unit = unitLabel(measure);
   const suffix = unit === null || unit === "" ? "" : ` ${unit}`;
@@ -48,13 +61,14 @@ export function WeekRow({
   readonly below?: ReactNode;
 }) {
   const { progress } = row;
+  const dates = useTodayDates();
   const closed = row.opportunity.state === "closed";
   return (
     <RowFrame
       title={row.habitName}
       glyph="repeat"
       details={[
-        progress === null ? scheduleText(row.measure) : detailOf(row, progress),
+        progress === null ? scheduleText(row.measure) : detailOf(row, progress, dates?.refDate),
         ...(closed ? ["Cerrada"] : []),
       ]}
       badges={row.privacy === "private" ? <Tag>Privado</Tag> : undefined}
