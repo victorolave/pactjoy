@@ -21,15 +21,17 @@ export function RowWithControls({
   const online = useOnline();
   const offersOneTap =
     row.kind === "day" && row.measure.unit === "done" && row.opportunity.state === "open";
+  const { state } = row.opportunity;
+  const windowOpen =
+    (state === "open" || state === "logged") && !(row.kind === "day" && !row.scheduledToday);
+  // A reach quantity keeps its plus once logged: more minutes or pages the same day add up (design
+  // 22). A limit is corrected from the edit, not summed on its grid.
   const offersSheet =
-    row.opportunity.state === "open" &&
-    !(row.kind === "day" && !row.scheduledToday) &&
-    (quantityMeasureOf(row.measure) !== null || limitMeasureOf(row.measure) !== null);
+    windowOpen &&
+    (quantityMeasureOf(row.measure) !== null ||
+      (state === "open" && limitMeasureOf(row.measure) !== null));
   const firstEntry = row.entries[0];
-  const offersEdit =
-    firstEntry !== undefined &&
-    (row.opportunity.state === "open" || row.opportunity.state === "logged") &&
-    !(row.kind === "day" && !row.scheduledToday);
+  const offersEdit = firstEntry !== undefined && windowOpen;
   return (
     <TodayRowCard
       row={row}

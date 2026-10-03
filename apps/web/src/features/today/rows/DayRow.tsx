@@ -28,7 +28,7 @@ export function DayRow({
   const quantities = row.entries.filter((entry) => entry.value.kind === "quantity");
   const sumsUp =
     achieved &&
-    quantities.length > 1 &&
+    quantities.length > 0 &&
     quantities.length === row.entries.length &&
     quantities.every((entry) => today === undefined || entry.forDate === today);
   const statuses = !achieved
