@@ -4,6 +4,7 @@
     "rootDir": ".",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",
+    "erasableSyntaxOnly": true,
     "types": ["vite/client", "node", "@testing-library/jest-dom"]
   },
   "include": [
