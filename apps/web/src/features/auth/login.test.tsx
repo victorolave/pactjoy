@@ -45,6 +45,7 @@ describe("email step (AU-R2)", () => {
         "Escribe un correo válido.",
       );
       expect(screen.getByRole("heading", { name: "Entrar" })).toBeInTheDocument();
+      expect(screen.getByLabelText("Correo")).toHaveFocus();
     },
   );
 
@@ -96,6 +97,7 @@ describe("code step (AU-R2)", () => {
       await userEvent.type(screen.getByLabelText("Código"), code);
       await userEvent.click(screen.getByRole("button", { name: "Entrar" }));
       expect(deps.auth.verified).toEqual([]);
+      expect(screen.getByLabelText("Código")).toHaveFocus();
       expect(screen.getByLabelText("Código")).toHaveAccessibleDescription(
         "El código tiene 6 dígitos.",
       );

@@ -1,7 +1,10 @@
+import { useOnline } from "../../app/connectivity-context.tsx";
+import { ApiError } from "../../ports/api-error.ts";
 import { toUiError } from "../../shared/ui-error.ts";
 import { Button } from "../../ui/Button.tsx";
 import { Icon } from "../../ui/icon/Icon.tsx";
 import { Skeleton } from "../../ui/Skeleton.tsx";
+import { OfflineBanner } from "../offline/OfflineBanner.tsx";
 import { useToday } from "./queries.ts";
 import styles from "./TodayScreen.module.css";
 import { NoCircle, NoSeason, NotStarted, PactOpen, RunningToday } from "./TodayStates.tsx";
@@ -62,11 +65,25 @@ function TodayFailure({
 
 export function TodayScreen() {
   const today = useToday();
-  if (today.isPending) return <TodayLoading />;
-  if (today.isError)
-    return <TodayFailure error={today.error} onRetry={() => void today.refetch()} />;
+  const online = useOnline();
+  if (today.data === undefined) {
+    // Offline with nothing saved is an error, not an endless skeleton (TO-S13).
+    if (today.isError || today.fetchStatus === "paused") {
+      return (
+        <TodayFailure
+          error={today.error ?? new ApiError("NetworkError", 0, null)}
+          onRetry={() => void today.refetch()}
+        />
+      );
+    }
+    return <TodayLoading />;
+  }
+  // Data is on screen: a failed refetch keeps it. Only a lost connection says "sin conexión".
+  const connectionLost =
+    !online || (today.isError && toUiError(today.error).code === "NetworkError");
   return (
     <div className={styles.screen}>
+      {connectionLost && <OfflineBanner />}
       <TodayContent model={toTodayModel(today.data)} />
     </div>
   );

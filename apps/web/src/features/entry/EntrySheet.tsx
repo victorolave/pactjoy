@@ -1,27 +1,29 @@
-import type { TodayRow } from "@pactjoy/app";
-import { useEffect, useState } from "react";
+import type { MeasureView, TodayRow } from "@pactjoy/app";
+import { type ReactNode, useState } from "react";
+import { useOnline } from "../../app/connectivity-context.tsx";
 import { Button } from "../../ui/Button.tsx";
 import { Card } from "../../ui/Card.tsx";
 import { InlineMessage } from "../../ui/InlineMessage.tsx";
-import { Illustration } from "../../ui/Placeholder.tsx";
 import { ProgressBar } from "../../ui/ProgressBar.tsx";
 import { Sheet } from "../../ui/Sheet.tsx";
-import { formatDecimal, targetText, unitLabel } from "../today/row-labels.ts";
+import { formatDecimal, quantityText, targetText, unitLabel } from "../today/row-labels.ts";
+import { Confirmation, useAutoClose } from "./Confirmation.tsx";
 import styles from "./entry.module.css";
 import {
   initialValue,
+  type LimitQuantity,
+  limitMeasureOf,
+  limitUsesGrid,
   nudge,
   presetsFor,
   quantityMeasureOf,
   type ReachQuantity,
   toSubmitValue,
 } from "./entry-form.ts";
+import { LimitGrid } from "./LimitGrid.tsx";
 import { NoteField } from "./NoteField.tsx";
 import { QuantityStepper } from "./QuantityStepper.tsx";
 import { useQuantityEntry } from "./use-quantity-entry.ts";
-
-/** How long the confirmation stays before the sheet closes itself (EN-R6). */
-const CONFIRMATION_MS = 1200;
 
 export interface EntrySheetProps {
   readonly row: TodayRow;
@@ -29,69 +31,67 @@ export interface EntrySheetProps {
   readonly onClose: () => void;
 }
 
-/** The sheet for a reach quantity, per session or weekly total. */
+/** The record sheet: a stepper for a reach quantity, a grid for a limit. Done rows never open one. */
 export function EntrySheet({ row, seasonId, onClose }: EntrySheetProps) {
-  const measure = quantityMeasureOf(row.measure);
-  if (measure === null) return null;
-  return <QuantitySheet row={row} seasonId={seasonId} measure={measure} onClose={onClose} />;
+  const reach = quantityMeasureOf(row.measure);
+  if (reach !== null)
+    return <ReachSheet row={row} seasonId={seasonId} measure={reach} onClose={onClose} />;
+  const limit = limitMeasureOf(row.measure);
+  if (limit !== null)
+    return <LimitSheet row={row} seasonId={seasonId} measure={limit} onClose={onClose} />;
+  return null;
 }
 
-function QuantitySheet({
+interface ShellProps {
+  readonly row: TodayRow;
+  readonly seasonId: string;
+  readonly measure: MeasureView;
+  readonly subtitle: string;
+  readonly hint?: string;
+  /** The decimal string to send, or null while the input cannot be sent. */
+  readonly toSend: string | null;
+  readonly input: ReactNode;
+  readonly card?: ReactNode;
+  readonly missedAllowed: boolean;
+  readonly onClose: () => void;
+}
+
+/** Everything the two record sheets share: note, submit, confirmation, errors, Hoy no salió. */
+function RecordShell({
   row,
   seasonId,
   measure,
+  subtitle,
+  hint,
+  toSend,
+  input,
+  card,
+  missedAllowed,
   onClose,
-}: {
-  readonly row: TodayRow;
-  readonly seasonId: string;
-  readonly measure: ReachQuantity;
-  readonly onClose: () => void;
-}) {
-  const [value, setValue] = useState(() => initialValue(measure));
+}: ShellProps) {
   const [note, setNote] = useState("");
   const entry = useQuantityEntry(row.commitmentId, seasonId);
-  const unit = unitLabel(measure) ?? "";
-  const weekly = row.kind === "week" && measure.schedule.period === "weeklyTotal";
-  const toSend = toSubmitValue(value, measure.precision);
-  const label = toSend === null ? "Registrar" : `Registrar ${formatDecimal(toSend)} ${unit}`.trim();
+  const online = useOnline();
 
-  useEffect(() => {
-    if (entry.saved === null) return;
-    const timer = setTimeout(onClose, CONFIRMATION_MS);
-    return () => clearTimeout(timer);
-  }, [entry.saved, onClose]);
+  useAutoClose(entry.saved, onClose);
 
   if (entry.saved !== null) {
     return (
       <Sheet open title={row.habitName} onClose={onClose}>
-        <div className={styles.confirmation}>
-          <Illustration alt="Registro guardado" />
-          <p className={styles.confirmationTitle}>Registro guardado.</p>
-          <p className={styles.subtitle}>{entry.saved}</p>
-          <Button block onClick={onClose}>
-            Seguir con mi día
-          </Button>
-        </div>
+        <Confirmation detail={entry.saved} onClose={onClose} />
       </Sheet>
     );
   }
 
   const noteError = entry.problem?.kind === "noteField" ? entry.problem.message : undefined;
+  const amount = toSend === null ? null : quantityText(toSend, measure);
   return (
     <Sheet open title={row.habitName} onClose={onClose}>
       <div className={styles.sheet}>
-        <p className={styles.subtitle}>{subtitleOf(row, measure, weekly, unit)}</p>
-        <QuantityStepper
-          value={value}
-          unit={unit}
-          presets={presetsFor(measure)}
-          invalid={toSend === null}
-          onChange={setValue}
-          onStep={(direction) => setValue((current) => nudge(current, direction, measure))}
-        />
-        <Card tone="sunken">
-          <ProgressCard row={row} measure={measure} value={value} weekly={weekly} unit={unit} />
-        </Card>
+        <p className={styles.subtitle}>{subtitle}</p>
+        {hint !== undefined && <p className={styles.subtitle}>{hint}</p>}
+        {input}
+        {card !== undefined && <Card tone="sunken">{card}</Card>}
         <NoteField
           value={note}
           onChange={setNote}
@@ -100,26 +100,27 @@ function QuantitySheet({
         {entry.problem !== null && entry.problem.kind !== "noteField" && (
           <InlineMessage tone="error" title={entry.problem.message} />
         )}
+        {!online && <InlineMessage tone="pending" title="Sin conexión: no se puede guardar." />}
         <div className={styles.actions}>
           <Button
             block
-            disabled={toSend === null || entry.pending}
+            disabled={toSend === null || entry.pending || !online}
             onClick={() =>
               toSend !== null &&
               entry.submit(
                 { kind: "quantity", value: toSend },
                 note.trim() === "" ? null : note,
-                `${row.habitName} · ${formatDecimal(toSend)} ${unit}`.trim(),
+                `${row.habitName} · ${amount}`,
               )
             }
           >
-            {label}
+            {amount === null ? "Registrar" : `Registrar ${amount}`}
           </Button>
-          {row.kind === "day" && (
+          {missedAllowed && row.kind === "day" && (
             <Button
               variant="ghost"
               block
-              disabled={entry.pending}
+              disabled={entry.pending || !online}
               onClick={() =>
                 entry.submit({ kind: "missed" }, null, `${row.habitName} · Hoy no salió`)
               }
@@ -133,7 +134,110 @@ function QuantitySheet({
   );
 }
 
-function subtitleOf(row: TodayRow, measure: ReachQuantity, weekly: boolean, unit: string): string {
+function ReachSheet({
+  row,
+  seasonId,
+  measure,
+  onClose,
+}: {
+  readonly row: TodayRow;
+  readonly seasonId: string;
+  readonly measure: ReachQuantity;
+  readonly onClose: () => void;
+}) {
+  const [value, setValue] = useState(() => initialValue(measure));
+  const unit = unitLabel(measure) ?? "";
+  const weekly = row.kind === "week" && measure.schedule.period === "weeklyTotal";
+  const toSend = toSubmitValue(value, measure.precision);
+  return (
+    <RecordShell
+      row={row}
+      seasonId={seasonId}
+      measure={measure}
+      subtitle={reachSubtitle(row, measure, weekly, unit)}
+      toSend={toSend}
+      missedAllowed
+      onClose={onClose}
+      input={
+        <QuantityStepper
+          value={value}
+          unit={unit}
+          presets={presetsFor(measure)}
+          invalid={toSend === null}
+          onChange={setValue}
+          onStep={(direction) => setValue((current) => nudge(current, direction, measure))}
+        />
+      }
+      card={<ProgressCard row={row} measure={measure} value={value} weekly={weekly} unit={unit} />}
+    />
+  );
+}
+
+function LimitSheet({
+  row,
+  seasonId,
+  measure,
+  onClose,
+}: {
+  readonly row: TodayRow;
+  readonly seasonId: string;
+  readonly measure: LimitQuantity;
+  readonly onClose: () => void;
+}) {
+  const grid = limitUsesGrid(measure);
+  // A grid choice is a number; a decimal limit types its value instead and starts at zero.
+  const [chosen, setChosen] = useState<number | null>(null);
+  const [typed, setTyped] = useState("0");
+  const unit = unitLabel(measure) ?? "";
+  const toSend = grid
+    ? chosen === null
+      ? null
+      : toSubmitValue(String(chosen), "integer")
+    : toSubmitValue(typed, measure.precision);
+  const weekly = row.kind === "week" && measure.schedule.period === "weeklyTotal";
+  const subtitle = weekly
+    ? `Esta semana llevas ${quantityText(row.progress?.value ?? "0", measure)}`
+    : `Hoy · ${targetText(measure) ?? ""}`;
+  return (
+    <RecordShell
+      row={row}
+      seasonId={seasonId}
+      measure={measure}
+      subtitle={subtitle}
+      hint="Registra aunque sea 0."
+      toSend={toSend}
+      missedAllowed={false}
+      onClose={onClose}
+      input={
+        grid ? (
+          <LimitGrid
+            unit={unit}
+            ideal={Number(measure.target.ideal)}
+            tolerance={Number(measure.target.tolerance)}
+            value={chosen}
+            onSelect={setChosen}
+          />
+        ) : (
+          <QuantityStepper
+            value={typed}
+            unit={unit}
+            presets={[]}
+            invalid={toSend === null}
+            onChange={setTyped}
+            onStep={(direction) => setTyped((current) => nudge(current, direction, measure))}
+          />
+        )
+      }
+    />
+  );
+}
+
+function reachSubtitle(
+  row: TodayRow,
+  measure: ReachQuantity,
+  weekly: boolean,
+  unit: string,
+): string {
   if (weekly && row.kind === "week") {
     return `Esta semana llevas ${formatDecimal(row.progress?.value ?? "0")} ${unit}`.trim();
   }
@@ -162,6 +266,7 @@ function ProgressCard({
     const current = row.progress?.value ?? "0";
     return (
       <ProgressBar
+        name={`Cantidad de ${row.habitName}`}
         value={Number(current)}
         max={ideal}
         label={`${formatDecimal(current)} / ${formatDecimal(measure.target.ideal)} ${unit}`.trim()}
@@ -174,6 +279,7 @@ function ProgressCard({
   const typed = toSubmitValue(value, measure.precision);
   return (
     <ProgressBar
+      name={`Cantidad de ${row.habitName}`}
       value={Number(typed ?? 0)}
       max={ideal}
       label={`${typed === null ? "0" : formatDecimal(typed)} / ${formatDecimal(measure.target.ideal)} ${unit}`.trim()}
