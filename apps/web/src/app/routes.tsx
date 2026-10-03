@@ -1,4 +1,6 @@
+import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router";
+import { loadDevToday } from "../config.ts";
 import { CodeStep } from "../features/auth/CodeStep.tsx";
 import { EmailStep } from "../features/auth/EmailStep.tsx";
 import { LoginLayout } from "../features/auth/LoginLayout.tsx";
@@ -7,6 +9,9 @@ import { ProfileScreen } from "../features/profile/ProfileScreen.tsx";
 import { StubScreen } from "../features/stubs/StubScreen.tsx";
 import { TodayScreen } from "../features/today/TodayScreen.tsx";
 import { AppShell } from "./AppShell.tsx";
+
+/** The Today scenario gallery; `null` in production (see `loadDevToday`). */
+const DevToday = loadDevToday === null ? null : lazy(loadDevToday);
 
 /** Route table. */
 export function AppRoutes() {
@@ -18,6 +23,16 @@ export function AppRoutes() {
           <Route path="login/code" element={<CodeStep />} />
         </Route>
       </Route>
+      {DevToday !== null && (
+        <Route
+          path="dev/today/*"
+          element={
+            <Suspense fallback={null}>
+              <DevToday />
+            </Suspense>
+          }
+        />
+      )}
       <Route element={<RequireSession />}>
         <Route element={<AppShell />}>
           <Route index element={<TodayScreen />} />
