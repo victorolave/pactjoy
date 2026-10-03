@@ -15,28 +15,28 @@ export interface EntryEdit {
 
 /** Saves a change to one entry (PUT is idempotent, so a retry needs no request id). */
 export function useEntryEdit(entryId: string): EntryEdit {
-  const edit = useEditEntry();
   const [saved, setSaved] = useState<string | null>(null);
   const [problem, setProblem] = useState<EntryProblem | null>(null);
   const saving = useRef(false);
+  const confirmation = useRef("");
 
-  const save: EntryEdit["save"] = (value, note, confirmation) => {
+  const edit = useEditEntry({
+    onSuccess: () => {
+      saving.current = false;
+      setSaved(confirmation.current);
+    },
+    onError: (error) => {
+      saving.current = false;
+      setProblem({ message: entryFailure(error).message, kind: toUiError(error).kind });
+    },
+  });
+
+  const save: EntryEdit["save"] = (value, note, text) => {
     if (saving.current) return;
     saving.current = true;
+    confirmation.current = text;
     setProblem(null);
-    edit.mutate(
-      { entryId, value, note },
-      {
-        onSuccess: () => {
-          saving.current = false;
-          setSaved(confirmation);
-        },
-        onError: (error) => {
-          saving.current = false;
-          setProblem({ message: entryFailure(error).message, kind: toUiError(error).kind });
-        },
-      },
-    );
+    edit.mutate({ entryId, value, note });
   };
 
   return { pending: edit.isPending, saved, problem, save };

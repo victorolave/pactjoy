@@ -82,6 +82,12 @@ describe("the one-tap circle (design 16)", () => {
     expect(deps.api.recorded[0]?.value).toEqual({ kind: "missed" });
   });
 
+  it("centres Hoy no salió under the row, with the shared Centered wrapper (it was lost once)", async () => {
+    render(open());
+    const missed = await screen.findByRole("button", { name: "Hoy no salió: Dibujar" });
+    expect(missed.parentElement).toHaveAttribute("data-centered", "true");
+  });
+
   it("does not offer Hoy no salió on a day that is already logged", async () => {
     render(logged());
     await screen.findByRole("heading", { name: "Dibujar" });
