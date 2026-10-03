@@ -12,6 +12,7 @@ import { limitMeasureOf, nudge, quantityMeasureOf, toSubmitValue } from "./entry
 import { LimitGrid } from "./LimitGrid.tsx";
 import { NoteField } from "./NoteField.tsx";
 import { QuantityStepper } from "./QuantityStepper.tsx";
+import { useEntryDelete } from "./use-entry-delete.ts";
 import { useEntryEdit } from "./use-entry-edit.ts";
 
 export interface EditSheetProps {
@@ -35,6 +36,8 @@ export function EditSheet(props: EditSheetProps) {
 
 function EntryEditor({ row, entry, onSelect, onClose }: EditSheetProps) {
   const edit = useEntryEdit(entry.entryId);
+  const remove = useEntryDelete(entry.entryId);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [note, setNote] = useState(entry.note ?? "");
   const quantity = entry.value.kind === "quantity" ? entry.value.value : null;
   const [typed, setTyped] = useState(quantity ?? "0");
@@ -44,8 +47,12 @@ function EntryEditor({ row, entry, onSelect, onClose }: EditSheetProps) {
   const grid = limit !== null && limit.precision === "integer";
   const measure = reach ?? limit;
 
-  useAutoClose(edit.saved, onClose);
+  const finished = edit.saved ?? remove.deleted;
+  useAutoClose(finished, onClose);
   if (edit.saved !== null) return <Confirmation detail={edit.saved} onClose={onClose} />;
+  if (remove.deleted !== null) {
+    return <Confirmation title="Registro borrado." detail={remove.deleted} onClose={onClose} />;
+  }
 
   // What the sheet would send for the value, or null while it cannot be sent.
   const toSend =
@@ -124,11 +131,36 @@ function EntryEditor({ row, entry, onSelect, onClose }: EditSheetProps) {
       {edit.problem !== null && edit.problem.kind !== "noteField" && (
         <InlineMessage tone="error" title={edit.problem.message} />
       )}
-      <div className={styles.actions}>
-        <Button block disabled={toSend === null || edit.pending} onClick={send}>
-          {amount === null ? "Guardar cambios" : `Guardar ${amount}`}
-        </Button>
-      </div>
+      {remove.problem !== null && <InlineMessage tone="error" title={remove.problem.message} />}
+      {confirmingDelete ? (
+        <div className={styles.actions}>
+          <p className={styles.confirmationTitle}>¿Borrar este registro?</p>
+          <Button
+            block
+            disabled={remove.pending}
+            onClick={() => remove.remove(`${row.habitName} · ${entryText(entry, row.measure)}`)}
+          >
+            Borrar
+          </Button>
+          <Button variant="ghost" block onClick={() => setConfirmingDelete(false)}>
+            Cancelar
+          </Button>
+        </div>
+      ) : (
+        <div className={styles.actions}>
+          <Button block disabled={toSend === null || edit.pending} onClick={send}>
+            {amount === null ? "Guardar cambios" : `Guardar ${amount}`}
+          </Button>
+          <Button
+            variant="ghost"
+            block
+            leadingIcon="trash-2"
+            onClick={() => setConfirmingDelete(true)}
+          >
+            Borrar registro
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

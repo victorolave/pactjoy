@@ -14,6 +14,7 @@ import {
   Repeat,
   RotateCw,
   Sun,
+  Trash2,
   UserRound,
   Users,
   X,
@@ -39,6 +40,7 @@ const GLYPHS = {
   pencil: Pencil,
   plus: Plus,
   "message-square-plus": MessageSquarePlus,
+  "trash-2": Trash2,
   x: X,
   "user-round": UserRound,
 } as const satisfies Record<string, LucideIcon>;
