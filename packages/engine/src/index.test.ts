@@ -34,6 +34,7 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "scoreMember",
   "seasonDay",
   "sumPoints",
+  "weekBoundGraceDeadline",
   "weekOf",
   "weekProgress",
 ].sort();

@@ -19,6 +19,9 @@
  *   show "+4 pts" and each limit option's score without a client re-deriving
  *   the rule. This supersedes the "single-opportunity preview isn't a
  *   confirmed app need" note under "Deliberately NOT exported" below.
+ * - `weekBoundGraceDeadline`: the day a week-bound commitment's week starts to COUNT toward the
+ *   score (week close plus grace, R1), so a read model never shows points `scoreMember` does not
+ *   yet include.
  * - `canRequestPause` + `PauseCheck`: D9's pure pause-request cap check,
  *   called before the app records a new pause request.
  * - `rankStandings` + `StandingsParticipant`/`StandingsRow`: builds the
@@ -111,7 +114,7 @@ export type { PauseDecision, PauseEnd, PauseRequest } from "./pause/pause.ts";
 export type { PauseCheck } from "./pause/pause-cap.ts";
 export { canRequestPause } from "./pause/pause-cap.ts";
 export type { CommitmentScoreEntry, MemberScore, ScoreInput } from "./scoring/member-score.ts";
-export { scoreMember } from "./scoring/member-score.ts";
+export { scoreMember, weekBoundGraceDeadline } from "./scoring/member-score.ts";
 export {
   opportunityPoints,
   opportunityValue,

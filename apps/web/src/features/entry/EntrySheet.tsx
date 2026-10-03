@@ -7,7 +7,13 @@ import { Button } from "../../ui/Button.tsx";
 import { InlineMessage } from "../../ui/InlineMessage.tsx";
 import { Sheet } from "../../ui/Sheet.tsx";
 import { loggedBefore } from "../today/logged-totals.ts";
-import { quantityText, targetPhrase, unitLabel } from "../today/row-labels.ts";
+import {
+  isWeekBound,
+  quantityText,
+  targetPhrase,
+  unitLabel,
+  WEEK_POINTS_NOTE,
+} from "../today/row-labels.ts";
 import { useTodayDates } from "../today/today-date-context.tsx";
 import { Confirmation } from "./Confirmation.tsx";
 import { DraftCard } from "./DraftCard.tsx";
@@ -168,6 +174,7 @@ function ReachSheet({
   // Frozen when the sheet opens: after saving, Today refetches and the row already holds the new entry.
   const [before] = useState(() => loggedBefore(row, dates?.refDate));
   const weekly = measure.schedule.period === "weeklyTotal";
+  const weekBound = isWeekBound(measure);
   // A weekly total always starts from its usual value; a day with entries adds on top of them.
   const adding = !weekly && before > 0n;
   const [value, setValue] = useState(() =>
@@ -185,7 +192,11 @@ function ReachSheet({
   };
   const preview = weekly
     ? weeklyPreview(thresholds)
-    : dailyPreview({ ...thresholds, perOpportunity: row.points.perOpportunity });
+    : // A timesPerWeek session counts at week close: the preview shows no points for it.
+      dailyPreview({
+        ...thresholds,
+        perOpportunity: weekBound ? null : row.points.perOpportunity,
+      });
   const minimumAt =
     thresholds.ideal === 0n ? 0 : Number(thresholds.minimum) / Number(thresholds.ideal);
   const subtitle = weekly
@@ -201,11 +212,19 @@ function ReachSheet({
       subtitle={subtitle}
       verb={adding ? "Añadir" : "Registrar"}
       toSend={toSend}
-      confirmMessage={preview.reached ? MINIMUM_MET : null}
+      confirmMessage={
+        weekBound
+          ? `${preview.reached ? `${MINIMUM_MET} ` : ""}${WEEK_POINTS_NOTE}`
+          : preview.reached
+            ? MINIMUM_MET
+            : null
+      }
       legend={
         weekly
-          ? "Durante la semana solo se muestra el progreso. Los puntos se asignan al cerrar la semana."
-          : undefined
+          ? `Durante la semana solo se muestra el progreso. ${WEEK_POINTS_NOTE}`
+          : weekBound
+            ? WEEK_POINTS_NOTE
+            : undefined
       }
       onClose={onClose}
       input={

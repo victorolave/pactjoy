@@ -96,15 +96,38 @@ describe("today rows: points of one opportunity (server-computed)", () => {
     expect(running(await today(low.app, low.given.andrea)).rows[0]?.points.earned).toBe(0);
   });
 
-  it("a timesPerWeek session is worth the commitment over its 12 sessions", async () => {
-    // 3 a week x 4 weeks = 12 -> 83.33; a full 30 min session earns 83.
+  it("a timesPerWeek session is worth the commitment over its 12 sessions, but earns nothing until its week is counted", async () => {
+    // 3 a week x 4 weeks = 12 -> 83.33 each. Mid-week the session does not count yet (R1, Mechanics:
+    // week-bound opportunities count at week close plus grace), exactly as the season score has it.
     const { app, given } = await setup(TIMES_PER_WEEK, 2);
     await record(app, given, 2, quantity("30"));
-    expect(running(await today(app, given.andrea)).rows[0]?.points).toEqual({
+    const view = running(await today(app, given.andrea));
+    expect(view.rows[0]?.points).toEqual({
       perOpportunity: "83.33",
-      earned: 83,
+      earned: null,
       limitPercents: null,
     });
+    expect(view.summary.pointsToday).toBe(0);
+    // The row and the season card agree: the card does not include it either.
+    expect(view.summary.score).toMatchObject({ points: 0 });
+  });
+
+  it("a day-bound row and the season score count the same points (they cannot disagree)", async () => {
+    const { app, given } = await setup(PER_DAY_REACH, 2);
+    await record(app, given, 2, quantity("30"));
+    const view = running(await today(app, given.andrea));
+    expect(view.rows[0]?.points.earned).toBe(36);
+    expect(view.summary.pointsToday).toBe(36);
+    expect(view.summary.score).toMatchObject({ points: 36 });
+  });
+
+  it("the day's points leave out a week-bound row but keep a day-bound one", async () => {
+    const day = await setup(PER_DAY_REACH, 2);
+    await record(day.app, day.given, 2, quantity("30"));
+    expect(running(await today(day.app, day.given.andrea)).summary.pointsToday).toBe(36);
+    const week = await setup(TIMES_PER_WEEK, 2);
+    await record(week.app, week.given, 2, quantity("30"));
+    expect(running(await today(week.app, week.given.andrea)).summary.pointsToday).toBe(0);
   });
 
   it("weeklyTotal never shows points during the week: they are assigned when it closes", async () => {

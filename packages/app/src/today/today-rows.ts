@@ -8,6 +8,7 @@ import {
   opportunityValue,
   progressAtValue,
   sumPoints,
+  weekBoundGraceDeadline,
   weekOf,
   weekProgress,
 } from "@pactjoy/engine";
@@ -76,9 +77,9 @@ export interface TodayPoints {
    */
   readonly perOpportunity: string | null;
   /**
-   * Whole points the opportunity's entries earned so far; `null` when nothing is
-   * logged, the opportunity is paused or on hold, or the points are only assigned
-   * when the week closes (`weeklyTotal`, design 17b). A logged miss is `0`.
+   * Whole points the opportunity's entries earned; `null` when nothing is logged, the opportunity
+   * is paused or on hold, or it is not COUNTED yet: a week-bound opportunity (`timesPerWeek`,
+   * `weeklyTotal`) counts from week close plus grace, as in the season score. A logged miss is `0`.
    */
   readonly earned: number | null;
   /**
@@ -263,7 +264,20 @@ export function todayRows(input: TodayRowsInput): TodayRowsResult {
         today: refDay,
       }),
     );
-    const paysNow = schedule.period === "perSession" && !held;
+    // Only COUNTED opportunities show points, by the engine's own rule (R1): a day-bound one once it
+    // has an entry, a week-bound one (timesPerWeek or weeklyTotal) from week close plus grace. So
+    // the row can never show what the season score does not yet include.
+    const weekBound =
+      schedule.period === "weeklyTotal" || schedule.frequency.kind === "timesPerWeek";
+    const paysNow =
+      !held &&
+      (!weekBound ||
+        refDay >=
+          weekBoundGraceDeadline(
+            engineCommitment,
+            input.pauses.filter((pause) => pause.commitmentId === commitment.id),
+            week,
+          ));
     const ofRefDay = engineEntries.filter(
       (entry) => entry.commitmentId === commitment.id && entry.day === refDay,
     );
