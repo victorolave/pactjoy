@@ -1,6 +1,8 @@
-import { QueryClientProvider } from "@tanstack/react-query";
-import { type ReactNode, useCallback } from "react";
-import { SessionProvider } from "../features/auth/session-context.tsx";
+import type { QueryClient } from "@tanstack/react-query";
+import { type Persister, PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import { type ReactNode, useCallback, useMemo } from "react";
+import { bustFor, persistOptionsFor } from "../adapters/query-persister.ts";
+import { SessionProvider, useSession } from "../features/auth/session-context.tsx";
 import { ApiProvider } from "./api-context.tsx";
 import { ConnectivityProvider } from "./connectivity-context.tsx";
 import type { AppDependencies } from "./dependencies.ts";
@@ -14,18 +16,21 @@ export function AppProviders({
   readonly deps: AppDependencies;
   readonly children: ReactNode;
 }) {
-  const { queryClient } = deps;
-  // Cached data belongs to the signed-in user: drop it whenever the session ends.
-  const onSessionEnd = useCallback(() => queryClient.clear(), [queryClient]);
+  const { queryClient, persister } = deps;
+  // Cached data belongs to the signed-in user: drop it, and the saved copy, whenever the session ends.
+  const onSessionEnd = useCallback(() => {
+    queryClient.clear();
+    void persister.removeClient();
+  }, [queryClient, persister]);
   return (
-    <QueryClientProvider client={queryClient}>
-      <SessionProvider
-        auth={deps.auth}
-        store={deps.store}
-        manager={deps.sessions}
-        expired={deps.sessionEvents}
-        onSessionEnd={onSessionEnd}
-      >
+    <SessionProvider
+      auth={deps.auth}
+      store={deps.store}
+      manager={deps.sessions}
+      expired={deps.sessionEvents}
+      onSessionEnd={onSessionEnd}
+    >
+      <PersistedQueries client={queryClient} persister={persister}>
         <ApiProvider api={deps.api}>
           <IdsProvider ids={deps.ids}>
             <ConnectivityProvider connectivity={deps.connectivity}>
@@ -33,7 +38,29 @@ export function AppProviders({
             </ConnectivityProvider>
           </IdsProvider>
         </ApiProvider>
-      </SessionProvider>
-    </QueryClientProvider>
+      </PersistedQueries>
+    </SessionProvider>
+  );
+}
+
+/** The saved Today is scoped to the signed-in user: another user's copy is never restored. */
+function PersistedQueries({
+  client,
+  persister,
+  children,
+}: {
+  readonly client: QueryClient;
+  readonly persister: Persister;
+  readonly children: ReactNode;
+}) {
+  const userId = useSession().session?.userId ?? null;
+  const persistOptions = useMemo(
+    () => persistOptionsFor(persister, bustFor(userId)),
+    [persister, userId],
+  );
+  return (
+    <PersistQueryClientProvider client={client} persistOptions={persistOptions}>
+      {children}
+    </PersistQueryClientProvider>
   );
 }

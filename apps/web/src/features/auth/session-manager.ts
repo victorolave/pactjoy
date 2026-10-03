@@ -66,6 +66,11 @@ export class SessionManager {
       // Only a definitive rejection ends the session. Network, 429 and 5xx keep it: a blip must
       // not sign the user out.
       if (error instanceof AuthError && error.code === "InvalidSession") {
+        // Refresh tokens rotate: another tab may have used this one and stored its successor.
+        const stored = this.#store.load();
+        if (stored !== null && stored.refreshToken !== session.refreshToken) {
+          return { status: "ok", token: stored.accessToken };
+        }
         this.#store.clear();
         return { status: "rejected" };
       }
