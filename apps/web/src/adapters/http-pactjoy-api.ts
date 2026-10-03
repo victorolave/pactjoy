@@ -1,5 +1,6 @@
 import type { TodayView } from "@pactjoy/app";
 import { ApiError } from "../ports/api-error.ts";
+import type { RefreshResult } from "../ports/auth.ts";
 import type {
   EditEntryCommand,
   PactJoyApi,
@@ -11,8 +12,8 @@ export interface HttpPactJoyApiOptions {
   readonly baseUrl: string;
   /** The current access token, refreshed ahead of expiry by the session manager. */
   readonly getAccessToken: () => Promise<string | null>;
-  /** Forces a refresh after a 401. Resolves the new token, or null when it cannot refresh. */
-  readonly refreshAccessToken: () => Promise<string | null>;
+  /** Forces a refresh after a 401. `transient` keeps the session; `rejected` ends it. */
+  readonly refreshAccessToken: () => Promise<RefreshResult>;
   /** Called once when a request is still unauthorized after the refresh attempt. */
   readonly onUnauthorized: () => void;
   readonly fetch: typeof fetch;
@@ -94,9 +95,14 @@ export class HttpPactJoyApi implements PactJoyApi {
     if (first.status !== 401) return this.#unwrap(first, request);
 
     // One refresh attempt, then one retry. A second 401 ends the session (no loop).
-    const token = await this.#options.refreshAccessToken();
-    if (token === null) return this.#unauthorized(first);
-    const second = await this.#send(request, token);
+    const refreshed = await this.#options.refreshAccessToken();
+    if (refreshed.status === "rejected") return this.#unauthorized(first);
+    // A refresh that failed for a transient reason (network, 429, 5xx, gateway) must not log the
+    // user out: surface a retryable error and keep the session.
+    if (refreshed.status === "transient") {
+      throw new ApiError("ServiceUnavailable", 503, first.headers.get("X-Request-Id"));
+    }
+    const second = await this.#send(request, refreshed.token);
     if (second.status === 401) return this.#unauthorized(second);
     return this.#unwrap(second, request);
   }

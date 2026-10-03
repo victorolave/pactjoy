@@ -1,6 +1,7 @@
 import type { TodayView } from "@pactjoy/app";
 import { describe, expect, it, vi } from "vitest";
 import { ApiError } from "../ports/api-error.ts";
+import type { RefreshResult } from "../ports/auth.ts";
 import type { RecordEntryCommand } from "../ports/pactjoy-api.ts";
 import { HttpPactJoyApi } from "./http-pactjoy-api.ts";
 
@@ -22,7 +23,11 @@ interface Harness {
   readonly refreshAccessToken: ReturnType<typeof vi.fn>;
 }
 
-function harness(responses: Array<Response | Error>, tokens = ["t1"]): Harness {
+function harness(
+  responses: Array<Response | Error>,
+  tokens = ["t1"],
+  refreshOverride?: RefreshResult,
+): Harness {
   const queue = [...responses];
   const fetchStub = vi.fn<typeof fetch>(async () => {
     const next = queue.shift();
@@ -32,7 +37,11 @@ function harness(responses: Array<Response | Error>, tokens = ["t1"]): Harness {
   });
   const onUnauthorized = vi.fn();
   const refreshQueue = [...tokens.slice(1)];
-  const refreshAccessToken = vi.fn(async () => refreshQueue.shift() ?? null);
+  const refreshAccessToken = vi.fn(async (): Promise<RefreshResult> => {
+    if (refreshOverride !== undefined) return refreshOverride;
+    const token = refreshQueue.shift();
+    return token === undefined ? { status: "rejected" } : { status: "ok", token };
+  });
   const api = new HttpPactJoyApi({
     baseUrl: BASE,
     getAccessToken: async () => tokens[0] ?? null,
@@ -76,7 +85,7 @@ describe("HttpPactJoyApi.getToday", () => {
     const api = new HttpPactJoyApi({
       baseUrl: BASE,
       getAccessToken: async () => null,
-      refreshAccessToken: async () => null,
+      refreshAccessToken: async () => ({ status: "rejected" }),
       onUnauthorized: () => {},
       fetch: fetchStub,
     });
@@ -184,6 +193,32 @@ describe("HttpPactJoyApi 401 handling (AU-R5)", () => {
     );
     await expect(api.getToday()).rejects.toMatchObject({ code: "Unauthorized" });
     expect(fetchStub).toHaveBeenCalledTimes(1);
+    expect(onUnauthorized).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("HttpPactJoyApi 401 with a transient refresh failure", () => {
+  it("surfaces ServiceUnavailable and keeps the session (no onUnauthorized)", async () => {
+    const { api, fetchStub, onUnauthorized } = harness(
+      [json(401, { error: { code: "Unauthorized", message: "no" } }, { "X-Request-Id": "rid-9" })],
+      ["old"],
+      { status: "transient" },
+    );
+    await expect(api.getToday()).rejects.toMatchObject({
+      code: "ServiceUnavailable",
+      requestId: "rid-9",
+    });
+    expect(fetchStub).toHaveBeenCalledTimes(1);
+    expect(onUnauthorized).not.toHaveBeenCalled();
+  });
+
+  it("still ends the session when the refresh is rejected", async () => {
+    const { api, onUnauthorized } = harness(
+      [json(401, { error: { code: "Unauthorized", message: "no" } })],
+      ["old"],
+      { status: "rejected" },
+    );
+    await expect(api.getToday()).rejects.toMatchObject({ code: "Unauthorized" });
     expect(onUnauthorized).toHaveBeenCalledTimes(1);
   });
 });

@@ -35,6 +35,10 @@
                 "message": "Import only package roots (type-only, from @pactjoy/app)."
               },
               {
+                "group": ["**/packages/**"],
+                "message": "Never reach a sibling package by relative path: the web client is type-only coupled to @pactjoy/app (ADR-0012)."
+              },
+              {
                 "group": ["@supabase/*"],
                 "message": "No vendor SDK in the client: Auth goes through GoTrue REST behind AuthPort (ADR-0012)."
               },
@@ -79,6 +83,10 @@
                     "message": "Import only package roots (type-only, from @pactjoy/app)."
                   },
                   {
+                    "group": ["**/packages/**"],
+                    "message": "Never reach a sibling package by relative path: the web client is type-only coupled to @pactjoy/app (ADR-0012)."
+                  },
+                  {
                     "group": ["@supabase/*"],
                     "message": "No vendor SDK in the client (ADR-0012)."
                   },
@@ -117,6 +125,10 @@
                   {
                     "group": ["@pactjoy/*/**"],
                     "message": "Import only package roots (type-only, from @pactjoy/app)."
+                  },
+                  {
+                    "group": ["**/packages/**"],
+                    "message": "Never reach a sibling package by relative path: the web client is type-only coupled to @pactjoy/app (ADR-0012)."
                   },
                   {
                     "group": ["@supabase/*"],
@@ -164,6 +176,10 @@
                   {
                     "group": ["@pactjoy/*/**"],
                     "message": "Import only package roots (type-only, from @pactjoy/app)."
+                  },
+                  {
+                    "group": ["**/packages/**"],
+                    "message": "Never reach a sibling package by relative path: the web client is type-only coupled to @pactjoy/app (ADR-0012)."
                   },
                   {
                     "group": ["@supabase/*"],

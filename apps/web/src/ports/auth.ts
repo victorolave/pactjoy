@@ -29,6 +29,15 @@ export class AuthError extends Error {
   }
 }
 
+/**
+ * Outcome of a forced refresh. `transient` (network, 429, 5xx, gateway or config fault) keeps the
+ * session; `rejected` means the refresh token is dead and the session is gone.
+ */
+export type RefreshResult =
+  | { readonly status: "ok"; readonly token: string }
+  | { readonly status: "transient" }
+  | { readonly status: "rejected" };
+
 export interface AuthPort {
   /** Sends a one-time code to the email (creates the account when it does not exist). */
   requestCode(email: string): Promise<void>;
