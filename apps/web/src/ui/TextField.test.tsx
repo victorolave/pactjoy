@@ -35,6 +35,14 @@ describe("TextField", () => {
     expect(screen.queryByText("Seis dígitos")).not.toBeInTheDocument();
   });
 
+  it("announces the error and moves focus to the invalid input", () => {
+    const { rerender } = render(<TextField label="Código" />);
+    expect(screen.getByLabelText("Código")).not.toHaveFocus();
+    rerender(<TextField label="Código" error="El código tiene 6 dígitos." />);
+    expect(screen.getByRole("alert")).toHaveTextContent("El código tiene 6 dígitos.");
+    expect(screen.getByLabelText("Código")).toHaveFocus();
+  });
+
   it("gives two fields different ids so labels never cross", () => {
     render(
       <>
