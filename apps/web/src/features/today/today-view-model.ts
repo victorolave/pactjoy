@@ -161,19 +161,45 @@ function dayStateOf(
   return registrable.every(achieved) ? "allDone" : "allLogged";
 }
 
-/** A row shows and edits ONLY the entries of the day on display; yesterday's have their own place. */
+/**
+ * A DAY row shows and edits ONLY the entries of the day on display; yesterday's have their own place.
+ * A week row (timesPerWeek, weeklyTotal) keeps every entry of its week: they have no other home, and
+ * its edit entry point must reach a Monday entry on a Friday.
+ */
 function ofDay<T extends Row>(row: T, refDate: string): T {
+  if (row.kind !== "day") return row;
   return { ...row, entries: row.entries.filter((entry) => entry.forDate === refDate) };
 }
 
-function running(view: Running): TodayModel {
+const NO_POINTS: Row["points"] = {
+  perOpportunity: null,
+  perOpportunityExact: null,
+  earned: null,
+  limitPercents: null,
+};
+
+/**
+ * Version skew: an API older than this client lacks the newer fields. They default to "nothing" here,
+ * once, so no screen reads an undefined (the type says they are always there; the wire may not).
+ */
+function normalised(view: Running): Running {
+  return {
+    ...view,
+    pendingYesterday: view.pendingYesterday ?? [],
+    summary: { ...view.summary, pointsToday: view.summary.pointsToday ?? 0 },
+    rows: view.rows.map((row) => (row.points === undefined ? { ...row, points: NO_POINTS } : row)),
+  };
+}
+
+function running(raw: Running): TodayModel {
+  const view = normalised(raw);
   const refDate = refDateOf(view);
   const yesterday = addDays(view.today, -1);
   const yesterdayRegistered =
     view.state === "ended"
       ? []
       : view.rows.flatMap((row) =>
-          row.entries
+          (row.kind === "day" ? row.entries : [])
             .filter((entry) => entry.forDate === yesterday)
             .map((entry): YesterdayRegistered => ({ row, entry })),
         );

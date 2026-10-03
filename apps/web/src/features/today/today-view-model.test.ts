@@ -154,6 +154,42 @@ describe("toTodayModel: sections and counts (TO-R3)", () => {
     );
   });
 
+  it("a WEEK row keeps all its week's entries: only day-bound rows split by day (review WB-1)", () => {
+    const monday = entryFixture(
+      { kind: "quantity", value: "20" },
+      { entryId: "e-monday" as never, forDate: "2026-09-28" as never },
+    );
+    const yesterday = entryFixture(
+      { kind: "quantity", value: "25" },
+      { entryId: "e-yesterday" as never, forDate: "2026-10-01" as never },
+    );
+    const model = running(
+      activeTodayFixture({ rows: [weekRowFixture({ entries: [monday, yesterday] })] }),
+    );
+    // Both stay on the row, so its pencil still reaches a Monday entry on a Friday...
+    expect(model.sections.week[0]?.entries.map((e) => e.entryId)).toEqual([
+      "e-monday",
+      "e-yesterday",
+    ]);
+    // ...and the De ayer card lists day-bound entries only.
+    expect(model.yesterdayRegistered).toEqual([]);
+  });
+
+  it("an older API without the new fields still renders: they default (review WB-5)", () => {
+    const view = activeTodayFixture({ rows: [row("open")] });
+    const { pendingYesterday: _drop, ...rest } = view;
+    const old = {
+      ...rest,
+      summary: { week: 1, weekCount: 4, daysLeft: 2, score: view.summary.score },
+      rows: view.rows.map(({ points: _points, ...r }) => r),
+    } as unknown as TodayView;
+    const model = running(old);
+    expect(model.pendingYesterday).toEqual([]);
+    expect(model.yesterdayRegistered).toEqual([]);
+    expect(model.pointsToday).toBe(0);
+    expect(model.sections.forToday[0]?.points.earned).toBeNull();
+  });
+
   it("the sheet can still reach yesterday's entry, through every row's own entries", () => {
     const yesterday = entryFixture(
       { kind: "done" },

@@ -8,6 +8,7 @@ import {
   entryFixture,
   type PendingItem,
   pendingItemFixture,
+  pointsFixture,
 } from "../../testing/fixtures/today.ts";
 import { renderApp } from "../../testing/render.tsx";
 
@@ -24,7 +25,7 @@ const running = (overrides: Partial<DayRow> = {}): DayRow =>
       target: { direction: "reach", minimum: "3", ideal: "5" },
       schedule: { period: "perSession", frequency: { kind: "specificDays", weekdays: WEEKDAYS } },
     },
-    points: { perOpportunity: "12.5", earned: null, limitPercents: null },
+    points: pointsFixture({ perOpportunity: "12.5", earned: null, limitPercents: null }),
     ...overrides,
   });
 
@@ -158,11 +159,11 @@ describe("the Hoy / Ayer selector in the entry sheet (design 21)", () => {
         target: { direction: "limit", ideal: "2", tolerance: "4" },
         schedule: { period: "perSession", frequency: { kind: "specificDays", weekdays: WEEKDAYS } },
       },
-      points: {
+      points: pointsFixture({
         perOpportunity: "3",
         earned: null,
         limitPercents: [100, 100, 100, 75, 50, 0, 0, 0, 0, 0, 0, 0, 0],
-      },
+      }),
     });
     const app = open(coffee);
     const dialog = await dialogOf();

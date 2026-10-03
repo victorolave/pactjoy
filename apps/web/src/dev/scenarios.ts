@@ -9,6 +9,7 @@ import {
   noSeasonTodayFixture,
   type PendingItem,
   pactOpenTodayFixture,
+  pointsFixture,
   type WeekRow,
   weekRowFixture,
 } from "../testing/fixtures/today.ts";
@@ -50,7 +51,7 @@ const correr = (overrides: Partial<DayRow> = {}): DayRow =>
       target: { direction: "reach", minimum: "3", ideal: "5" },
       schedule: { period: "perSession", frequency: { kind: "specificDays", weekdays: [1, 4] } },
     },
-    points: { perOpportunity: "12.5", earned: null, limitPercents: null },
+    points: pointsFixture({ perOpportunity: "12.5", earned: null, limitPercents: null }),
     ...overrides,
   });
 
@@ -68,11 +69,11 @@ const cafe = (overrides: Partial<DayRow> = {}): DayRow =>
         frequency: { kind: "specificDays", weekdays: [0, 1, 2, 3, 4, 5, 6] },
       },
     },
-    points: {
+    points: pointsFixture({
       perOpportunity: "3.57",
       earned: null,
       limitPercents: [100, 100, 100, 75, 50, 0, 0, 0, 0, 0, 0, 0, 0],
-    },
+    }),
     ...overrides,
   });
 
@@ -81,7 +82,7 @@ const leer = (overrides: Partial<WeekRow> = {}): WeekRow =>
   weekRowFixture({
     commitmentId: id("c-leer"),
     habitName: "Leer",
-    points: { perOpportunity: "6.25", earned: null, limitPercents: null },
+    points: pointsFixture({ perOpportunity: "6.25", earned: null, limitPercents: null }),
     ...overrides,
   });
 
@@ -103,7 +104,7 @@ const ingles = (overrides: Partial<WeekRow> = {}): WeekRow =>
       sessionsTarget: 1,
       percent: 60,
     },
-    points: { perOpportunity: "31.25", earned: null, limitPercents: null },
+    points: pointsFixture({ perOpportunity: "31.25", earned: null, limitPercents: null }),
     ...overrides,
   });
 
@@ -125,7 +126,7 @@ const caminar = (overrides: Partial<WeekRow> = {}): WeekRow =>
       sessionsTarget: 1,
       percent: 50,
     },
-    points: { perOpportunity: "20", earned: null, limitPercents: null },
+    points: pointsFixture({ perOpportunity: "20", earned: null, limitPercents: null }),
     ...overrides,
   });
 
@@ -233,7 +234,7 @@ const mixedYesterday = (): TodayView => {
       yesterdayEntry({ kind: "quantity", value: "4" }, "e-correr-ayer"),
       entryFixture({ kind: "quantity", value: "3" }, { entryId: id("e-correr-hoy") }),
     ],
-    points: { perOpportunity: "12.5", earned: 8, limitPercents: null },
+    points: pointsFixture({ perOpportunity: "12.5", earned: 8, limitPercents: null }),
   });
   const meditado = meditar({
     entries: [yesterdayEntry({ kind: "missed" }, "e-meditar-ayer")],
