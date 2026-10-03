@@ -22,34 +22,50 @@ export function RowWithControls({
     row.opportunity.state === "open" &&
     !(row.kind === "day" && !row.scheduledToday) &&
     (quantityMeasureOf(row.measure) !== null || limitMeasureOf(row.measure) !== null);
+  const firstEntry = row.entries[0];
+  const offersEdit =
+    firstEntry !== undefined &&
+    limitMeasureOf(row.measure) === null &&
+    (row.opportunity.state === "open" || row.opportunity.state === "logged") &&
+    !(row.kind === "day" && !row.scheduledToday);
   return (
     <TodayRowCard
       row={row}
       action={
-        offersOneTap ? (
-          <>
+        <>
+          {offersOneTap && (
+            <>
+              <IconButton
+                icon="check"
+                variant="outline"
+                label={`Registrar ${row.habitName}`}
+                disabled={oneTap.pending}
+                onClick={oneTap.done}
+              />
+              <IconButton
+                icon="x"
+                label={`Hoy no salió: ${row.habitName}`}
+                disabled={oneTap.pending}
+                onClick={oneTap.missed}
+              />
+            </>
+          )}
+          {offersSheet && (
             <IconButton
-              icon="check"
+              icon="plus"
               variant="outline"
               label={`Registrar ${row.habitName}`}
-              disabled={oneTap.pending}
-              onClick={oneTap.done}
+              onClick={() => sheet.open(row.commitmentId)}
             />
+          )}
+          {offersEdit && (
             <IconButton
-              icon="x"
-              label={`Hoy no salió: ${row.habitName}`}
-              disabled={oneTap.pending}
-              onClick={oneTap.missed}
+              icon="pencil"
+              label={`Editar registro de ${row.habitName}`}
+              onClick={() => sheet.open(row.commitmentId, firstEntry.entryId)}
             />
-          </>
-        ) : offersSheet ? (
-          <IconButton
-            icon="plus"
-            variant="outline"
-            label={`Registrar ${row.habitName}`}
-            onClick={() => sheet.open(row.commitmentId)}
-          />
-        ) : undefined
+          )}
+        </>
       }
       below={
         oneTap.message === null ? undefined : <InlineMessage tone="error" title={oneTap.message} />

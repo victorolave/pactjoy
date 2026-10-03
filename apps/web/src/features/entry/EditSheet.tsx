@@ -1,0 +1,122 @@
+import type { TodayEntry, TodayRow } from "@pactjoy/app";
+import { useState } from "react";
+import { longDate } from "../../shared/format.ts";
+import { Button } from "../../ui/Button.tsx";
+import { InlineMessage } from "../../ui/InlineMessage.tsx";
+import { Sheet } from "../../ui/Sheet.tsx";
+import { Tag } from "../../ui/Tag.tsx";
+import { entryText, quantityText, targetText, unitLabel } from "../today/row-labels.ts";
+import { Confirmation, useAutoClose } from "./Confirmation.tsx";
+import styles from "./entry.module.css";
+import { nudge, quantityMeasureOf, toSubmitValue } from "./entry-form.ts";
+import { NoteField } from "./NoteField.tsx";
+import { QuantityStepper } from "./QuantityStepper.tsx";
+import { useEntryEdit } from "./use-entry-edit.ts";
+
+export interface EditSheetProps {
+  readonly row: TodayRow;
+  readonly entry: TodayEntry;
+  readonly onSelect: (entryId: string) => void;
+  readonly onClose: () => void;
+}
+
+/**
+ * Edits one of the viewer's entries. Every entry on the row is listed; the chosen one is edited.
+ * The sheet stays mounted when another entry is chosen, only the form under it starts over.
+ */
+export function EditSheet(props: EditSheetProps) {
+  return (
+    <Sheet open title={props.row.habitName} onClose={props.onClose}>
+      <EntryEditor key={props.entry.entryId} {...props} />
+    </Sheet>
+  );
+}
+
+function EntryEditor({ row, entry, onSelect, onClose }: EditSheetProps) {
+  const edit = useEntryEdit(entry.entryId);
+  const [note, setNote] = useState(entry.note ?? "");
+  const quantity = entry.value.kind === "quantity" ? entry.value.value : null;
+  const [typed, setTyped] = useState(quantity ?? "0");
+  const measure = quantityMeasureOf(row.measure);
+
+  useAutoClose(edit.saved, onClose);
+  if (edit.saved !== null) return <Confirmation detail={edit.saved} onClose={onClose} />;
+
+  // What the sheet would send for the value, or null while it cannot be sent.
+  const toSend =
+    measure === null || quantity === null
+      ? entry.value.kind
+      : toSubmitValue(typed, measure.precision);
+  const amount =
+    measure !== null && quantity !== null && toSend !== null ? quantityText(toSend, measure) : null;
+  const unit = measure === null ? "" : (unitLabel(measure) ?? "");
+  const noteError = edit.problem?.kind === "noteField" ? edit.problem.message : undefined;
+
+  const send = () => {
+    if (toSend === null) return;
+    const value =
+      quantity === null
+        ? ({ kind: entry.value.kind } as { kind: "done" } | { kind: "missed" })
+        : { kind: "quantity" as const, value: toSend };
+    edit.save(
+      value,
+      note.trim() === "" ? null : note,
+      `${row.habitName} · ${amount ?? entryText(entry, row.measure)}`,
+    );
+  };
+
+  return (
+    <div className={styles.sheet}>
+      <p className={styles.subtitle}>
+        {longDate(entry.forDate)} · {entryText(entry, row.measure)}
+      </p>
+      {row.entries.length > 1 && (
+        <div className={styles.presets}>
+          {row.entries.map((other) => (
+            <Tag
+              key={other.entryId}
+              selected={other.entryId === entry.entryId}
+              onClick={() => onSelect(other.entryId)}
+            >
+              {entryText(other, row.measure)}
+            </Tag>
+          ))}
+        </div>
+      )}
+      {quantity !== null && measure !== null && (
+        <QuantityStepper
+          value={typed}
+          unit={unit}
+          presets={[]}
+          invalid={toSend === null}
+          onChange={setTyped}
+          onStep={(direction) => setTyped((current) => nudge(current, direction, measure))}
+        />
+      )}
+      {measure !== null && quantity !== null && (
+        <p className={styles.subtitle}>{`Hoy · ${targetText(measure) ?? ""}`}</p>
+      )}
+      <NoteField
+        value={note}
+        onChange={setNote}
+        {...(noteError === undefined ? {} : { error: noteError })}
+      />
+      {row.opportunity.graceUntil !== null && (
+        <InlineMessage
+          tone="info"
+          title={`Puedes cambiarlo hasta el ${longDate(row.opportunity.graceUntil, false)}.`}
+        >
+          Después del periodo de gracia, el registro queda bloqueado.
+        </InlineMessage>
+      )}
+      {edit.problem !== null && edit.problem.kind !== "noteField" && (
+        <InlineMessage tone="error" title={edit.problem.message} />
+      )}
+      <div className={styles.actions}>
+        <Button block disabled={toSend === null || edit.pending} onClick={send}>
+          {amount === null ? "Guardar cambios" : `Guardar ${amount}`}
+        </Button>
+      </div>
+    </div>
+  );
+}

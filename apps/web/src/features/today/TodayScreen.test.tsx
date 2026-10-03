@@ -1,5 +1,5 @@
 import type { TodayView } from "@pactjoy/app";
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { ApiError } from "../../ports/api-error.ts";
@@ -147,7 +147,8 @@ describe("Today active: rows (TO-R3, TO-R4, TO-R5)", () => {
       activeTodayFixture({ rows: [dayRow("Gym", "paused"), dayRow("Meditar", "logged")] }),
     );
     expect(await screen.findByText("En pausa")).toBeInTheDocument();
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    const paused = screen.getByRole("heading", { name: "Gym" }).closest("article") as HTMLElement;
+    expect(within(paused).queryByRole("button")).not.toBeInTheDocument();
   });
 
   it("marks the viewer's private commitments (TO-R8)", async () => {
