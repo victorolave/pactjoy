@@ -1,7 +1,10 @@
+import { BrowserRouter } from "react-router";
+import { AppRoutes } from "./app/routes.tsx";
+
 export function App() {
   return (
-    <main>
-      <h1>PactJoy</h1>
-    </main>
+    <BrowserRouter>
+      <AppRoutes />
+    </BrowserRouter>
   );
 }
