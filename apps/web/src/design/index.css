@@ -1,8 +1,15 @@
-/* Vendored design system first (order matters), then app-only tokens. */
-@import "./vendor/colors.css";
-@import "./vendor/typography.css";
-@import "./vendor/spacing.css";
-@import "./vendor/motion.css";
-@import "./vendor/base.css";
-@import "./vendor/components.css";
+/*
+ * The vendored design system lives in the `vendor` layer. Unlayered CSS (every CSS module) always
+ * beats layered CSS, whatever order the bundler emits them in, so an app rule such as
+ * `.success` on a card reliably overrides the vendored `.pj-card`. Order inside the layer is the
+ * vendored order: tokens first, then base, then components.
+ */
+@layer vendor;
+@import "./vendor/colors.css" layer(vendor);
+@import "./vendor/typography.css" layer(vendor);
+@import "./vendor/spacing.css" layer(vendor);
+@import "./vendor/motion.css" layer(vendor);
+@import "./vendor/base.css" layer(vendor);
+@import "./vendor/components.css" layer(vendor);
+/* App-only tokens, outside the layer: they may override the vendored ones. */
 @import "./local-tokens.css";

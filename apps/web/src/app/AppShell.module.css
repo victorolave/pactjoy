@@ -14,7 +14,7 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: var(--space-2) var(--layout-margin-mobile) var(--space-5);
+  padding: var(--space-4) var(--layout-margin-mobile) var(--space-5);
 }
 
 .tabs {

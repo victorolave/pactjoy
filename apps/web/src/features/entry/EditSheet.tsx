@@ -2,6 +2,7 @@ import type { TodayEntry, TodayRow } from "@pactjoy/app";
 import { type ReactNode, useEffect, useState } from "react";
 import { useOnline } from "../../app/connectivity-context.tsx";
 import { useToasts } from "../../app/toast-context.tsx";
+import { addDays } from "../../shared/date.ts";
 import { longDate, weekdayName } from "../../shared/format.ts";
 import { Button } from "../../ui/Button.tsx";
 import { InlineMessage } from "../../ui/InlineMessage.tsx";
@@ -69,6 +70,12 @@ function EntryEditor({
   const toasts = useToasts();
   const gain = useEarnedGain(row.points.earned);
   const dates = useTodayDates();
+  // A day-bound entry of another day (yesterday's) ends at its own day's grace, not the row's.
+  const dayBound = row.kind === "day";
+  const changeUntil =
+    dayBound && dates !== undefined && entry.forDate !== dates.refDate
+      ? addDays(entry.forDate, 1)
+      : row.opportunity.graceUntil;
 
   useEffect(() => onConfirming(edit.saved !== null), [edit.saved, onConfirming]);
   // A delete closes the sheet and says so in a toast: the entry is gone, so there is nothing to edit.
@@ -112,7 +119,7 @@ function EntryEditor({
   return (
     <div className={styles.sheet}>
       <p className={styles.subtitle}>
-        {longDate(entry.forDate)} · {entryText(entry, row.measure)}
+        {longDate(entry.forDate)} · {entryText(entry, row.measure, dates?.refDate)}
       </p>
       {row.entries.length > 1 && (
         <div className={styles.presets}>
@@ -150,10 +157,10 @@ function EntryEditor({
         onChange={setNote}
         {...(noteError === undefined ? {} : { error: noteError })}
       />
-      {row.opportunity.graceUntil !== null && (
+      {changeUntil !== null && (
         <InlineMessage
           tone="info"
-          title={`Puedes cambiarlo hasta el ${longDate(row.opportunity.graceUntil, false)}.`}
+          title={`Puedes cambiarlo hasta el ${longDate(changeUntil, false)}.`}
         >
           Después del periodo de gracia, el registro queda bloqueado.
         </InlineMessage>

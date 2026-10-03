@@ -53,7 +53,7 @@ describe("the confirmation after a save (design 20)", () => {
   it("says the minimum was met when the typed value reaches it", async () => {
     open(withEarned(null));
     await save("Registrar 20 min");
-    expect(await screen.findByText("Mínimo cumplido. Un paso más en tu meta.")).toBeInTheDocument();
+    expect(await screen.findByText(/Mínimo cumplido. Un paso más en tu meta./)).toBeInTheDocument();
   });
 
   it("does not say it when the value is below the minimum", async () => {

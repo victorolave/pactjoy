@@ -61,6 +61,17 @@ describe("a saved Today from before the shape changed is dropped, not rendered",
     expect(reloaded.getQueryData(todayKey)).toBeUndefined();
   });
 
+  it("drops a Today whose points lack the exact per-opportunity value (version 3 saved copies)", async () => {
+    const view = activeTodayFixture();
+    // A version 3 row: everything a row carries, but no exact per-opportunity value.
+    const pointsV3 = { perOpportunity: "8", earned: null, limitPercents: null };
+    const { reloaded } = await restoreFrom({
+      ...view,
+      rows: view.rows.map((row) => ({ ...row, points: pointsV3 })),
+    });
+    expect(reloaded.getQueryData(todayKey)).toBeUndefined();
+  });
+
   it("keeps a current Today", async () => {
     const current = activeTodayFixture();
     const { reloaded } = await restoreFrom(current);
