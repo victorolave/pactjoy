@@ -1,4 +1,4 @@
-import { type InputHTMLAttributes, useId } from "react";
+import { type InputHTMLAttributes, useEffect, useId, useRef } from "react";
 import { Icon } from "./icon/Icon.tsx";
 
 export interface TextFieldProps
@@ -11,6 +11,11 @@ export interface TextFieldProps
 
 export function TextField({ label, hint, error, ...rest }: TextFieldProps) {
   const id = useId();
+  const input = useRef<HTMLInputElement>(null);
+  // A validation failure sends the user to the field that needs fixing.
+  useEffect(() => {
+    if (error !== undefined) input.current?.focus();
+  }, [error]);
   const hintId = `${id}-hint`;
   const errorId = `${id}-error`;
   const describedBy = error !== undefined ? errorId : hint !== undefined ? hintId : undefined;
@@ -20,6 +25,7 @@ export function TextField({ label, hint, error, ...rest }: TextFieldProps) {
         {label}
       </label>
       <input
+        ref={input}
         id={id}
         className="pj-input"
         aria-describedby={describedBy}
@@ -32,7 +38,7 @@ export function TextField({ label, hint, error, ...rest }: TextFieldProps) {
         </span>
       )}
       {error !== undefined && (
-        <span id={errorId} className="pj-field__error">
+        <span id={errorId} className="pj-field__error" role="alert">
           <Icon name="circle-alert" size="sm" />
           {error}
         </span>

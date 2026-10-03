@@ -1,13 +1,18 @@
 import type { TodayView } from "@pactjoy/app";
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { ApiError } from "../../ports/api-error.ts";
 import {
   activeTodayFixture,
+  type DayRow,
+  dayRowFixture,
+  endedTodayFixture,
+  entryFixture,
   noCircleTodayFixture,
   noSeasonTodayFixture,
   pactOpenTodayFixture,
+  weekRowFixture,
 } from "../../testing/fixtures/today.ts";
 import { renderApp } from "../../testing/render.tsx";
 
@@ -72,6 +77,160 @@ describe("Today with a season", () => {
   });
 });
 
+const dayRow = (
+  habitName: string,
+  state: DayRow["opportunity"]["state"],
+  overrides: Partial<DayRow> = {},
+) =>
+  dayRowFixture({
+    habitName,
+    opportunity: { state, graceUntil: null },
+    ...(state === "logged" ? { entries: [entryFixture({ kind: "done" })] } : {}),
+    ...overrides,
+  });
+
+describe("Today active: rows (TO-R3, TO-R4, TO-R5)", () => {
+  it("counts the day rows registered of those scheduled today (TO-S5)", async () => {
+    renderToday(
+      activeTodayFixture({
+        rows: [dayRow("Meditar", "logged"), dayRow("Dibujar", "open"), dayRow("Correr", "open")],
+      }),
+    );
+    expect(await screen.findByRole("heading", { name: "Para hoy" })).toBeInTheDocument();
+    expect(screen.getByText("1 de 3 registrados")).toBeInTheDocument();
+    expect(screen.getByText("¿Qué quieres cumplir hoy?")).toBeInTheDocument();
+    for (const name of ["Meditar", "Dibujar", "Correr"]) {
+      expect(screen.getByRole("heading", { name })).toBeInTheDocument();
+    }
+  });
+
+  it("does not count a day that does not fall today as pending, and lists it under the week", async () => {
+    renderToday(
+      activeTodayFixture({
+        rows: [dayRow("Meditar", "logged"), dayRow("Yoga", "open", { scheduledToday: false })],
+      }),
+    );
+    expect(await screen.findByText("1 de 1 registrados")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Esta semana" })).toBeInTheDocument();
+    expect(screen.getByText("No toca hoy")).toBeInTheDocument();
+  });
+
+  it("celebrates quietly when everything for today is registered (15b)", async () => {
+    renderToday(
+      activeTodayFixture({ rows: [dayRow("Meditar", "logged"), dayRow("Dibujar", "logged")] }),
+    );
+    expect(await screen.findByText("Hoy ya está cumplido.")).toBeInTheDocument();
+    expect(screen.getByText("2 de 2 compromisos de hoy")).toBeInTheDocument();
+    expect(screen.getByText("Meditar y Dibujar.")).toBeInTheDocument();
+    expect(screen.queryByText("¿Qué quieres cumplir hoy?")).not.toBeInTheDocument();
+  });
+
+  it("does not celebrate a day that has a Hoy no salió: it is registered, not cumplido (B-W2)", async () => {
+    renderToday(
+      activeTodayFixture({
+        rows: [
+          dayRow("Meditar", "logged"),
+          dayRow("Dibujar", "logged", { entries: [entryFixture({ kind: "missed" })] }),
+        ],
+      }),
+    );
+    expect(await screen.findByText("Hoy ya registraste todo.")).toBeInTheDocument();
+    expect(screen.getByText("2 de 2 compromisos de hoy registrados")).toBeInTheDocument();
+    expect(screen.queryByText("Hoy ya está cumplido.")).not.toBeInTheDocument();
+  });
+
+  it("explains a day with nothing scheduled and keeps the week visible (15c)", async () => {
+    renderToday(activeTodayFixture({ rows: [weekRowFixture()] }));
+    expect(
+      await screen.findByRole("heading", { name: "Hoy no tienes compromisos previstos." }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Para hoy" })).not.toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Un día sin compromisos" })).toHaveAttribute(
+      "src",
+      expect.stringContaining("cocinar"),
+    );
+    expect(screen.getByRole("heading", { name: "Esta semana" })).toBeInTheDocument();
+    expect(screen.getByText("2 de 3 esta semana")).toBeInTheDocument();
+  });
+
+  it("shows the week rows with their progress under Esta semana (TO-S7)", async () => {
+    renderToday(activeTodayFixture({ rows: [dayRow("Meditar", "open"), weekRowFixture()] }));
+    expect(await screen.findByRole("heading", { name: "Esta semana" })).toBeInTheDocument();
+    expect(screen.getByText("2 de 3 esta semana")).toBeInTheDocument();
+    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "67");
+  });
+
+  it("shows a paused row read-only, with no control (TO-S8)", async () => {
+    renderToday(
+      activeTodayFixture({ rows: [dayRow("Gym", "paused"), dayRow("Meditar", "logged")] }),
+    );
+    expect(await screen.findByText("En pausa")).toBeInTheDocument();
+    const paused = screen.getByRole("heading", { name: "Gym" }).closest("article") as HTMLElement;
+    expect(within(paused).queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("marks the viewer's private commitments (TO-R8)", async () => {
+    renderToday(activeTodayFixture({ rows: [dayRow("Terapia", "open", { privacy: "private" })] }));
+    expect(await screen.findByText("Privado")).toBeInTheDocument();
+  });
+});
+
+describe("Today active: season and standings (TO-R6, TO-R7)", () => {
+  it("shows the season card and the standings pair", async () => {
+    renderToday(activeTodayFixture());
+    expect(await screen.findByText("Tu temporada")).toBeInTheDocument();
+    expect(screen.getByText("540")).toBeInTheDocument();
+    expect(screen.getByText("Consistencia 75 %")).toBeInTheDocument();
+    expect(screen.getByText("Quedan 23 días")).toBeInTheDocument();
+    expect(screen.getByText("Andrea 620 · Tú 540")).toBeInTheDocument();
+    expect(screen.getByText("80 pts de diferencia")).toBeInTheDocument();
+  });
+
+  it("shows only the viewer when they are the only participant", async () => {
+    renderToday(
+      activeTodayFixture({
+        standings: {
+          kind: "ranked",
+          eligibleParticipantCount: 1,
+          rows: activeTodayFixture().standings.rows.filter((row) => row.displayName === "Victor"),
+        },
+      }),
+    );
+    expect(await screen.findByText("Tú 540 pts")).toBeInTheDocument();
+    expect(screen.queryByText(/de diferencia/)).not.toBeInTheDocument();
+  });
+});
+
+describe("Today ended (TO-R6, TO-S9)", () => {
+  it("shows an ended banner and no pending prompt", async () => {
+    renderToday(endedTodayFixture());
+    expect(await screen.findByText("Temporada terminada")).toBeInTheDocument();
+    expect(
+      screen.getByText("Los registros abiertos solo se pueden ajustar mientras dure su plazo."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("La temporada terminó")).toBeInTheDocument();
+    expect(screen.queryByText("¿Qué quieres cumplir hoy?")).not.toBeInTheDocument();
+    expect(screen.queryByText("Hoy no tienes compromisos previstos.")).not.toBeInTheDocument();
+    expect(screen.getByText("Tu temporada")).toBeInTheDocument();
+  });
+});
+
+describe("Today ended: the last day (B-W3)", () => {
+  it("titles the day section Último día, not Para hoy", async () => {
+    renderToday(
+      endedTodayFixture({
+        rows: [
+          dayRow("Meditar", "logged", {
+            opportunity: { state: "logged", graceUntil: "2026-10-27" as never },
+          }),
+        ],
+      }),
+    );
+    expect(await screen.findByRole("heading", { name: "Último día" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Para hoy" })).not.toBeInTheDocument();
+  });
+});
+
 describe("loading and failure (TO-R9)", () => {
   it("shows a skeleton while the query is pending (TO-S10)", () => {
     renderToday(noCircleTodayFixture());
@@ -84,7 +243,7 @@ describe("loading and failure (TO-R9)", () => {
       today: noCircleTodayFixture(),
       todayFailures: [new ApiError("Internal", 500, "req-1")],
     });
-    expect(await screen.findByRole("alert")).toHaveTextContent("No pudimos cargar Hoy");
+    expect(await screen.findByRole("alert")).toHaveTextContent("No pudimos cargar tu día.");
     await userEvent.click(screen.getByRole("button", { name: "Reintentar" }));
     expect(
       await screen.findByRole("heading", { name: "Aún no estás en un círculo" }),
@@ -107,7 +266,7 @@ describe("loading and failure (TO-R9)", () => {
       today: noCircleTodayFixture(),
       todayFailures: [new ApiError("NetworkError", 0, null)],
     });
-    expect(await screen.findByRole("alert")).toHaveTextContent("No pudimos cargar Hoy");
+    expect(await screen.findByRole("alert")).toHaveTextContent("No pudimos cargar tu día.");
     expect(screen.getByRole("button", { name: "Reintentar" })).toBeInTheDocument();
   });
 });
