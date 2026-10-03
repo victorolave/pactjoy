@@ -24,9 +24,34 @@ describe("Toast", () => {
     expect(onAction).toHaveBeenCalledTimes(1);
   });
 
-  it("has no button without an action label", () => {
+  it("has only the close button without an action label", () => {
     render(<Toast message="Guardado" />);
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual([
+      "Cerrar aviso",
+    ]);
+  });
+
+  it("closes from its X without running the action (Deshacer only hides, it does not undo)", async () => {
+    const onAction = vi.fn();
+    const onDismiss = vi.fn();
+    render(
+      <Toast message="Guardado" actionLabel="Deshacer" onAction={onAction} onDismiss={onDismiss} />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Cerrar aviso" }));
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
+  it("closes an error toast that stays until acted on", async () => {
+    const onDismiss = vi.fn();
+    render(<Toast tone="error" message="Falló" durationMs={null} onDismiss={onDismiss} />);
+    await userEvent.click(screen.getByRole("button", { name: "Cerrar aviso" }));
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+  });
+
+  it("gives the close control the touch-target size through the icon button", () => {
+    render(<Toast message="Guardado" />);
+    expect(screen.getByRole("button", { name: "Cerrar aviso" })).toHaveClass("pj-iconbtn");
   });
 
   it("dismisses itself after 4000 ms by default, and not before", () => {

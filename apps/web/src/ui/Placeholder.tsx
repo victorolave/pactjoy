@@ -19,15 +19,21 @@ export interface IllustrationProps {
   readonly name?: IllustrationName;
   /** Another image. It wins over `name`. */
   readonly src?: string;
-  /** A short banner image instead of a full-width one. */
-  readonly compact?: boolean;
+  /**
+   * The design's boxes, the image contained in each: `lg` 200 square (confirmation), `md` 130 high
+   * and `banner` 150 high, both full width (empty day, offline). Without it the image fills the width.
+   */
+  readonly size?: "lg" | "md" | "banner";
 }
 
 /** Without a name or a src a neutral block is drawn and no image is requested. */
-export function Illustration({ alt, name, src, compact = false }: IllustrationProps) {
+export function Illustration({ alt, name, src, size }: IllustrationProps) {
   const url = src ?? (name === undefined ? undefined : ILLUSTRATIONS[name]);
+  if (url !== undefined && size !== undefined) {
+    return <img className={styles.imageSized} data-size={size} src={url} alt={alt} />;
+  }
   if (url !== undefined) {
-    return <img className={compact ? styles.imageCompact : styles.image} src={url} alt={alt} />;
+    return <img className={styles.image} src={url} alt={alt} />;
   }
   return (
     <div className={`${styles.placeholder} ${styles.illustration}`} role="img" aria-label={alt} />

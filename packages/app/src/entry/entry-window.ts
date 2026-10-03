@@ -23,6 +23,13 @@ export interface EntryWindowInput {
 const DAYS_PER_WEEK = 7;
 
 /**
+ * B7: extra grace days a rejected pause adds. `app-pause-workflow` (A2) will wire it; until then it is
+ * ZERO, and this is the ONE place that says so: every entry window, Today row and "De ayer" item
+ * reads it from here, so they cannot drift apart.
+ */
+export const PAUSE_GRACE_EXTENSION_DAYS = 0;
+
+/**
  * The last day of the period an entry on `day` belongs to: the day itself
  * for day-bound opportunities (`specificDays`), the week's last day for
  * week-bound ones (`timesPerWeek` sessions and `weeklyTotal`, A9/B8).
@@ -44,7 +51,7 @@ function periodEnd(schedule: Schedule, day: SeasonDay): SeasonDay {
 export function entryWindowDeadline(
   schedule: Schedule,
   day: SeasonDay,
-  pauseGraceExtensionDays = 0,
+  pauseGraceExtensionDays = PAUSE_GRACE_EXTENSION_DAYS,
 ): SeasonDay {
   return seasonDay(graceDeadline(periodEnd(schedule, day)) + pauseGraceExtensionDays);
 }
