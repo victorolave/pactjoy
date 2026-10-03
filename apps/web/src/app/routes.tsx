@@ -1,21 +1,20 @@
 import { Navigate, Route, Routes } from "react-router";
+import { CodeStep } from "../features/auth/CodeStep.tsx";
+import { EmailStep } from "../features/auth/EmailStep.tsx";
+import { LoginLayout } from "../features/auth/LoginLayout.tsx";
 import { RedirectIfSignedIn, RequireSession } from "../features/auth/RequireSession.tsx";
 import { StubScreen } from "../features/stubs/StubScreen.tsx";
 import { AppShell } from "./AppShell.tsx";
 
-/** Route table. `/` and `/login` hold placeholders until Today and Login land. */
+/** Route table. `/` holds a placeholder until Today lands. */
 export function AppRoutes() {
   return (
     <Routes>
       <Route element={<RedirectIfSignedIn />}>
-        <Route
-          path="/login"
-          element={
-            <main>
-              <StubScreen title="Entrar" />
-            </main>
-          }
-        />
+        <Route element={<LoginLayout />}>
+          <Route path="login" element={<EmailStep />} />
+          <Route path="login/code" element={<CodeStep />} />
+        </Route>
       </Route>
       <Route element={<RequireSession />}>
         <Route element={<AppShell />}>
