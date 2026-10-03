@@ -39,8 +39,9 @@ export function ToastProvider({ children }: { readonly children: ReactNode }) {
   return (
     <ToastContext.Provider value={api}>
       {children}
-      {shown !== null && (
-        <div className={styles.host}>
+      {/* Always mounted: a live region announces changes to its content, not its own arrival. */}
+      <div className={styles.host} aria-live="polite" aria-atomic="true">
+        {shown !== null && (
           <Toast
             key={shown.id}
             {...shown.toast}
@@ -50,8 +51,8 @@ export function ToastProvider({ children }: { readonly children: ReactNode }) {
             }}
             onDismiss={dismiss}
           />
-        </div>
-      )}
+        )}
+      </div>
     </ToastContext.Provider>
   );
 }

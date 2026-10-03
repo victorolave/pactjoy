@@ -265,6 +265,7 @@ function ProgressCard({
     const current = row.progress?.value ?? "0";
     return (
       <ProgressBar
+        name={`Cantidad de ${row.habitName}`}
         value={Number(current)}
         max={ideal}
         label={`${formatDecimal(current)} / ${formatDecimal(measure.target.ideal)} ${unit}`.trim()}
@@ -277,6 +278,7 @@ function ProgressCard({
   const typed = toSubmitValue(value, measure.precision);
   return (
     <ProgressBar
+      name={`Cantidad de ${row.habitName}`}
       value={Number(typed ?? 0)}
       max={ideal}
       label={`${typed === null ? "0" : formatDecimal(typed)} / ${formatDecimal(measure.target.ideal)} ${unit}`.trim()}

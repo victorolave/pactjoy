@@ -28,6 +28,15 @@ describe("ToastProvider", () => {
   beforeEach(() => vi.useFakeTimers({ shouldAdvanceTime: true }));
   afterEach(() => vi.useRealTimers());
 
+  it("keeps a live region mounted before any toast, so the first one is announced", async () => {
+    setup({ message: "Registro guardado." });
+    const region = document.querySelector("[aria-live]");
+    expect(region).not.toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "mostrar" }));
+    expect(document.querySelector("[aria-live]")).toBe(region);
+    expect(region).toContainElement(screen.getByRole("status"));
+  });
+
   it("shows a toast with its message when asked", async () => {
     setup({ message: "Registro guardado." });
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
