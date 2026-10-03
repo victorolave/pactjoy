@@ -5,6 +5,7 @@ import {
   type DayRow,
   dayRowFixture,
   endedTodayFixture,
+  entryFixture,
   noCircleTodayFixture,
   noSeasonTodayFixture,
   pactOpenTodayFixture,
@@ -150,6 +151,32 @@ describe("toTodayModel: sections and counts (TO-R3)", () => {
     expect(running(activeTodayFixture({ rows: [row("logged"), row("logged")] })).dayState).toBe(
       "allDone",
     );
+  });
+
+  it("is allLogged, not allDone, when a registered day was marked Hoy no salió (B-W2)", () => {
+    const missed = row("logged", { entries: [entryFixture({ kind: "missed" })] });
+    const done = row("logged", { entries: [entryFixture({ kind: "done" })] });
+    expect(running(activeTodayFixture({ rows: [missed, missed] })).dayState).toBe("allLogged");
+    expect(running(activeTodayFixture({ rows: [done, missed] })).dayState).toBe("allLogged");
+    expect(running(activeTodayFixture({ rows: [done, done] })).dayState).toBe("allDone");
+  });
+
+  it("counts a missed entry as registered", () => {
+    const missed = row("logged", { entries: [entryFixture({ kind: "missed" })] });
+    expect(running(activeTodayFixture({ rows: [missed, row("open")] })).counts).toEqual({
+      logged: 1,
+      scheduled: 2,
+    });
+  });
+
+  it("describes today while the season runs, and its last day once it ended (C-W4)", () => {
+    expect(running(activeTodayFixture()).refDate).toBe("2026-10-02");
+    // 4 weeks from 2026-09-28: the last day is 2026-10-25, though today is 2026-10-27.
+    expect(running(endedTodayFixture()).refDate).toBe("2026-10-25");
+  });
+
+  it("carries the server's today, to tell entries of another day", () => {
+    expect(running(activeTodayFixture()).today).toBe("2026-10-02");
   });
 
   it("has no day commitments when nothing is scheduled today (15c)", () => {

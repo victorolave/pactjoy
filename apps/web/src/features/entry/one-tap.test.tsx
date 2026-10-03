@@ -7,6 +7,7 @@ import {
   activeTodayFixture,
   type DayRow,
   dayRowFixture,
+  endedTodayFixture,
   entryFixture,
   weekRowFixture,
 } from "../../testing/fixtures/today.ts";
@@ -32,6 +33,7 @@ describe("one tap done (EN-R1)", () => {
       {
         seasonId: "season-1",
         commitmentId: "commitment-1",
+        forDate: "2026-10-02",
         value: { kind: "done" },
         note: null,
         clientRequestId: "id-1",
@@ -92,6 +94,44 @@ describe("one tap done (EN-R1)", () => {
   });
 });
 
+describe("the day an entry lands on (C-W4)", () => {
+  it("sends the server's today as the entry's day", async () => {
+    const { deps } = renderRow(openDone());
+    await tapDone();
+    await waitFor(() => expect(deps.api.recorded).toHaveLength(1));
+    expect(deps.api.recorded[0]?.forDate).toBe("2026-10-02");
+  });
+
+  it("records on the day the user saw even if midnight passed since the screen loaded", async () => {
+    const { deps } = renderRow(openDone());
+    await screen.findByRole("button", { name: "Registrar Meditar" });
+    // The server's clock moves to the next day, but the screen on display still shows the old one.
+    deps.api.setToday(activeTodayFixture({ today: "2026-10-03" as never, rows: [openDone()] }));
+    await tapDone();
+    await waitFor(() => expect(deps.api.recorded).toHaveLength(1));
+    expect(deps.api.recorded[0]?.forDate).toBe("2026-10-02");
+  });
+
+  it("records on the season's last day during the grace period after it ended", async () => {
+    const { deps } = renderApp({
+      today: endedTodayFixture({
+        rows: [openDone({ opportunity: { state: "open", graceUntil: "2026-10-26" as never } })],
+      }),
+    });
+    await tapDone();
+    await waitFor(() => expect(deps.api.recorded).toHaveLength(1));
+    // Season: 4 weeks from 2026-09-28, so the last day is 2026-10-25 while today is 2026-10-27.
+    expect(deps.api.recorded[0]?.forDate).toBe("2026-10-25");
+  });
+
+  it("sends the same day for Hoy no salió", async () => {
+    const { deps } = renderRow(openDone());
+    await userEvent.click(await screen.findByRole("button", { name: "Hoy no salió: Meditar" }));
+    await waitFor(() => expect(deps.api.recorded).toHaveLength(1));
+    expect(deps.api.recorded[0]?.forDate).toBe("2026-10-02");
+  });
+});
+
 describe("Hoy no salió (EN-R2)", () => {
   it("records a missed entry (EN-S5)", async () => {
     const { deps } = renderRow(openDone());
@@ -103,11 +143,11 @@ describe("Hoy no salió (EN-R2)", () => {
     ).toBeInTheDocument();
   });
 
-  it("is not offered on week rows, which have no register control here (EN-S6)", async () => {
+  it("is not offered on week rows, which only open the sheet (EN-S6)", async () => {
     renderRow(weekRowFixture());
     await screen.findByRole("heading", { name: "Leer" });
     expect(screen.queryByRole("button", { name: /Hoy no salió/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("button")).toHaveLength(1);
   });
 
   it("explains a 422 MissedNotAllowed inline in the row", async () => {
@@ -144,7 +184,7 @@ describe("failures that mean the day is closed (EN-R8)", () => {
 });
 
 describe("rows that cannot be written", () => {
-  it("offers no control on a logged, closed, paused or not-today row", async () => {
+  it("offers no register control on a logged, closed, paused or not-today row", async () => {
     renderRow(
       openDone({
         habitName: "Logged",
@@ -156,11 +196,14 @@ describe("rows that cannot be written", () => {
       openDone({ habitName: "Elsewhere", scheduledToday: false }),
     );
     await screen.findByRole("heading", { name: "Logged" });
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    // The logged row can be edited; nothing else has a control.
+    expect(screen.getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual([
+      "Editar registro de Logged",
+    ]);
   });
 
-  it("does not offer the one-tap on a quantity row (that opens a sheet)", async () => {
-    renderRow(
+  it("opens the sheet on a quantity row instead of recording at once", async () => {
+    const { deps } = renderRow(
       dayRowFixture({
         habitName: "Correr",
         measure: {
@@ -172,7 +215,8 @@ describe("rows that cannot be written", () => {
         },
       }),
     );
-    await screen.findByRole("heading", { name: "Correr" });
-    expect(screen.queryByRole("button", { name: /Registrar Correr/ })).not.toBeInTheDocument();
+    await userEvent.click(await screen.findByRole("button", { name: "Registrar Correr" }));
+    expect(await screen.findByRole("dialog", { name: "Correr" })).toBeInTheDocument();
+    expect(deps.api.calls.recordEntry).toBe(0);
   });
 });

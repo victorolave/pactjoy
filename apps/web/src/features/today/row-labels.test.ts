@@ -63,6 +63,15 @@ describe("quantityText", () => {
     expect(quantityText("0.5", { ...minutes, unit: "hours" })).toBe("0,5 h");
   });
 
+  it("uses the singular for exactly one", () => {
+    expect(quantityText("1", { ...minutes, unit: "times" })).toBe("1 vez");
+    expect(quantityText("2", { ...minutes, unit: "times" })).toBe("2 veces");
+    expect(quantityText("1", { ...minutes, unit: "glasses" })).toBe("1 vaso");
+    expect(quantityText("1", { ...minutes, unit: "pages" })).toBe("1 pág.");
+    expect(quantityText("1", minutes)).toBe("1 min");
+    expect(quantityText("1.5", { ...minutes, unit: "times" })).toBe("1,5 veces");
+  });
+
   it("is just the number for a done measure", () => {
     expect(quantityText("1", dayRowFixture().measure)).toBe("1");
   });
@@ -96,6 +105,35 @@ describe("weekdaysText and scheduleText", () => {
   it("describes times per week and weekly total", () => {
     expect(scheduleText(minutes)).toBe("3 veces por semana");
     expect(scheduleText(limitTimes)).toBe("Total de la semana");
+  });
+});
+
+describe("entryText on another day (B-W1)", () => {
+  const entry = (value: TodayEntry["value"], forDate: string): TodayEntry => ({
+    entryId: "e" as TodayEntry["entryId"],
+    forDate: forDate as TodayEntry["forDate"],
+    value,
+    note: null,
+  });
+  const done = dayRowFixture().measure;
+
+  it("says the weekday, not hoy, for an entry of yesterday", () => {
+    expect(entryText(entry({ kind: "done" }, "2026-10-01"), done, "2026-10-02")).toBe(
+      "Registrado el jueves",
+    );
+    expect(entryText(entry({ kind: "missed" }, "2026-10-01"), done, "2026-10-02")).toBe(
+      "No salió el jueves",
+    );
+    expect(
+      entryText(entry({ kind: "quantity", value: "25" }, "2026-10-01"), minutes, "2026-10-02"),
+    ).toBe("25 min · jueves");
+  });
+
+  it("keeps the hoy wording for an entry of today, or when today is not known", () => {
+    expect(entryText(entry({ kind: "done" }, "2026-10-02"), done, "2026-10-02")).toBe(
+      "Registrado hoy",
+    );
+    expect(entryText(entry({ kind: "done" }, "2026-10-01"), done)).toBe("Registrado hoy");
   });
 });
 

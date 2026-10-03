@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { longDate } from "./format.ts";
+import { longDate, weekdayName } from "./format.ts";
 
 describe("longDate", () => {
   it("writes a Friday in Spanish, capitalised, without a year", () => {
@@ -28,5 +28,17 @@ describe("longDate", () => {
 
   it("returns the input untouched when it is not a date", () => {
     expect(longDate("mañana")).toBe("mañana");
+  });
+});
+
+describe("weekdayName", () => {
+  it("names the weekday of a calendar date", () => {
+    expect(weekdayName("2026-10-01")).toBe("jueves");
+    expect(weekdayName("2026-10-04")).toBe("domingo");
+    expect(weekdayName("2026-09-30")).toBe("miércoles");
+  });
+
+  it("is null for anything that is not a date", () => {
+    expect(weekdayName("ayer")).toBeNull();
   });
 });
