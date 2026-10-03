@@ -1,15 +1,9 @@
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router";
 import { describe, expect, it } from "vitest";
-import { AppRoutes } from "./routes.tsx";
+import { renderApp } from "../testing/render.tsx";
 
-const renderAt = (path: string) =>
-  render(
-    <MemoryRouter initialEntries={[path]}>
-      <AppRoutes />
-    </MemoryRouter>,
-  );
+const renderAt = (path: string, signedIn = true) => renderApp({ path, signedIn });
 
 describe("AppRoutes", () => {
   it("shows the Perfil stub when its tab is pressed (WF-S3)", async () => {
@@ -35,13 +29,24 @@ describe("AppRoutes", () => {
   });
 
   it("renders /login without the tab bar", () => {
-    renderAt("/login");
+    renderAt("/login", false);
     expect(screen.queryByRole("navigation", { name: "Principal" })).not.toBeInTheDocument();
     expect(screen.getByRole("main")).toBeInTheDocument();
   });
 
   it("sends an unknown path to Today", () => {
     renderAt("/nope");
+    expect(screen.getByRole("link", { name: "Hoy" })).toHaveAttribute("aria-current", "page");
+  });
+
+  it("sends a visitor without a session from Today to /login", () => {
+    renderAt("/", false);
+    expect(screen.getByRole("heading", { name: "Entrar" })).toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "Principal" })).not.toBeInTheDocument();
+  });
+
+  it("sends a signed-in user from /login to Today", () => {
+    renderAt("/login");
     expect(screen.getByRole("link", { name: "Hoy" })).toHaveAttribute("aria-current", "page");
   });
 });

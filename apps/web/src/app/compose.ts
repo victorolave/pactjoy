@@ -1,0 +1,35 @@
+import { GoTrueAuth, type GoTrueAuthOptions } from "../adapters/gotrue-auth.ts";
+import { LocalStorageTokenStore } from "../adapters/local-storage-token-store.ts";
+import { SystemClock } from "../adapters/system-clock.ts";
+import type { AppConfig } from "../config.ts";
+import { createSessionEvents } from "../features/auth/session-events.ts";
+import { SessionManager } from "../features/auth/session-manager.ts";
+import type { TokenStore } from "../ports/token-store.ts";
+import type { AppDependencies } from "./dependencies.ts";
+import { createQueryClient } from "./query-client.ts";
+
+export interface ComposeEnvironment {
+  /** The browser's fetch, handed in by main.tsx (the only place allowed to name it). */
+  readonly fetch: GoTrueAuthOptions["fetch"];
+  /** Defaults to the localStorage adapter. */
+  readonly store?: TokenStore | undefined;
+}
+
+/** Builds the adapters and the objects that wire them together. */
+export function createDependencies(config: AppConfig, env: ComposeEnvironment): AppDependencies {
+  const clock = new SystemClock();
+  const auth = new GoTrueAuth({
+    baseUrl: config.supabaseUrl,
+    anonKey: config.supabaseAnonKey,
+    fetch: env.fetch,
+    clock,
+  });
+  const store = env.store ?? new LocalStorageTokenStore();
+  return {
+    auth,
+    store,
+    sessions: new SessionManager(auth, store, clock),
+    sessionEvents: createSessionEvents(),
+    queryClient: createQueryClient(),
+  };
+}
