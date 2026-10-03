@@ -6,7 +6,7 @@ import { renderApp } from "../testing/render.tsx";
 const renderAt = (path: string, signedIn = true) => renderApp({ path, signedIn });
 
 describe("AppRoutes", () => {
-  it("shows the Perfil stub when its tab is pressed (WF-S3)", async () => {
+  it("shows Perfil when its tab is pressed (WF-S3)", async () => {
     renderAt("/");
     await userEvent.click(screen.getByRole("link", { name: "Perfil" }));
     expect(screen.getByRole("heading", { name: "Perfil" })).toBeInTheDocument();
@@ -16,7 +16,7 @@ describe("AppRoutes", () => {
     ["/season", "Temporada"],
     ["/circle", "Círculo"],
     ["/profile", "Perfil"],
-  ])("renders the %s stub with the tab bar", (path, title) => {
+  ])("renders %s with the tab bar", (path, title) => {
     renderAt(path);
     expect(screen.getByRole("heading", { name: title })).toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: "Principal" })).toBeInTheDocument();

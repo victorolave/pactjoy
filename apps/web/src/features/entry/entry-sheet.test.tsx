@@ -7,6 +7,7 @@ import {
   type DayRow,
   dayRowFixture,
   entryFixture,
+  pointsFixture,
   type WeekRow,
   weekRowFixture,
 } from "../../testing/fixtures/today.ts";
@@ -25,6 +26,22 @@ const running = (overrides: Partial<DayRow> = {}) =>
       target: { direction: "reach", minimum: "3", ideal: "5" },
       schedule: { period: "perSession", frequency: { kind: "specificDays", weekdays: [0, 4] } },
     },
+    ...overrides,
+  });
+
+/** Leer as a day-bound row (specific days): it counts at once, so its sheet previews points. */
+const readingDay = (overrides: Partial<DayRow> = {}): DayRow =>
+  dayRowFixture({
+    commitmentId: "commitment-2" as DayRow["commitmentId"],
+    habitName: "Leer",
+    measure: {
+      unit: "minutes",
+      customLabel: null,
+      precision: "integer",
+      target: { direction: "reach", minimum: "10", ideal: "30" },
+      schedule: { period: "perSession", frequency: { kind: "specificDays", weekdays: [4] } },
+    },
+    points: pointsFixture({ perOpportunity: "6.25", earned: null, limitPercents: null }),
     ...overrides,
   });
 
@@ -134,11 +151,7 @@ describe("the quantity form (EN-R3)", () => {
   });
 
   it("previews the points of the draft from the server's value of one opportunity (design 17)", async () => {
-    const row = reading();
-    renderRows(
-      [{ ...row, points: { ...row.points, perOpportunity: "6.25" } }],
-      "/?entry=commitment-2",
-    );
+    renderRows([readingDay()], "/?entry=commitment-2");
     const dialog = await screen.findByRole("dialog", { name: "Leer" });
     // 20 of 30 min: round(6.25 x 2/3) = 4.
     expect(within(dialog).getByText("+4 pts")).toBeInTheDocument();
@@ -152,12 +165,13 @@ describe("the quantity form (EN-R3)", () => {
   });
 
   it("adds on top of what is logged today: +N, the running total and 'Añadir' (design 22)", async () => {
-    const row = reading({
-      entries: [entryFixture({ kind: "quantity", value: "25" })],
-      opportunity: { state: "logged", graceUntil: null },
-    });
     renderRows(
-      [{ ...row, points: { ...row.points, perOpportunity: "6.25" } }],
+      [
+        readingDay({
+          entries: [entryFixture({ kind: "quantity", value: "25" })],
+          opportunity: { state: "logged", graceUntil: null },
+        }),
+      ],
       "/?entry=commitment-2",
     );
     const dialog = await screen.findByRole("dialog", { name: "Leer" });

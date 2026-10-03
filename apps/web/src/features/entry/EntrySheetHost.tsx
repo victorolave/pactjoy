@@ -1,4 +1,4 @@
-import type { TodayRow } from "@pactjoy/app";
+import type { PendingYesterdayItem, TodayRow } from "@pactjoy/app";
 import { EditSheet } from "./EditSheet.tsx";
 import { EntrySheet } from "./EntrySheet.tsx";
 import { useEntrySheet } from "./use-entry-sheet.ts";
@@ -7,16 +7,28 @@ import { useEntrySheet } from "./use-entry-sheet.ts";
 export function EntrySheetHost({
   rows,
   seasonId,
+  pendingYesterday = [],
 }: {
   readonly rows: readonly TodayRow[];
   readonly seasonId: string;
+  readonly pendingYesterday?: readonly PendingYesterdayItem[];
 }) {
-  const { commitmentId, entryId, select, close } = useEntrySheet();
+  const { commitmentId, entryId, forYesterday, select, close } = useEntrySheet();
   const row = rows.find((candidate) => candidate.commitmentId === commitmentId);
   if (row === undefined) return null;
   const entry = row.entries.find((candidate) => candidate.entryId === entryId);
   if (entry !== undefined) {
     return <EditSheet row={row} entry={entry} onSelect={select} onClose={close} />;
   }
-  return <EntrySheet key={row.commitmentId} row={row} seasonId={seasonId} onClose={close} />;
+  const pending = pendingYesterday.find((item) => item.commitmentId === row.commitmentId);
+  return (
+    <EntrySheet
+      key={row.commitmentId}
+      row={row}
+      seasonId={seasonId}
+      pending={pending}
+      startOnYesterday={forYesterday}
+      onClose={close}
+    />
+  );
 }

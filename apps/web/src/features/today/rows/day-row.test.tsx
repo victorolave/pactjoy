@@ -5,6 +5,7 @@ import {
   dayRowFixture,
   type Entry,
   entryFixture,
+  pointsFixture,
 } from "../../../testing/fixtures/today.ts";
 import { TodayDateContext } from "../today-date-context.tsx";
 import { DayRow } from "./DayRow.tsx";
@@ -76,7 +77,7 @@ describe("day row (TO-R3)", () => {
         row={dayRowFixture({
           opportunity: { state: "logged", graceUntil: null },
           entries: [entryFixture({ kind: "done" })],
-          points: { perOpportunity: "8", earned: 8, limitPercents: null },
+          points: pointsFixture({ perOpportunity: "8", earned: 8, limitPercents: null }),
         })}
       />,
     );

@@ -1,0 +1,18 @@
+/* The toast is ink: the close X reads cream on it, with the design's soft hover. */
+.close {
+  display: inline-flex;
+  flex: none;
+  margin-left: calc(var(--space-1) * -1);
+}
+
+.close button {
+  color: var(--pj-cream);
+}
+
+.close button:hover {
+  background: var(--ink-700);
+}
+
+.close button:active {
+  background: var(--ink-800);
+}
