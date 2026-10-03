@@ -49,6 +49,16 @@ describe("LimitGrid (EN-R5)", () => {
     expect(onSelect.mock.calls.map(([value]) => value)).toEqual([0, 3]);
   });
 
+  it("shows a stored value that is outside the grid, selected, instead of dropping it", () => {
+    grid(7);
+    expect(screen.getAllByRole("radio")).toHaveLength(7);
+    const checked = screen
+      .getAllByRole("radio")
+      .filter((radio) => radio.getAttribute("aria-checked") === "true");
+    expect(checked).toHaveLength(1);
+    expect(checked[0]).toHaveTextContent(/^7Excede/);
+  });
+
   it("selects nothing by default", () => {
     grid(null);
     expect(

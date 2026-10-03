@@ -7,11 +7,11 @@ export interface EntryFailure {
 }
 
 /** Placeholder Spanish copy (P8): the design has no wording for these failures yet. */
-export function entryFailure(error: unknown): EntryFailure {
+export function entryFailure(error: unknown, verb: "guardar" | "borrar" = "guardar"): EntryFailure {
   const { kind, code, retryable } = toUiError(error);
   switch (kind) {
     case "retryable":
-      return { message: "No pudimos guardar el registro.", retryable };
+      return { message: `No pudimos ${verb} el registro.`, retryable };
     case "closedWindow":
       return { message: "Ya no se puede registrar este día.", retryable };
     case "entryGone":
@@ -23,7 +23,7 @@ export function entryFailure(error: unknown): EntryFailure {
     case "noteField":
       return { message: "La nota es demasiado larga.", retryable };
     case "generic":
-      return { message: "No pudimos guardar el registro.", retryable };
+      return { message: `No pudimos ${verb} el registro.`, retryable };
     default:
       return code === "MissedNotAllowed"
         ? { message: "Este compromiso no admite «Hoy no salió».", retryable }

@@ -1,6 +1,7 @@
 import type { TodayView } from "@pactjoy/app";
 import { act, type RenderResult, render } from "@testing-library/react";
 import { MemoryRouter, useLocation, useNavigate } from "react-router";
+import { createTodayPersister } from "../adapters/query-persister.ts";
 import type { AppDependencies } from "../app/dependencies.ts";
 import { AppProviders } from "../app/providers.tsx";
 import { createQueryClient } from "../app/query-client.ts";
@@ -9,9 +10,11 @@ import { createSessionEvents } from "../features/auth/session-events.ts";
 import { SessionManager } from "../features/auth/session-manager.ts";
 import type { ApiError } from "../ports/api-error.ts";
 import { FakeAuth, fakeSession } from "./fake-auth.ts";
+import { FakeConnectivity } from "./fake-connectivity.ts";
 import { FakePactJoyApi } from "./fake-pactjoy-api.ts";
 import { FixedClock } from "./fixed-clock.ts";
 import { activeTodayFixture } from "./fixtures/today.ts";
+import { MemoryStorage } from "./memory-storage.ts";
 import { MemoryTokenStore } from "./memory-token-store.ts";
 import { SequentialIds } from "./sequential-ids.ts";
 
@@ -21,6 +24,10 @@ export interface RenderAppOptions {
   readonly signedIn?: boolean;
   /** What `getToday` answers. Defaults to an active season. */
   readonly today?: TodayView;
+  /** Where the saved Today lives. A fresh in-memory one by default, so tests never share it. */
+  readonly storage?: Storage;
+  /** Whether the network is reachable. Defaults to true. */
+  readonly online?: boolean;
   /** `getToday` rejects with these, one per call, before it answers `today`. */
   readonly todayFailures?: readonly ApiError[];
 }
@@ -41,6 +48,7 @@ export interface RenderedApp extends RenderResult {
   readonly deps: AppDependencies & {
     readonly auth: FakeAuth;
     readonly api: FakePactJoyApi;
+    readonly connectivity: FakeConnectivity;
     readonly store: MemoryTokenStore;
   };
 }
@@ -51,6 +59,8 @@ export function renderApp({
   signedIn = true,
   today = activeTodayFixture(),
   todayFailures = [],
+  online = true,
+  storage = new MemoryStorage(),
 }: RenderAppOptions = {}): RenderedApp {
   const auth = new FakeAuth();
   const store = new MemoryTokenStore(signedIn ? fakeSession() : null);
@@ -60,10 +70,12 @@ export function renderApp({
     auth,
     api,
     ids: new SequentialIds(),
+    connectivity: new FakeConnectivity(online),
     store,
     sessions: new SessionManager(auth, store, new FixedClock(0)),
     sessionEvents: createSessionEvents(),
     queryClient: createQueryClient({ retryQueries: false }),
+    persister: createTodayPersister(storage, { throttleMs: 0 }),
   };
   let goBack = () => {};
   const result = render(
