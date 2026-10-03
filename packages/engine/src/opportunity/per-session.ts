@@ -20,6 +20,11 @@ const ZERO = fromInt(0);
 
 /** One `perSession` opportunity's outcome: its raw (possibly summed) value and derived progress. */
 export interface SessionResult {
+  /**
+   * `specificDays` only: the day whose entries filled this slot: its own day, or the extra day whose
+   * entry covered it as a make-up (D5). `undefined` when nothing filled it, and for other schedules.
+   */
+  readonly filledFrom?: SeasonDay;
   readonly value: Fraction | null;
   readonly progress: Fraction;
   readonly consistent: boolean;
@@ -139,13 +144,21 @@ export function specificDaysSessions(
   const slotValues = new Map<number, Fraction | null>(
     scheduledDays.map((day) => [day, byDay.has(day) ? sumEntryValues(byDay.get(day) ?? []) : null]),
   );
+  const filledFrom = new Map<number, SeasonDay>(
+    scheduledDays.filter((day) => byDay.has(day)).map((day) => [day, seasonDay(day)]),
+  );
 
   const extraDays = [...byDay.keys()].filter((day) => !scheduledSet.has(day)).sort((a, b) => a - b);
   for (const extraDay of extraDays) {
     const missingSlot = scheduledDays.find((day) => slotValues.get(day) === null);
     if (missingSlot === undefined) continue; // nothing missed this week — the extra entry adds nothing
     slotValues.set(missingSlot, sumEntryValues(byDay.get(extraDay) ?? []));
+    filledFrom.set(missingSlot, seasonDay(extraDay));
   }
 
-  return scheduledDays.map((day) => toSessionResult(target, slotValues.get(day) ?? null));
+  return scheduledDays.map((day) => {
+    const source = filledFrom.get(day);
+    const result = toSessionResult(target, slotValues.get(day) ?? null);
+    return source === undefined ? result : { ...result, filledFrom: source };
+  });
 }

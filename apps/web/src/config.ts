@@ -3,6 +3,8 @@
  * Everything else receives the typed `AppConfig` from the composition root.
  */
 
+import type { ComponentType } from "react";
+
 export interface AppConfig {
   readonly supabaseUrl: string;
   readonly supabaseAnonKey: string;
@@ -67,6 +69,17 @@ export function loadConfig(env: Env): AppConfig {
   if (missing.length > 0 || invalid.length > 0) throw new ConfigError(missing, invalid);
   return config;
 }
+
+/**
+ * The dev-only Today scenario gallery, loaded lazily, or `null` in a production build. The import
+ * sits directly under the literal `import.meta.env.DEV`, which Vite replaces with `false`, so the
+ * whole gallery (scenarios, fakes, fixtures) is dropped from the module graph, not just unused
+ * (checked by test/prod-bundle.test.ts).
+ */
+export const loadDevToday: (() => Promise<{ default: ComponentType }>) | null = import.meta.env.DEV
+  ? // biome-ignore lint/style/noRestrictedImports: the ONE door to src/dev, dropped from production builds
+    () => import("./dev/DevToday.tsx")
+  : null;
 
 /** Reads the build-time environment. Call it once, from the composition root. */
 export function loadConfigFromEnv(): AppConfig {
