@@ -1,6 +1,8 @@
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { FakeConnectivity } from "../testing/fake-connectivity.ts";
+import { ConnectivityProvider } from "./connectivity-context.tsx";
 import { ToastProvider, useToasts } from "./toast-context.tsx";
 
 function Trigger({ toast }: { toast: Parameters<ReturnType<typeof useToasts>["show"]>[0] }) {
@@ -27,6 +29,15 @@ const setup = (toast: Parameters<typeof Trigger>[0]["toast"]) =>
 describe("ToastProvider", () => {
   beforeEach(() => vi.useFakeTimers({ shouldAdvanceTime: true }));
   afterEach(() => vi.useRealTimers());
+
+  it("keeps a live region mounted before any toast, so the first one is announced", async () => {
+    setup({ message: "Registro guardado." });
+    const region = document.querySelector("[aria-live]");
+    expect(region).not.toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "mostrar" }));
+    expect(document.querySelector("[aria-live]")).toBe(region);
+    expect(region).toContainElement(screen.getByRole("status"));
+  });
 
   it("shows a toast with its message when asked", async () => {
     setup({ message: "Registro guardado." });
@@ -112,6 +123,25 @@ describe("ToastProvider", () => {
     expect(screen.getByRole("status")).toBeInTheDocument();
     act(() => vi.advanceTimersByTime(1000));
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+});
+
+describe("toast actions offline (no write queue)", () => {
+  it("disables the action while offline and enables it when the connection returns", async () => {
+    const connectivity = new FakeConnectivity(true);
+    render(
+      <ConnectivityProvider connectivity={connectivity}>
+        <ToastProvider>
+          <Trigger toast={{ message: "Guardado", actionLabel: "Deshacer", onAction: () => {} }} />
+        </ToastProvider>
+      </ConnectivityProvider>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "mostrar" }));
+    expect(screen.getByRole("button", { name: "Deshacer" })).toBeEnabled();
+    act(() => connectivity.setOnline(false));
+    expect(screen.getByRole("button", { name: "Deshacer" })).toBeDisabled();
+    act(() => connectivity.setOnline(true));
+    expect(screen.getByRole("button", { name: "Deshacer" })).toBeEnabled();
   });
 });
 

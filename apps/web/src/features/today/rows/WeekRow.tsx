@@ -25,7 +25,14 @@ function barOf(row: WeekTodayRow, progress: Progress): ReactNode {
   const valueLabel = `${progress.percent} %`;
   // Sessions are scored by the server: the bar shows its percent as is.
   if (row.measure.schedule.period === "perSession") {
-    return <ProgressBar value={progress.percent} max={100} valueLabel={valueLabel} />;
+    return (
+      <ProgressBar
+        name={`Progreso de ${row.habitName}`}
+        value={progress.percent}
+        max={100}
+        valueLabel={valueLabel}
+      />
+    );
   }
   // A weekly reach total reads against its ideal, with the minimum marked.
   if (progress.target.direction !== "reach") return undefined;
@@ -42,6 +49,7 @@ function barOf(row: WeekTodayRow, progress: Progress): ReactNode {
   ];
   return (
     <ProgressBar
+      name={`Progreso de ${row.habitName}`}
       value={Number(progress.value ?? "0")}
       max={Number(progress.target.ideal)}
       valueLabel={valueLabel}
