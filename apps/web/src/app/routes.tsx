@@ -4,9 +4,10 @@ import { EmailStep } from "../features/auth/EmailStep.tsx";
 import { LoginLayout } from "../features/auth/LoginLayout.tsx";
 import { RedirectIfSignedIn, RequireSession } from "../features/auth/RequireSession.tsx";
 import { StubScreen } from "../features/stubs/StubScreen.tsx";
+import { TodayScreen } from "../features/today/TodayScreen.tsx";
 import { AppShell } from "./AppShell.tsx";
 
-/** Route table. `/` holds a placeholder until Today lands. */
+/** Route table. */
 export function AppRoutes() {
   return (
     <Routes>
@@ -18,7 +19,7 @@ export function AppRoutes() {
       </Route>
       <Route element={<RequireSession />}>
         <Route element={<AppShell />}>
-          <Route index element={<StubScreen title="Hoy" />} />
+          <Route index element={<TodayScreen />} />
           <Route path="season" element={<StubScreen title="Temporada" />} />
           <Route path="circle" element={<StubScreen title="Círculo" />} />
           <Route path="profile" element={<StubScreen title="Perfil" />} />

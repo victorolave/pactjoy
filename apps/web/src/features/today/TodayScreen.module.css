@@ -1,0 +1,41 @@
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.meta {
+  font: var(--font-meta);
+  color: var(--text-secondary);
+}
+
+.title {
+  margin: 0;
+  font: var(--font-h1);
+  letter-spacing: var(--type-h1-track);
+}
+
+.lead {
+  margin: 0;
+  font: var(--font-body);
+  color: var(--text-secondary);
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-top: var(--space-5);
+}
+
+.emptyTitle {
+  margin: 0;
+  font: var(--font-h2);
+  letter-spacing: var(--type-h2-track);
+}
