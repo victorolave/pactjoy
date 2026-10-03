@@ -1,4 +1,24 @@
-import { CalendarDays, CircleCheck, type LucideIcon, Sun, UserRound, Users } from "lucide-react";
+import {
+  CalendarDays,
+  Check,
+  CircleAlert,
+  CircleCheck,
+  CirclePause,
+  CloudOff,
+  Info,
+  type LucideIcon,
+  MessageSquarePlus,
+  Minus,
+  Pencil,
+  Plus,
+  Repeat,
+  RotateCw,
+  Sun,
+  Trash2,
+  UserRound,
+  Users,
+  X,
+} from "lucide-react";
 
 /**
  * The only module that imports `lucide-react` (Biome enforces it). Screens name an icon by its
@@ -9,6 +29,19 @@ const GLYPHS = {
   "calendar-days": CalendarDays,
   users: Users,
   "circle-check": CircleCheck,
+  "circle-alert": CircleAlert,
+  "circle-pause": CirclePause,
+  "cloud-off": CloudOff,
+  check: Check,
+  repeat: Repeat,
+  "rotate-cw": RotateCw,
+  info: Info,
+  minus: Minus,
+  pencil: Pencil,
+  plus: Plus,
+  "message-square-plus": MessageSquarePlus,
+  "trash-2": Trash2,
+  x: X,
   "user-round": UserRound,
 } as const satisfies Record<string, LucideIcon>;
 
