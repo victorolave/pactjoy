@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App.tsx";
+import { createDependencies } from "./app/compose.ts";
 import { ConfigErrorScreen } from "./ConfigErrorScreen.tsx";
 import { ConfigError, loadConfigFromEnv } from "./config.ts";
 import "./design/fonts.ts";
@@ -12,10 +13,11 @@ const root = createRoot(container);
 
 try {
   // Fail fast: a missing variable shows a config error screen instead of a broken app.
-  loadConfigFromEnv();
+  const config = loadConfigFromEnv();
+  const deps = createDependencies(config, { fetch: globalThis.fetch.bind(globalThis) });
   root.render(
     <StrictMode>
-      <App />
+      <App deps={deps} />
     </StrictMode>,
   );
 } catch (error) {
