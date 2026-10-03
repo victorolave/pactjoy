@@ -1,15 +1,34 @@
+import cocinar from "../design/brand/cocinar.webp";
 import horizontalLogo from "../design/brand/pactjoy-horizontal-proposed.svg";
 import symbolLogo from "../design/brand/pactjoy-symbol-gradient.svg";
+import registroGuardado from "../design/brand/registro-guardado.webp";
+import sinConexion from "../design/brand/sin-conexion.webp";
 import styles from "./Placeholder.module.css";
+
+const ILLUSTRATIONS = {
+  "registro-guardado": registroGuardado,
+  "sin-conexion": sinConexion,
+  cocinar,
+} as const;
+
+export type IllustrationName = keyof typeof ILLUSTRATIONS;
 
 export interface IllustrationProps {
   readonly alt: string;
-  /** Without a src a neutral block is drawn and no image is requested. */
+  /** One of the official illustrations this app uses. */
+  readonly name?: IllustrationName;
+  /** Another image. It wins over `name`. */
   readonly src?: string;
+  /** A short banner image instead of a full-width one. */
+  readonly compact?: boolean;
 }
 
-export function Illustration({ alt, src }: IllustrationProps) {
-  if (src !== undefined) return <img className={styles.image} src={src} alt={alt} />;
+/** Without a name or a src a neutral block is drawn and no image is requested. */
+export function Illustration({ alt, name, src, compact = false }: IllustrationProps) {
+  const url = src ?? (name === undefined ? undefined : ILLUSTRATIONS[name]);
+  if (url !== undefined) {
+    return <img className={compact ? styles.imageCompact : styles.image} src={url} alt={alt} />;
+  }
   return (
     <div className={`${styles.placeholder} ${styles.illustration}`} role="img" aria-label={alt} />
   );

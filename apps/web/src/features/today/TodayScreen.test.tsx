@@ -145,6 +145,10 @@ describe("Today active: rows (TO-R3, TO-R4, TO-R5)", () => {
       await screen.findByRole("heading", { name: "Hoy no tienes compromisos previstos." }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Para hoy" })).not.toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Un día sin compromisos" })).toHaveAttribute(
+      "src",
+      expect.stringContaining("cocinar"),
+    );
     expect(screen.getByRole("heading", { name: "Esta semana" })).toBeInTheDocument();
     expect(screen.getByText("2 de 3 esta semana")).toBeInTheDocument();
   });

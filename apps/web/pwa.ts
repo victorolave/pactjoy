@@ -34,7 +34,7 @@ export const pwaOptions: Partial<VitePWAOptions> = {
     ],
   },
   workbox: {
-    globPatterns: ["**/*.{js,css,html,woff2,svg,png,webmanifest}"],
+    globPatterns: ["**/*.{js,css,html,woff2,svg,png,webp,webmanifest}"],
     navigateFallback: "/index.html",
     navigateFallbackDenylist: [/^\/functions\//, /^\/api\//],
   },

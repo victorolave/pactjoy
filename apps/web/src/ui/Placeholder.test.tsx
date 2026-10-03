@@ -16,6 +16,27 @@ describe("Illustration (WF-R5, WF-S4)", () => {
   });
 });
 
+describe("Illustration with an official image", () => {
+  it.each(["registro-guardado", "sin-conexion", "cocinar"] as const)(
+    "shows the %s illustration by name",
+    (name) => {
+      const { container } = render(<Illustration alt="Imagen" name={name} />);
+      expect(container.querySelector("img")).toHaveAttribute("src", expect.stringContaining(name));
+      expect(screen.getByRole("img", { name: "Imagen" })).toBeInTheDocument();
+    },
+  );
+
+  it("lets an explicit src win over a name", () => {
+    const { container } = render(<Illustration alt="Imagen" name="cocinar" src="/otra.png" />);
+    expect(container.querySelector("img")).toHaveAttribute("src", "/otra.png");
+  });
+
+  it("still draws the neutral placeholder with neither a name nor a src", () => {
+    const { container } = render(<Illustration alt="Imagen" />);
+    expect(container.querySelector("img")).toBeNull();
+  });
+});
+
 describe("Logo (official brand files)", () => {
   it("is the official horizontal logo by default, named PactJoy, never live text", () => {
     const { container } = render(<Logo />);

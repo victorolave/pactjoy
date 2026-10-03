@@ -26,3 +26,11 @@
   height: var(--icon-lg);
   width: auto;
 }
+
+.imageCompact {
+  display: block;
+  max-width: 100%;
+  height: calc(var(--space-8) * 2);
+  margin: 0 auto;
+  object-fit: contain;
+}

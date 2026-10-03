@@ -146,7 +146,7 @@ function NoCommitments() {
   return (
     <Card tone="warm">
       <div className={styles.empty}>
-        <Illustration alt="Un día sin compromisos" />
+        <Illustration name="cocinar" alt="Un día sin compromisos" />
         <h2 className={styles.sectionTitle}>Hoy no tienes compromisos previstos.</h2>
         <p className={styles.lead}>Lo que queda de la semana sigue disponible abajo.</p>
       </div>
