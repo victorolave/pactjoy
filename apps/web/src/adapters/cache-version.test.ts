@@ -50,7 +50,7 @@ const paths = [...new Set(complete.flatMap((view) => shape(view)))].sort();
  * drops it. This pins the shape and the version together, so changing one without the other fails.
  * If you changed the Today fixtures' shape on purpose: bump CACHE_VERSION, then update both here.
  */
-const PINNED = { hash: "9d2650ef", version: "3" };
+const PINNED = { hash: "e3d8c9cd", version: "4" };
 
 describe("saved Today cache version", () => {
   it("changes whenever the shape of Today changes", () => {

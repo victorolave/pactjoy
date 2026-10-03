@@ -5,8 +5,8 @@ import { describe, expect, it } from "vitest";
 
 /**
  * The dev-only Today gallery (src/dev) must not reach a production bundle: no scenario text, no
- * fake API, no fixtures. It is reached only through a lazy import behind `devTools` (config.ts),
- * which Vite replaces with `false` in a production build.
+ * fake API, no fixtures. It is reached only through `loadDevToday` (config.ts), a lazy import directly under the literal
+ * `import.meta.env.DEV`, which Vite replaces with `false` in a production build.
  */
 async function bundle(mode: "production" | "development"): Promise<string> {
   // Vitest runs with NODE_ENV=test, which Vite would read as a non-production build.

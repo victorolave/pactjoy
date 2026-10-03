@@ -9,8 +9,11 @@ export interface ErrorBoundaryProps {
   /** Where the saved Today lives: Reintentar erases it, since a bad copy is a likely cause. */
   readonly persister: Persister;
   readonly queryClient: QueryClient;
-  /** Reloads the page; injected so tests do not navigate. */
-  readonly reload?: () => void;
+  /**
+   * Where Reintentar goes once the cache is clean: the app's start, never a reload of the URL that
+   * crashed (it would crash again). Injected so tests do not navigate.
+   */
+  readonly restart?: () => void;
   readonly children: ReactNode;
 }
 
@@ -20,7 +23,7 @@ interface State {
 
 /**
  * The last line of defence: an error while rendering shows this screen instead of a blank page.
- * Reintentar drops everything cached on this device and reloads, so a saved copy that no longer
+ * Reintentar drops everything cached on this device and goes back to the start, so a saved copy that no longer
  * matches the code can never keep the app down.
  */
 export class ErrorBoundary extends Component<ErrorBoundaryProps, State> {
@@ -39,9 +42,9 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, State> {
     try {
       await this.props.persister.removeClient();
     } catch {
-      // Blocked storage: reloading is still the best we can do.
+      // Blocked storage: starting over is still the best we can do.
     }
-    (this.props.reload ?? (() => window.location.reload()))();
+    (this.props.restart ?? (() => window.location.assign("/")))();
   };
 
   override render(): ReactNode {
@@ -53,7 +56,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, State> {
         </span>
         <h1 className={styles.title}>Algo salió mal</h1>
         <p className={styles.lead}>
-          Borramos lo guardado en este teléfono para empezar de cero. Inténtalo de nuevo.
+          Al reintentar borramos lo guardado en este teléfono y volvemos al inicio.
         </p>
         <Button leadingIcon="rotate-cw" onClick={() => void this.retry()}>
           Reintentar
