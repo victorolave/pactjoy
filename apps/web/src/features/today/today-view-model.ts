@@ -36,6 +36,8 @@ export type TodayModel =
         /** timesPerWeek and weeklyTotal rows ("Esta semana"). */
         readonly week: readonly WeekRow[];
       };
+      /** Day-bound opportunities of yesterday still open to register (design 15d). */
+      readonly pendingYesterday: Running["pendingYesterday"];
       readonly counts: { readonly logged: number; readonly scheduled: number };
       /** Whole points the viewer's entries for the described day earned, from the server. */
       readonly pointsToday: number;
@@ -166,6 +168,7 @@ function running(view: Running): TodayModel {
       otherDays: days.filter((row) => !row.scheduledToday),
       week: view.rows.filter((row): row is WeekRow => row.kind === "week"),
     },
+    pendingYesterday: view.pendingYesterday,
     counts: { logged, scheduled: registrable.length },
     pointsToday: view.summary.pointsToday,
     today: view.today,

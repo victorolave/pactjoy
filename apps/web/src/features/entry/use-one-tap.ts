@@ -35,7 +35,12 @@ export interface OneTap {
  * The one-tap flow for a done/not done day row: record, then a toast to undo. A retry of the same
  * tap reuses its clientRequestId, so it is an idempotent replay on the server (EN-R1).
  */
-export function useOneTap(commitmentId: string, seasonId: string): OneTap {
+export function useOneTap(
+  commitmentId: string,
+  seasonId: string,
+  /** The day the registro is for; the day on display unless it is yesterday's (design 15d). */
+  forDate?: string,
+): OneTap {
   const record = useRecordEntry();
   const toasts = useToasts();
   const showSaved = useSavedToast();
@@ -95,7 +100,11 @@ export function useOneTap(commitmentId: string, seasonId: string): OneTap {
       {
         seasonId,
         commitmentId,
-        ...(dates === undefined ? {} : { forDate: dates.refDate }),
+        ...(forDate !== undefined
+          ? { forDate }
+          : dates === undefined
+            ? {}
+            : { forDate: dates.refDate }),
         value: { kind },
         note: null,
         clientRequestId: ids.newId(),
