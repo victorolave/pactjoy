@@ -130,6 +130,57 @@ describe("Today active: rows (TO-R3, TO-R4, TO-R5)", () => {
     expect(screen.queryByText("¿Qué quieres cumplir hoy?")).not.toBeInTheDocument();
   });
 
+  it("lists what was logged with its quantity, and the day's points from the server (15b)", async () => {
+    const reading = weekRowFixture({
+      habitName: "Leer",
+      measure: {
+        unit: "minutes",
+        customLabel: null,
+        precision: "integer",
+        target: { direction: "reach", minimum: "10", ideal: "30" },
+        schedule: { period: "perSession", frequency: { kind: "specificDays", weekdays: [4] } },
+      },
+    });
+    renderToday(
+      activeTodayFixture({
+        rows: [
+          dayRow("Dibujar", "logged"),
+          {
+            ...dayRowFixture({
+              habitName: "Leer",
+              measure: reading.measure,
+              opportunity: { state: "logged", graceUntil: null },
+              entries: [entryFixture({ kind: "quantity", value: "30" })],
+            }),
+          },
+        ],
+        summary: { ...activeTodayFixture().summary, pointsToday: 14 },
+      }),
+    );
+    expect(await screen.findByText("Dibujar y Leer 30 min. +14 pts hoy.")).toBeInTheDocument();
+  });
+
+  it("leaves the points out of that line when the server counted none", async () => {
+    renderToday(activeTodayFixture({ rows: [dayRow("Meditar", "logged")] }));
+    expect(await screen.findByText("Meditar.")).toBeInTheDocument();
+    expect(screen.queryByText(/pts hoy/)).not.toBeInTheDocument();
+  });
+
+  it("keeps the same detail, on a neutral card, when a day was marked Hoy no salió", async () => {
+    renderToday(
+      activeTodayFixture({
+        rows: [
+          dayRow("Meditar", "logged"),
+          dayRow("Dibujar", "logged", { entries: [entryFixture({ kind: "missed" })] }),
+        ],
+        summary: { ...activeTodayFixture().summary, pointsToday: 8 },
+      }),
+    );
+    expect(await screen.findByText("Meditar y Dibujar. +8 pts hoy.")).toBeInTheDocument();
+    const card = screen.getByText("2 de 2 compromisos de hoy registrados").closest(".pj-card");
+    expect(card?.className).not.toMatch(/success/);
+  });
+
   it("does not celebrate a day that has a Hoy no salió: it is registered, not cumplido (B-W2)", async () => {
     renderToday(
       activeTodayFixture({

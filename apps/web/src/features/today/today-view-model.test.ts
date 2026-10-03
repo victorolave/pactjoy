@@ -129,6 +129,15 @@ describe("toTodayModel: sections and counts (TO-R3)", () => {
     expect(dayState).toBe("pending");
   });
 
+  it("carries the server's points for the day, untouched", () => {
+    const view = activeTodayFixture({ rows: [row("logged")] });
+    const { pointsToday } = running({
+      ...view,
+      summary: { ...view.summary, pointsToday: 14 },
+    });
+    expect(pointsToday).toBe(14);
+  });
+
   it("never counts a day not scheduled today as pending", () => {
     const { counts } = running(
       activeTodayFixture({

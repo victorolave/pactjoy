@@ -37,6 +37,8 @@ export type TodayModel =
         readonly week: readonly WeekRow[];
       };
       readonly counts: { readonly logged: number; readonly scheduled: number };
+      /** Whole points the viewer's entries for the described day earned, from the server. */
+      readonly pointsToday: number;
       /**
        * `allDone`: everything for today is registered and each row has a real done or quantity.
        * `allLogged`: everything is registered but some day was marked "Hoy no salió": not a success.
@@ -165,6 +167,7 @@ function running(view: Running): TodayModel {
       week: view.rows.filter((row): row is WeekRow => row.kind === "week"),
     },
     counts: { logged, scheduled: registrable.length },
+    pointsToday: view.summary.pointsToday,
     today: view.today,
     refDate: refDateOf(view),
     dayState: dayStateOf(registrable, logged),
