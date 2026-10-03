@@ -10,6 +10,8 @@
   --illustration-md: 130px;
   --illustration-banner: 150px;
   --border-width-control: 1.5px;
+  /* The check's fill and pop in the prototype (design 16, 20): 160 ms, none under reduced motion. */
+  --motion-check: 160ms;
   /* Entry sheets (design 17, 22): 52 px stepper buttons, a 48 px quantity. */
   --stepper-button: 52px;
   --font-quantity: 800 48px / 52px var(--font-sans);

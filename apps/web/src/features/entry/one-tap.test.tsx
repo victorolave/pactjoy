@@ -61,21 +61,39 @@ describe("one tap done (EN-R1)", () => {
     expect(deps.api.recordAttempts.map((cmd) => cmd.clientRequestId)).toEqual(["id-1", "id-1"]);
   });
 
-  it("issues a new request id for a new tap", async () => {
+  it("issues a new request id for a new tap, after the first one was undone", async () => {
     const { deps } = renderRow(openDone());
+    await screen.findByRole("button", { name: "Registrar Meditar" });
+    // What the server answers once the entry exists: the filled circle's next tap asks to undo it.
+    const logged = openDone({
+      opportunity: { state: "logged", graceUntil: "2026-10-03" as never },
+      entries: [entryFixture({ kind: "done" }, { entryId: "entry-1" as never })],
+    });
+    deps.api.setToday(activeTodayFixture({ rows: [logged] }));
     await tapDone();
     await screen.findByText(SAVED);
+    await userEvent.click(await screen.findByRole("button", { name: "Registrar Meditar" }));
+    deps.api.setToday(activeTodayFixture({ rows: [openDone()] }));
+    await userEvent.click(await screen.findByRole("button", { name: "Deshacer registro" }));
+    await waitFor(() => expect(deps.api.deleted).toEqual(["entry-1"]));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Registrar Meditar" })).toHaveAttribute(
+        "aria-pressed",
+        "false",
+      ),
+    );
     await tapDone();
     await waitFor(() => expect(deps.api.recorded).toHaveLength(2));
     expect(deps.api.recorded.map((cmd) => cmd.clientRequestId)).toEqual(["id-1", "id-2"]);
   });
 
-  it("sends one request on a double tap and disables the button while saving (EN-S4)", async () => {
+  it("sends one request on a double tap, with the circle already filled (EN-S4)", async () => {
     const { deps } = renderRow(openDone());
     const release = deps.api.hold("recordEntry");
     const button = await screen.findByRole("button", { name: "Registrar Meditar" });
     await userEvent.dblClick(button);
-    expect(button).toBeDisabled();
+    // Not disabled: greying it mid-fill would break the transition. The guard is the single request.
+    expect(button).toHaveAttribute("aria-pressed", "true");
     expect(deps.api.calls.recordEntry).toBe(1);
     release();
     expect(await screen.findByText(SAVED)).toBeInTheDocument();
