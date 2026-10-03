@@ -1,0 +1,93 @@
+/* Design 15e. Blocks are the sunken surface; the whole group pulses opacity .55 to 1. */
+.group {
+  display: flex;
+  flex-direction: column;
+}
+
+.pulse {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  animation: pulse var(--motion-pulse) ease-in-out infinite alternate;
+}
+
+@keyframes pulse {
+  from {
+    opacity: 0.55;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse {
+    animation: none;
+  }
+}
+
+.title {
+  display: block;
+  width: var(--skeleton-title-width);
+  height: var(--skeleton-title-height);
+  border-radius: var(--skeleton-radius);
+  background: var(--surface-sunken);
+}
+
+/* The row keeps the design's fixed heights; the real row's own padding and gap come from rows.module.css. */
+.row {
+  box-sizing: border-box;
+}
+
+.tall {
+  height: var(--skeleton-row-tall);
+}
+
+.short {
+  height: var(--skeleton-row-short);
+}
+
+/* The design aligns the tile and the lines to the top, not the middle. */
+div.top {
+  align-items: flex-start;
+}
+
+span.tile {
+  background: var(--surface-sunken);
+}
+
+.line {
+  display: block;
+  border-radius: var(--skeleton-radius);
+  background: var(--surface-sunken);
+}
+
+.lineTitle {
+  height: var(--skeleton-line-title);
+}
+
+.lineMeta {
+  height: var(--skeleton-line-meta);
+}
+
+.w40 {
+  width: 40%;
+}
+
+.w50 {
+  width: 50%;
+}
+
+.w60 {
+  width: 60%;
+}
+
+.w70 {
+  width: 70%;
+}
+
+/* The season card: an empty card as tall as the design's. */
+.season {
+  height: calc(var(--skeleton-row-tall) - 2 * var(--space-5));
+}

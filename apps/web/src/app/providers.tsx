@@ -6,6 +6,7 @@ import { SessionProvider, useSession } from "../features/auth/session-context.ts
 import { ApiProvider } from "./api-context.tsx";
 import { ConnectivityProvider } from "./connectivity-context.tsx";
 import type { AppDependencies } from "./dependencies.ts";
+import { HapticsProvider } from "./haptics-context.tsx";
 import { IdsProvider } from "./ids-context.tsx";
 import { ToastProvider } from "./toast-context.tsx";
 
@@ -33,9 +34,11 @@ export function AppProviders({
       <PersistedQueries client={queryClient} persister={persister}>
         <ApiProvider api={deps.api}>
           <IdsProvider ids={deps.ids}>
-            <ConnectivityProvider connectivity={deps.connectivity}>
-              <ToastProvider>{children}</ToastProvider>
-            </ConnectivityProvider>
+            <HapticsProvider haptics={deps.haptics}>
+              <ConnectivityProvider connectivity={deps.connectivity}>
+                <ToastProvider>{children}</ToastProvider>
+              </ConnectivityProvider>
+            </HapticsProvider>
           </IdsProvider>
         </ApiProvider>
       </PersistedQueries>

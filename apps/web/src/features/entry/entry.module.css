@@ -61,6 +61,21 @@
   gap: var(--space-2);
 }
 
+/* "Se guardará para el jueves 1…" under the Hoy / Ayer selector (design 21). */
+.dayNote {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-control);
+  background: var(--surface-sunken);
+  font: var(--font-small);
+}
+
+.dayNote p {
+  margin: 0;
+}
+
 .sheet {
   display: flex;
   flex-direction: column;
@@ -132,8 +147,9 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--space-1);
-  height: var(--space-8);
+  gap: 0;
+  min-height: var(--space-8);
+  padding: var(--space-2) 0;
   border: var(--border-width) solid var(--border-control);
   border-radius: var(--radius-control);
   background: transparent;

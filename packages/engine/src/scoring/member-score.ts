@@ -127,7 +127,7 @@ function specificDaysScheduledDays(
  * Reuses `rejectionExtendedDeadline` itself rather than duplicating its
  * formula.
  */
-function weekBoundGraceDeadline(
+export function weekBoundGraceDeadline(
   commitment: Commitment,
   pauses: readonly PauseRequest[],
   week: number,

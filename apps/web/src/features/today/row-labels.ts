@@ -52,6 +52,15 @@ export function targetText(measure: MeasureView): string | null {
     : `ideal hasta ${formatDecimal(target.ideal)} · tolerancia ${formatDecimal(target.tolerance)}${suffix}`;
 }
 
+/** What a week-bound row says instead of points: they are assigned when the week closes (design 17b). */
+export const WEEK_POINTS_NOTE = "Los puntos se asignan al cerrar la semana.";
+
+/** Whether the opportunity is the week's (timesPerWeek or weeklyTotal) rather than a day's. */
+export function isWeekBound(measure: MeasureView): boolean {
+  const { schedule } = measure;
+  return schedule.period === "weeklyTotal" || schedule.frequency.kind === "timesPerWeek";
+}
+
 /** The thresholds as a sentence for a sheet: "mínimo 10 min, ideal 30 min", "ideal hasta 2, tolerancia hasta 4 veces". */
 export function targetPhrase(measure: MeasureView): string {
   if (measure.unit === "done") return "";
