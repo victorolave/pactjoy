@@ -1,16 +1,17 @@
+/* The card is flush: the strip sits on its top edge and the content keeps the design's inset. */
 .season {
   position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  overflow: hidden;
+  padding: var(--space-5) var(--space-4) var(--space-4);
 }
 
 .seasonBar {
   position: absolute;
-  top: calc(var(--space-5) * -1);
-  left: calc(var(--space-4) * -1);
-  right: calc(var(--space-4) * -1);
+  top: 0;
+  left: 0;
+  right: 0;
   height: var(--space-1);
   background: var(--gradient-together);
 }

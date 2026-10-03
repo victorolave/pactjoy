@@ -1,0 +1,4 @@
+/* The vendored tab styles assume a <button>; a router link would be underlined. */
+.item {
+  text-decoration: none;
+}

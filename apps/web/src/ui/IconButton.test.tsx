@@ -3,6 +3,15 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { IconButton } from "./IconButton.tsx";
 
+describe("IconButton size", () => {
+  it("is the 44 px touch target unless it asks for the large stepper size", () => {
+    const { rerender } = render(<IconButton icon="plus" label="Más" />);
+    expect(screen.getByRole("button", { name: "Más" }).className).not.toMatch(/large/);
+    rerender(<IconButton icon="plus" label="Más" size="lg" />);
+    expect(screen.getByRole("button", { name: "Más" }).className).toMatch(/large/);
+  });
+});
+
 describe("IconButton", () => {
   it("is named by its label, both for assistive tech and as a tooltip", () => {
     render(<IconButton icon="circle-check" label="Registrar Dibujar" />);
