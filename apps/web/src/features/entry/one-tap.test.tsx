@@ -184,7 +184,7 @@ describe("failures that mean the day is closed (EN-R8)", () => {
 });
 
 describe("rows that cannot be written", () => {
-  it("offers no register control on a logged, closed, paused or not-today row", async () => {
+  it("offers only the pressed circle and the edit on a logged row, and nothing on closed, paused or not-today ones", async () => {
     renderRow(
       openDone({
         habitName: "Logged",
@@ -196,10 +196,15 @@ describe("rows that cannot be written", () => {
       openDone({ habitName: "Elsewhere", scheduledToday: false }),
     );
     await screen.findByRole("heading", { name: "Logged" });
-    // The logged row can be edited; nothing else has a control.
+    // The logged row is pressed (a second tap undoes it) and can be edited; nothing else has a control.
     expect(screen.getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual([
+      "Registrar Logged",
       "Editar registro de Logged",
     ]);
+    expect(screen.getByRole("button", { name: "Registrar Logged" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
   });
 
   it("opens the sheet on a quantity row instead of recording at once", async () => {
