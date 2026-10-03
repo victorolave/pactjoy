@@ -6,6 +6,7 @@ import {
   type DayRow,
   dayRowFixture,
   entryFixture,
+  pointsFixture,
   weekRowFixture,
 } from "../../testing/fixtures/today.ts";
 import { renderApp } from "../../testing/render.tsx";
@@ -14,7 +15,10 @@ const NOTE = "Los puntos se asignan al cerrar la semana.";
 
 const reading = (earned: number | null = null) => {
   const row = weekRowFixture();
-  return { ...row, points: { perOpportunity: "6.25", earned, limitPercents: null } };
+  return {
+    ...row,
+    points: pointsFixture({ perOpportunity: "6.25", earned: earned, limitPercents: null }),
+  };
 };
 
 describe("week-bound rows do not present points as earned", () => {

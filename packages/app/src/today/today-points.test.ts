@@ -1,7 +1,11 @@
+import { fromInt } from "@pactjoy/engine";
 import { describe, expect, it } from "vitest";
 import type { Measure } from "../commitment/commitment.ts";
+import { commitmentId } from "../commitment/commitment.ts";
 import { recordEntry } from "../entry/record-entry.ts";
+import { habitId } from "../shared/ids.ts";
 import { createTestApp } from "../testing/app-harness.ts";
+import { habitFixture } from "../testing/builders.ts";
 import {
   atInstant,
   fixtureTimeZone,
@@ -62,6 +66,7 @@ describe("today rows: points of one opportunity (server-computed)", () => {
     const { app, given } = await setup(SATURDAY_ONLY, 2);
     expect(running(await today(app, given.andrea)).rows[0]?.points).toEqual({
       perOpportunity: "250",
+      perOpportunityExact: { numerator: "250", denominator: "1" },
       earned: null,
       limitPercents: null,
     });
@@ -104,6 +109,7 @@ describe("today rows: points of one opportunity (server-computed)", () => {
     const view = running(await today(app, given.andrea));
     expect(view.rows[0]?.points).toEqual({
       perOpportunity: "83.33",
+      perOpportunityExact: { numerator: "250", denominator: "3" },
       earned: null,
       limitPercents: null,
     });
@@ -135,6 +141,7 @@ describe("today rows: points of one opportunity (server-computed)", () => {
     await record(app, given, 2, quantity("30"));
     expect(running(await today(app, given.andrea)).rows[0]?.points).toEqual({
       perOpportunity: "250",
+      perOpportunityExact: { numerator: "250", denominator: "1" },
       earned: null,
       limitPercents: null,
     });
@@ -147,9 +154,105 @@ describe("today rows: points of one opportunity (server-computed)", () => {
     expect(percents).toEqual([100, 100, 100, 75, 50, 0, 0, 0, 0, 0, 0, 0, 0]);
   });
 
+  it("a limit whose tolerance outgrows the table publishes none, never one that stops short", async () => {
+    const limit = (ideal: number, tolerance: number): Measure => ({
+      unit: "times",
+      customLabel: null,
+      precision: "integer",
+      target: { direction: "limit", ideal: fromInt(ideal), tolerance: fromInt(tolerance) },
+      schedule: PER_DAY_REACH.schedule,
+    });
+    const wide = limit(14, 20);
+    const { app, given } = await setup(wide, 2);
+    expect(running(await today(app, given.andrea)).rows[0]?.points.limitPercents).toBeNull();
+    // 11 + 1 options still fit the table.
+    const fits = limit(2, 11);
+    const narrow = await setup(fits, 2);
+    expect(
+      running(await today(narrow.app, narrow.given.andrea)).rows[0]?.points.limitPercents,
+    ).toHaveLength(13);
+  });
+
   it("a done row has no limit percents", async () => {
     const { app, given } = await setup(PER_DAY_REACH, 2);
     expect(running(await today(app, given.andrea)).rows[0]?.points.limitPercents).toBeNull();
+  });
+});
+
+describe("earned follows what the engine assigned (make-up entries), not every entry of the day", () => {
+  /** Viewing day `day` with whatever entries exist: the row's earned and the day's points. */
+  async function viewAt(app: ReturnType<typeof createTestApp>, given: Given, day: number) {
+    const view = running(await today(atInstant(app, localInstant(dayOf(day))), given.andrea));
+    return { earned: view.rows[0]?.points.earned, pointsToday: view.summary.pointsToday, view };
+  }
+
+  it("an extra-day entry with no slot left earns nothing, as the season score has it (review B-C1)", async () => {
+    // Saturday (day 2) is the only scheduled day: log it, then Sunday (day 3) too.
+    const { app, given } = await setup(SATURDAY_ONLY, 3);
+    await record(app, given, 2, quantity("30"));
+    await record(app, given, 3, quantity("30"));
+    const sunday = await viewAt(app, given, 3);
+    expect(sunday.earned).toBe(0);
+    expect(sunday.pointsToday).toBe(0);
+    // The season card agrees: it holds the 250 of Saturday only.
+    expect(sunday.view.summary.score).toMatchObject({ points: 250 });
+    const saturday = await viewAt(app, given, 2);
+    expect(saturday.earned).toBe(250);
+  });
+
+  it("an extra-day entry covering a missed scheduled day earns that slot's points", async () => {
+    // Saturday missed, Sunday 30 min covers it (D5).
+    const { app, given } = await setup(SATURDAY_ONLY, 3);
+    await record(app, given, 3, quantity("30"));
+    const sunday = await viewAt(app, given, 3);
+    expect(sunday.earned).toBe(250);
+    expect(sunday.pointsToday).toBe(250);
+    expect(sunday.view.summary.score).toMatchObject({ points: 250 });
+  });
+
+  it("the row points of every day add up to the season points (property over entry patterns)", async () => {
+    const patterns: readonly (readonly [number, string][])[] = [
+      [[2, "30"]],
+      [[3, "30"]],
+      [
+        [2, "30"],
+        [3, "30"],
+      ],
+      [
+        [1, "30"],
+        [3, "15"],
+      ],
+      [
+        [2, "10"],
+        [4, "30"],
+        [5, "20"],
+      ],
+      [
+        [2, "5"],
+        [3, "30"],
+      ],
+      [
+        [0, "30"],
+        [1, "30"],
+        [2, "30"],
+        [3, "30"],
+      ],
+      [
+        [2, "30"],
+        [9, "30"],
+        [10, "15"],
+      ],
+    ];
+    for (const pattern of patterns) {
+      const { app, given } = await setup(SATURDAY_ONLY, 11);
+      for (const [day, value] of pattern) await record(app, given, day, quantity(value));
+      let sum = 0;
+      for (let day = 0; day <= 11; day += 1) sum += (await viewAt(app, given, day)).earned ?? 0;
+      const final = await viewAt(app, given, 11);
+      const score = final.view.summary.score;
+      expect(score.kind).toBe("scored");
+      if (score.kind === "scored") expect(sum).toBe(score.points);
+    }
   });
 });
 
@@ -164,6 +267,47 @@ describe("today summary: points earned today", () => {
     const { app, given } = await setup(PER_DAY_REACH, 2);
     await record(app, given, 2, quantity("30"));
     expect(running(await today(app, given.andrea)).summary.pointsToday).toBe(36);
+  });
+
+  it("rounds once over several commitments: two half-point parts add up to 25, not 13 + 13", async () => {
+    // Two commitments of weight 5 on 4 Saturdays: each slot is worth 12.5. Today's 25 is exact; summing
+    // the rounded rows would say 26.
+    const { app, given } = await setup(SATURDAY_ONLY, 2);
+    await app.uow.transaction(async (repos) => {
+      const season = await repos.seasons.findLatestByCircle(given.season.circleId);
+      if (season === null) throw new Error("setup: no season");
+      const first = season.commitments[0];
+      if (first === undefined) throw new Error("setup: no commitment");
+      const second = {
+        ...first,
+        id: commitmentId("commitment-andrea-2"),
+        habitId: habitId("habit-andrea-2"),
+      };
+      const light = (c: typeof first) => ({ ...c, weightPercent: 5 });
+      await repos.seasons.save(
+        { ...season, commitments: [light(first), light(second), ...season.commitments.slice(1)] },
+        season.version,
+      );
+      await repos.habits.save(
+        habitFixture({ id: habitId("habit-andrea-2"), ownerId: given.andrea.userId, name: "Leer" }),
+        null,
+      );
+      return { ok: true, value: undefined };
+    });
+    for (const id of [given.andreaCommitment, commitmentId("commitment-andrea-2")]) {
+      const result = await recordEntry(atInstant(app, localInstant(dayOf(2))), given.andrea, {
+        seasonId: given.season.id,
+        commitmentId: id,
+        forDate: dayOf(2),
+        value: { kind: "quantity", value: "30" },
+        note: null,
+        clientRequestId: `req-${id}`,
+      });
+      if (!result.ok) throw new Error(`setup: ${result.error.kind}`);
+    }
+    const view = running(await today(app, given.andrea));
+    expect(view.rows.map((row) => row.points.earned)).toEqual([13, 13]);
+    expect(view.summary.pointsToday).toBe(25);
   });
 
   it("ignores a weeklyTotal row: its points arrive when the week closes", async () => {
