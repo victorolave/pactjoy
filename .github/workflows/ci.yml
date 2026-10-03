@@ -35,6 +35,9 @@ jobs:
       - name: Lint and typecheck
         run: pnpm turbo run lint typecheck
 
+      - name: Build the web client
+        run: pnpm turbo run build --filter=@pactjoy/web
+
       # packages/db tests need Postgres and run in the `db` job below.
       - name: Test (all packages except @pactjoy/db)
         run: pnpm turbo run test --filter='!@pactjoy/db'

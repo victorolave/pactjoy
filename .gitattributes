@@ -1,0 +1,2 @@
+# The lockfile is generated: keep it out of diff stats and language statistics.
+pnpm-lock.yaml linguist-generated=true

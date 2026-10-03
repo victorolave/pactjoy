@@ -1,0 +1,194 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.14/schema.json",
+  "extends": "//",
+  "css": {
+    "parser": {
+      "cssModules": true
+    }
+  },
+  "linter": {
+    "rules": {
+      "style": {
+        "useImportType": "error",
+        "noRestrictedGlobals": {
+          "level": "error",
+          "options": {
+            "deniedGlobals": {
+              "fetch": "Network access lives in src/adapters (ADR-0012). Depend on the PactJoyApi or AuthPort port instead.",
+              "localStorage": "Browser storage lives in src/adapters behind the TokenStore port (ADR-0012).",
+              "sessionStorage": "Browser storage lives in src/adapters (ADR-0012).",
+              "indexedDB": "Browser storage lives in src/adapters (ADR-0012).",
+              "navigator": "Browser capabilities live in src/adapters behind a port such as Connectivity (ADR-0012)."
+            }
+          }
+        },
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "patterns": [
+              {
+                "group": ["@pactjoy/api", "@pactjoy/db", "@pactjoy/engine"],
+                "message": "The web client is type-only coupled to @pactjoy/app. It never imports the API, database or engine packages (ADR-0012)."
+              },
+              {
+                "group": ["@pactjoy/*/**"],
+                "message": "Import only package roots (type-only, from @pactjoy/app)."
+              },
+              {
+                "group": ["@supabase/*"],
+                "message": "No vendor SDK in the client: Auth goes through GoTrue REST behind AuthPort (ADR-0012)."
+              },
+              {
+                "group": ["**/design/vendor/**"],
+                "message": "Vendored design-system files are loaded only through src/design/index.css."
+              },
+              {
+                "group": ["**/testing/**", "**/testing"],
+                "message": "Production src must not import test doubles; only src/testing/**, tests and test/** may."
+              },
+              {
+                "group": ["lucide-react"],
+                "message": "Icons are confined to src/ui/icon/**."
+              },
+              {
+                "group": ["@tanstack/*"],
+                "message": "TanStack is confined to src/app/**, src/features/*/queries.ts and src/adapters/query-persister.ts (ADR-0012)."
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["src/app/**", "src/features/*/queries.ts", "src/adapters/query-persister.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@pactjoy/api", "@pactjoy/db", "@pactjoy/engine"],
+                    "message": "The web client is type-only coupled to @pactjoy/app (ADR-0012)."
+                  },
+                  {
+                    "group": ["@pactjoy/*/**"],
+                    "message": "Import only package roots (type-only, from @pactjoy/app)."
+                  },
+                  {
+                    "group": ["@supabase/*"],
+                    "message": "No vendor SDK in the client (ADR-0012)."
+                  },
+                  {
+                    "group": ["**/design/vendor/**"],
+                    "message": "Vendored design-system files are loaded only through src/design/index.css."
+                  },
+                  {
+                    "group": ["**/testing/**", "**/testing"],
+                    "message": "Production src must not import test doubles."
+                  },
+                  {
+                    "group": ["lucide-react"],
+                    "message": "Icons are confined to src/ui/icon/**."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/ui/icon/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@pactjoy/api", "@pactjoy/db", "@pactjoy/engine"],
+                    "message": "The web client is type-only coupled to @pactjoy/app (ADR-0012)."
+                  },
+                  {
+                    "group": ["@pactjoy/*/**"],
+                    "message": "Import only package roots (type-only, from @pactjoy/app)."
+                  },
+                  {
+                    "group": ["@supabase/*"],
+                    "message": "No vendor SDK in the client (ADR-0012)."
+                  },
+                  {
+                    "group": ["**/design/vendor/**"],
+                    "message": "Vendored design-system files are loaded only through src/design/index.css."
+                  },
+                  {
+                    "group": ["**/testing/**", "**/testing"],
+                    "message": "Production src must not import test doubles."
+                  },
+                  {
+                    "group": ["@tanstack/*"],
+                    "message": "TanStack is confined to src/app/**, src/features/*/queries.ts and the persister (ADR-0012)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "src/testing/**",
+        "src/**/*.test.ts",
+        "src/**/*.test.tsx",
+        "test/**",
+        "scripts/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedGlobals": "off",
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@pactjoy/api", "@pactjoy/db", "@pactjoy/engine"],
+                    "message": "The web client is type-only coupled to @pactjoy/app (ADR-0012)."
+                  },
+                  {
+                    "group": ["@pactjoy/*/**"],
+                    "message": "Import only package roots (type-only, from @pactjoy/app)."
+                  },
+                  {
+                    "group": ["@supabase/*"],
+                    "message": "No vendor SDK in the client (ADR-0012)."
+                  },
+                  {
+                    "group": ["**/design/vendor/**"],
+                    "message": "Vendored design-system files are loaded only through src/design/index.css."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/adapters/**", "src/main.tsx"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedGlobals": "off"
+          }
+        }
+      }
+    }
+  ]
+}
