@@ -1,6 +1,7 @@
 import type { TodayView } from "@pactjoy/app";
 import { describe, expect, it, vi } from "vitest";
 import { ApiError } from "../ports/api-error.ts";
+import type { RecordEntryCommand } from "../ports/pactjoy-api.ts";
 import { HttpPactJoyApi } from "./http-pactjoy-api.ts";
 
 const BASE = "http://api.test/api";
@@ -50,6 +51,14 @@ const call = (stub: FetchStub, index = 0) => {
     headers: new Headers(init?.headers),
     body: typeof init?.body === "string" ? JSON.parse(init.body) : undefined,
   };
+};
+
+const RECORD: RecordEntryCommand = {
+  seasonId: "s-1",
+  commitmentId: "c-1",
+  value: { kind: "done" },
+  note: null,
+  clientRequestId: "req-1",
 };
 
 describe("HttpPactJoyApi.getToday", () => {
@@ -176,5 +185,108 @@ describe("HttpPactJoyApi 401 handling (AU-R5)", () => {
     await expect(api.getToday()).rejects.toMatchObject({ code: "Unauthorized" });
     expect(fetchStub).toHaveBeenCalledTimes(1);
     expect(onUnauthorized).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("HttpPactJoyApi.recordEntry", () => {
+  it("posts the command and returns {entryId, replayed} (AC-R3)", async () => {
+    const { api, fetchStub } = harness([
+      json(201, { data: { entry: { id: "e-1" }, replayed: false } }),
+    ]);
+    await expect(api.recordEntry({ ...RECORD, forDate: "2026-10-02" })).resolves.toEqual({
+      entryId: "e-1",
+      replayed: false,
+    });
+    const request = call(fetchStub);
+    expect(request.url).toBe(`${BASE}/seasons/s-1/entries`);
+    expect(request.method).toBe("POST");
+    expect(request.headers.get("Content-Type")).toBe("application/json");
+    expect(request.body).toEqual({
+      commitmentId: "c-1",
+      forDate: "2026-10-02",
+      value: { kind: "done" },
+      note: null,
+      clientRequestId: "req-1",
+    });
+  });
+
+  it("treats a 200 replay as success and omits forDate when absent", async () => {
+    const { api, fetchStub } = harness([
+      json(200, { data: { entry: { id: "e-2" }, replayed: true } }),
+    ]);
+    await expect(
+      api.recordEntry({ ...RECORD, value: { kind: "quantity", value: "10" }, note: "x" }),
+    ).resolves.toEqual({ entryId: "e-2", replayed: true });
+    expect(call(fetchStub).body).toEqual({
+      commitmentId: "c-1",
+      value: { kind: "quantity", value: "10" },
+      note: "x",
+      clientRequestId: "req-1",
+    });
+  });
+
+  it("sends the same clientRequestId when the same command is retried (AC-S4)", async () => {
+    const { api, fetchStub } = harness([
+      new TypeError("Failed to fetch"),
+      json(201, { data: { entry: { id: "e-1" }, replayed: false } }),
+    ]);
+    await expect(api.recordEntry(RECORD)).rejects.toMatchObject({ code: "NetworkError" });
+    await api.recordEntry(RECORD);
+    expect(call(fetchStub, 0).body.clientRequestId).toBe("req-1");
+    expect(call(fetchStub, 1).body.clientRequestId).toBe("req-1");
+  });
+
+  it("keeps the same clientRequestId across the 401 refresh retry", async () => {
+    const { api, fetchStub } = harness(
+      [
+        json(401, { error: { code: "Unauthorized", message: "no" } }),
+        json(201, { data: { entry: { id: "e-1" }, replayed: false } }),
+      ],
+      ["old", "new"],
+    );
+    await api.recordEntry(RECORD);
+    expect(call(fetchStub, 0).body.clientRequestId).toBe("req-1");
+    expect(call(fetchStub, 1).body.clientRequestId).toBe("req-1");
+  });
+});
+
+describe("HttpPactJoyApi.recordEntry with an invalid success body", () => {
+  it.each([
+    ["no data", json(201, {})],
+    ["data without an entry", json(201, { data: { replayed: false } })],
+    ["an entry without a string id", json(201, { data: { entry: { id: 1 }, replayed: false } })],
+    ["a non-boolean replayed", json(201, { data: { entry: { id: "e-1" }, replayed: "no" } })],
+  ])("rejects %s with Internal", async (_name, response) => {
+    const { api } = harness([response]);
+    await expect(api.recordEntry(RECORD)).rejects.toMatchObject({ code: "Internal", status: 201 });
+  });
+});
+
+describe("HttpPactJoyApi.editEntry and deleteEntry", () => {
+  it("puts value and note to the entry", async () => {
+    const { api, fetchStub } = harness([json(200, { data: { entry: { id: "e-1" } } })]);
+    await expect(
+      api.editEntry({ entryId: "e-1", value: { kind: "quantity", value: "5" }, note: null }),
+    ).resolves.toBeUndefined();
+    const request = call(fetchStub);
+    expect(request.url).toBe(`${BASE}/entries/e-1`);
+    expect(request.method).toBe("PUT");
+    expect(request.body).toEqual({ value: { kind: "quantity", value: "5" }, note: null });
+  });
+
+  it("deletes the entry and accepts data:null", async () => {
+    const { api, fetchStub } = harness([json(200, { data: null })]);
+    await expect(api.deleteEntry("e-9")).resolves.toBeUndefined();
+    const request = call(fetchStub);
+    expect(request.url).toBe(`${BASE}/entries/e-9`);
+    expect(request.method).toBe("DELETE");
+  });
+
+  it("maps a delete error to ApiError", async () => {
+    const { api } = harness([json(404, { error: { code: "EntryNotFound", message: "x" } })]);
+    await expect(api.deleteEntry("e-9")).rejects.toMatchObject({
+      code: "EntryNotFound",
+      status: 404,
+    });
   });
 });

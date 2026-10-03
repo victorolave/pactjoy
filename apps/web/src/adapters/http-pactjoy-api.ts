@@ -1,6 +1,11 @@
 import type { TodayView } from "@pactjoy/app";
 import { ApiError } from "../ports/api-error.ts";
-import type { PactJoyApi } from "../ports/pactjoy-api.ts";
+import type {
+  EditEntryCommand,
+  PactJoyApi,
+  RecordEntryCommand,
+  RecordedEntry,
+} from "../ports/pactjoy-api.ts";
 
 export interface HttpPactJoyApiOptions {
   readonly baseUrl: string;
@@ -24,6 +29,12 @@ interface HttpRequest {
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
+
+const isRecordResult = (data: unknown): boolean =>
+  isRecord(data) &&
+  isRecord(data.entry) &&
+  typeof data.entry.id === "string" &&
+  typeof data.replayed === "boolean";
 
 const isTodayView = (data: unknown): boolean => isRecord(data) && typeof data.state === "string";
 
@@ -55,6 +66,27 @@ export class HttpPactJoyApi implements PactJoyApi {
       signal,
       valid: isTodayView,
     })) as TodayView;
+  }
+
+  async recordEntry(cmd: RecordEntryCommand): Promise<RecordedEntry> {
+    const { seasonId, ...body } = cmd;
+    const data = await this.#request({
+      method: "POST",
+      path: `/seasons/${encodeURIComponent(seasonId)}/entries`,
+      body,
+      valid: isRecordResult,
+    });
+    const { entry, replayed } = data as { entry: { id: string }; replayed: boolean };
+    return { entryId: entry.id, replayed };
+  }
+
+  async editEntry(cmd: EditEntryCommand): Promise<void> {
+    const { entryId, ...body } = cmd;
+    await this.#request({ method: "PUT", path: `/entries/${encodeURIComponent(entryId)}`, body });
+  }
+
+  async deleteEntry(entryId: string): Promise<void> {
+    await this.#request({ method: "DELETE", path: `/entries/${encodeURIComponent(entryId)}` });
   }
 
   async #request(request: HttpRequest): Promise<unknown> {
