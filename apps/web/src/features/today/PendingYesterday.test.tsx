@@ -198,7 +198,7 @@ describe("the De ayer card (design 15d)", () => {
   it("says Ayer no salió, never Hoy, and keeps it inside its own item's card", async () => {
     show([pendingItemFixture(), quantityItem()]);
     const miss = await screen.findByRole("button", { name: "Ayer no salió: Dibujar" });
-    expect(miss).toHaveTextContent("Ayer no salió");
+    expect(miss).toHaveAttribute("title", "Ayer no salió: Dibujar");
     const card = miss.closest(".pj-card") as HTMLElement;
     expect(within(card).queryByText("Hoy no salió")).not.toBeInTheDocument();
     // Inside the white item that names the habit, not floating between items.
@@ -208,8 +208,56 @@ describe("the De ayer card (design 15d)", () => {
       within(item).getByRole("button", { name: "Registrar Dibujar de ayer" }),
     ).toBeInTheDocument();
     expect(within(item).queryByText("Correr")).not.toBeInTheDocument();
-    // Centred under the item, with the same shared wrapper the Today rows use.
-    expect(miss.parentElement).toHaveAttribute("data-centered", "true");
+  });
+
+  it("is one line per item: the name and day on the left, circular buttons on the right", async () => {
+    show([pendingItemFixture(), quantityItem(), limitItem()]);
+    await screen.findByText("De ayer");
+    // The text line under the item is gone.
+    expect(screen.queryByText("Ayer no salió")).not.toBeInTheDocument();
+    const done = screen.getByRole("button", { name: "Registrar Dibujar de ayer" });
+    const miss = screen.getByRole("button", { name: "Ayer no salió: Dibujar" });
+    const item = done.closest("div[class*='entry']") as HTMLElement;
+    expect(item.contains(miss)).toBe(true);
+    expect(within(item).getAllByRole("button")).toHaveLength(2);
+    // The ✓ is the one-tap circle, the × a ghost icon button.
+    expect(done.className).toMatch(/circle/);
+    expect(miss).toHaveClass("pj-iconbtn");
+    expect(miss.querySelector(".lucide-x")).not.toBeNull();
+  });
+
+  it("a quantity item has only the plus, which opens the sheet on Ayer", async () => {
+    const app = show([quantityItem()]);
+    const plus = await screen.findByRole("button", { name: "Registrar Correr de ayer" });
+    expect(plus.querySelector(".lucide-plus")).not.toBeNull();
+    const item = plus.closest("div[class*='entry']") as HTMLElement;
+    expect(within(item).getAllByRole("button")).toHaveLength(1);
+    await userEvent.click(plus);
+    expect(app.location()).toBe("/?entry=commitment-9&day=ayer");
+  });
+
+  it("a limit item has only the plus: no miss", async () => {
+    show([limitItem()]);
+    const plus = await screen.findByRole("button", { name: "Registrar Café de ayer" });
+    const item = plus.closest("div[class*='entry']") as HTMLElement;
+    expect(within(item).getAllByRole("button")).toHaveLength(1);
+  });
+
+  it("the ✓ fills at once and records yesterday", async () => {
+    const { deps } = show();
+    const done = await screen.findByRole("button", { name: "Registrar Dibujar de ayer" });
+    await userEvent.click(done);
+    expect(done).toHaveAttribute("aria-pressed", "true");
+    await waitFor(() => expect(deps.api.recorded).toHaveLength(1));
+    expect(deps.api.recorded[0]).toMatchObject({ forDate: "2026-10-01", value: { kind: "done" } });
+  });
+
+  it("every control is a real touch target: the 48 px circle and the 44 px icon buttons", async () => {
+    show([pendingItemFixture()]);
+    const done = await screen.findByRole("button", { name: "Registrar Dibujar de ayer" });
+    const miss = screen.getByRole("button", { name: "Ayer no salió: Dibujar" });
+    expect(done.className).toMatch(/circle/);
+    expect(miss).toHaveClass("pj-iconbtn");
   });
 
   it("lists several items, each with its own controls", async () => {

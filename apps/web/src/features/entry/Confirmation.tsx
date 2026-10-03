@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { pointsText } from "../../shared/format.ts";
 import { Button } from "../../ui/Button.tsx";
 import { Illustration } from "../../ui/Placeholder.tsx";
@@ -20,9 +21,14 @@ export function Confirmation({
   message = null,
   onClose,
 }: ConfirmationProps) {
+  const root = useRef<HTMLDivElement>(null);
+  // The save is the user's answer: focus lands on it (the sheet's old content is gone) and a status
+  // region announces it, instead of focus falling back to the page body in silence.
+  useEffect(() => root.current?.focus(), []);
   return (
-    <div className={styles.confirmation}>
-      <Illustration alt="Registro guardado" name="registro-guardado" size="lg" />
+    <div ref={root} className={styles.confirmation} role="status" tabIndex={-1}>
+      {/* The text says it; the picture only decorates. */}
+      <Illustration alt="" name="registro-guardado" size="lg" />
       <p className={styles.confirmationTitle}>Registro guardado.</p>
       <p className={styles.confirmationDetail}>{detail}</p>
       {points !== null && points > 0 && (

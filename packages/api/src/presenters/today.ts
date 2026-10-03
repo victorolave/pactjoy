@@ -62,6 +62,13 @@ function presentProgress(progress: TodayWeekProgress | null): TodayWeekProgress 
 function presentPoints(points: TodayPoints): TodayPoints {
   return {
     perOpportunity: points.perOpportunity,
+    perOpportunityExact:
+      points.perOpportunityExact === null
+        ? null
+        : {
+            numerator: points.perOpportunityExact.numerator,
+            denominator: points.perOpportunityExact.denominator,
+          },
     earned: points.earned,
     limitPercents: points.limitPercents === null ? null : [...points.limitPercents],
   };

@@ -1,21 +1,16 @@
 import type { PendingYesterdayItem, TodayEntry } from "@pactjoy/app";
 import { useOnline } from "../../app/connectivity-context.tsx";
 import { weekdayDay } from "../../shared/format.ts";
-import { Button } from "../../ui/Button.tsx";
 import { Card } from "../../ui/Card.tsx";
-import { Centered } from "../../ui/Centered.tsx";
 import { IconButton } from "../../ui/IconButton.tsx";
 import { InlineMessage } from "../../ui/InlineMessage.tsx";
 import { Icon } from "../../ui/icon/Icon.tsx";
+import { CheckCircle } from "../entry/CheckCircle.tsx";
 import { useEntrySheet } from "../entry/use-entry-sheet.ts";
 import { useOneTap } from "../entry/use-one-tap.ts";
 import styles from "./PendingYesterday.module.css";
 import { quantityText } from "./row-labels.ts";
 import type { YesterdayRegistered } from "./today-view-model.ts";
-
-/** A limit counts its real value, 0 included: it has no "no salió" (server: MissedNotAllowed). */
-const isLimit = (item: PendingYesterdayItem): boolean =>
-  item.measure.unit !== "done" && item.measure.target.direction === "limit";
 
 function PendingItem({
   item,
@@ -29,6 +24,9 @@ function PendingItem({
   // No write queue (P1): every write control is off until the network is back.
   const online = useOnline();
   const isDone = item.measure.unit === "done";
+  // Once the tap went out (or its entry exists) the item can take no second registro, whichever
+  // button it came from: both controls rest while it is still listed (as `RowWithControls` does).
+  const sent = oneTap.optimisticDone || oneTap.entryId !== null;
   return (
     <div className={styles.entry}>
       <div className={styles.line}>
@@ -36,33 +34,34 @@ function PendingItem({
           <div className={styles.name}>{item.habitName}</div>
           <div className={styles.day}>{weekdayDay(item.forDate)}</div>
         </div>
-        <Button
-          variant="secondary"
-          size="sm"
-          aria-label={`Registrar ${item.habitName} de ayer`}
-          disabled={!online}
-          onClick={
-            isDone
-              ? oneTap.done
-              : () => sheet.open(item.commitmentId, undefined, { yesterday: true })
-          }
-        >
-          Registrar
-        </Button>
+        <div className={styles.actions}>
+          {isDone ? (
+            <>
+              {/* The same one-tap circle as Today: it fills at once, the server confirms. */}
+              <CheckCircle
+                label={`Registrar ${item.habitName} de ayer`}
+                pressed={sent}
+                disabled={!online || sent}
+                onClick={oneTap.done}
+              />
+              <IconButton
+                icon="x"
+                label={`Ayer no salió: ${item.habitName}`}
+                disabled={oneTap.pending || sent || !online}
+                onClick={oneTap.missed}
+              />
+            </>
+          ) : (
+            <IconButton
+              icon="plus"
+              variant="outline"
+              label={`Registrar ${item.habitName} de ayer`}
+              disabled={!online}
+              onClick={() => sheet.open(item.commitmentId, undefined, { yesterday: true })}
+            />
+          )}
+        </div>
       </div>
-      {!isLimit(item) && (
-        <Centered>
-          <Button
-            variant="ghost"
-            size="sm"
-            aria-label={`Ayer no salió: ${item.habitName}`}
-            disabled={oneTap.pending || !online}
-            onClick={oneTap.missed}
-          >
-            Ayer no salió
-          </Button>
-        </Centered>
-      )}
       {oneTap.message !== null && <InlineMessage tone="error" title={oneTap.message} />}
     </div>
   );

@@ -1,5 +1,5 @@
 import type { PendingYesterdayItem, TodayRow } from "@pactjoy/app";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 import { weekdayDay } from "../../shared/format.ts";
 import { Icon } from "../../ui/icon/Icon.tsx";
 import { SegmentedControl } from "../../ui/SegmentedControl.tsx";
@@ -32,7 +32,13 @@ export function useDayChoice(
   const [day, setDay] = useState<Day>(() =>
     pending !== undefined && (startOnYesterday || !todayAllowed) ? "ayer" : "hoy",
   );
-  if (pending === undefined) return { yesterday: false, forDate: undefined, picker: null };
+  // The item vanishes from the list after the save's refetch; what was chosen must not flip to Hoy
+  // mid-confirmation, so the last one seen stays the one that counts.
+  const remembered = useRef(pending);
+  if (pending !== undefined) remembered.current = pending;
+  const kept = pending ?? remembered.current;
+  if (kept === undefined) return { yesterday: false, forDate: undefined, picker: null };
+  pending = kept;
   const yesterday = day === "ayer";
   const label = lower(weekdayDay(pending.forDate));
   return {

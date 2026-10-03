@@ -45,6 +45,11 @@ export function RowWithControls({
   const offersMissed = isDone && windowOpen;
   const missedOpen = state === "open" && !oneTap.optimisticDone;
   // The server's own row takes over from the optimistic fill once it shows the entry.
+  // The undo question is about one entry: when there is none any more it closes for good, and must
+  // not come back if an entry shows up again later.
+  useEffect(() => {
+    if (undoId === null) setConfirmingUndo(false);
+  }, [undoId]);
   const { settle, optimisticDone } = oneTap;
   useEffect(() => {
     if (optimisticDone && doneEntry !== undefined) settle();
