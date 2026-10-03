@@ -122,10 +122,35 @@ describe("limit sheet (EN-R5)", () => {
     const { deps } = open([sweets()], "commitment-6");
     const dialog = await screen.findByRole("dialog", { name: "Dulces" });
     expect(within(dialog).getByText("Esta semana llevas 2 veces")).toBeInTheDocument();
-    await userEvent.click(within(dialog).getByRole("radio", { name: /^1/ }));
+    // A weekly total is not a day's pick from a grid: it is a number to add.
+    expect(within(dialog).queryByRole("radiogroup")).not.toBeInTheDocument();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Más" }));
     await userEvent.click(within(dialog).getByRole("button", { name: "Registrar 1 vez" }));
     await waitFor(() => expect(deps.api.recorded).toHaveLength(1));
     expect(deps.api.recorded[0]?.value).toEqual({ kind: "quantity", value: "1" });
+  });
+
+  it("uses a stepper when the tolerance outgrows the grid (limit 14, tolerance 20)", async () => {
+    const wide = coffee({
+      commitmentId: "commitment-8" as DayRow["commitmentId"],
+      habitName: "Cigarros",
+      measure: {
+        unit: "times",
+        customLabel: null,
+        precision: "integer",
+        target: { direction: "limit", ideal: "14", tolerance: "20" },
+        schedule: { period: "perSession", frequency: { kind: "specificDays", weekdays: [4] } },
+      },
+    });
+    const { deps } = open([wide], "commitment-8");
+    const dialog = await screen.findByRole("dialog", { name: "Cigarros" });
+    expect(within(dialog).queryByRole("radiogroup")).not.toBeInTheDocument();
+    const input = within(dialog).getByRole("textbox", { name: "Cantidad" });
+    await userEvent.clear(input);
+    await userEvent.type(input, "17");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Registrar 17 veces" }));
+    await screen.findByText("Registro guardado.");
+    expect(deps.api.recorded[0]?.value).toEqual({ kind: "quantity", value: "17" });
   });
 
   it("uses a stepper that allows 0 for a decimal limit", async () => {

@@ -7,6 +7,8 @@ import { describe, expect, it } from "vitest";
 import { todayKey } from "../shared/query-keys.ts";
 import { MemoryStorage } from "../testing/memory-storage.ts";
 import {
+  bustFor,
+  CACHE_VERSION,
   createTodayPersister,
   MAX_AGE_MS,
   persistOptionsFor,
@@ -19,7 +21,7 @@ async function save(storage: Storage, fill: (client: QueryClient) => void) {
   const persister = createTodayPersister(storage, { throttleMs: 0 });
   const client = new QueryClient();
   fill(client);
-  const options = persistOptionsFor(persister);
+  const options = persistOptionsFor(persister, bustFor("user-1"));
   await persistQueryClientSave({ queryClient: client, ...options });
   // The sync persister writes on a timer even with no throttle: let it run.
   await new Promise((resolve) => setTimeout(resolve, 20));
@@ -33,9 +35,26 @@ describe("createTodayPersister (TO-R10)", () => {
     const reloaded = new QueryClient();
     await persistQueryClientRestore({
       queryClient: reloaded,
-      ...persistOptionsFor(createTodayPersister(storage, { throttleMs: 0 })),
+      ...persistOptionsFor(createTodayPersister(storage, { throttleMs: 0 }), bustFor("user-1")),
     });
     expect(reloaded.getQueryData(todayKey)).toEqual(TODAY);
+  });
+
+  it("does not restore the saved Today for a different user (C-W5)", async () => {
+    const storage = new MemoryStorage();
+    await save(storage, (client) => client.setQueryData(todayKey, TODAY));
+    const other = new QueryClient();
+    await persistQueryClientRestore({
+      queryClient: other,
+      ...persistOptionsFor(createTodayPersister(storage, { throttleMs: 0 }), bustFor("user-2")),
+    });
+    expect(other.getQueryData(todayKey)).toBeUndefined();
+  });
+
+  it("tells users and cache versions apart, and a signed-out visitor from any user", () => {
+    expect(bustFor("user-1")).not.toBe(bustFor("user-2"));
+    expect(bustFor(null)).not.toBe(bustFor("user-1"));
+    expect(bustFor("user-1")).toContain(CACHE_VERSION);
   });
 
   it("persists only Today, never another query", async () => {
@@ -61,9 +80,16 @@ describe("createTodayPersister (TO-R10)", () => {
     expect(storage.getItem(STORAGE_KEY) ?? "").not.toContain("noCircle");
   });
 
+  it("never persists a mutation, so no write can be replayed after a reload (P1)", () => {
+    const options = persistOptionsFor(createTodayPersister(new MemoryStorage()), bustFor("user-1"));
+    expect(options.dehydrateOptions?.shouldDehydrateMutation?.({} as never)).toBe(false);
+  });
+
   it("keeps it for 24 hours", () => {
     expect(MAX_AGE_MS).toBe(24 * 60 * 60 * 1000);
-    expect(persistOptionsFor(createTodayPersister(new MemoryStorage())).maxAge).toBe(MAX_AGE_MS);
+    expect(
+      persistOptionsFor(createTodayPersister(new MemoryStorage()), bustFor("user-1")).maxAge,
+    ).toBe(MAX_AGE_MS);
   });
 
   it("removeClient forgets the cached Today (sign out)", async () => {

@@ -35,6 +35,7 @@ export function RowFrame({
       <div className={styles.card}>
         <div className={styles.top}>
           <span
+            data-tone={tone}
             className={cx(
               styles.glyph,
               tone === "done" && styles.glyphDone,

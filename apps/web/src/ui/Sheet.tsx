@@ -1,4 +1,4 @@
-import { type KeyboardEvent, type ReactNode, useEffect, useId, useRef } from "react";
+import { type ReactNode, useEffect, useId, useRef } from "react";
 import { cx } from "./cx.ts";
 import { IconButton } from "./IconButton.tsx";
 
@@ -38,35 +38,47 @@ function OpenSheet({
     };
   }, []);
 
-  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === "Escape") {
-      event.stopPropagation();
-      onClose();
-      return;
-    }
-    if (event.key !== "Tab" || dialog.current === null) return;
-    const items = Array.from(dialog.current.querySelectorAll<HTMLElement>(FOCUSABLE));
-    const first = items[0];
-    const last = items[items.length - 1];
-    if (first === undefined || last === undefined) return;
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first.focus();
-    }
-  };
+  // Document level, so Escape and Tab keep working after a click leaves focus on content that
+  // cannot take it (a paragraph, the scrim): a keydown there never reaches the dialog.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const box = dialog.current;
+      if (box === null) return;
+      if (event.key === "Escape") {
+        event.stopPropagation();
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const items = Array.from(box.querySelectorAll<HTMLElement>(FOCUSABLE));
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (first === undefined || last === undefined) return;
+      const active = document.activeElement;
+      if (!(active instanceof Node) || !box.contains(active)) {
+        event.preventDefault();
+        (event.shiftKey ? last : first).focus();
+      } else if (event.shiftKey && active === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
 
   return (
     // The scrim is a pointer shortcut only; keyboard users close with Escape or the Cerrar button.
     // biome-ignore lint/a11y/noStaticElementInteractions: see above
+    // biome-ignore lint/a11y/useKeyWithClickEvents: see above
     <div
       className={cx("pj-scrim", "pj-scrim--fixed", `pj-scrim--${placement}`)}
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
-      onKeyDown={onKeyDown}
     >
       <div
         ref={dialog}
