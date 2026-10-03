@@ -6,7 +6,9 @@ import { Icon } from "../../ui/icon/Icon.tsx";
 import { Illustration } from "../../ui/Placeholder.tsx";
 import { EntrySheetHost } from "../entry/EntrySheetHost.tsx";
 import { RowWithControls } from "../entry/RowWithControls.tsx";
+import { allDoneDetail } from "./all-done-copy.ts";
 import { dayOffText } from "./day-off-copy.ts";
+import { PendingYesterday } from "./PendingYesterday.tsx";
 import { SeasonCard } from "./SeasonCard.tsx";
 import { StandingsPair } from "./StandingsPair.tsx";
 import styles from "./TodayScreen.module.css";
@@ -72,9 +74,6 @@ export function NotStarted({ model }: { readonly model: SeasonModel }) {
   );
 }
 
-const listNames = (names: readonly string[]): string =>
-  new Intl.ListFormat("es", { style: "long", type: "conjunction" }).format(names);
-
 function RunningHeader({ model }: { readonly model: RunningModel }) {
   const subtitle =
     model.kind === "ended"
@@ -120,13 +119,11 @@ function Section({
 }
 
 function AllDone({ model }: { readonly model: RunningModel }) {
-  const done = model.sections.forToday
-    .filter((row) => row.opportunity.state === "logged")
-    .map((row) => row.habitName);
+  const logged = model.sections.forToday.filter((row) => row.opportunity.state === "logged");
   // Only real dones and quantities are celebrated; a day with a "Hoy no salió" is just registered.
   const achieved = model.dayState === "allDone";
   return (
-    <Card tone="success">
+    <Card tone={achieved ? "success" : "sunken"}>
       <div className={styles.allDone}>
         <span className={achieved ? styles.allDoneGlyph : styles.allLoggedGlyph}>
           <Icon name={achieved ? "check" : "minus"} />
@@ -136,7 +133,9 @@ function AllDone({ model }: { readonly model: RunningModel }) {
             {model.counts.logged} de {model.counts.scheduled} compromisos de hoy
             {achieved ? "" : " registrados"}
           </div>
-          <div className={styles.lead}>{listNames(done)}.</div>
+          <div className={styles.lead}>
+            {allDoneDetail(logged, model.refDate, model.pointsToday)}
+          </div>
         </div>
       </div>
     </Card>
@@ -178,6 +177,11 @@ export function RunningToday({ model }: { readonly model: RunningModel }) {
         <AllDone model={model} />
       )}
       {showDayState && model.dayState === "none" && <NoCommitments model={model} />}
+      <PendingYesterday
+        items={model.pendingYesterday}
+        registered={model.yesterdayRegistered}
+        seasonId={model.seasonId}
+      />
       {forToday.length > 0 && (
         <Section
           title={model.kind === "ended" ? "Último día" : "Para hoy"}
@@ -203,7 +207,11 @@ export function RunningToday({ model }: { readonly model: RunningModel }) {
       {model.standings !== null && (
         <StandingsPair model={model.standings} viewerName={model.greetingName} />
       )}
-      <EntrySheetHost rows={[...forToday, ...week]} seasonId={model.seasonId} />
+      <EntrySheetHost
+        rows={model.sheetRows}
+        seasonId={model.seasonId}
+        pendingYesterday={model.pendingYesterday}
+      />
     </TodayDateContext.Provider>
   );
 }

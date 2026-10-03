@@ -4,21 +4,6 @@ import { Button } from "../../ui/Button.tsx";
 import { Illustration } from "../../ui/Placeholder.tsx";
 import styles from "./entry.module.css";
 
-/** How long the confirmation stays before the sheet closes itself (EN-R6). */
-const CONFIRMATION_MS = 1200;
-
-/** Calls `onClose` after the confirmation time, once `saved` is set. */
-export function useAutoClose(saved: string | null, onClose: () => void): void {
-  // The latest callback runs when the timer fires: a re-render (Today refetching) must not restart it.
-  const latest = useRef(onClose);
-  latest.current = onClose;
-  useEffect(() => {
-    if (saved === null) return;
-    const timer = setTimeout(() => latest.current(), CONFIRMATION_MS);
-    return () => clearTimeout(timer);
-  }, [saved]);
-}
-
 export interface ConfirmationProps {
   /** What was saved: "Leer · 20 min". */
   readonly detail: string;
@@ -36,9 +21,14 @@ export function Confirmation({
   message = null,
   onClose,
 }: ConfirmationProps) {
+  const root = useRef<HTMLDivElement>(null);
+  // The save is the user's answer: focus lands on it (the sheet's old content is gone) and a status
+  // region announces it, instead of focus falling back to the page body in silence.
+  useEffect(() => root.current?.focus(), []);
   return (
-    <div className={styles.confirmation}>
-      <Illustration alt="Registro guardado" name="registro-guardado" size="lg" />
+    <div ref={root} className={styles.confirmation} role="status" tabIndex={-1}>
+      {/* The text says it; the picture only decorates. */}
+      <Illustration alt="" name="registro-guardado" size="lg" />
       <p className={styles.confirmationTitle}>Registro guardado.</p>
       <p className={styles.confirmationDetail}>{detail}</p>
       {points !== null && points > 0 && (

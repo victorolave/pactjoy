@@ -23,6 +23,18 @@ describe("editing a logged entry (EN-R7)", () => {
     await waitFor(() => expect(deps.api.calls.getToday).toBe(2));
   });
 
+  it("keeps the confirmation open until the user leaves it (no timer)", async () => {
+    renderToday([reading([quantity("25", "entry-1")])]);
+    await userEvent.click(await screen.findByRole("button", { name: "Editar registro de Leer" }));
+    const dialog = await screen.findByRole("dialog", { name: "Leer" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "Guardar 25 min" }));
+    expect(await screen.findByText("Registro guardado.")).toBeInTheDocument();
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    expect(screen.getByText("Registro guardado.")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Seguir con mi día" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
   it("can clear the note", async () => {
     const { deps } = renderToday([reading([quantity("25", "entry-1", "borrar")])]);
     await userEvent.click(await screen.findByRole("button", { name: "Editar registro de Leer" }));

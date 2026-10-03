@@ -36,7 +36,15 @@ export type TodayModel =
         /** timesPerWeek and weeklyTotal rows ("Esta semana"). */
         readonly week: readonly WeekRow[];
       };
+      /** Day-bound opportunities of yesterday still open to register (design 15d). */
+      readonly pendingYesterday: Running["pendingYesterday"];
+      /** What was registered yesterday and can still be changed: it lives in the De ayer card. */
+      readonly yesterdayRegistered: readonly YesterdayRegistered[];
+      /** Every row with ALL its entries, so the edit sheet reaches yesterday's too. */
+      readonly sheetRows: Running["rows"];
       readonly counts: { readonly logged: number; readonly scheduled: number };
+      /** Whole points the viewer's entries for the described day earned, from the server. */
+      readonly pointsToday: number;
       /**
        * `allDone`: everything for today is registered and each row has a real done or quantity.
        * `allLogged`: everything is registered but some day was marked "Hoy no salió": not a success.
@@ -48,6 +56,12 @@ export type TodayModel =
       readonly season: SeasonCardModel;
       readonly standings: StandingsPairModel | null;
     };
+
+/** One entry of yesterday, with the row of its commitment (design 15d). */
+export interface YesterdayRegistered {
+  readonly row: Row;
+  readonly entry: Row["entries"][number];
+}
 
 export interface SeasonCardModel {
   readonly points: string;
@@ -147,8 +161,50 @@ function dayStateOf(
   return registrable.every(achieved) ? "allDone" : "allLogged";
 }
 
-function running(view: Running): TodayModel {
-  const days = view.rows.filter((row): row is DayRow => row.kind === "day");
+/**
+ * A DAY row shows and edits ONLY the entries of the day on display; yesterday's have their own place.
+ * A week row (timesPerWeek, weeklyTotal) keeps every entry of its week: they have no other home, and
+ * its edit entry point must reach a Monday entry on a Friday.
+ */
+function ofDay<T extends Row>(row: T, refDate: string): T {
+  if (row.kind !== "day") return row;
+  return { ...row, entries: row.entries.filter((entry) => entry.forDate === refDate) };
+}
+
+const NO_POINTS: Row["points"] = {
+  perOpportunity: null,
+  perOpportunityExact: null,
+  earned: null,
+  limitPercents: null,
+};
+
+/**
+ * Version skew: an API older than this client lacks the newer fields. They default to "nothing" here,
+ * once, so no screen reads an undefined (the type says they are always there; the wire may not).
+ */
+function normalised(view: Running): Running {
+  return {
+    ...view,
+    pendingYesterday: view.pendingYesterday ?? [],
+    summary: { ...view.summary, pointsToday: view.summary.pointsToday ?? 0 },
+    rows: view.rows.map((row) => (row.points === undefined ? { ...row, points: NO_POINTS } : row)),
+  };
+}
+
+function running(raw: Running): TodayModel {
+  const view = normalised(raw);
+  const refDate = refDateOf(view);
+  const yesterday = addDays(view.today, -1);
+  const yesterdayRegistered =
+    view.state === "ended"
+      ? []
+      : view.rows.flatMap((row) =>
+          (row.kind === "day" ? row.entries : [])
+            .filter((entry) => entry.forDate === yesterday)
+            .map((entry): YesterdayRegistered => ({ row, entry })),
+        );
+  const rows = view.rows.map((row) => ofDay(row, refDate));
+  const days = rows.filter((row): row is DayRow => row.kind === "day");
   const forToday = days.filter((row) => row.scheduledToday);
   const registrable = forToday.filter(isRegistrable);
   const logged = registrable.filter((row) => row.opportunity.state === "logged").length;
@@ -162,11 +218,15 @@ function running(view: Running): TodayModel {
     sections: {
       forToday,
       otherDays: days.filter((row) => !row.scheduledToday),
-      week: view.rows.filter((row): row is WeekRow => row.kind === "week"),
+      week: rows.filter((row): row is WeekRow => row.kind === "week"),
     },
+    pendingYesterday: view.pendingYesterday,
+    yesterdayRegistered,
+    sheetRows: view.rows,
     counts: { logged, scheduled: registrable.length },
+    pointsToday: view.summary.pointsToday,
     today: view.today,
-    refDate: refDateOf(view),
+    refDate,
     dayState: dayStateOf(registrable, logged),
     season: seasonCard(view),
     standings: standingsPair(view),

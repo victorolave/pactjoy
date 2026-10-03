@@ -1,12 +1,14 @@
 import type { TodayRow } from "@pactjoy/app";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useOnline } from "../../app/connectivity-context.tsx";
 import { Button } from "../../ui/Button.tsx";
+import { Centered } from "../../ui/Centered.tsx";
 import { IconButton } from "../../ui/IconButton.tsx";
 import { InlineMessage } from "../../ui/InlineMessage.tsx";
 import { Sheet } from "../../ui/Sheet.tsx";
 import { TodayRowCard } from "../today/rows/TodayRowCard.tsx";
 import { CheckCircle } from "./CheckCircle.tsx";
+import styles from "./check-circle.module.css";
 import { limitMeasureOf, quantityMeasureOf } from "./entry-form.ts";
 import { useEntrySheet } from "./use-entry-sheet.ts";
 import { useOneTap } from "./use-one-tap.ts";
@@ -36,8 +38,22 @@ export function RowWithControls({
   const doneEntry = row.entries.find((entry) => entry.value.kind === "done");
   // Open: the first tap records. Logged with a real done: pressed, and a second tap undoes it. A day
   // marked "Hoy no salió" has no circle: that registro is edited, not toggled.
-  const offersCircle = isDone && windowOpen && (state === "open" || doneEntry !== undefined);
-  const offersMissed = isDone && windowOpen && state === "open";
+  const filled = doneEntry !== undefined || oneTap.optimisticDone;
+  const undoId = doneEntry?.entryId ?? oneTap.entryId;
+  const offersCircle = isDone && windowOpen && (state === "open" || filled);
+  // Hoy no salió stays mounted through the tap and collapses, so the row never jumps in height.
+  const offersMissed = isDone && windowOpen;
+  const missedOpen = state === "open" && !oneTap.optimisticDone;
+  // The server's own row takes over from the optimistic fill once it shows the entry.
+  // The undo question is about one entry: when there is none any more it closes for good, and must
+  // not come back if an entry shows up again later.
+  useEffect(() => {
+    if (undoId === null) setConfirmingUndo(false);
+  }, [undoId]);
+  const { settle, optimisticDone } = oneTap;
+  useEffect(() => {
+    if (optimisticDone && doneEntry !== undefined) settle();
+  }, [optimisticDone, doneEntry, settle]);
   // A reach quantity keeps its plus once logged: more minutes or pages the same day add up (design
   // 22). A limit is corrected from the edit, not summed on its grid.
   const offersSheet =
@@ -50,14 +66,17 @@ export function RowWithControls({
     <>
       <TodayRowCard
         row={row}
+        optimisticDone={oneTap.optimisticDone}
         action={
           <>
             {offersCircle && (
               <CheckCircle
                 label={`Registrar ${row.habitName}`}
-                pressed={doneEntry !== undefined}
-                disabled={oneTap.pending || !online}
-                onClick={doneEntry === undefined ? oneTap.done : () => setConfirmingUndo(true)}
+                pressed={filled}
+                disabled={!online}
+                onClick={
+                  !filled ? oneTap.done : undoId === null ? () => {} : () => setConfirmingUndo(true)
+                }
               />
             )}
             {offersSheet && (
@@ -82,21 +101,31 @@ export function RowWithControls({
         below={
           <>
             {offersMissed && (
-              <Button
-                variant="ghost"
-                size="sm"
-                aria-label={`Hoy no salió: ${row.habitName}`}
-                disabled={oneTap.pending || !online}
-                onClick={oneTap.missed}
+              <div
+                className={styles.collapse}
+                data-open={missedOpen}
+                aria-hidden={missedOpen ? undefined : true}
               >
-                Hoy no salió
-              </Button>
+                <div className={styles.collapseInner}>
+                  <Centered>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      aria-label={`Hoy no salió: ${row.habitName}`}
+                      disabled={!missedOpen || oneTap.pending || !online}
+                      onClick={oneTap.missed}
+                    >
+                      Hoy no salió
+                    </Button>
+                  </Centered>
+                </div>
+              </div>
             )}
             {oneTap.message !== null && <InlineMessage tone="error" title={oneTap.message} />}
           </>
         }
       />
-      {confirmingUndo && doneEntry !== undefined && (
+      {confirmingUndo && undoId !== null && (
         <Sheet
           open
           placement="center"
@@ -108,7 +137,7 @@ export function RowWithControls({
                 block
                 onClick={() => {
                   setConfirmingUndo(false);
-                  undo(doneEntry.entryId);
+                  undo(undoId);
                 }}
               >
                 Deshacer registro
