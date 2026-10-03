@@ -1,0 +1,118 @@
+.stepper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.value {
+  display: flex;
+  flex: 1;
+  align-items: baseline;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.number {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font: var(--font-display);
+  letter-spacing: var(--type-display-track);
+  text-align: center;
+}
+
+.number[aria-invalid="true"] {
+  color: var(--text-error);
+}
+
+.unit {
+  font: var(--font-label);
+  color: var(--text-secondary);
+}
+
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: center;
+}
+
+.note {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.sheet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.subtitle {
+  margin: 0;
+  font: var(--font-small);
+  color: var(--text-secondary);
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.confirmation {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  text-align: center;
+}
+
+.confirmationTitle {
+  margin: 0;
+  font: var(--font-h2);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+}
+
+.option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  height: var(--space-8);
+  border: var(--border-width) solid var(--border-control);
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-family: var(--font-sans);
+}
+
+.optionOn {
+  background: var(--pj-ink);
+  border-color: var(--pj-ink);
+  color: var(--pj-cream);
+}
+
+.optionNumber {
+  font: var(--font-h2);
+}
+
+.optionZone {
+  font: var(--font-meta);
+}
