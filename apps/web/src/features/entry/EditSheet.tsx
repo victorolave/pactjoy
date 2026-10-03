@@ -63,8 +63,8 @@ function EntryEditor({ row, entry, onSelect, onClose }: EditSheetProps) {
       : grid
         ? chosen === null
           ? null
-          : toSubmitValue(String(chosen), "integer", { allowZero: true })
-        : toSubmitValue(typed, measure.precision, { allowZero: limit !== null });
+          : toSubmitValue(String(chosen), "integer")
+        : toSubmitValue(typed, measure.precision);
   const amount =
     measure !== null && quantity !== null && toSend !== null ? quantityText(toSend, measure) : null;
   const unit = measure === null ? "" : (unitLabel(measure) ?? "");

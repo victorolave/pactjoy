@@ -8,6 +8,7 @@ import {
   useState,
 } from "react";
 import { Toast, type ToastProps } from "../ui/Toast.tsx";
+import { useOptionalOnline } from "./connectivity-context.tsx";
 import styles from "./toast-context.module.css";
 
 export type ToastRequest = Omit<ToastProps, "onDismiss">;
@@ -27,6 +28,8 @@ interface Shown {
 
 export function ToastProvider({ children }: { readonly children: ReactNode }) {
   const [shown, setShown] = useState<Shown | null>(null);
+  // No write queue (P1): Deshacer and Reintentar are writes, so they wait for the network.
+  const online = useOptionalOnline();
   const nextId = useRef(0);
 
   const dismiss = useCallback(() => setShown(null), []);
@@ -45,6 +48,7 @@ export function ToastProvider({ children }: { readonly children: ReactNode }) {
           <Toast
             key={shown.id}
             {...shown.toast}
+            actionDisabled={!online}
             onAction={() => {
               setShown(null);
               shown.toast.onAction?.();

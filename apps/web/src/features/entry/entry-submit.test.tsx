@@ -98,17 +98,31 @@ describe("submitting a quantity (EN-R3)", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("blocks submit for zero or an unreadable value (EN-S8)", async () => {
+  it("records 0, which a reach with a quantity allows, and blocks an unreadable value", async () => {
     const { deps } = open([weekRowFixture()], "commitment-2");
     const dialog = await dialogFor("Leer");
     const input = within(dialog).getByRole("textbox", { name: "Cantidad" });
     await userEvent.clear(input);
-    await userEvent.type(input, "0");
-    expect(within(dialog).getByRole("button", { name: "Registrar" })).toBeDisabled();
-    await userEvent.clear(input);
     await userEvent.type(input, "abc");
     expect(within(dialog).getByRole("button", { name: "Registrar" })).toBeDisabled();
     expect(deps.api.calls.recordEntry).toBe(0);
+    await userEvent.clear(input);
+    await userEvent.type(input, "0");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Registrar 0 min" }));
+    await screen.findByText("Registro guardado.");
+    expect(deps.api.recorded[0]?.value).toEqual({ kind: "quantity", value: "0" });
+  });
+
+  it("records 0 on a weekly total too", async () => {
+    const { deps } = open([english()], "commitment-4");
+    const dialog = await dialogFor("Inglés");
+    const input = within(dialog).getByRole("textbox", { name: "Cantidad" });
+    await userEvent.clear(input);
+    await userEvent.type(input, "0");
+    expect(within(dialog).getByRole("textbox", { name: "Cantidad" })).toHaveValue("0");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Registrar 0 min" }));
+    await screen.findByText("Registro guardado.");
+    expect(deps.api.recorded[0]?.value).toEqual({ kind: "quantity", value: "0" });
   });
 
   it("keeps decimals exact on the wire", async () => {

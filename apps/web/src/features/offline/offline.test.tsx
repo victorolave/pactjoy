@@ -76,6 +76,47 @@ describe("writes are disabled offline, and nothing is queued (EN-R9, EN-S17)", (
     expect(within(dialog).getByText("Sin conexión: no se puede guardar.")).toBeInTheDocument();
   });
 
+  it("does not run Deshacer while offline, and queues nothing (C-W1)", async () => {
+    const { deps } = renderApp({
+      today: activeTodayFixture({ rows: [dayRowFixture({ habitName: "Meditar" })] }),
+    });
+    await userEvent.click(await screen.findByRole("button", { name: "Registrar Meditar" }));
+    const undo = await screen.findByRole("button", { name: "Deshacer" });
+    act(() => deps.connectivity.setOnline(false));
+    expect(undo).toBeDisabled();
+    await userEvent.click(undo);
+    expect(deps.api.deleteAttempts).toEqual([]);
+  });
+
+  it("disables Hoy no salió in the sheet of a day row too (C-W2)", async () => {
+    const { deps } = renderApp({
+      online: false,
+      path: "/?entry=commitment-3",
+      today: activeTodayFixture({
+        rows: [
+          dayRowFixture({
+            commitmentId: "commitment-3" as DayRow["commitmentId"],
+            habitName: "Correr",
+            measure: {
+              unit: "km",
+              customLabel: null,
+              precision: "integer",
+              target: { direction: "reach", minimum: "3", ideal: "5" },
+              schedule: {
+                period: "perSession",
+                frequency: { kind: "specificDays", weekdays: [4] },
+              },
+            },
+          }),
+        ],
+      }),
+    });
+    const dialog = await screen.findByRole("dialog", { name: "Correr" });
+    expect(within(dialog).getByRole("button", { name: "Hoy no salió" })).toBeDisabled();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Hoy no salió" }));
+    expect(deps.api.calls.recordEntry).toBe(0);
+  });
+
   it("disables saving and deleting in the edit sheet", async () => {
     renderApp({
       online: false,

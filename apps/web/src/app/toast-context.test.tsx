@@ -1,6 +1,8 @@
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { FakeConnectivity } from "../testing/fake-connectivity.ts";
+import { ConnectivityProvider } from "./connectivity-context.tsx";
 import { ToastProvider, useToasts } from "./toast-context.tsx";
 
 function Trigger({ toast }: { toast: Parameters<ReturnType<typeof useToasts>["show"]>[0] }) {
@@ -121,6 +123,25 @@ describe("ToastProvider", () => {
     expect(screen.getByRole("status")).toBeInTheDocument();
     act(() => vi.advanceTimersByTime(1000));
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+});
+
+describe("toast actions offline (no write queue)", () => {
+  it("disables the action while offline and enables it when the connection returns", async () => {
+    const connectivity = new FakeConnectivity(true);
+    render(
+      <ConnectivityProvider connectivity={connectivity}>
+        <ToastProvider>
+          <Trigger toast={{ message: "Guardado", actionLabel: "Deshacer", onAction: () => {} }} />
+        </ToastProvider>
+      </ConnectivityProvider>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "mostrar" }));
+    expect(screen.getByRole("button", { name: "Deshacer" })).toBeEnabled();
+    act(() => connectivity.setOnline(false));
+    expect(screen.getByRole("button", { name: "Deshacer" })).toBeDisabled();
+    act(() => connectivity.setOnline(true));
+    expect(screen.getByRole("button", { name: "Deshacer" })).toBeEnabled();
   });
 });
 

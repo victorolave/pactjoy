@@ -100,6 +100,15 @@ describe("Toast", () => {
     expect(onDismiss).toHaveBeenCalledTimes(1);
   });
 
+  it("shows the action disabled, and does not run it, when told it cannot run", async () => {
+    const onAction = vi.fn();
+    render(<Toast message="Guardado" actionLabel="Deshacer" actionDisabled onAction={onAction} />);
+    const button = screen.getByRole("button", { name: "Deshacer" });
+    expect(button).toBeDisabled();
+    await userEvent.click(button);
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
   it("does not stack a polite live region on an alert", () => {
     render(<Toast tone="error" message="Falló" />);
     expect(screen.getByRole("alert")).not.toHaveAttribute("aria-live");

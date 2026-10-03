@@ -50,6 +50,8 @@ export function persistOptionsFor(
     persister,
     maxAge: MAX_AGE_MS,
     dehydrateOptions: {
+      // Writes are never queued or replayed (P1): a pending mutation must not survive a reload.
+      shouldDehydrateMutation: () => false,
       shouldDehydrateQuery: (query) =>
         query.queryKey[0] === todayKey[0] && query.state.status === "success",
     },

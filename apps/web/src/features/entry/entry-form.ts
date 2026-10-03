@@ -72,18 +72,14 @@ export function nudge(raw: string, direction: 1 | -1, measure: Quantity): string
 }
 
 /**
- * The decimal string to send, or null when the text cannot be sent: unreadable, more places than the
- * precision allows (integer takes none, decimal two), or zero unless `allowZero` (a limit's 0).
+ * The decimal string to send, or null when the text cannot be sent: unreadable, or more places than
+ * the precision allows (integer takes none, decimal two). Zero is valid: a reach with a quantity can
+ * record 0 (Notion Mechanics, and the server accepts it).
  */
-export function toSubmitValue(
-  raw: string,
-  precision: Quantity["precision"],
-  { allowZero = false }: { readonly allowZero?: boolean } = {},
-): string | null {
+export function toSubmitValue(raw: string, precision: Quantity["precision"]): string | null {
   const scaled = toScaled(raw);
   if (scaled === null) return null;
   if (precision === "integer" && scaled % 100n !== 0n) return null;
-  if (scaled === 0n && !allowZero) return null;
   return fromScaled(scaled);
 }
 

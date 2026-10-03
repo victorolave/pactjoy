@@ -129,8 +129,14 @@ describe("isSubmittable and toSubmitValue (EN-R3)", () => {
     expect(toSubmitValue("10,5", "decimal")).toBe("10.5");
   });
 
-  it("blocks zero and anything unreadable (EN-S8)", () => {
-    expect(isSubmittable("0", "integer")).toBe(false);
+  it("accepts zero: a reach with a quantity can record 0 (Notion Mechanics)", () => {
+    expect(isSubmittable("0", "integer")).toBe(true);
+    expect(isSubmittable("0", "decimal")).toBe(true);
+    expect(toSubmitValue("0", "integer")).toBe("0");
+    expect(toSubmitValue("0.00", "decimal")).toBe("0");
+  });
+
+  it("blocks anything unreadable", () => {
     expect(isSubmittable("", "integer")).toBe(false);
     expect(isSubmittable("abc", "decimal")).toBe(false);
     expect(isSubmittable("-5", "integer")).toBe(false);

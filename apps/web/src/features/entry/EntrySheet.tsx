@@ -119,7 +119,7 @@ function RecordShell({
             <Button
               variant="ghost"
               block
-              disabled={entry.pending}
+              disabled={entry.pending || !online}
               onClick={() =>
                 entry.submit({ kind: "missed" }, null, `${row.habitName} · Hoy no salió`)
               }
@@ -191,8 +191,8 @@ function LimitSheet({
   const toSend = grid
     ? chosen === null
       ? null
-      : toSubmitValue(String(chosen), "integer", { allowZero: true })
-    : toSubmitValue(typed, "decimal", { allowZero: true });
+      : toSubmitValue(String(chosen), "integer")
+    : toSubmitValue(typed, "decimal");
   const weekly = row.kind === "week" && measure.schedule.period === "weeklyTotal";
   const subtitle = weekly
     ? `Esta semana llevas ${quantityText(row.progress?.value ?? "0", measure)}`

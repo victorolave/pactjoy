@@ -61,6 +61,11 @@ describe("createTodayPersister (TO-R10)", () => {
     expect(storage.getItem(STORAGE_KEY) ?? "").not.toContain("noCircle");
   });
 
+  it("never persists a mutation, so no write can be replayed after a reload (P1)", () => {
+    const options = persistOptionsFor(createTodayPersister(new MemoryStorage()));
+    expect(options.dehydrateOptions?.shouldDehydrateMutation?.({} as never)).toBe(false);
+  });
+
   it("keeps it for 24 hours", () => {
     expect(MAX_AGE_MS).toBe(24 * 60 * 60 * 1000);
     expect(persistOptionsFor(createTodayPersister(new MemoryStorage())).maxAge).toBe(MAX_AGE_MS);
