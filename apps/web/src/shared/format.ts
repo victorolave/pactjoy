@@ -39,6 +39,11 @@ export function longDate(isoDate: string, capitalized = true): string {
   return capitalized ? `${text.charAt(0).toUpperCase()}${text.slice(1)}` : text;
 }
 
+/** "+4 pts", and "+1 pt" for a single point (design 22). */
+export function pointsText(points: number): string {
+  return points === 1 ? "+1 pt" : `+${points} pts`;
+}
+
 /** "2026-10-01" -> "jueves" (calendar date, so the machine's time zone cannot move the day). */
 export function weekdayName(isoDate: string): string | null {
   const match = ISO_DATE.exec(isoDate);

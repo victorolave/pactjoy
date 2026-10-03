@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { pointsText } from "../../shared/format.ts";
 import { Button } from "../../ui/Button.tsx";
 import { Illustration } from "../../ui/Placeholder.tsx";
 import styles from "./entry.module.css";
@@ -41,7 +42,7 @@ export function Confirmation({
       <p className={styles.confirmationTitle}>Registro guardado.</p>
       <p className={styles.confirmationDetail}>{detail}</p>
       {points !== null && points > 0 && (
-        <p className={styles.confirmationPoints}>{`+${points} pts`}</p>
+        <p className={styles.confirmationPoints}>{pointsText(points)}</p>
       )}
       {message !== null && <p className={styles.subtitle}>{message}</p>}
       <div className={styles.confirmationAction}>
