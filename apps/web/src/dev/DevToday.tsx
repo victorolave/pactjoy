@@ -9,6 +9,7 @@ import { createSessionEvents, SessionManager } from "../features/auth/index.ts";
 import { TodayScreen } from "../features/today/index.ts";
 import { ApiError } from "../ports/api-error.ts";
 import { AppShell } from "../shell/AppShell.tsx";
+import { FakeAppInstall } from "../testing/fake-app-install.ts";
 import { FakeAuth, fakeSession } from "../testing/fake-auth.ts";
 import { FakeConnectivity } from "../testing/fake-connectivity.ts";
 import { FakeHaptics } from "../testing/fake-haptics.ts";
@@ -41,6 +42,7 @@ function dependenciesFor(scenario: Scenario): AppDependencies {
     store,
     device: new LocalStorageDeviceStore(new MemoryStorage()),
     sharing: new FakeSharing(),
+    appInstall: new FakeAppInstall(),
     clock: new FixedClock(0),
     sessions: new SessionManager(auth, store, new FixedClock(0)),
     sessionEvents: createSessionEvents(),

@@ -11,6 +11,7 @@ import { createSessionEvents, SessionManager } from "../features/auth/index.ts";
 import type { ApiError } from "../ports/api-error.ts";
 import type { MyCircle } from "../ports/pactjoy-api.ts";
 import { AppRoutes } from "../shell/routes.tsx";
+import { FakeAppInstall } from "./fake-app-install.ts";
 import { FakeAuth, fakeSession } from "./fake-auth.ts";
 import { FakeConnectivity } from "./fake-connectivity.ts";
 import { FakeHaptics } from "./fake-haptics.ts";
@@ -41,6 +42,10 @@ export interface RenderAppOptions {
   readonly now?: number;
   /** Whether the system share sheet exists. Defaults to true. */
   readonly canShare?: boolean;
+  /** Launched from the home screen. Defaults to false (a browser tab). */
+  readonly standalone?: boolean;
+  /** The welcome carousel was already seen on this device. Defaults to true, so login tests start at login. */
+  readonly welcomeSeen?: boolean;
   /** A name draft already on the device (the name step was done). */
   readonly nameDraft?: string;
   /** `getToday` rejects with these, one per call, before it answers `today`. */
@@ -70,6 +75,7 @@ export interface RenderedApp extends RenderResult {
     readonly store: MemoryTokenStore;
     readonly device: LocalStorageDeviceStore;
     readonly sharing: FakeSharing;
+    readonly appInstall: FakeAppInstall;
     readonly clock: FixedClock;
   };
 }
@@ -79,6 +85,8 @@ function createFakeDeps({
   today = activeTodayFixture(),
   myCircle = soloCircleFixture(),
   nameDraft,
+  standalone = false,
+  welcomeSeen = true,
   now = DEFAULT_NOW_MS,
   canShare = true,
   myCircleFailures = [],
@@ -94,6 +102,7 @@ function createFakeDeps({
   for (const failure of myCircleFailures) api.failNext("getMyCircle", failure);
   const device = new LocalStorageDeviceStore(new MemoryStorage());
   if (nameDraft !== undefined) device.set("nameDraft", nameDraft);
+  if (welcomeSeen) device.set("welcomeSeen", "1");
   for (const failure of todayFailures) api.failNext("getToday", failure);
   return {
     auth,
@@ -104,6 +113,7 @@ function createFakeDeps({
     store,
     device,
     sharing: new FakeSharing(canShare),
+    appInstall: new FakeAppInstall(standalone),
     clock,
     sessions: new SessionManager(auth, store, new FixedClock(0)),
     sessionEvents: createSessionEvents(),

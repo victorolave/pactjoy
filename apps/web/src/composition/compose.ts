@@ -1,3 +1,4 @@
+import { BrowserAppInstall } from "../adapters/browser-app-install.ts";
 import { BrowserConnectivity } from "../adapters/browser-connectivity.ts";
 import { BrowserHaptics } from "../adapters/browser-haptics.ts";
 import { BrowserSharing } from "../adapters/browser-sharing.ts";
@@ -49,6 +50,7 @@ export function createDependencies(config: AppConfig, env: ComposeEnvironment): 
     store,
     device: new LocalStorageDeviceStore(),
     sharing: new BrowserSharing(),
+    appInstall: new BrowserAppInstall(),
     sessions,
     sessionEvents,
     queryClient: createQueryClient(),

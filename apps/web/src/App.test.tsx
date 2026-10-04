@@ -7,6 +7,7 @@ import { LocalStorageDeviceStore } from "./adapters/local-storage-device-store.t
 import { createTodayPersister } from "./adapters/query-persister.ts";
 import type { AppDependencies } from "./composition/dependencies.ts";
 import { createSessionEvents, SessionManager } from "./features/auth/index.ts";
+import { FakeAppInstall } from "./testing/fake-app-install.ts";
 import { FakeAuth, fakeSession } from "./testing/fake-auth.ts";
 import { FakeConnectivity } from "./testing/fake-connectivity.ts";
 import { FakeHaptics } from "./testing/fake-haptics.ts";
@@ -23,6 +24,7 @@ function deps(signedIn: boolean): AppDependencies {
   // These tests are about the app shell and Today, not onboarding: the name step is already done.
   const device = new LocalStorageDeviceStore(new MemoryStorage());
   device.set("nameDraft", "Victor");
+  device.set("welcomeSeen", "1");
   const auth = new FakeAuth();
   const api = new FakePactJoyApi(noCircleTodayFixture());
   const store = new MemoryTokenStore(signedIn ? fakeSession() : null);
@@ -35,6 +37,7 @@ function deps(signedIn: boolean): AppDependencies {
     store,
     device,
     sharing: new FakeSharing(),
+    appInstall: new FakeAppInstall(),
     clock: new FixedClock(0),
     sessions: new SessionManager(auth, store, new FixedClock(0)),
     sessionEvents: createSessionEvents(),
