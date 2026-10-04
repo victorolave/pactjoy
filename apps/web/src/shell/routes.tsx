@@ -14,12 +14,13 @@ import {
   InviteScreen,
   JoinCircleScreen,
 } from "../features/circle/index.ts";
-import { NameStep } from "../features/onboarding/index.ts";
+import { NameStep, WelcomeCarousel } from "../features/onboarding/index.ts";
 import { ProfileScreen, SettingsScreen } from "../features/profile/index.ts";
 import { TodayScreen } from "../features/today/index.ts";
 import { AppShell } from "./AppShell.tsx";
 import { OnboardingGate } from "./OnboardingGate.tsx";
 import { StubScreen } from "./StubScreen.tsx";
+import { WelcomeGate } from "./WelcomeGate.tsx";
 
 /** The Today scenario gallery; `null` in production (see `loadDevToday`). */
 const DevToday = loadDevToday === null ? null : lazy(loadDevToday);
@@ -29,9 +30,12 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route element={<RedirectIfSignedIn />}>
-        <Route element={<LoginLayout />}>
-          <Route path="login" element={<EmailStep />} />
-          <Route path="login/code" element={<CodeStep />} />
+        <Route element={<WelcomeGate />}>
+          <Route path="welcome" element={<WelcomeCarousel />} />
+          <Route element={<LoginLayout />}>
+            <Route path="login" element={<EmailStep />} />
+            <Route path="login/code" element={<CodeStep />} />
+          </Route>
         </Route>
       </Route>
       {DevToday !== null && (

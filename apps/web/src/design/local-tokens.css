@@ -17,6 +17,9 @@
   --avatar-lg: 96px;
   /* Member rows and the waiting room (designs 7, 31a): 56 square. */
   --avatar-xl: 56px;
+  /* Pager dots (design 1a-c): 6 px, the current one a 20 px pill. */
+  --pager-dot: 6px;
+  --pager-dot-current: 20px;
   --border-width-control: 1.5px;
   /* The empty member slot of the waiting room (design 7): a 2 px dashed ring. */
   --border-width-slot: 2px;
