@@ -16,7 +16,14 @@ describe("Icon", () => {
   });
 
   it("renders the glyph that its name maps to", () => {
-    const names: IconName[] = ["sun", "calendar-days", "users", "user-round", "circle-check"];
+    const names: IconName[] = [
+      "sun",
+      "calendar-days",
+      "users",
+      "user-round",
+      "circle-check",
+      "settings",
+    ];
     for (const name of names) {
       const { container, unmount } = render(<Icon name={name} />);
       expect(container.querySelector("svg")).toHaveClass(`lucide-${name}`);
