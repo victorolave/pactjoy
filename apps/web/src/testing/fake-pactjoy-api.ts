@@ -178,6 +178,8 @@ export class FakePactJoyApi implements PactJoyApi {
 
   async leaveCircle(circleId: string): Promise<void> {
     await this.#circleCall("leaveCircle", [circleId]);
+    // Like the server: the viewer has no circle from now on.
+    this.#myCircle = { circle: null, season: null };
   }
 
   /** Records the call, waits on a held gate, then throws a scripted failure. */

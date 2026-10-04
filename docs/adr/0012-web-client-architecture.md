@@ -83,6 +83,34 @@ Recorded while the owner is unavailable; to be confirmed.
 | P8 | Placeholder Spanish copy for error toasts |
 | P9 | Design-system CSS is not published until the owner decides on the brand question |
 
+## Addendum: onboarding, circle and profile (change `pwa-onboarding-circle-profile`)
+
+New browser capabilities follow the same rule as the first ports: a port in `src/ports`, one adapter in `src/adapters`, a context in `src/context`, a fake in `src/testing`.
+
+| Port | What it hides | Notes |
+| ---- | ------------- | ----- |
+| `Sharing` | Web Share API and clipboard | The UI hides "Compartir" when `canShare()` is false |
+| `AppInstall` | Display mode, platform, `beforeinstallprompt` | iOS has no prompt: `InstallStep` explains the Share menu. The step shows wherever the browser can install (iOS, or any browser that fired `beforeinstallprompt`, desktop Chrome and Edge included) and never in an installed app |
+| `NotificationPermissionPort` | `Notification.permission` and `requestPermission` (promise and old callback forms) | Permission only: no subscription, nothing sent until push (change D). Biome bans the `Notification` global outside adapters, and `boundary.test.ts` bans `window.Notification` |
+| `DeviceStore` | `localStorage` flags and drafts | A closed key union, so a typo is a compile error |
+
+**Device versus session storage.** Device flags describe the phone and survive sign out: `welcomeSeen`, `installStep`, `notificationStep`. Only `nameDraft` is personal, so only it is cleared when the session ends (`clearSession`, called from the composition's `onSessionEnd`). Otherwise the pre-login carousel would return on every login. On iOS the installed app has its own storage, separate from Safari, so the carousel and the install step run before login and the permission step after it (the user taps it inside the installed app).
+
+**Who sees the permission step (owner decision, 2026-10-04).** Every user sees it once, on their first standalone launch after login, members included. Permission belongs to the device, not to the circle, and the step does not wait for `/me/circle`, so it also works offline. It is shown only when the app runs standalone, the permission is `default` and `notificationStep` is not set; any answer, even a refusal or "Ahora no", sets the flag. `NotificationPermissionPort.request()` must start synchronously inside the tap (no `await` before it) and never rejects.
+
+**Feature dependencies.** `test/architecture.test.ts` holds `ALLOWED_FEATURE_DEPS`; any cross-feature edge not listed fails, and a feature is reached only through its `index.ts`.
+
+| Feature | May depend on |
+| ------- | ------------- |
+| `today` | `entry` |
+| `profile` | `auth`, `circle` |
+| `circle` | `onboarding` |
+| `entry`, `auth`, `onboarding` | nothing |
+
+**`Serialized<T>`.** App views use domain types (`Instant`). `src/ports/wire.ts` maps `Instant` to its ISO string recursively, so the client types a response with a type-only import and never copies a wire shape by hand.
+
+**`myCircle` is not persisted offline.** Only `["today"]` is persisted. A saved `myCircle` would restore a stale `noCircle` or circle after a leave or join. `CACHE_VERSION` changes only when a persisted query changes shape or a new key becomes persisted.
+
 ## References
 
 - ADR-0003 (Biome), ADR-0008 (ports), ADR-0011 (API layer)
