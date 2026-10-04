@@ -1,13 +1,44 @@
 import type { TodayView } from "@pactjoy/app";
 import type { ApiError } from "../ports/api-error.ts";
 import type {
+  CircleInvite,
+  CircleRef,
+  CreateCircleCommand,
   EditEntryCommand,
+  InvitePreviewView,
+  JoinCircleCommand,
+  MyCircle,
   PactJoyApi,
   RecordEntryCommand,
   RecordedEntry,
 } from "../ports/pactjoy-api.ts";
 
-type Method = "getToday" | "recordEntry" | "editEntry" | "deleteEntry";
+type Method =
+  | "getToday"
+  | "recordEntry"
+  | "editEntry"
+  | "deleteEntry"
+  | "getMyCircle"
+  | "previewInvite"
+  | "createCircle"
+  | "joinCircle"
+  | "generateInvite"
+  | "renameCircle"
+  | "renameMyDisplayName"
+  | "leaveCircle";
+
+const NO_CIRCLE: MyCircle = { circle: null, season: null };
+const INVITE: CircleInvite = {
+  code: "7K4Q2M",
+  createdAt: "2026-10-01T12:00:00.000Z",
+  expiresAt: "2026-10-08T12:00:00.000Z",
+};
+const PREVIEW: InvitePreviewView = {
+  circleName: "Los Pactos",
+  invitedBy: "Andrea",
+  activeMemberCount: 2,
+  expiresAt: "2026-10-08T12:00:00.000Z",
+};
 
 /**
  * In-memory PactJoyApi for tests, scriptable per state and per error. `recordEntry` is idempotent
@@ -19,7 +50,17 @@ export class FakePactJoyApi implements PactJoyApi {
     recordEntry: 0,
     editEntry: 0,
     deleteEntry: 0,
+    getMyCircle: 0,
+    previewInvite: 0,
+    createCircle: 0,
+    joinCircle: 0,
+    generateInvite: 0,
+    renameCircle: 0,
+    renameMyDisplayName: 0,
+    leaveCircle: 0,
   };
+  /** What the circle mutations were asked to do, in order, for assertions. */
+  readonly circleCommands: { readonly method: Method; readonly args: readonly unknown[] }[] = [];
   /** Every recordEntry call, including the ones that were scripted to fail. */
   readonly recordAttempts: RecordEntryCommand[] = [];
   /** Every deleteEntry call, including the ones that were scripted to fail. */
@@ -29,6 +70,9 @@ export class FakePactJoyApi implements PactJoyApi {
   readonly deleted: string[] = [];
 
   #today: TodayView;
+  #myCircle: MyCircle = NO_CIRCLE;
+  #preview: InvitePreviewView = PREVIEW;
+  #invite: CircleInvite = INVITE;
   readonly #failures = new Map<Method, ApiError[]>();
   readonly #idByRequest = new Map<string, string>();
   readonly #gates = new Map<Method, Promise<void>>();
@@ -39,6 +83,18 @@ export class FakePactJoyApi implements PactJoyApi {
 
   setToday(today: TodayView): void {
     this.#today = today;
+  }
+
+  setMyCircle(myCircle: MyCircle): void {
+    this.#myCircle = myCircle;
+  }
+
+  setPreview(preview: InvitePreviewView): void {
+    this.#preview = preview;
+  }
+
+  setInvite(invite: CircleInvite): void {
+    this.#invite = invite;
   }
 
   /** The next call to `method` rejects with `error` (queued: call twice to fail twice). */
@@ -85,6 +141,51 @@ export class FakePactJoyApi implements PactJoyApi {
     this.deleteAttempts.push(entryId);
     this.#enter("deleteEntry");
     this.deleted.push(entryId);
+  }
+
+  async getMyCircle(_signal?: AbortSignal): Promise<MyCircle> {
+    await this.#circleCall("getMyCircle", []);
+    return this.#myCircle;
+  }
+
+  async previewInvite(inviteCode: string, _signal?: AbortSignal): Promise<InvitePreviewView> {
+    await this.#circleCall("previewInvite", [inviteCode]);
+    return this.#preview;
+  }
+
+  async createCircle(cmd: CreateCircleCommand): Promise<CircleRef> {
+    await this.#circleCall("createCircle", [cmd]);
+    return { circleId: "circle-1" };
+  }
+
+  async joinCircle(cmd: JoinCircleCommand): Promise<CircleRef> {
+    await this.#circleCall("joinCircle", [cmd]);
+    return { circleId: "circle-1" };
+  }
+
+  async generateInvite(circleId: string): Promise<CircleInvite> {
+    await this.#circleCall("generateInvite", [circleId]);
+    return this.#invite;
+  }
+
+  async renameCircle(circleId: string, name: string): Promise<void> {
+    await this.#circleCall("renameCircle", [circleId, name]);
+  }
+
+  async renameMyDisplayName(circleId: string, displayName: string): Promise<void> {
+    await this.#circleCall("renameMyDisplayName", [circleId, displayName]);
+  }
+
+  async leaveCircle(circleId: string): Promise<void> {
+    await this.#circleCall("leaveCircle", [circleId]);
+  }
+
+  /** Records the call, waits on a held gate, then throws a scripted failure. */
+  async #circleCall(method: Method, args: readonly unknown[]): Promise<void> {
+    const gate = this.#takeGate(method);
+    this.circleCommands.push({ method, args });
+    this.#enter(method);
+    await gate;
   }
 
   #takeGate(method: Method): Promise<void> | undefined {
