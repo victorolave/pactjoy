@@ -9,6 +9,7 @@ import { ConnectivityProvider } from "../context/connectivity-context.tsx";
 import { DeviceStoreProvider } from "../context/device-store-context.tsx";
 import { HapticsProvider } from "../context/haptics-context.tsx";
 import { IdsProvider } from "../context/ids-context.tsx";
+import { NotificationPermissionProvider } from "../context/notification-permission-context.tsx";
 import { SharingProvider } from "../context/sharing-context.tsx";
 import { ToastProvider } from "../context/toast-context.tsx";
 import { SessionProvider, useSession } from "../features/auth/index.ts";
@@ -46,9 +47,11 @@ export function AppProviders({
                 <DeviceStoreProvider device={deps.device}>
                   <SharingProvider sharing={deps.sharing}>
                     <AppInstallProvider appInstall={deps.appInstall}>
-                      <ClockProvider clock={deps.clock}>
-                        <ToastProvider>{children}</ToastProvider>
-                      </ClockProvider>
+                      <NotificationPermissionProvider notifications={deps.notifications}>
+                        <ClockProvider clock={deps.clock}>
+                          <ToastProvider>{children}</ToastProvider>
+                        </ClockProvider>
+                      </NotificationPermissionProvider>
                     </AppInstallProvider>
                   </SharingProvider>
                 </DeviceStoreProvider>

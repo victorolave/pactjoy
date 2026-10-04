@@ -1,0 +1,20 @@
+.dots {
+  display: flex;
+  gap: var(--pager-dot);
+  justify-content: center;
+}
+
+.dot {
+  width: var(--pager-dot);
+  height: var(--pager-dot);
+  border-radius: calc(var(--pager-dot) / 2);
+  background: var(--ink-200);
+  transition:
+    width var(--motion-base) var(--ease-standard),
+    background-color var(--motion-base) var(--ease-standard);
+}
+
+.current {
+  width: var(--pager-dot-current);
+  background: var(--pj-ink);
+}
