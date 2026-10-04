@@ -29,10 +29,18 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: var(--space-5);
   min-height: 0;
   overflow-y: auto;
   padding: var(--space-4) var(--layout-margin-mobile) var(--space-5);
+}
+
+/* Picture, title and body as one block, centred vertically in the space between header and footer. Auto margins (not
+   justify-content) keep the top reachable when a tall slide scrolls. */
+.stage {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  margin-block: auto;
 }
 
 .title {

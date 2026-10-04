@@ -42,16 +42,18 @@ export function WelcomeCarousel() {
         )}
       </div>
       <div className={styles.slide} aria-live="polite">
-        {slide.composition === "goals" ? (
-          <GoalsIllustration />
-        ) : (
-          <Illustration
-            alt={slide.alt}
-            {...(slide.illustration ? { name: slide.illustration, size: "story" as const } : {})}
-          />
-        )}
-        <h1 className={styles.title}>{slide.title}</h1>
-        <p className={styles.body}>{slide.body}</p>
+        <div className={styles.stage}>
+          {slide.composition === "goals" ? (
+            <GoalsIllustration />
+          ) : (
+            <Illustration
+              alt={slide.alt}
+              {...(slide.illustration ? { name: slide.illustration, size: "story" as const } : {})}
+            />
+          )}
+          <h1 className={styles.title}>{slide.title}</h1>
+          <p className={styles.body}>{slide.body}</p>
+        </div>
       </div>
       <div className={styles.footer}>
         <PagerDots count={WELCOME_SLIDES.length} current={index} />
