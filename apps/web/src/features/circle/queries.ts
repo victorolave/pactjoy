@@ -71,6 +71,17 @@ export function useCreateCircle() {
   });
 }
 
+/** Joins with a code. Today and the circle are refetched before it settles, like create (WC-R10). */
+export function useJoinCircle() {
+  const api = usePactJoyApi();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (cmd: { readonly inviteCode: string; readonly displayName: string }) =>
+      api.joinCircle(cmd),
+    onSettled: () => invalidateCircleState(client),
+  });
+}
+
 /** A new invite code (it replaces the old one). Only `myCircle` changes, so only it is refetched. */
 export function useGenerateInvite(circleId: string) {
   const api = usePactJoyApi();

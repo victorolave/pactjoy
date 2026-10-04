@@ -8,7 +8,12 @@ import {
   RedirectIfSignedIn,
   RequireSession,
 } from "../features/auth/index.ts";
-import { CircleScreen, CreateCircleScreen, InviteScreen } from "../features/circle/index.ts";
+import {
+  CircleScreen,
+  CreateCircleScreen,
+  InviteScreen,
+  JoinCircleScreen,
+} from "../features/circle/index.ts";
 import { NameStep } from "../features/onboarding/index.ts";
 import { ProfileScreen } from "../features/profile/index.ts";
 import { TodayScreen } from "../features/today/index.ts";
@@ -43,6 +48,7 @@ export function AppRoutes() {
         <Route element={<OnboardingGate />}>
           <Route path="welcome/name" element={<NameStep />} />
           <Route path="circle/new" element={<CreateCircleScreen />} />
+          <Route path="circle/join" element={<JoinCircleScreen />} />
           <Route path="circle/invite" element={<InviteScreen />} />
           <Route element={<AppShell />}>
             <Route index element={<TodayScreen />} />
