@@ -12,6 +12,7 @@ import type {
   RecordEntryCommand,
   RecordedEntry,
 } from "../ports/pactjoy-api.ts";
+import { NO_CIRCLE } from "./fixtures/circle.ts";
 
 type Method =
   | "getToday"
@@ -27,7 +28,6 @@ type Method =
   | "renameMyDisplayName"
   | "leaveCircle";
 
-const NO_CIRCLE: MyCircle = { circle: null, season: null };
 const INVITE: CircleInvite = {
   code: "7K4Q2M",
   createdAt: "2026-10-01T12:00:00.000Z",

@@ -20,6 +20,9 @@ import { seedPersistedToday } from "./testing/seed-persisted-today.ts";
 import { SequentialIds } from "./testing/sequential-ids.ts";
 
 function deps(signedIn: boolean): AppDependencies {
+  // These tests are about the app shell and Today, not onboarding: the name step is already done.
+  const device = new LocalStorageDeviceStore(new MemoryStorage());
+  device.set("nameDraft", "Victor");
   const auth = new FakeAuth();
   const api = new FakePactJoyApi(noCircleTodayFixture());
   const store = new MemoryTokenStore(signedIn ? fakeSession() : null);
@@ -30,7 +33,7 @@ function deps(signedIn: boolean): AppDependencies {
     haptics: new FakeHaptics(),
     connectivity: new FakeConnectivity(),
     store,
-    device: new LocalStorageDeviceStore(new MemoryStorage()),
+    device,
     sharing: new FakeSharing(),
     sessions: new SessionManager(auth, store, new FixedClock(0)),
     sessionEvents: createSessionEvents(),

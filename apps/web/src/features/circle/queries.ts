@@ -1,4 +1,4 @@
-import { type QueryClient, useQuery } from "@tanstack/react-query";
+import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePactJoyApi } from "../../context/api-context.tsx";
 import { invitePreviewKey, myCircleKey, todayKey } from "../../shared/query-keys.ts";
 
@@ -32,4 +32,26 @@ export async function invalidateCircleState(client: QueryClient): Promise<void> 
     client.invalidateQueries({ queryKey: todayKey }),
     client.invalidateQueries({ queryKey: myCircleKey }),
   ]);
+}
+
+/**
+ * Creates the circle, then its first invite. If the invite fails the circle still exists, so the
+ * mutation succeeds and the invite screen offers "Generar código" (design D4). Both caches are
+ * refetched before it settles, so the screen it navigates to never sees the old `noCircle`.
+ */
+export function useCreateCircle() {
+  const api = usePactJoyApi();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async (cmd: { readonly name: string; readonly displayName: string }) => {
+      const { circleId } = await api.createCircle(cmd);
+      try {
+        await api.generateInvite(circleId);
+      } catch {
+        // The circle exists; its screen offers to generate the code again.
+      }
+      return circleId;
+    },
+    onSettled: () => invalidateCircleState(client),
+  });
 }

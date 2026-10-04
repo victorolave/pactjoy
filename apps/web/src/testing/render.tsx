@@ -9,6 +9,7 @@ import { AppProviders } from "../composition/providers.tsx";
 import { createQueryClient } from "../composition/query-client.ts";
 import { createSessionEvents, SessionManager } from "../features/auth/index.ts";
 import type { ApiError } from "../ports/api-error.ts";
+import type { MyCircle } from "../ports/pactjoy-api.ts";
 import { AppRoutes } from "../shell/routes.tsx";
 import { FakeAuth, fakeSession } from "./fake-auth.ts";
 import { FakeConnectivity } from "./fake-connectivity.ts";
@@ -16,6 +17,7 @@ import { FakeHaptics } from "./fake-haptics.ts";
 import { FakePactJoyApi } from "./fake-pactjoy-api.ts";
 import { FakeSharing } from "./fake-sharing.ts";
 import { FixedClock } from "./fixed-clock.ts";
+import { soloCircleFixture } from "./fixtures/circle.ts";
 import { activeTodayFixture } from "./fixtures/today.ts";
 import { MemoryStorage } from "./memory-storage.ts";
 import { MemoryTokenStore } from "./memory-token-store.ts";
@@ -31,6 +33,12 @@ export interface RenderAppOptions {
   readonly storage?: Storage;
   /** Whether the network is reachable. Defaults to true. */
   readonly online?: boolean;
+  /** What `getMyCircle` answers. Defaults to a member, so onboarding stays out of the way. */
+  readonly myCircle?: MyCircle;
+  /** `getMyCircle` rejects with these, one per call, before it answers `myCircle`. */
+  readonly myCircleFailures?: readonly ApiError[];
+  /** A name draft already on the device (the name step was done). */
+  readonly nameDraft?: string;
   /** `getToday` rejects with these, one per call, before it answers `today`. */
   readonly todayFailures?: readonly ApiError[];
 }
@@ -62,6 +70,9 @@ export interface RenderedApp extends RenderResult {
 function createFakeDeps({
   signedIn = true,
   today = activeTodayFixture(),
+  myCircle = soloCircleFixture(),
+  nameDraft,
+  myCircleFailures = [],
   todayFailures = [],
   online = true,
   storage = new MemoryStorage(),
@@ -69,6 +80,10 @@ function createFakeDeps({
   const auth = new FakeAuth();
   const store = new MemoryTokenStore(signedIn ? fakeSession() : null);
   const api = new FakePactJoyApi(today);
+  api.setMyCircle(myCircle);
+  for (const failure of myCircleFailures) api.failNext("getMyCircle", failure);
+  const device = new LocalStorageDeviceStore(new MemoryStorage());
+  if (nameDraft !== undefined) device.set("nameDraft", nameDraft);
   for (const failure of todayFailures) api.failNext("getToday", failure);
   return {
     auth,
@@ -77,7 +92,7 @@ function createFakeDeps({
     haptics: new FakeHaptics(),
     connectivity: new FakeConnectivity(online),
     store,
-    device: new LocalStorageDeviceStore(new MemoryStorage()),
+    device,
     sharing: new FakeSharing(),
     sessions: new SessionManager(auth, store, new FixedClock(0)),
     sessionEvents: createSessionEvents(),

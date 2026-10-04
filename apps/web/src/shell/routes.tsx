@@ -8,9 +8,12 @@ import {
   RedirectIfSignedIn,
   RequireSession,
 } from "../features/auth/index.ts";
+import { CreateCircleScreen } from "../features/circle/index.ts";
+import { NameStep } from "../features/onboarding/index.ts";
 import { ProfileScreen } from "../features/profile/index.ts";
 import { TodayScreen } from "../features/today/index.ts";
 import { AppShell } from "./AppShell.tsx";
+import { OnboardingGate } from "./OnboardingGate.tsx";
 import { StubScreen } from "./StubScreen.tsx";
 
 /** The Today scenario gallery; `null` in production (see `loadDevToday`). */
@@ -37,11 +40,15 @@ export function AppRoutes() {
         />
       )}
       <Route element={<RequireSession />}>
-        <Route element={<AppShell />}>
-          <Route index element={<TodayScreen />} />
-          <Route path="season" element={<StubScreen title="Temporada" />} />
-          <Route path="circle" element={<StubScreen title="Círculo" />} />
-          <Route path="profile" element={<ProfileScreen />} />
+        <Route element={<OnboardingGate />}>
+          <Route path="welcome/name" element={<NameStep />} />
+          <Route path="circle/new" element={<CreateCircleScreen />} />
+          <Route element={<AppShell />}>
+            <Route index element={<TodayScreen />} />
+            <Route path="season" element={<StubScreen title="Temporada" />} />
+            <Route path="circle" element={<StubScreen title="Círculo" />} />
+            <Route path="profile" element={<ProfileScreen />} />
+          </Route>
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
