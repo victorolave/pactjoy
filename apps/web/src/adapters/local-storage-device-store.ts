@@ -26,7 +26,9 @@ export class LocalStorageDeviceStore implements DeviceStore {
 
   get(key: DeviceKey): string | null {
     try {
-      if (this.#storage !== null) return this.#storage.getItem(PREFIX + key);
+      // A quota-full or old Safari private storage reads fine but drops writes: fall back to memory.
+      const stored = this.#storage?.getItem(PREFIX + key) ?? null;
+      if (stored !== null) return stored;
     } catch {
       // Fall through to the in-memory copy.
     }

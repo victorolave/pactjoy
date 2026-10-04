@@ -54,4 +54,18 @@ describe("LocalStorageDeviceStore", () => {
     expect(broken.get("installStep")).toBe("1");
     expect(() => broken.clearSession()).not.toThrow();
   });
+
+  it("keeps a value in memory when storage reads fine but drops writes (quota full, Safari private)", () => {
+    const dropsWrites = new LocalStorageDeviceStore({
+      getItem: () => null,
+      setItem: () => {
+        throw new Error("QuotaExceededError");
+      },
+      removeItem: () => undefined,
+    } as unknown as Storage);
+    dropsWrites.set("welcomeSeen", "1");
+    expect(dropsWrites.get("welcomeSeen")).toBe("1");
+    dropsWrites.remove("welcomeSeen");
+    expect(dropsWrites.get("welcomeSeen")).toBeNull();
+  });
 });
