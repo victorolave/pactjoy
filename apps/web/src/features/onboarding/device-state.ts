@@ -17,6 +17,51 @@ export function displayNameProblem(raw: string): string | null {
 }
 
 /**
+ * Whether the welcome carousel was seen on this device. A device flag: it survives sign out, so
+ * the carousel does not come back on every login (D10). Read from the store on every render.
+ */
+export function useWelcomeSeen(): {
+  readonly seen: boolean;
+  readonly markSeen: () => void;
+} {
+  const device = useDeviceStore();
+  return {
+    seen: device.get("welcomeSeen") !== null,
+    markSeen: () => device.set("welcomeSeen", "1"),
+  };
+}
+
+/**
+ * Whether the install step ("add to home screen") was done or skipped on this device. A device
+ * flag like the carousel's: it survives sign out (D10).
+ */
+export function useInstallStep(): {
+  readonly done: boolean;
+  readonly markDone: () => void;
+} {
+  const device = useDeviceStore();
+  return {
+    done: device.get("installStep") !== null,
+    markDone: () => device.set("installStep", "1"),
+  };
+}
+
+/**
+ * Whether the notification-permission step was done or skipped on this device. A device flag like
+ * the carousel's: it survives sign out (D10), so the step is not asked again (D9).
+ */
+export function useNotificationStep(): {
+  readonly done: boolean;
+  readonly markDone: () => void;
+} {
+  const device = useDeviceStore();
+  return {
+    done: device.get("notificationStep") !== null,
+    markDone: () => device.set("notificationStep", "1"),
+  };
+}
+
+/**
  * The name typed in the name step, kept only on this device (no backend, no photo). It prefills the
  * editable displayName on create and join, and is the one onboarding value cleared on sign out.
  * Read straight from the store on every render, so a route change always sees the latest.
