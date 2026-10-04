@@ -2,7 +2,7 @@ import { type QueryClient, useQuery } from "@tanstack/react-query";
 import { usePactJoyApi } from "../../context/api-context.tsx";
 import { invitePreviewKey, myCircleKey, todayKey } from "../../shared/query-keys.ts";
 
-/** The viewer's circle and season summary: one read that survives a reload. */
+/** The viewer's circle and season summary. Not persisted offline: a reload always refetches it. */
 export function useMyCircle() {
   const api = usePactJoyApi();
   return useQuery({ queryKey: myCircleKey, queryFn: ({ signal }) => api.getMyCircle(signal) });
