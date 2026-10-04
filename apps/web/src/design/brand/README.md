@@ -17,7 +17,10 @@ endorsed.
 - Illustrations: `registro-guardado`, `sin-conexion`, `cocinar` and `crear-pacto` (the ones the app wires),
   from the design's `assets/imagery/*.png` (800x800, with alpha), converted with
   `cwebp -q 80 -alpha_q 90 -m 6 in.png -o out.webp`. Sizes before and after: cocinar 399,806 to
-  43,692 bytes, crear-pacto 461,360 to 70,080, registro-guardado 347,708 to 49,918, sin-conexion 431,084 to 49,984. The other
+  43,692 bytes, crear-pacto 461,360 to 70,080, registro-guardado 347,708 to 49,918, sin-conexion 431,084 to 49,984. Lote 5 (2026-10-04): `onboarding-1` (carousel 1a), `dia-dificil-crop`
+  (1c), `primer-habito` (waiting room, design 7) and `invitar-circulo` (empty Circle tab, 31b), same
+  command: 548,769 to 82,452 (1296x1213), 491,388 to 58,386 (1188x672), 438,260 to 51,766 and 505,041 to 81,124. Slide 1b (2026-10-04) adds `metas-andrea` (617x483) and `metas-victor` (621x598), the two pictures laid over its season cards, same command: 314,599 to 51,740 and 299,717 to 51,696. The PNGs
+  were fetched from the design project's preview origin (`render_preview`), since `read_file` refuses binaries. The other
   Lote screens' illustrations are not used yet; without a `name` or `src`, `Illustration` keeps its
   neutral placeholder.
 

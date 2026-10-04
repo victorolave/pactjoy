@@ -58,6 +58,8 @@ export interface RenderAppOptions {
   readonly notificationPermission?: NotificationPermissionState;
   /** The permission step was already done or skipped on this device. */
   readonly notificationStepDone?: boolean;
+  /** Where the device flags live. A fresh in-memory one by default; pass a throwing one to test blocked storage. */
+  readonly deviceStorage?: Storage;
   /** A name draft already on the device (the name step was done). */
   readonly nameDraft?: string;
   /** `getToday` rejects with these, one per call, before it answers `today`. */
@@ -104,6 +106,7 @@ function createFakeDeps({
   installDone = true,
   notificationPermission = "granted",
   notificationStepDone = false,
+  deviceStorage = new MemoryStorage(),
   welcomeSeen = true,
   now = DEFAULT_NOW_MS,
   canShare = true,
@@ -118,7 +121,7 @@ function createFakeDeps({
   const api = new FakePactJoyApi(today);
   api.setMyCircle(myCircle);
   for (const failure of myCircleFailures) api.failNext("getMyCircle", failure);
-  const device = new LocalStorageDeviceStore(new MemoryStorage());
+  const device = new LocalStorageDeviceStore(deviceStorage);
   if (nameDraft !== undefined) device.set("nameDraft", nameDraft);
   if (welcomeSeen) device.set("welcomeSeen", "1");
   if (installDone) device.set("installStep", "1");

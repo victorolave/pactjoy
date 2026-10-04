@@ -46,9 +46,9 @@ export function WaitingRoom({ circle }: { readonly circle: Circle }) {
   return (
     <>
       <Illustration
-        name="crear-pacto"
-        size="banner"
-        alt="Dos personas chocan los puños, cada una con su cuaderno"
+        name="primer-habito"
+        size="hero"
+        alt="Una mujer piensa con un cuaderno en la mano"
       />
       <div className={styles.avatars}>
         <Avatar name={me} size="xl" />
