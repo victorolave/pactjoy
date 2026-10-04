@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { type OnboardingInput, onboardingRedirect } from "./onboarding-redirect.ts";
 
-const base: OnboardingInput = { pathname: "/", hasCircle: false, hasNameDraft: false };
+const base: OnboardingInput = {
+  pathname: "/",
+  hasCircle: false,
+  hasNameDraft: false,
+  permissionPending: false,
+};
 
 describe("onboardingRedirect", () => {
   it.each<[string, Partial<OnboardingInput>, string | null]>([
@@ -29,6 +34,46 @@ describe("onboardingRedirect", () => {
       "a member on create stays: the screen navigates itself after the mutation",
       { hasCircle: true, pathname: "/circle/new" },
       null,
+    ],
+    [
+      "permission due: even a member goes to the step",
+      { hasCircle: true, permissionPending: true },
+      "/welcome/notifications",
+    ],
+    [
+      "permission due, no circle: the step comes before the name step",
+      { permissionPending: true },
+      "/welcome/notifications",
+    ],
+    [
+      "permission due, circle state unknown (offline): the step still shows",
+      { hasCircle: null, permissionPending: true },
+      "/welcome/notifications",
+    ],
+    [
+      "permission due, on the step: stay",
+      { pathname: "/welcome/notifications", permissionPending: true },
+      null,
+    ],
+    [
+      "permission due, on a deep link: the step comes first",
+      { hasCircle: true, pathname: "/circle/invite", permissionPending: true },
+      "/welcome/notifications",
+    ],
+    [
+      "step no longer due, a member on it goes home",
+      { hasCircle: true, pathname: "/welcome/notifications" },
+      "/",
+    ],
+    [
+      "step no longer due, no circle on it goes home, where the name step takes over",
+      { pathname: "/welcome/notifications" },
+      "/",
+    ],
+    [
+      "step no longer due, circle unknown on it goes home",
+      { hasCircle: null, pathname: "/welcome/notifications" },
+      "/",
     ],
   ])("%s", (_name, patch, expected) => {
     expect(onboardingRedirect({ ...base, ...patch })).toBe(expected);

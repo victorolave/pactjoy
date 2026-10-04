@@ -35,6 +35,8 @@ export function useInvitePreview(code: string) {
     enabled: code.length === 6,
     retry: false,
     gcTime: 0,
+    // Offline, a paused query would leave the screen searching forever: fail fast with NetworkError.
+    networkMode: "always",
   });
 }
 
@@ -71,6 +73,17 @@ export function useCreateCircle() {
   });
 }
 
+/** Joins with a code. Today and the circle are refetched before it settles, like create (WC-R10). */
+export function useJoinCircle() {
+  const api = usePactJoyApi();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (cmd: { readonly inviteCode: string; readonly displayName: string }) =>
+      api.joinCircle(cmd),
+    onSettled: () => invalidateCircleState(client),
+  });
+}
+
 /** A new invite code (it replaces the old one). Only `myCircle` changes, so only it is refetched. */
 export function useGenerateInvite(circleId: string) {
   const api = usePactJoyApi();
@@ -87,6 +100,29 @@ export function useRenameCircle(circleId: string) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (name: string) => api.renameCircle(circleId, name),
+    onSettled: () => invalidateCircleState(client),
+  });
+}
+
+/** Leaves the circle; Today and the circle are refetched before it settles, so the user lands on `noCircle`. */
+export function useLeaveCircle(circleId: string) {
+  const api = usePactJoyApi();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.leaveCircle(circleId),
+    onSettled: () => invalidateCircleState(client),
+  });
+}
+
+/**
+ * Renames the viewer's own displayName in the circle (Q9). Circle, Profile and Today show it, so
+ * both caches are refetched before it settles.
+ */
+export function useRenameMyDisplayName(circleId: string) {
+  const api = usePactJoyApi();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (displayName: string) => api.renameMyDisplayName(circleId, displayName),
     onSettled: () => invalidateCircleState(client),
   });
 }

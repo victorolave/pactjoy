@@ -38,7 +38,7 @@ describe("Illustration with an official image", () => {
     expect(image?.className).toMatch(/imageSized/);
   });
 
-  it.each(["md", "banner", "hero"] as const)(
+  it.each(["md", "banner", "hero", "story"] as const)(
     "offers the full-width %s box of the design",
     (size) => {
       const { container } = render(<Illustration alt="Imagen" name="cocinar" size={size} />);
