@@ -1,18 +1,18 @@
 import type { TodayRow } from "@pactjoy/app";
 import { useEffect, useState } from "react";
-import { useOnline } from "../../context/connectivity-context.tsx";
-import { Button } from "../../ui/Button.tsx";
-import { Centered } from "../../ui/Centered.tsx";
-import { IconButton } from "../../ui/IconButton.tsx";
-import { InlineMessage } from "../../ui/InlineMessage.tsx";
-import { Sheet } from "../../ui/Sheet.tsx";
-import { TodayRowCard } from "../today/rows/TodayRowCard.tsx";
-import { CheckCircle } from "./CheckCircle.tsx";
-import styles from "./check-circle.module.css";
-import { limitMeasureOf, quantityMeasureOf } from "./entry-form.ts";
-import { useEntrySheet } from "./use-entry-sheet.ts";
-import { useOneTap } from "./use-one-tap.ts";
-import { useUndoEntry } from "./use-undo-entry.ts";
+import { useOnline } from "../../../context/connectivity-context.tsx";
+import { Button } from "../../../ui/Button.tsx";
+import { Centered } from "../../../ui/Centered.tsx";
+import { IconButton } from "../../../ui/IconButton.tsx";
+import { InlineMessage } from "../../../ui/InlineMessage.tsx";
+import { Sheet } from "../../../ui/Sheet.tsx";
+import { CheckCircle } from "../../entry/CheckCircle.tsx";
+import { limitMeasureOf, quantityMeasureOf } from "../../entry/entry-form.ts";
+import { useEntrySheet } from "../../entry/use-entry-sheet.ts";
+import { useOneTap } from "../../entry/use-one-tap.ts";
+import { useUndoEntry } from "../../entry/use-undo-entry.ts";
+import styles from "./rows.module.css";
+import { TodayRowCard } from "./TodayRowCard.tsx";
 
 /**
  * A Today row plus its register controls: the one-tap circle of a done/not done day (a second tap on

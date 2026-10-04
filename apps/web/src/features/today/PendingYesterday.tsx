@@ -1,6 +1,7 @@
 import type { PendingYesterdayItem, TodayEntry } from "@pactjoy/app";
 import { useOnline } from "../../context/connectivity-context.tsx";
 import { weekdayDay } from "../../shared/format.ts";
+import { quantityText } from "../../shared/row-labels.ts";
 import { Card } from "../../ui/Card.tsx";
 import { IconButton } from "../../ui/IconButton.tsx";
 import { InlineMessage } from "../../ui/InlineMessage.tsx";
@@ -9,7 +10,6 @@ import { CheckCircle } from "../entry/CheckCircle.tsx";
 import { useEntrySheet } from "../entry/use-entry-sheet.ts";
 import { useOneTap } from "../entry/use-one-tap.ts";
 import styles from "./PendingYesterday.module.css";
-import { quantityText } from "./row-labels.ts";
 import type { YesterdayRegistered } from "./today-view-model.ts";
 
 function PendingItem({

@@ -1,5 +1,5 @@
 import { pointsText } from "../../shared/format.ts";
-import { quantityText, sumQuantities } from "./row-labels.ts";
+import { quantityText, sumQuantities } from "../../shared/row-labels.ts";
 import type { DayTodayRow } from "./today-view-model.ts";
 
 const list = (items: readonly string[]): string =>

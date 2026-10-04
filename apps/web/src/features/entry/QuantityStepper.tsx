@@ -1,7 +1,7 @@
 import { toScaled } from "../../shared/decimal.ts";
+import { formatDecimal } from "../../shared/row-labels.ts";
 import { IconButton } from "../../ui/IconButton.tsx";
 import { Tag } from "../../ui/Tag.tsx";
-import { formatDecimal } from "../today/row-labels.ts";
 import styles from "./entry.module.css";
 
 export interface QuantityStepperProps {

@@ -1,8 +1,6 @@
 import type { ReactNode } from "react";
 import { fromScaled } from "../../../shared/decimal.ts";
-import { ProgressBar } from "../../../ui/ProgressBar.tsx";
-import { Tag } from "../../../ui/Tag.tsx";
-import { loggedToday } from "../logged-totals.ts";
+import { loggedToday } from "../../../shared/logged-totals.ts";
 import {
   formatDecimal,
   quantityText,
@@ -10,8 +8,10 @@ import {
   scheduleText,
   targetText,
   unitLabel,
-} from "../row-labels.ts";
-import { useTodayDates } from "../today-date-context.tsx";
+} from "../../../shared/row-labels.ts";
+import { useTodayDates } from "../../../shared/today-date-context.tsx";
+import { ProgressBar } from "../../../ui/ProgressBar.tsx";
+import { Tag } from "../../../ui/Tag.tsx";
 import type { WeekTodayRow } from "../today-view-model.ts";
 import { RowFrame } from "./RowFrame.tsx";
 import { SessionBar } from "./SessionBar.tsx";

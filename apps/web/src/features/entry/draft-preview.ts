@@ -1,5 +1,5 @@
 import { fromScaled } from "../../shared/decimal.ts";
-import { formatDecimal } from "../today/row-labels.ts";
+import { formatDecimal } from "../../shared/row-labels.ts";
 
 /**
  * What the sheet says about a value that is still being typed (design 17, 17b, 22).

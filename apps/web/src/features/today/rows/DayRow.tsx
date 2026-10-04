@@ -1,7 +1,13 @@
 import type { ReactNode } from "react";
+import {
+  entryText,
+  quantityText,
+  scheduleText,
+  sumQuantities,
+  targetText,
+} from "../../../shared/row-labels.ts";
+import { useTodayDate } from "../../../shared/today-date-context.tsx";
 import { Tag } from "../../../ui/Tag.tsx";
-import { entryText, quantityText, scheduleText, sumQuantities, targetText } from "../row-labels.ts";
-import { useTodayDate } from "../today-date-context.tsx";
 import type { DayTodayRow } from "../today-view-model.ts";
 import { RowFrame } from "./RowFrame.tsx";
 import { SessionBar } from "./SessionBar.tsx";

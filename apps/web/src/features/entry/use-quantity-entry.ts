@@ -1,8 +1,8 @@
 import { useRef, useState } from "react";
 import { useIds } from "../../context/ids-context.tsx";
 import type { EntryValueInput } from "../../ports/pactjoy-api.ts";
+import { useTodayDates } from "../../shared/today-date-context.tsx";
 import { toUiError, type UiKind } from "../../shared/ui-error.ts";
-import { useTodayDates } from "../today/today-date-context.tsx";
 import { entryFailure } from "./entry-messages.ts";
 import { useRecordEntry } from "./queries.ts";
 

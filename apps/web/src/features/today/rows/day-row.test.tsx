@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { TodayDateContext } from "../../../shared/today-date-context.tsx";
 import {
   type DayRow as DayRowData,
   dayRowFixture,
@@ -7,7 +8,6 @@ import {
   entryFixture,
   pointsFixture,
 } from "../../../testing/fixtures/today.ts";
-import { TodayDateContext } from "../today-date-context.tsx";
 import { DayRow } from "./DayRow.tsx";
 
 const show = (row: DayRowData) => render(<DayRow row={row} />);

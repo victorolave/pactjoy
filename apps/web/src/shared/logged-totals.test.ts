@@ -4,7 +4,7 @@ import {
   type Entry,
   entryFixture,
   weekRowFixture,
-} from "../../testing/fixtures/today.ts";
+} from "../testing/fixtures/today.ts";
 import { loggedBefore, loggedThisWeek, loggedToday } from "./logged-totals.ts";
 
 const minutes = (value: string, forDate = "2026-10-02") =>

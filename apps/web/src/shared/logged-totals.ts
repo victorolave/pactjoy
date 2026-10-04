@@ -1,5 +1,5 @@
 import type { TodayRow } from "@pactjoy/app";
-import { toScaled } from "../../shared/decimal.ts";
+import { toScaled } from "./decimal.ts";
 
 /** Quantities the viewer already logged for the day the row describes, scaled x100. */
 export function loggedToday(row: TodayRow, refDate: string | undefined): bigint {

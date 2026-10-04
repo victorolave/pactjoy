@@ -3,18 +3,18 @@ import { type ReactNode, useRef, useState } from "react";
 import { useOnline } from "../../context/connectivity-context.tsx";
 import { fromScaled, toScaled } from "../../shared/decimal.ts";
 import { pointsText } from "../../shared/format.ts";
-import { Button } from "../../ui/Button.tsx";
-import { InlineMessage } from "../../ui/InlineMessage.tsx";
-import { Sheet } from "../../ui/Sheet.tsx";
-import { loggedBefore } from "../today/logged-totals.ts";
+import { loggedBefore } from "../../shared/logged-totals.ts";
 import {
   isWeekBound,
   quantityText,
   targetPhrase,
   unitLabel,
   WEEK_POINTS_NOTE,
-} from "../today/row-labels.ts";
-import { useTodayDates } from "../today/today-date-context.tsx";
+} from "../../shared/row-labels.ts";
+import { useTodayDates } from "../../shared/today-date-context.tsx";
+import { Button } from "../../ui/Button.tsx";
+import { InlineMessage } from "../../ui/InlineMessage.tsx";
+import { Sheet } from "../../ui/Sheet.tsx";
 import { Confirmation } from "./Confirmation.tsx";
 import { type DayChoice, useDayChoice } from "./DayPicker.tsx";
 import { DraftCard } from "./DraftCard.tsx";

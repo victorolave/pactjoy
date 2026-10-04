@@ -1,6 +1,6 @@
 import type { MeasureView, TodayEntry } from "@pactjoy/app";
 import { describe, expect, it } from "vitest";
-import { dayRowFixture } from "../../testing/fixtures/today.ts";
+import { dayRowFixture } from "../testing/fixtures/today.ts";
 import {
   entryText,
   formatDecimal,

@@ -4,12 +4,12 @@ import { useOnline } from "../../context/connectivity-context.tsx";
 import { useToasts } from "../../context/toast-context.tsx";
 import { addDays } from "../../shared/date.ts";
 import { longDate, weekdayName } from "../../shared/format.ts";
+import { entryText, quantityText, targetPhrase, unitLabel } from "../../shared/row-labels.ts";
+import { useTodayDates } from "../../shared/today-date-context.tsx";
 import { Button } from "../../ui/Button.tsx";
 import { InlineMessage } from "../../ui/InlineMessage.tsx";
 import { Sheet } from "../../ui/Sheet.tsx";
 import { Tag } from "../../ui/Tag.tsx";
-import { entryText, quantityText, targetPhrase, unitLabel } from "../today/row-labels.ts";
-import { useTodayDates } from "../today/today-date-context.tsx";
 import { Confirmation } from "./Confirmation.tsx";
 import styles from "./entry.module.css";
 import {

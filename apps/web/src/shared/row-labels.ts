@@ -1,7 +1,7 @@
 import type { MeasureView, TodayEntry } from "@pactjoy/app";
-import { fromScaled, toScaled } from "../../shared/decimal.ts";
-import { weekdayName } from "../../shared/format.ts";
-import type { ProgressMark } from "../../ui/ProgressBar.tsx";
+import type { ProgressMark } from "../ui/ProgressBar.tsx";
+import { fromScaled, toScaled } from "./decimal.ts";
+import { weekdayName } from "./format.ts";
 
 /** Decimal strings come from the server with a dot; Spanish writes a comma. */
 export const formatDecimal = (value: string): string => value.replace(".", ",");

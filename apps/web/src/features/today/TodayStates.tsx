@@ -1,18 +1,18 @@
 import type { ReactNode } from "react";
 import { longDate } from "../../shared/format.ts";
+import { TodayDateContext } from "../../shared/today-date-context.tsx";
 import { Card } from "../../ui/Card.tsx";
 import { InlineMessage } from "../../ui/InlineMessage.tsx";
 import { Icon } from "../../ui/icon/Icon.tsx";
 import { Illustration } from "../../ui/Placeholder.tsx";
 import { EntrySheetHost } from "../entry/EntrySheetHost.tsx";
-import { RowWithControls } from "../entry/RowWithControls.tsx";
 import { allDoneDetail } from "./all-done-copy.ts";
 import { dayOffText } from "./day-off-copy.ts";
 import { PendingYesterday } from "./PendingYesterday.tsx";
+import { RowWithControls } from "./rows/RowWithControls.tsx";
 import { SeasonCard } from "./SeasonCard.tsx";
 import { StandingsPair } from "./StandingsPair.tsx";
 import styles from "./TodayScreen.module.css";
-import { TodayDateContext } from "./today-date-context.tsx";
 import type { TodayModel } from "./today-view-model.ts";
 
 type SeasonModel = Extract<TodayModel, { kind: "pactOpen" | "notStarted" }>;

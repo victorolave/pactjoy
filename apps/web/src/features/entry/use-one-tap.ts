@@ -3,7 +3,7 @@ import { useHaptics } from "../../context/haptics-context.tsx";
 import { useIds } from "../../context/ids-context.tsx";
 import { useToasts } from "../../context/toast-context.tsx";
 import type { RecordEntryCommand } from "../../ports/pactjoy-api.ts";
-import { useTodayDates } from "../today/today-date-context.tsx";
+import { useTodayDates } from "../../shared/today-date-context.tsx";
 import { entryFailure } from "./entry-messages.ts";
 import { useRecordEntry } from "./queries.ts";
 import { useSavedToast } from "./use-saved-toast.ts";
