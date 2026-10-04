@@ -40,3 +40,23 @@ the public API (no SQL, no service role key). It refuses to run unless both URLs
 `127.0.0.1` or `localhost`. It asks for the code on stdin; use `SEED_EMAIL` to pick the user
 (default `dev@pactjoy.local`). If the user already is in an active circle it exits 0 and suggests
 `supabase db reset`.
+
+## Source layout
+
+```
+src/
+  features/<name>/   product features, grouped by capability (a user flow), never by file type
+    index.ts         the feature's public API: the only file other code imports
+    <capability>/    e.g. entry/one-tap, entry/edit, today/rows; tests sit next to the file they cover
+  composition/       the composition root: dependencies, providers, query client
+  context/           React contexts that carry a port (api, connectivity, haptics, ids) and the toast
+  shell/             app chrome: routes, tab bar, error boundary, placeholder screens
+  platform/          cross-cutting capabilities that are not features (offline)
+  ports/ adapters/   interfaces owned by the client, and their browser or HTTP implementations
+  shared/ ui/        pure helpers and presentational components
+```
+
+Dependencies run one way: `shell` and `composition` assemble features, `today` uses `entry`, and
+features never import `composition` or `shell`. `test/architecture.test.ts` fails when a feature is
+reached other than through its `index.ts`, when `entry` imports `today`, or when a feature imports
+`composition` or `shell`.
