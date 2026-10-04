@@ -1,5 +1,7 @@
+import { BrowserAppInstall } from "../adapters/browser-app-install.ts";
 import { BrowserConnectivity } from "../adapters/browser-connectivity.ts";
 import { BrowserHaptics } from "../adapters/browser-haptics.ts";
+import { BrowserNotificationPermission } from "../adapters/browser-notification-permission.ts";
 import { BrowserSharing } from "../adapters/browser-sharing.ts";
 import { CryptoIds } from "../adapters/crypto-ids.ts";
 import { GoTrueAuth, type GoTrueAuthOptions } from "../adapters/gotrue-auth.ts";
@@ -35,6 +37,7 @@ export function createDependencies(config: AppConfig, env: ComposeEnvironment): 
   const sessionEvents = createSessionEvents();
   return {
     auth,
+    clock,
     api: new HttpPactJoyApi({
       baseUrl: config.apiBaseUrl,
       getAccessToken: () => sessions.getAccessToken(),
@@ -48,6 +51,8 @@ export function createDependencies(config: AppConfig, env: ComposeEnvironment): 
     store,
     device: new LocalStorageDeviceStore(),
     sharing: new BrowserSharing(),
+    appInstall: new BrowserAppInstall(),
+    notifications: new BrowserNotificationPermission(),
     sessions,
     sessionEvents,
     queryClient: createQueryClient(),

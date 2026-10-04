@@ -13,8 +13,10 @@ import { circleFailure } from "../circle-messages.ts";
 import { useCreateCircle } from "../queries.ts";
 import styles from "./CreateCircleScreen.module.css";
 
-/** Where a new circle lands. The invite screen (design 5) takes this over with the Circle tab. */
-const AFTER_CREATE_PATH = "/circle";
+/** Where a new circle lands: its invite (design 5). */
+const AFTER_CREATE_PATH = "/circle/invite";
+/** Where someone who already has a circle belongs. */
+const CIRCLE_PATH = "/circle";
 /** Joining by code (design 6a). */
 const JOIN_PATH = "/circle/join";
 
@@ -52,7 +54,7 @@ export function CreateCircleScreen() {
       // A lost response to a create that did land, or a member opening this screen: the circle
       // exists, so go to it instead of asking them to leave it.
       if (error instanceof ApiError && error.code === "AlreadyInActiveCircle") {
-        navigate(AFTER_CREATE_PATH);
+        navigate(CIRCLE_PATH);
         return;
       }
       const { message, field } = circleFailure(error);

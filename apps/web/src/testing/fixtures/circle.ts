@@ -26,3 +26,24 @@ export function soloCircleFixture(): MyCircle {
     season: null,
   };
 }
+
+/** The viewer and Andrea in the circle, with a season in the given phase (none by default). */
+export function pairCircleFixture(season: MyCircle["season"] = null): MyCircle {
+  const solo = soloCircleFixture();
+  if (solo.circle === null) throw new Error("the solo fixture always has a circle");
+  return {
+    circle: {
+      ...solo.circle,
+      members: [
+        {
+          id: "member-andrea",
+          displayName: "Andrea",
+          joinedAt: "2026-09-27T12:00:00.000Z",
+          isYou: false,
+        },
+        ...solo.circle.members,
+      ],
+    },
+    season,
+  };
+}

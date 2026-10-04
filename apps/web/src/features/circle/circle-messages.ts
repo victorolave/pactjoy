@@ -45,6 +45,15 @@ const RETRY: CircleFailure = {
   retryable: true,
 };
 
+/**
+ * `AlreadyInActiveCircle` when the code is the viewer's own circle's (the join screen compares it
+ * against `myCircle`): not a failure to fix, so it has its own wording.
+ */
+export const ALREADY_IN_THIS_CIRCLE = "Ya formas parte de este círculo.";
+
+/** Under the code boxes when typed or pasted characters were dropped for not being in the alphabet. */
+export const CODE_CHARS_HINT = "Los códigos no usan 0, O, 1, I ni L.";
+
 /** `satisfies` makes a missing or stale code a compile error; the test walks every key. */
 export const CIRCLE_FAILURES = {
   InvalidName: {

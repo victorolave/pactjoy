@@ -40,7 +40,7 @@ describe("create circle (design 4)", () => {
     await userEvent.type(await circleName(), " Andrea & Victor ");
     deps.api.setMyCircle(soloCircleFixture());
     await submit();
-    await waitFor(() => expect(location()).toBe("/circle"));
+    await waitFor(() => expect(location()).toBe("/circle/invite"));
     expect(deps.api.circleCommands.map((c) => c.method)).toEqual([
       "getMyCircle",
       "createCircle",
@@ -59,7 +59,8 @@ describe("create circle (design 4)", () => {
     deps.api.setMyCircle(soloCircleFixture());
     deps.api.setToday(noSeasonTodayFixture());
     await submit();
-    await waitFor(() => expect(location()).toBe("/circle"));
+    await waitFor(() => expect(location()).toBe("/circle/invite"));
+    await userEvent.click(screen.getByRole("button", { name: "Listo" }));
     await userEvent.click(screen.getByRole("link", { name: "Hoy" }));
     expect(
       await screen.findByRole("heading", { name: "Todavía no hay temporada" }),
@@ -77,7 +78,7 @@ describe("create circle (design 4)", () => {
     await waitFor(() => expect(deps.api.calls.getMyCircle).toBe(2));
     expect(location()).toBe("/circle/new");
     releaseRefetch();
-    await waitFor(() => expect(location()).toBe("/circle"));
+    await waitFor(() => expect(location()).toBe("/circle/invite"));
   });
 
   it("still lands on the circle when only the invite fails: the circle exists", async () => {
@@ -86,7 +87,7 @@ describe("create circle (design 4)", () => {
     await userEvent.type(await circleName(), "Los Pactos");
     deps.api.setMyCircle(soloCircleFixture());
     await submit();
-    await waitFor(() => expect(location()).toBe("/circle"));
+    await waitFor(() => expect(location()).toBe("/circle/invite"));
   });
 
   it("goes to the circle when the server says they are already in one (a retried, landed create)", async () => {
