@@ -21,6 +21,7 @@
   --icon-xs: 12px;
   --goals-card-height: 118px;
   --goals-lift: 62px;
+  --goals-lift-second: 40px;
   --goals-chip-height: 26px;
   --goals-art-andrea: 206px;
   --goals-art-victor: 176px;
@@ -32,6 +33,10 @@
   --avatar-lg: 96px;
   /* Member rows and the waiting room (designs 7, 31a): 56 square. */
   --avatar-xl: 56px;
+  /* The avatars inside the goals cards of welcome slide 1b: 22 square. */
+  --avatar-xs: 22px;
+  /* The welcome carousel header row with the logo and Saltar (design 1a-c): 52 high. */
+  --welcome-header-height: 52px;
   /* Pager dots (design 1a-c): 6 px, the current one a 20 px pill. */
   --pager-dot: 6px;
   --pager-dot-current: 20px;

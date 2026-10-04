@@ -3,13 +3,16 @@
   flex: none;
   flex-direction: column;
   gap: var(--space-1);
-  /* Room between the composition and the slide title. */
-  margin-bottom: var(--space-4);
 }
 
 .row {
   position: relative;
   padding-top: var(--goals-lift);
+}
+
+/* The second card sits closer to the first; its picture overlaps only the first card's bottom padding. */
+.row + .row {
+  padding-top: var(--goals-lift-second);
 }
 
 .card {

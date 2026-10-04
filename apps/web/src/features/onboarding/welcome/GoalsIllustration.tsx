@@ -52,7 +52,7 @@ export function GoalsIllustration() {
         <div key={person.name} className={styles.row} data-person={person.name}>
           <div className={styles.card} aria-hidden="true">
             <div className={styles.header}>
-              <Avatar name={person.name} size="sm" />
+              <Avatar name={person.name} size="xs" />
               <b className={styles.name}>{person.name}</b>
             </div>
             <div className={styles.points}>1.000 pts</div>

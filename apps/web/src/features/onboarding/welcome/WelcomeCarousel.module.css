@@ -17,7 +17,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: var(--space-7);
+  min-height: var(--welcome-header-height);
   padding: 0 var(--space-3) 0 var(--layout-margin-mobile);
 }
 

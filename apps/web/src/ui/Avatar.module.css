@@ -10,6 +10,12 @@
   font-weight: var(--weight-extrabold);
 }
 
+.xs {
+  width: var(--avatar-xs);
+  height: var(--avatar-xs);
+  font-size: calc(var(--avatar-xs) * 0.42);
+}
+
 .sm {
   width: var(--icon-lg);
   height: var(--icon-lg);
