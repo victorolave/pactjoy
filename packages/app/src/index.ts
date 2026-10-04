@@ -197,6 +197,7 @@ export { localDateOfSeasonDay, toSeasonDay } from "./time/season-calendar.ts";
 export type { TimeZone, TimeZoneId } from "./time/time-zone.port.ts";
 export { timeZoneId } from "./time/time-zone.port.ts";
 export type { PendingYesterdayItem } from "./today/pending-yesterday.ts";
+export type { SeasonPhaseName } from "./today/season-phase.ts";
 export type {
   TodayBase,
   TodayCircle,

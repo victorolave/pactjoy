@@ -4,7 +4,7 @@ import type { SeasonLengthWeeks } from "../season/season.ts";
 import type { Actor } from "../shared/actor.ts";
 import type { CircleId, SeasonId } from "../shared/ids.ts";
 import type { Instant } from "../time/instant.ts";
-import { seasonPhase, weekOf } from "../today/season-phase.ts";
+import { type SeasonPhaseName, seasonPhase, weekOf } from "../today/season-phase.ts";
 import type { InviteCode } from "./invite-code.ts";
 
 export type MyCircleDeps = ScoreQueryDeps;
@@ -18,7 +18,7 @@ export interface MyCircleMember {
 
 export interface MyCircleSeason {
   readonly id: SeasonId;
-  readonly phase: "pactOpen" | "notStarted" | "active" | "ended";
+  readonly phase: SeasonPhaseName;
   readonly lengthWeeks: SeasonLengthWeeks;
   /** 1-based; `null` until the season has started. */
   readonly week: number | null;
@@ -49,6 +49,8 @@ export interface MyCircleView {
  */
 export async function myCircle(deps: MyCircleDeps, actor: Actor): Promise<MyCircleView> {
   return deps.uow.read(async (repos): Promise<MyCircleView> => {
+    // No archived check: the last active member leaving archives the circle, so an archived
+    // circle never has an active member and cannot be found here.
     const circle = await repos.circles.findActiveByUser(actor.userId);
     if (!circle) {
       return { circle: null, season: null };

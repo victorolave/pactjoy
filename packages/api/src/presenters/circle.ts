@@ -1,4 +1,4 @@
-import type { Actor, Circle, Invite, MyCircleView } from "@pactjoy/app";
+import type { Actor, Circle, Invite, MyCircleView, SeasonPhaseName } from "@pactjoy/app";
 import { presentInstant, presentInstantOrNull } from "./time.ts";
 
 export interface InviteDto {
@@ -69,7 +69,7 @@ export interface MyCircleDto {
   };
   readonly season: null | {
     readonly id: string;
-    readonly phase: "pactOpen" | "notStarted" | "active" | "ended";
+    readonly phase: SeasonPhaseName;
     readonly lengthWeeks: number;
     readonly week: number | null;
     readonly approvalCount: number;

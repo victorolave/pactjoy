@@ -12,6 +12,8 @@ export const DAYS_PER_WEEK = 7;
  * one scoring reads: today while running, the last season day once over. Callers treat a
  * `closed` season as no season before asking.
  */
+export type SeasonPhaseName = "pactOpen" | "notStarted" | "active" | "ended";
+
 export type SeasonPhase =
   | { readonly phase: "pactOpen" }
   | { readonly phase: "notStarted" }
