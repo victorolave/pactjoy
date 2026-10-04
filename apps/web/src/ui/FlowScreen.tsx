@@ -11,18 +11,27 @@ export interface FlowScreenProps {
   readonly onSubmit?: FormEventHandler<HTMLFormElement>;
   /** Shows a "Volver" chevron above the title (design 6a); leave it out on a first step. */
   readonly onBack?: () => void;
+  /** The back button's accessible name; "Volver" by default. */
+  readonly backLabel?: string;
 }
 
 /**
  * A full-screen step outside the tab bar (onboarding, create, join): a title, content that
  * scrolls, and (when it has one) a pinned action. It is a `form` when it has `onSubmit`.
  */
-export function FlowScreen({ title, footer, children, onSubmit, onBack }: FlowScreenProps) {
+export function FlowScreen({
+  title,
+  footer,
+  children,
+  onSubmit,
+  onBack,
+  backLabel = "Volver",
+}: FlowScreenProps) {
   const body = (
     <>
       {onBack !== undefined && (
         <div className={styles.back}>
-          <IconButton icon="chevron-left" label="Volver" onClick={onBack} />
+          <IconButton icon="chevron-left" label={backLabel} onClick={onBack} />
         </div>
       )}
       <div className={styles.content}>

@@ -113,3 +113,16 @@ export function useLeaveCircle(circleId: string) {
     onSettled: () => invalidateCircleState(client),
   });
 }
+
+/**
+ * Renames the viewer's own displayName in the circle (Q9). Circle, Profile and Today show it, so
+ * both caches are refetched before it settles.
+ */
+export function useRenameMyDisplayName(circleId: string) {
+  const api = usePactJoyApi();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (displayName: string) => api.renameMyDisplayName(circleId, displayName),
+    onSettled: () => invalidateCircleState(client),
+  });
+}

@@ -15,7 +15,7 @@ import {
   JoinCircleScreen,
 } from "../features/circle/index.ts";
 import { NameStep } from "../features/onboarding/index.ts";
-import { ProfileScreen } from "../features/profile/index.ts";
+import { ProfileScreen, SettingsScreen } from "../features/profile/index.ts";
 import { TodayScreen } from "../features/today/index.ts";
 import { AppShell } from "./AppShell.tsx";
 import { OnboardingGate } from "./OnboardingGate.tsx";
@@ -50,6 +50,7 @@ export function AppRoutes() {
           <Route path="circle/new" element={<CreateCircleScreen />} />
           <Route path="circle/join" element={<JoinCircleScreen />} />
           <Route path="circle/invite" element={<InviteScreen />} />
+          <Route path="profile/settings" element={<SettingsScreen />} />
           <Route element={<AppShell />}>
             <Route index element={<TodayScreen />} />
             <Route path="season" element={<StubScreen title="Temporada" />} />
