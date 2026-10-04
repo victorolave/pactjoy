@@ -14,7 +14,12 @@ import {
   InviteScreen,
   JoinCircleScreen,
 } from "../features/circle/index.ts";
-import { NameStep, WelcomeCarousel } from "../features/onboarding/index.ts";
+import {
+  InstallStep,
+  NameStep,
+  NotificationStep,
+  WelcomeCarousel,
+} from "../features/onboarding/index.ts";
 import { ProfileScreen, SettingsScreen } from "../features/profile/index.ts";
 import { TodayScreen } from "../features/today/index.ts";
 import { AppShell } from "./AppShell.tsx";
@@ -32,6 +37,7 @@ export function AppRoutes() {
       <Route element={<RedirectIfSignedIn />}>
         <Route element={<WelcomeGate />}>
           <Route path="welcome" element={<WelcomeCarousel />} />
+          <Route path="welcome/install" element={<InstallStep />} />
           <Route element={<LoginLayout />}>
             <Route path="login" element={<EmailStep />} />
             <Route path="login/code" element={<CodeStep />} />
@@ -50,6 +56,7 @@ export function AppRoutes() {
       )}
       <Route element={<RequireSession />}>
         <Route element={<OnboardingGate />}>
+          <Route path="welcome/notifications" element={<NotificationStep />} />
           <Route path="welcome/name" element={<NameStep />} />
           <Route path="circle/new" element={<CreateCircleScreen />} />
           <Route path="circle/join" element={<JoinCircleScreen />} />

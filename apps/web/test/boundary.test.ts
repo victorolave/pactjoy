@@ -60,7 +60,7 @@ function escapesRoot(file: string, text: string, root: string): string[] {
 }
 
 const GLOBAL_ACCESS =
-  /\b(?:globalThis|window|self)\s*\.\s*(?:fetch|localStorage|sessionStorage|indexedDB|navigator)\b/;
+  /\b(?:globalThis|window|self)\s*\.\s*(?:fetch|localStorage|sessionStorage|indexedDB|navigator|Notification)\b/;
 const GLOBAL_ALLOWED = /^src\/adapters\/|^src\/main\.tsx$/;
 
 describe("pactjoyViolations (the scanner itself)", () => {
@@ -164,6 +164,7 @@ describe("the global access rule (scanner check)", () => {
     "window.fetch(url)",
     "window.localStorage.getItem('a')",
     "self.navigator.onLine",
+    "window.Notification.requestPermission()",
   ])("flags %s", (code) => {
     expect(GLOBAL_ACCESS.test(code)).toBe(true);
   });

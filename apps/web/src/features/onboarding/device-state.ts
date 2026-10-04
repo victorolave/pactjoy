@@ -32,6 +32,36 @@ export function useWelcomeSeen(): {
 }
 
 /**
+ * Whether the install step ("add to home screen") was done or skipped on this device. A device
+ * flag like the carousel's: it survives sign out (D10).
+ */
+export function useInstallStep(): {
+  readonly done: boolean;
+  readonly markDone: () => void;
+} {
+  const device = useDeviceStore();
+  return {
+    done: device.get("installStep") !== null,
+    markDone: () => device.set("installStep", "1"),
+  };
+}
+
+/**
+ * Whether the notification-permission step was done or skipped on this device. A device flag like
+ * the carousel's: it survives sign out (D10), so the step is not asked again (D9).
+ */
+export function useNotificationStep(): {
+  readonly done: boolean;
+  readonly markDone: () => void;
+} {
+  const device = useDeviceStore();
+  return {
+    done: device.get("notificationStep") !== null,
+    markDone: () => device.set("notificationStep", "1"),
+  };
+}
+
+/**
  * The name typed in the name step, kept only on this device (no backend, no photo). It prefills the
  * editable displayName on create and join, and is the one onboarding value cleared on sign out.
  * Read straight from the store on every render, so a route change always sees the latest.
