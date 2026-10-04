@@ -1,6 +1,6 @@
-import { AuthError, type AuthPort, type RefreshResult, type Session } from "../../ports/auth.ts";
-import type { Clock } from "../../ports/clock.ts";
-import type { TokenStore } from "../../ports/token-store.ts";
+import { AuthError, type AuthPort, type RefreshResult, type Session } from "../../../ports/auth.ts";
+import type { Clock } from "../../../ports/clock.ts";
+import type { TokenStore } from "../../../ports/token-store.ts";
 
 /** Refresh when fewer than this many seconds remain on the access token. */
 const REFRESH_WINDOW_SECONDS = 60;

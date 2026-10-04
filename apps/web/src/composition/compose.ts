@@ -7,8 +7,7 @@ import { LocalStorageTokenStore } from "../adapters/local-storage-token-store.ts
 import { createTodayPersister } from "../adapters/query-persister.ts";
 import { SystemClock } from "../adapters/system-clock.ts";
 import type { AppConfig } from "../config.ts";
-import { createSessionEvents } from "../features/auth/session-events.ts";
-import { SessionManager } from "../features/auth/session-manager.ts";
+import { createSessionEvents, SessionManager } from "../features/auth/index.ts";
 import type { TokenStore } from "../ports/token-store.ts";
 import type { AppDependencies } from "./dependencies.ts";
 import { createQueryClient } from "./query-client.ts";

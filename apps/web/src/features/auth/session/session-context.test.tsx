@@ -1,10 +1,10 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { AuthError, type Session } from "../../ports/auth.ts";
-import { FakeAuth, fakeSession } from "../../testing/fake-auth.ts";
-import { FixedClock } from "../../testing/fixed-clock.ts";
-import { MemoryTokenStore } from "../../testing/memory-token-store.ts";
+import { AuthError, type Session } from "../../../ports/auth.ts";
+import { FakeAuth, fakeSession } from "../../../testing/fake-auth.ts";
+import { FixedClock } from "../../../testing/fixed-clock.ts";
+import { MemoryTokenStore } from "../../../testing/memory-token-store.ts";
 import { SessionProvider, useSession } from "./session-context.tsx";
 import { createSessionEvents } from "./session-events.ts";
 import { SessionManager } from "./session-manager.ts";

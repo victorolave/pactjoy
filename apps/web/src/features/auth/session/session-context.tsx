@@ -8,8 +8,8 @@ import {
   useRef,
   useState,
 } from "react";
-import type { AuthPort, Session } from "../../ports/auth.ts";
-import type { TokenStore } from "../../ports/token-store.ts";
+import type { AuthPort, Session } from "../../../ports/auth.ts";
+import type { TokenStore } from "../../../ports/token-store.ts";
 import type { SessionEvents } from "./session-events.ts";
 import type { SessionManager } from "./session-manager.ts";
 

@@ -1,9 +1,9 @@
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { describe, expect, it } from "vitest";
-import { FakeAuth, fakeSession } from "../../testing/fake-auth.ts";
-import { FixedClock } from "../../testing/fixed-clock.ts";
-import { MemoryTokenStore } from "../../testing/memory-token-store.ts";
+import { FakeAuth, fakeSession } from "../../../testing/fake-auth.ts";
+import { FixedClock } from "../../../testing/fixed-clock.ts";
+import { MemoryTokenStore } from "../../../testing/memory-token-store.ts";
 import { RedirectIfSignedIn, RequireSession } from "./RequireSession.tsx";
 import { SessionProvider } from "./session-context.tsx";
 import { SessionManager } from "./session-manager.ts";

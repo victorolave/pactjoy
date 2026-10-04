@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "../../ui/Button.tsx";
-import { useSession } from "../auth/session-context.tsx";
+import { useSession } from "../auth/index.ts";
 import styles from "./ProfileScreen.module.css";
 
 /**

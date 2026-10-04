@@ -1,11 +1,11 @@
 import { type FormEvent, useState } from "react";
 import { Link, Navigate, useLocation } from "react-router";
-import { Button } from "../../ui/Button.tsx";
-import { InlineMessage } from "../../ui/InlineMessage.tsx";
-import { TextField } from "../../ui/TextField.tsx";
+import { Button } from "../../../ui/Button.tsx";
+import { InlineMessage } from "../../../ui/InlineMessage.tsx";
+import { TextField } from "../../../ui/TextField.tsx";
+import { useSession } from "../session/session-context.tsx";
 import { authMessage } from "./auth-messages.ts";
 import styles from "./LoginLayout.module.css";
-import { useSession } from "./session-context.tsx";
 
 const CODE_SHAPE = /^\d{6}$/;
 

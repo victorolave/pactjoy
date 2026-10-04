@@ -1,4 +1,4 @@
-import { AuthError, type AuthErrorCode } from "../../ports/auth.ts";
+import { AuthError, type AuthErrorCode } from "../../../ports/auth.ts";
 
 /** Placeholder Spanish copy (P8): the design has no wording for these failures yet. */
 const MESSAGES: Record<AuthErrorCode, string> = {

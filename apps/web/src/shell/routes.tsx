@@ -1,11 +1,14 @@
 import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router";
 import { loadDevToday } from "../config.ts";
-import { CodeStep } from "../features/auth/CodeStep.tsx";
-import { EmailStep } from "../features/auth/EmailStep.tsx";
-import { LoginLayout } from "../features/auth/LoginLayout.tsx";
-import { RedirectIfSignedIn, RequireSession } from "../features/auth/RequireSession.tsx";
-import { ProfileScreen } from "../features/profile/ProfileScreen.tsx";
+import {
+  CodeStep,
+  EmailStep,
+  LoginLayout,
+  RedirectIfSignedIn,
+  RequireSession,
+} from "../features/auth/index.ts";
+import { ProfileScreen } from "../features/profile/index.ts";
 import { TodayScreen } from "../features/today/index.ts";
 import { AppShell } from "./AppShell.tsx";
 import { StubScreen } from "./StubScreen.tsx";

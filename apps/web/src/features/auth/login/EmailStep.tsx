@@ -1,11 +1,11 @@
 import { type FormEvent, useState } from "react";
 import { useNavigate } from "react-router";
-import { Button } from "../../ui/Button.tsx";
-import { InlineMessage } from "../../ui/InlineMessage.tsx";
-import { TextField } from "../../ui/TextField.tsx";
+import { Button } from "../../../ui/Button.tsx";
+import { InlineMessage } from "../../../ui/InlineMessage.tsx";
+import { TextField } from "../../../ui/TextField.tsx";
+import { useSession } from "../session/session-context.tsx";
 import { authMessage } from "./auth-messages.ts";
 import styles from "./LoginLayout.module.css";
-import { useSession } from "./session-context.tsx";
 
 /** Deliberately loose: the server decides what a real address is; this only blocks obvious typos. */
 const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

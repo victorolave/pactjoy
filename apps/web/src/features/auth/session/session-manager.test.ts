@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { FakeAuth, fakeSession } from "../../testing/fake-auth.ts";
-import { FixedClock } from "../../testing/fixed-clock.ts";
-import { MemoryTokenStore } from "../../testing/memory-token-store.ts";
+import { FakeAuth, fakeSession } from "../../../testing/fake-auth.ts";
+import { FixedClock } from "../../../testing/fixed-clock.ts";
+import { MemoryTokenStore } from "../../../testing/memory-token-store.ts";
 import { SessionManager } from "./session-manager.ts";
 
 const NOW_S = 1_800_000_000;

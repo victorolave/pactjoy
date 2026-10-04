@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { AuthErrorCode } from "../../ports/auth.ts";
+import type { AuthErrorCode } from "../../../ports/auth.ts";
 import { authMessage } from "./auth-messages.ts";
 
 describe("authMessage", () => {
@@ -32,7 +32,7 @@ describe("authMessage", () => {
   });
 
   it("reads the code off an AuthError", async () => {
-    const { AuthError } = await import("../../ports/auth.ts");
+    const { AuthError } = await import("../../../ports/auth.ts");
     expect(authMessage(new AuthError("RateLimited"))).toBe(authMessage("RateLimited"));
   });
 });

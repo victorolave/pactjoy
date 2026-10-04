@@ -7,7 +7,7 @@ import { ConnectivityProvider } from "../context/connectivity-context.tsx";
 import { HapticsProvider } from "../context/haptics-context.tsx";
 import { IdsProvider } from "../context/ids-context.tsx";
 import { ToastProvider } from "../context/toast-context.tsx";
-import { SessionProvider, useSession } from "../features/auth/session-context.tsx";
+import { SessionProvider, useSession } from "../features/auth/index.ts";
 import type { AppDependencies } from "./dependencies.ts";
 
 export function AppProviders({

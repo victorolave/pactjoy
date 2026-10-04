@@ -1,7 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 import type { Persister } from "@tanstack/react-query-persist-client";
-import type { SessionEvents } from "../features/auth/session-events.ts";
-import type { SessionManager } from "../features/auth/session-manager.ts";
+import type { SessionEvents, SessionManager } from "../features/auth/index.ts";
 import type { AuthPort } from "../ports/auth.ts";
 import type { Connectivity } from "../ports/connectivity.ts";
 import type { Haptics } from "../ports/haptics.ts";

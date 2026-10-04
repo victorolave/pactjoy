@@ -1,8 +1,8 @@
 import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import { fakeSession } from "../../testing/fake-auth.ts";
-import { renderApp } from "../../testing/render.tsx";
+import { fakeSession } from "../../../testing/fake-auth.ts";
+import { renderApp } from "../../../testing/render.tsx";
 
 const EMAIL = "andrea@example.com";
 
