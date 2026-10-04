@@ -13,6 +13,8 @@
   --illustration-banner: 150px;
   /* The create-circle hero (design 4): 220 high. */
   --illustration-hero: 220px;
+  /* The welcome carousel picture (design 1a): 320 high. */
+  --illustration-story: 320px;
   /* The name step avatar (design 3): 96 square. */
   --avatar-lg: 96px;
   /* Member rows and the waiting room (designs 7, 31a): 56 square. */

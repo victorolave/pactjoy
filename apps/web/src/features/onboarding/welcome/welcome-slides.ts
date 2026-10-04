@@ -10,15 +10,16 @@ export interface WelcomeSlide {
 }
 
 /**
- * Designs 1a-c. The design's pictures are not in the repository (and 1b, 1c are mock-ups of the
- * Today and season cards), so each slide keeps the neutral placeholder until the art is vendored.
+ * Designs 1a-c. 1a and 1c use the design's own pictures. 1b is a mock-up of two season cards with
+ * two avatars laid over them, not one picture, so it keeps the neutral placeholder.
  * The circle size says "de 1 a 6 personas": a solo circle is a valid one (OB-R7).
  */
 export const WELCOME_SLIDES: readonly WelcomeSlide[] = [
   {
     title: "Elige una meta. Invita a alguien. Avancen a su manera.",
     body: "PactJoy es para círculos pequeños, de 1 a 6 personas: tu pareja, un amigo, tu hermana.",
-    alt: "Dos personas con hábitos distintos, unidas por una cinta de color",
+    alt: "Una mujer se ata las zapatillas junto a la puerta y un hombre lee en el sofá, unidos por una cinta de color",
+    illustration: "onboarding-1",
   },
   {
     title: "Metas distintas, la misma cuenta.",
@@ -28,6 +29,7 @@ export const WELCOME_SLIDES: readonly WelcomeSlide[] = [
   {
     title: "Compite contigo. Juega con otros.",
     body: "Cada compromiso tiene un mínimo para los días difíciles y un ideal. Lo que importa es volver, no ser perfecto.",
-    alt: "Un compromiso con su mínimo y su ideal",
+    alt: "Un hombre lee en un sillón con un café",
+    illustration: "dia-dificil-crop",
   },
 ];

@@ -1,7 +1,11 @@
 import cocinar from "../design/brand/cocinar.webp";
 import crearPacto from "../design/brand/crear-pacto.webp";
+import diaDificilCrop from "../design/brand/dia-dificil-crop.webp";
+import invitarCirculo from "../design/brand/invitar-circulo.webp";
+import onboarding1 from "../design/brand/onboarding-1.webp";
 import horizontalLogo from "../design/brand/pactjoy-horizontal-proposed.svg";
 import symbolLogo from "../design/brand/pactjoy-symbol-gradient.svg";
+import primerHabito from "../design/brand/primer-habito.webp";
 import registroGuardado from "../design/brand/registro-guardado.webp";
 import sinConexion from "../design/brand/sin-conexion.webp";
 import styles from "./Placeholder.module.css";
@@ -11,6 +15,10 @@ const ILLUSTRATIONS = {
   "sin-conexion": sinConexion,
   cocinar,
   "crear-pacto": crearPacto,
+  "onboarding-1": onboarding1,
+  "dia-dificil-crop": diaDificilCrop,
+  "primer-habito": primerHabito,
+  "invitar-circulo": invitarCirculo,
 } as const;
 
 export type IllustrationName = keyof typeof ILLUSTRATIONS;
@@ -23,9 +31,9 @@ export interface IllustrationProps {
   readonly src?: string;
   /**
    * The design's boxes, the image contained in each: `lg` 200 square (confirmation), `md` 130 high
-   * and `banner` 150 high, and `hero` 220 high, all full width (empty day, offline, create circle). Without it the image fills the width.
+   * and `banner` 150 high, `hero` 220 high and `story` 320 high, all full width (empty day, offline, create circle, welcome carousel). Without it the image fills the width.
    */
-  readonly size?: "lg" | "md" | "banner" | "hero";
+  readonly size?: "lg" | "md" | "banner" | "hero" | "story";
 }
 
 /** Without a name or a src a neutral block is drawn and no image is requested. */

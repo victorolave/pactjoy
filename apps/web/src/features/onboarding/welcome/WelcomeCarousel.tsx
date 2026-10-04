@@ -43,7 +43,7 @@ export function WelcomeCarousel() {
       <div className={styles.slide} aria-live="polite">
         <Illustration
           alt={slide.alt}
-          {...(slide.illustration ? { name: slide.illustration } : {})}
+          {...(slide.illustration ? { name: slide.illustration, size: "story" as const } : {})}
         />
         <h1 className={styles.title}>{slide.title}</h1>
         <p className={styles.body}>{slide.body}</p>
