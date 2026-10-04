@@ -32,6 +32,7 @@ function deps(overrides: Partial<AppDependencies> = {}): AppDependencies {
     store,
     device: new LocalStorageDeviceStore(new MemoryStorage()),
     sharing: new FakeSharing(),
+    clock: new FixedClock(0),
     sessions: new SessionManager(auth, store, new FixedClock(0)),
     sessionEvents: createSessionEvents(),
     queryClient: new QueryClient(),

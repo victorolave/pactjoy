@@ -2,6 +2,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import type { Persister } from "@tanstack/react-query-persist-client";
 import type { SessionEvents, SessionManager } from "../features/auth/index.ts";
 import type { AuthPort } from "../ports/auth.ts";
+import type { Clock } from "../ports/clock.ts";
 import type { Connectivity } from "../ports/connectivity.ts";
 import type { DeviceStore } from "../ports/device-store.ts";
 import type { Haptics } from "../ports/haptics.ts";
@@ -13,6 +14,8 @@ import type { TokenStore } from "../ports/token-store.ts";
 /** Everything the composition root wires: ports implemented by adapters (or by fakes in tests). */
 export interface AppDependencies {
   readonly auth: AuthPort;
+  /** Device time, for comparing server instants (an invite's `expiresAt`). */
+  readonly clock: Clock;
   readonly api: PactJoyApi;
   readonly ids: IdSource;
   readonly haptics: Haptics;

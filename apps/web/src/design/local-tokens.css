@@ -15,7 +15,12 @@
   --illustration-hero: 220px;
   /* The name step avatar (design 3): 96 square. */
   --avatar-lg: 96px;
+  /* Member rows and the waiting room (designs 7, 31a): 56 square. */
+  --avatar-xl: 56px;
   --border-width-control: 1.5px;
+  /* Invite codes (design 5, 7): monospaced, 40 px on the invite screen and 24 px in the waiting room. */
+  --font-code-lg: 800 40px / 44px ui-monospace, Menlo, monospace;
+  --font-code: 800 24px / 30px ui-monospace, Menlo, monospace;
   /* The check's fill and pop in the prototype (design 16, 20): 160 ms, none under reduced motion. */
   --motion-check: 160ms;
   /* Loading skeleton of Today (design 15e). */

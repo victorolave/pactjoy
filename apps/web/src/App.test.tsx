@@ -35,6 +35,7 @@ function deps(signedIn: boolean): AppDependencies {
     store,
     device,
     sharing: new FakeSharing(),
+    clock: new FixedClock(0),
     sessions: new SessionManager(auth, store, new FixedClock(0)),
     sessionEvents: createSessionEvents(),
     queryClient: new QueryClient(),

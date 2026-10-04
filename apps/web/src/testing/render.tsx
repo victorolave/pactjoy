@@ -37,11 +37,17 @@ export interface RenderAppOptions {
   readonly myCircle?: MyCircle;
   /** `getMyCircle` rejects with these, one per call, before it answers `myCircle`. */
   readonly myCircleFailures?: readonly ApiError[];
+  /** The device's clock, in epoch ms. Defaults to 2026-10-03T12:00Z, inside the fixtures' invite window. */
+  readonly now?: number;
+  /** Whether the system share sheet exists. Defaults to true. */
+  readonly canShare?: boolean;
   /** A name draft already on the device (the name step was done). */
   readonly nameDraft?: string;
   /** `getToday` rejects with these, one per call, before it answers `today`. */
   readonly todayFailures?: readonly ApiError[];
 }
+
+const DEFAULT_NOW_MS = Date.parse("2026-10-03T12:00:00.000Z");
 
 /** Lets a test read the URL and press the browser's Back button. */
 function NavigationProbe({ onReady }: { readonly onReady: (back: () => void) => void }) {
@@ -64,6 +70,7 @@ export interface RenderedApp extends RenderResult {
     readonly store: MemoryTokenStore;
     readonly device: LocalStorageDeviceStore;
     readonly sharing: FakeSharing;
+    readonly clock: FixedClock;
   };
 }
 
@@ -72,12 +79,15 @@ function createFakeDeps({
   today = activeTodayFixture(),
   myCircle = soloCircleFixture(),
   nameDraft,
+  now = DEFAULT_NOW_MS,
+  canShare = true,
   myCircleFailures = [],
   todayFailures = [],
   online = true,
   storage = new MemoryStorage(),
 }: RenderAppOptions = {}): RenderedApp["deps"] {
   const auth = new FakeAuth();
+  const clock = new FixedClock(now);
   const store = new MemoryTokenStore(signedIn ? fakeSession() : null);
   const api = new FakePactJoyApi(today);
   api.setMyCircle(myCircle);
@@ -93,7 +103,8 @@ function createFakeDeps({
     connectivity: new FakeConnectivity(online),
     store,
     device,
-    sharing: new FakeSharing(),
+    sharing: new FakeSharing(canShare),
+    clock,
     sessions: new SessionManager(auth, store, new FixedClock(0)),
     sessionEvents: createSessionEvents(),
     queryClient: createQueryClient({ retryQueries: false }),

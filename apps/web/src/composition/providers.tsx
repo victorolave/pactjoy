@@ -3,6 +3,7 @@ import { type Persister, PersistQueryClientProvider } from "@tanstack/react-quer
 import { type ReactNode, useCallback, useMemo } from "react";
 import { bustFor, persistOptionsFor } from "../adapters/query-persister.ts";
 import { ApiProvider } from "../context/api-context.tsx";
+import { ClockProvider } from "../context/clock-context.tsx";
 import { ConnectivityProvider } from "../context/connectivity-context.tsx";
 import { DeviceStoreProvider } from "../context/device-store-context.tsx";
 import { HapticsProvider } from "../context/haptics-context.tsx";
@@ -43,7 +44,9 @@ export function AppProviders({
               <ConnectivityProvider connectivity={deps.connectivity}>
                 <DeviceStoreProvider device={deps.device}>
                   <SharingProvider sharing={deps.sharing}>
-                    <ToastProvider>{children}</ToastProvider>
+                    <ClockProvider clock={deps.clock}>
+                      <ToastProvider>{children}</ToastProvider>
+                    </ClockProvider>
                   </SharingProvider>
                 </DeviceStoreProvider>
               </ConnectivityProvider>

@@ -35,6 +35,7 @@ export function createDependencies(config: AppConfig, env: ComposeEnvironment): 
   const sessionEvents = createSessionEvents();
   return {
     auth,
+    clock,
     api: new HttpPactJoyApi({
       baseUrl: config.apiBaseUrl,
       getAccessToken: () => sessions.getAccessToken(),
