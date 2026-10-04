@@ -1,9 +1,9 @@
 import type { TodayRow } from "@pactjoy/app";
 import { fromScaled } from "../../../shared/decimal.ts";
+import { loggedToday } from "../../../shared/logged-totals.ts";
+import { reachMarks } from "../../../shared/row-labels.ts";
+import { useTodayDates } from "../../../shared/today-date-context.tsx";
 import { ProgressBar } from "../../../ui/ProgressBar.tsx";
-import { loggedToday } from "../logged-totals.ts";
-import { reachMarks } from "../row-labels.ts";
-import { useTodayDates } from "../today-date-context.tsx";
 
 /**
  * The bar of a per-session reach quantity (design proto, Leer): what today has so far against the

@@ -63,7 +63,7 @@
               },
               {
                 "group": ["@tanstack/*"],
-                "message": "TanStack is confined to src/app/**, src/features/*/queries.ts and src/adapters/query-persister.ts (ADR-0012)."
+                "message": "TanStack is confined to src/composition/**, src/shell/ErrorBoundary.tsx, src/features/*/queries.ts and src/adapters/query-persister.ts (ADR-0012)."
               }
             ]
           }
@@ -73,7 +73,12 @@
   },
   "overrides": [
     {
-      "includes": ["src/app/**", "src/features/*/queries.ts", "src/adapters/query-persister.ts"],
+      "includes": [
+        "src/composition/**",
+        "src/shell/ErrorBoundary.tsx",
+        "src/features/*/queries.ts",
+        "src/adapters/query-persister.ts"
+      ],
       "linter": {
         "rules": {
           "style": {
@@ -159,7 +164,7 @@
                   },
                   {
                     "group": ["@tanstack/*"],
-                    "message": "TanStack is confined to src/app/**, src/features/*/queries.ts and the persister (ADR-0012)."
+                    "message": "TanStack is confined to src/composition/**, src/shell/ErrorBoundary.tsx, src/features/*/queries.ts and the persister (ADR-0012)."
                   }
                 ]
               }

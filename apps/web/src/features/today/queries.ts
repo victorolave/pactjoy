@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { usePactJoyApi } from "../../app/api-context.tsx";
+import { usePactJoyApi } from "../../context/api-context.tsx";
 import { todayKey } from "../../shared/query-keys.ts";
 
 /** Today for the signed-in viewer: one read, recomputed by the server on every refetch. */

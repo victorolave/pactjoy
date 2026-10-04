@@ -1,0 +1,64 @@
+.circle {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-height);
+  height: var(--control-height);
+  padding: 0;
+  border: var(--border-width-control) solid var(--border-control);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  /* The prototype fills the background over 160 ms; the border and the tick colour switch at once. */
+  transition: background-color var(--motion-check) var(--ease-standard);
+}
+
+/* The tick scales .8 to 1 as the circle fills (design 20: "El check aparece y escala de .8 a 1"). */
+.circle[aria-pressed="true"] svg {
+  stroke-width: 2.4;
+  animation: pop var(--motion-check) var(--ease-standard) both;
+}
+
+@keyframes pop {
+  from {
+    transform: scale(0.8);
+  }
+
+  to {
+    transform: scale(1);
+  }
+}
+
+/* Reduced motion: the same end state with a short fade, no scale. */
+@media (prefers-reduced-motion: reduce) {
+  .circle {
+    transition: background-color var(--motion-reduced) linear;
+  }
+
+  .circle[aria-pressed="true"] svg {
+    animation: none;
+  }
+}
+
+.circle:disabled {
+  border-color: var(--ink-200);
+  color: var(--ink-300);
+  cursor: not-allowed;
+}
+
+.circle[aria-pressed="true"] {
+  border-color: var(--pj-success);
+  background: var(--pj-success);
+  color: var(--pj-white);
+}
+
+.circle[aria-pressed="true"]:disabled {
+  opacity: 0.6;
+}
+
+.circle:focus-visible {
+  outline: var(--focus-width) solid var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}

@@ -1,8 +1,8 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App.tsx";
-import { createDependencies } from "./app/compose.ts";
 import { ConfigErrorScreen } from "./ConfigErrorScreen.tsx";
+import { createDependencies } from "./composition/compose.ts";
 import { ConfigError, loadConfigFromEnv } from "./config.ts";
 import "./design/fonts.ts";
 import "./design/index.css";

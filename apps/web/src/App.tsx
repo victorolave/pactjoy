@@ -1,8 +1,8 @@
 import { BrowserRouter } from "react-router";
-import type { AppDependencies } from "./app/dependencies.ts";
-import { ErrorBoundary } from "./app/ErrorBoundary.tsx";
-import { AppProviders } from "./app/providers.tsx";
-import { AppRoutes } from "./app/routes.tsx";
+import type { AppDependencies } from "./composition/dependencies.ts";
+import { AppProviders } from "./composition/providers.tsx";
+import { ErrorBoundary } from "./shell/ErrorBoundary.tsx";
+import { AppRoutes } from "./shell/routes.tsx";
 
 export function App({ deps }: { readonly deps: AppDependencies }) {
   return (

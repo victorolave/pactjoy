@@ -112,6 +112,30 @@
   flex: none;
 }
 
+/* Hoy no salió collapses with the tap instead of vanishing when the server answers. */
+.collapse {
+  display: grid;
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transition:
+    grid-template-rows var(--motion-base) var(--ease-standard),
+    margin-top var(--motion-base) var(--ease-standard),
+    opacity var(--motion-base) var(--ease-standard);
+}
+
+/* Closed it takes no room: the row's own gap above it is pulled back too. */
+.collapse[data-open="false"] {
+  grid-template-rows: 0fr;
+  margin-top: calc(var(--space-3) * -1);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.collapseInner {
+  min-height: 0;
+  overflow: hidden;
+}
+
 /* Reduced motion: the same end state with a short fade, no rise (design 20). */
 @media (prefers-reduced-motion: reduce) {
   .points {
@@ -120,5 +144,9 @@
 
   .glyph {
     transition-duration: var(--motion-reduced);
+  }
+
+  .collapse {
+    transition: opacity var(--motion-reduced) linear;
   }
 }
