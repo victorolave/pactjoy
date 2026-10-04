@@ -112,7 +112,6 @@
   flex: none;
 }
 
-/* Reduced motion: the same end state with a short fade, no rise (design 20). */
 /* Hoy no salió collapses with the tap instead of vanishing when the server answers. */
 .collapse {
   display: grid;
@@ -137,6 +136,7 @@
   overflow: hidden;
 }
 
+/* Reduced motion: the same end state with a short fade, no rise (design 20). */
 @media (prefers-reduced-motion: reduce) {
   .points {
     animation: fade var(--motion-reduced) linear both;
