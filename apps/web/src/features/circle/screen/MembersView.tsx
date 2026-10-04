@@ -37,7 +37,9 @@ export function MembersView({
         </p>
       ) : (
         <div className={styles.status}>
-          <Badge tone={status.tone} icon="handshake">{status.badge}</Badge>
+          <Badge tone={status.tone} icon="handshake">
+            {status.badge}
+          </Badge>
           {status.detail !== null && <span className={styles.small}>{status.detail}</span>}
         </div>
       )}
