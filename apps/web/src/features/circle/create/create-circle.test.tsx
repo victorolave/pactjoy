@@ -89,6 +89,16 @@ describe("create circle (design 4)", () => {
     await waitFor(() => expect(location()).toBe("/circle"));
   });
 
+  it("goes to the circle when the server says they are already in one (a retried, landed create)", async () => {
+    const { deps, location } = renderCreate();
+    deps.api.failNext("createCircle", new ApiError("AlreadyInActiveCircle", 409, null));
+    await userEvent.type(await circleName(), "Los Pactos");
+    deps.api.setMyCircle(soloCircleFixture());
+    await submit();
+    await waitFor(() => expect(location()).toBe("/circle"));
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
   it("ignores a second press while the circle is being created", async () => {
     const { deps } = renderCreate();
     await userEvent.type(await circleName(), "Los Pactos");

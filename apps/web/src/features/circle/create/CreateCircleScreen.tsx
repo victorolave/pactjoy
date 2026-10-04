@@ -1,5 +1,6 @@
 import { type FormEvent, useState } from "react";
 import { useNavigate } from "react-router";
+import { ApiError } from "../../../ports/api-error.ts";
 import { Button } from "../../../ui/Button.tsx";
 import { ButtonLink } from "../../../ui/ButtonLink.tsx";
 import { Card } from "../../../ui/Card.tsx";
@@ -48,6 +49,12 @@ export function CreateCircleScreen() {
       await create.mutateAsync({ name: name.trim(), displayName: displayName.trim() });
       navigate(AFTER_CREATE_PATH);
     } catch (error) {
+      // A lost response to a create that did land, or a member opening this screen: the circle
+      // exists, so go to it instead of asking them to leave it.
+      if (error instanceof ApiError && error.code === "AlreadyInActiveCircle") {
+        navigate(AFTER_CREATE_PATH);
+        return;
+      }
       const { message, field } = circleFailure(error);
       if (field === "name" || field === "displayName") setErrors({ [field]: message });
       else setFailure(message);
