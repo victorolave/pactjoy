@@ -7,11 +7,13 @@ export interface WelcomeSlide {
   readonly alt: string;
   /** An official illustration, when one fits; otherwise the neutral placeholder is drawn. */
   readonly illustration?: IllustrationName;
+  /** A drawn composition instead of a picture: two season cards with two people (1b). */
+  readonly composition?: "goals";
 }
 
 /**
- * Designs 1a-c. 1a and 1c use the design's own pictures. 1b is a mock-up of two season cards with
- * two avatars laid over them, not one picture, so it keeps the neutral placeholder.
+ * Designs 1a-c. 1a and 1c use the design's own pictures. 1b is not one picture but a composition of two season cards
+ * with a person's picture over each, drawn in `GoalsIllustration`.
  * The circle size says "de 1 a 6 personas": a solo circle is a valid one (OB-R7).
  */
 export const WELCOME_SLIDES: readonly WelcomeSlide[] = [
@@ -25,6 +27,7 @@ export const WELCOME_SLIDES: readonly WelcomeSlide[] = [
     title: "Metas distintas, la misma cuenta.",
     body: "Cada persona tiene 1.000 puntos posibles por temporada, repartidos entre sus compromisos. Así es justo aunque persigan cosas diferentes.",
     alt: "Las metas de dos personas, cada una con sus compromisos",
+    composition: "goals",
   },
   {
     title: "Compite contigo. Juega con otros.",

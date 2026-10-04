@@ -2,6 +2,8 @@ import cocinar from "../design/brand/cocinar.webp";
 import crearPacto from "../design/brand/crear-pacto.webp";
 import diaDificilCrop from "../design/brand/dia-dificil-crop.webp";
 import invitarCirculo from "../design/brand/invitar-circulo.webp";
+import metasAndrea from "../design/brand/metas-andrea.webp";
+import metasVictor from "../design/brand/metas-victor.webp";
 import onboarding1 from "../design/brand/onboarding-1.webp";
 import horizontalLogo from "../design/brand/pactjoy-horizontal-proposed.svg";
 import symbolLogo from "../design/brand/pactjoy-symbol-gradient.svg";
@@ -19,6 +21,8 @@ const ILLUSTRATIONS = {
   "dia-dificil-crop": diaDificilCrop,
   "primer-habito": primerHabito,
   "invitar-circulo": invitarCirculo,
+  "metas-andrea": metasAndrea,
+  "metas-victor": metasVictor,
 } as const;
 
 export type IllustrationName = keyof typeof ILLUSTRATIONS;

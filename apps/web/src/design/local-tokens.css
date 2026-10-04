@@ -15,6 +15,17 @@
   --illustration-hero: 220px;
   /* The welcome carousel picture (design 1a): 320 high. */
   --illustration-story: 320px;
+  /* The welcome slide 1b composition (design 1b): two season cards, the pictures overhanging each. */
+  --icon-xs: 12px;
+  --goals-card-height: 118px;
+  --goals-lift: 62px;
+  --goals-chip-height: 26px;
+  --goals-art-andrea: 206px;
+  --goals-art-victor: 176px;
+  --goals-pad-andrea: 180px;
+  --goals-pad-victor: 172px;
+  --goals-bleed-andrea: -10px;
+  --goals-bleed-victor: -8px;
   /* The name step avatar (design 3): 96 square. */
   --avatar-lg: 96px;
   /* Member rows and the waiting room (designs 7, 31a): 56 square. */
