@@ -1,7 +1,7 @@
-import { Card } from "../../ui/Card.tsx";
-import { cx } from "../../ui/cx.ts";
+import { Card } from "../../../ui/Card.tsx";
+import { cx } from "../../../ui/cx.ts";
+import type { SeasonCardModel } from "../today-view-model.ts";
 import styles from "./cards.module.css";
-import type { SeasonCardModel } from "./today-view-model.ts";
 
 /** The viewer's season at a glance. Everything shown is server-computed. */
 export function SeasonCard({ model }: { readonly model: SeasonCardModel }) {

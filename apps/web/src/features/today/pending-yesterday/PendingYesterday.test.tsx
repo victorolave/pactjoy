@@ -9,8 +9,8 @@ import {
   endedTodayFixture,
   entryFixture,
   pendingItemFixture,
-} from "../../testing/fixtures/today.ts";
-import { renderApp } from "../../testing/render.tsx";
+} from "../../../testing/fixtures/today.ts";
+import { renderApp } from "../../../testing/render.tsx";
 
 const limitItem = () =>
   pendingItemFixture({

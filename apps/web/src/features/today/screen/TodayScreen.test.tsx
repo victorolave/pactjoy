@@ -4,8 +4,8 @@ import type { TodayView } from "@pactjoy/app";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import { ApiError } from "../../ports/api-error.ts";
-import { longDate } from "../../shared/format.ts";
+import { ApiError } from "../../../ports/api-error.ts";
+import { longDate } from "../../../shared/format.ts";
 import {
   activeTodayFixture,
   type DayRow,
@@ -16,8 +16,8 @@ import {
   noSeasonTodayFixture,
   pactOpenTodayFixture,
   weekRowFixture,
-} from "../../testing/fixtures/today.ts";
-import { renderApp } from "../../testing/render.tsx";
+} from "../../../testing/fixtures/today.ts";
+import { renderApp } from "../../../testing/render.tsx";
 
 const renderToday = (today: TodayView) => renderApp({ path: "/", today });
 

@@ -1,6 +1,6 @@
-import { AvatarStack } from "../../ui/Avatar.tsx";
+import { AvatarStack } from "../../../ui/Avatar.tsx";
+import type { StandingsPairModel } from "../today-view-model.ts";
 import styles from "./cards.module.css";
-import type { StandingsPairModel } from "./today-view-model.ts";
 
 const YOU = "Tú";
 

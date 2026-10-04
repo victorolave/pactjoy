@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayRowFixture, type Entry, entryFixture } from "../../testing/fixtures/today.ts";
+import { dayRowFixture, type Entry, entryFixture } from "../../../testing/fixtures/today.ts";
 import { allDoneDetail } from "./all-done-copy.ts";
 
 const TODAY = "2026-10-02";

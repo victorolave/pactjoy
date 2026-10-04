@@ -6,7 +6,7 @@ import { AppProviders } from "../composition/providers.tsx";
 import { createQueryClient } from "../composition/query-client.ts";
 import { createSessionEvents } from "../features/auth/session-events.ts";
 import { SessionManager } from "../features/auth/session-manager.ts";
-import { TodayScreen } from "../features/today/TodayScreen.tsx";
+import { TodayScreen } from "../features/today/index.ts";
 import { ApiError } from "../ports/api-error.ts";
 import { AppShell } from "../shell/AppShell.tsx";
 import { FakeAuth, fakeSession } from "../testing/fake-auth.ts";

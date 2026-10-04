@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayRowFixture, weekRowFixture } from "../../testing/fixtures/today.ts";
+import { dayRowFixture, weekRowFixture } from "../../../testing/fixtures/today.ts";
 import { dayOffText, nextWeekdayName } from "./day-off-copy.ts";
 
 /** 2026-09-27 is a Sunday (Monday-first weekday 6). */

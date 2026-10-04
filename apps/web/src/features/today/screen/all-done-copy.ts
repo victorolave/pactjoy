@@ -1,6 +1,6 @@
-import { pointsText } from "../../shared/format.ts";
-import { quantityText, sumQuantities } from "../../shared/row-labels.ts";
-import type { DayTodayRow } from "./today-view-model.ts";
+import { pointsText } from "../../../shared/format.ts";
+import { quantityText, sumQuantities } from "../../../shared/row-labels.ts";
+import type { DayTodayRow } from "../today-view-model.ts";
 
 const list = (items: readonly string[]): string =>
   new Intl.ListFormat("es", { style: "long", type: "conjunction" }).format(items);

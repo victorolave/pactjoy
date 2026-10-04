@@ -1,14 +1,14 @@
 import type { PendingYesterdayItem, TodayEntry } from "@pactjoy/app";
-import { useOnline } from "../../context/connectivity-context.tsx";
-import { weekdayDay } from "../../shared/format.ts";
-import { quantityText } from "../../shared/row-labels.ts";
-import { Card } from "../../ui/Card.tsx";
-import { IconButton } from "../../ui/IconButton.tsx";
-import { InlineMessage } from "../../ui/InlineMessage.tsx";
-import { Icon } from "../../ui/icon/Icon.tsx";
-import { CheckCircle, useEntrySheet, useOneTap } from "../entry/index.ts";
+import { useOnline } from "../../../context/connectivity-context.tsx";
+import { weekdayDay } from "../../../shared/format.ts";
+import { quantityText } from "../../../shared/row-labels.ts";
+import { Card } from "../../../ui/Card.tsx";
+import { IconButton } from "../../../ui/IconButton.tsx";
+import { InlineMessage } from "../../../ui/InlineMessage.tsx";
+import { Icon } from "../../../ui/icon/Icon.tsx";
+import { CheckCircle, useEntrySheet, useOneTap } from "../../entry/index.ts";
+import type { YesterdayRegistered } from "../today-view-model.ts";
 import styles from "./PendingYesterday.module.css";
-import type { YesterdayRegistered } from "./today-view-model.ts";
 
 function PendingItem({
   item,

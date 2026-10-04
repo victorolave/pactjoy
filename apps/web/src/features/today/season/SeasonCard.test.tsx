@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import type { SeasonCardModel } from "../today-view-model.ts";
 import { SeasonCard } from "./SeasonCard.tsx";
-import type { SeasonCardModel } from "./today-view-model.ts";
 
 const model: SeasonCardModel = {
   points: "540",

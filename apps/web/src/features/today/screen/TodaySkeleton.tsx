@@ -1,6 +1,6 @@
-import { Card } from "../../ui/Card.tsx";
-import { cx } from "../../ui/cx.ts";
-import rows from "./rows/rows.module.css";
+import { Card } from "../../../ui/Card.tsx";
+import { cx } from "../../../ui/cx.ts";
+import rows from "../rows/rows.module.css";
 import styles from "./TodaySkeleton.module.css";
 
 /** A row card as the design draws it while loading: the real row card, with blocks for its content. */

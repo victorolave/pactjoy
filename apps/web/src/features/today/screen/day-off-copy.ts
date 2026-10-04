@@ -1,4 +1,4 @@
-import type { DayTodayRow, WeekTodayRow } from "./today-view-model.ts";
+import type { DayTodayRow, WeekTodayRow } from "../today-view-model.ts";
 
 /** Monday first, as the engine numbers weekdays. */
 const WEEKDAY_NAMES = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"];
