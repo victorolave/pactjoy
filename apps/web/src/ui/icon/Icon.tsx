@@ -1,6 +1,7 @@
 import {
   CalendarDays,
   Check,
+  ChevronLeft,
   CircleAlert,
   CircleCheck,
   CirclePause,
@@ -39,6 +40,7 @@ const GLYPHS = {
   "circle-pause": CirclePause,
   "cloud-off": CloudOff,
   check: Check,
+  "chevron-left": ChevronLeft,
   repeat: Repeat,
   "rotate-cw": RotateCw,
   history: History,
