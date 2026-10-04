@@ -38,10 +38,13 @@ describe("Illustration with an official image", () => {
     expect(image?.className).toMatch(/imageSized/);
   });
 
-  it.each(["md", "banner"] as const)("offers the full-width %s box of the design", (size) => {
-    const { container } = render(<Illustration alt="Imagen" name="cocinar" size={size} />);
-    expect(container.querySelector("img")).toHaveAttribute("data-size", size);
-  });
+  it.each(["md", "banner", "hero"] as const)(
+    "offers the full-width %s box of the design",
+    (size) => {
+      const { container } = render(<Illustration alt="Imagen" name="cocinar" size={size} />);
+      expect(container.querySelector("img")).toHaveAttribute("data-size", size);
+    },
+  );
 
   it("has no size on an image that fills its width", () => {
     const { container } = render(<Illustration alt="Imagen" name="cocinar" />);

@@ -1,4 +1,5 @@
 import cocinar from "../design/brand/cocinar.webp";
+import crearPacto from "../design/brand/crear-pacto.webp";
 import horizontalLogo from "../design/brand/pactjoy-horizontal-proposed.svg";
 import symbolLogo from "../design/brand/pactjoy-symbol-gradient.svg";
 import registroGuardado from "../design/brand/registro-guardado.webp";
@@ -9,6 +10,7 @@ const ILLUSTRATIONS = {
   "registro-guardado": registroGuardado,
   "sin-conexion": sinConexion,
   cocinar,
+  "crear-pacto": crearPacto,
 } as const;
 
 export type IllustrationName = keyof typeof ILLUSTRATIONS;
@@ -21,9 +23,9 @@ export interface IllustrationProps {
   readonly src?: string;
   /**
    * The design's boxes, the image contained in each: `lg` 200 square (confirmation), `md` 130 high
-   * and `banner` 150 high, both full width (empty day, offline). Without it the image fills the width.
+   * and `banner` 150 high, and `hero` 220 high, all full width (empty day, offline, create circle). Without it the image fills the width.
    */
-  readonly size?: "lg" | "md" | "banner";
+  readonly size?: "lg" | "md" | "banner" | "hero";
 }
 
 /** Without a name or a src a neutral block is drawn and no image is requested. */

@@ -22,6 +22,12 @@
   font-size: calc(var(--control-height-sm) * 0.42);
 }
 
+.lg {
+  width: var(--avatar-lg);
+  height: var(--avatar-lg);
+  font-size: calc(var(--avatar-lg) * 0.42);
+}
+
 .stack {
   display: flex;
 }

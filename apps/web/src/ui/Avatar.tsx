@@ -12,7 +12,7 @@ function hash(text: string): number {
 
 export interface AvatarProps {
   readonly name: string;
-  readonly size?: "sm" | "md";
+  readonly size?: "sm" | "md" | "lg";
 }
 
 export function Avatar({ name, size = "md" }: AvatarProps) {

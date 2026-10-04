@@ -11,6 +11,10 @@
   --illustration-lg: 200px;
   --illustration-md: 130px;
   --illustration-banner: 150px;
+  /* The create-circle hero (design 4): 220 high. */
+  --illustration-hero: 220px;
+  /* The name step avatar (design 3): 96 square. */
+  --avatar-lg: 96px;
   --border-width-control: 1.5px;
   /* The check's fill and pop in the prototype (design 16, 20): 160 ms, none under reduced motion. */
   --motion-check: 160ms;
