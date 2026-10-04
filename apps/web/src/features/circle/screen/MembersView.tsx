@@ -1,9 +1,7 @@
-import { useNavigate } from "react-router";
 import type { MyCircle } from "../../../ports/pactjoy-api.ts";
 import { Avatar } from "../../../ui/Avatar.tsx";
 import { Badge } from "../../../ui/Badge.tsx";
 import { Card } from "../../../ui/Card.tsx";
-import { CircleHeader } from "./CircleHeader.tsx";
 import styles from "./CircleScreen.module.css";
 import { seasonStatus } from "./season-status.ts";
 
@@ -20,19 +18,9 @@ export function MembersView({
   readonly circle: Circle;
   readonly season: MyCircle["season"];
 }) {
-  const navigate = useNavigate();
   const status = season === null ? null : seasonStatus(season, circle.members.length);
   return (
-    <section className={styles.screen}>
-      <CircleHeader
-        name={circle.name}
-        eyebrow={
-          season?.phase === "active" && season.week !== null
-            ? `Semana ${season.week} de ${season.lengthWeeks}`
-            : null
-        }
-        onInvite={() => navigate("/circle/invite")}
-      />
+    <>
       <Card>
         <ul className={styles.members}>
           {circle.members.map((member) => (
@@ -49,10 +37,12 @@ export function MembersView({
         </p>
       ) : (
         <div className={styles.status}>
-          <Badge tone={status.tone} icon="handshake">{status.badge}</Badge>
+          <Badge tone={status.tone} icon="handshake">
+            {status.badge}
+          </Badge>
           {status.detail !== null && <span className={styles.small}>{status.detail}</span>}
         </div>
       )}
-    </section>
+    </>
   );
 }
