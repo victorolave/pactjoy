@@ -1,0 +1,28 @@
+.preview {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.previewText {
+  flex: 1;
+  min-width: 0;
+}
+
+.previewName {
+  font: var(--font-label);
+}
+
+.previewMeta {
+  font: var(--font-small);
+  color: var(--text-secondary);
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: var(--border-width);
+  height: var(--border-width);
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

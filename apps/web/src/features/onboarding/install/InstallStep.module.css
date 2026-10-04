@@ -1,0 +1,45 @@
+.body {
+  margin: 0;
+  font: var(--font-body);
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font: var(--font-body);
+}
+
+.steps li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.number {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--space-6);
+  height: var(--space-6);
+  border-radius: 50%;
+  background: var(--surface-sunken);
+  font: var(--font-label);
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.steps :global(.pj-icon) {
+  display: inline-block;
+  vertical-align: text-bottom;
+}

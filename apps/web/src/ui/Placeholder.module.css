@@ -38,6 +38,16 @@
   height: var(--illustration-md);
 }
 
+.imageSized[data-size="hero"] {
+  width: 100%;
+  height: var(--illustration-hero);
+}
+
+.imageSized[data-size="story"] {
+  width: 100%;
+  height: var(--illustration-story);
+}
+
 .imageSized[data-size="banner"] {
   width: 100%;
   height: var(--illustration-banner);
