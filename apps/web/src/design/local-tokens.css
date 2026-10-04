@@ -18,6 +18,8 @@
   /* Member rows and the waiting room (designs 7, 31a): 56 square. */
   --avatar-xl: 56px;
   --border-width-control: 1.5px;
+  /* The empty member slot of the waiting room (design 7): a 2 px dashed ring. */
+  --border-width-slot: 2px;
   /* Invite codes (design 5, 7): monospaced, 40 px on the invite screen and 24 px in the waiting room. */
   --font-code-lg: 800 40px / 44px ui-monospace, Menlo, monospace;
   --font-code: 800 24px / 30px ui-monospace, Menlo, monospace;

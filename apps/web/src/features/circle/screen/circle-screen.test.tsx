@@ -1,6 +1,6 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "../../../ports/api-error.ts";
 import { NO_CIRCLE, pairCircleFixture } from "../../../testing/fixtures/circle.ts";
 import { renderApp } from "../../../testing/render.tsx";
@@ -12,6 +12,8 @@ const ACTIVE = {
   week: 5,
   approvalCount: 2,
 } as const;
+
+afterEach(() => vi.useRealTimers());
 
 describe("Circle tab, no circle (31b)", () => {
   it("offers to create a circle or to join with a code", async () => {
@@ -27,6 +29,72 @@ describe("Circle tab, no circle (31b)", () => {
       "href",
       "/circle/join",
     );
+  });
+});
+
+describe("Circle tab, alone in the circle: the waiting room (7)", () => {
+  it("shows the code and lets the viewer copy it (WC-S8)", async () => {
+    const { deps } = renderApp({ path: "/circle" });
+    expect(
+      await screen.findByRole("heading", { name: "Esperando a que alguien se una" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("7K4Q2M")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Copiar código" }));
+    expect(deps.sharing.copied).toEqual(["7K4Q2M"]);
+  });
+
+  it("keeps the season and habit actions visible, disabled and labelled, and they do nothing (Q4, WC-S8)", async () => {
+    const { location } = renderApp({ path: "/circle" });
+    const prepare = await screen.findByRole("button", { name: "Preparar la temporada" });
+    const habits = screen.getByRole("button", { name: "Solo crear mis hábitos" });
+    expect(prepare).toBeDisabled();
+    expect(habits).toBeDisabled();
+    expect(screen.getAllByText("Próximamente")).toHaveLength(2);
+    expect(prepare).toHaveAccessibleDescription("Próximamente");
+    expect(habits).toHaveAccessibleDescription("Próximamente");
+    await userEvent.click(prepare);
+    expect(location()).toBe("/circle");
+  });
+
+  it("promises no push and never calls a solo circle incomplete (WC-R8, OB-R7)", async () => {
+    renderApp({ path: "/circle" });
+    await screen.findByRole("heading", { name: "Esperando a que alguien se una" });
+    expect(screen.queryByText(/Te avisaremos/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/De 2 a 6/)).not.toBeInTheDocument();
+  });
+
+  it("hides Compartir where the share sheet does not exist, and keeps Copiar", async () => {
+    renderApp({ path: "/circle", canShare: false });
+    expect(await screen.findByRole("button", { name: "Copiar código" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Compartir código" })).not.toBeInTheDocument();
+  });
+
+  it("asks for a new code when the one shown has expired (WC-R2)", async () => {
+    const { deps } = renderApp({ path: "/circle", now: Date.parse("2026-10-09T12:00:00.000Z") });
+    expect(await screen.findByText("Este código ya caducó.")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Nuevo código" }));
+    await waitFor(() => expect(deps.api.calls.generateInvite).toBe(1));
+  });
+
+  it("looks for a second member every 30 seconds and shows the circle when one joins (D11)", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const { deps } = renderApp({ path: "/circle" });
+    await screen.findByRole("heading", { name: "Esperando a que alguien se una" });
+    expect(deps.api.calls.getMyCircle).toBe(1);
+    deps.api.setMyCircle(pairCircleFixture());
+    await act(() => vi.advanceTimersByTimeAsync(30_000));
+    expect(await screen.findByText("Andrea")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Esperando a que alguien se una" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("stops looking once there are two members", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const { deps } = renderApp({ path: "/circle", myCircle: pairCircleFixture() });
+    await screen.findByText("Andrea");
+    await act(() => vi.advanceTimersByTimeAsync(90_000));
+    expect(deps.api.calls.getMyCircle).toBe(1);
   });
 });
 
