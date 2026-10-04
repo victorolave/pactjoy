@@ -1,0 +1,5 @@
+.lead {
+  margin: calc(-1 * var(--space-2)) 0 0;
+  font: var(--font-body);
+  color: var(--text-secondary);
+}

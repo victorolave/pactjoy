@@ -6,9 +6,11 @@ import { createTodayPersister } from "../adapters/query-persister.ts";
 import { useIds } from "../context/ids-context.tsx";
 import { useToasts } from "../context/toast-context.tsx";
 import { createSessionEvents, SessionManager, useSession } from "../features/auth/index.ts";
+import { FakeAppInstall } from "../testing/fake-app-install.ts";
 import { FakeAuth, fakeSession } from "../testing/fake-auth.ts";
 import { FakeConnectivity } from "../testing/fake-connectivity.ts";
 import { FakeHaptics } from "../testing/fake-haptics.ts";
+import { FakeNotificationPermission } from "../testing/fake-notification-permission.ts";
 import { FakePactJoyApi } from "../testing/fake-pactjoy-api.ts";
 import { FakeSharing } from "../testing/fake-sharing.ts";
 import { FixedClock } from "../testing/fixed-clock.ts";
@@ -32,6 +34,9 @@ function deps(overrides: Partial<AppDependencies> = {}): AppDependencies {
     store,
     device: new LocalStorageDeviceStore(new MemoryStorage()),
     sharing: new FakeSharing(),
+    appInstall: new FakeAppInstall(),
+    notifications: new FakeNotificationPermission(),
+    clock: new FixedClock(0),
     sessions: new SessionManager(auth, store, new FixedClock(0)),
     sessionEvents: createSessionEvents(),
     queryClient: new QueryClient(),

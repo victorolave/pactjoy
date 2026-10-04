@@ -1,0 +1,20 @@
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+}
+
+.label {
+  font: var(--font-meta);
+  color: var(--text-secondary);
+}
+
+.code {
+  font: var(--font-code);
+  letter-spacing: 0.1em;
+}

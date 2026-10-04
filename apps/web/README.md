@@ -56,7 +56,8 @@ src/
   shared/ ui/        pure helpers and presentational components
 ```
 
-Dependencies run one way: `shell` and `composition` assemble features, `today` uses `entry`, and
+Dependencies run one way: `shell` and `composition` assemble features, `today` uses `entry`, `circle` uses `onboarding` and
+`profile` uses `auth` and `circle` (the table in `test/architecture.test.ts`), and
 features never import `composition` or `shell`. `test/architecture.test.ts` fails when a feature is
-reached other than through its `index.ts`, when `entry` imports `today`, or when a feature imports
+reached other than through its `index.ts`, when a feature imports another one that is not on that table, or when a feature imports
 `composition` or `shell`.

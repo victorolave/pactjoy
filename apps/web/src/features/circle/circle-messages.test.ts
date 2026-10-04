@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ApiError } from "../../ports/api-error.ts";
-import { CIRCLE_FAILURES, circleFailure } from "./circle-messages.ts";
+import { ALREADY_IN_THIS_CIRCLE, CIRCLE_FAILURES, circleFailure } from "./circle-messages.ts";
 
 const fail = (code: string) => circleFailure(new ApiError(code, 409, null));
 
@@ -35,5 +35,10 @@ describe("circleFailure", () => {
     expect(fail("Whatever")).toEqual({ message: "Algo salió mal.", field: null, retryable: false });
     expect(circleFailure(new TypeError("x")).message).toBe("Algo salió mal.");
     expect(fail("toString").message).toBe("Algo salió mal.");
+  });
+
+  it("keeps the 'already in this circle' wording apart from the 'leave first' one", () => {
+    expect(ALREADY_IN_THIS_CIRCLE).toBe("Ya formas parte de este círculo.");
+    expect(fail("AlreadyInActiveCircle").message).not.toBe(ALREADY_IN_THIS_CIRCLE);
   });
 });
