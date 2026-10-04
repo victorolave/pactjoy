@@ -1,5 +1,6 @@
 import type { TodayView } from "@pactjoy/app";
 import { act, type RenderResult, render } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { MemoryRouter, useLocation, useNavigate } from "react-router";
 import { createTodayPersister } from "../adapters/query-persister.ts";
 import type { AppDependencies } from "../composition/dependencies.ts";
@@ -55,20 +56,18 @@ export interface RenderedApp extends RenderResult {
   };
 }
 
-/** The whole route tree over fakes, at a given path. */
-export function renderApp({
-  path = "/",
+function createFakeDeps({
   signedIn = true,
   today = activeTodayFixture(),
   todayFailures = [],
   online = true,
   storage = new MemoryStorage(),
-}: RenderAppOptions = {}): RenderedApp {
+}: RenderAppOptions = {}): RenderedApp["deps"] {
   const auth = new FakeAuth();
   const store = new MemoryTokenStore(signedIn ? fakeSession() : null);
   const api = new FakePactJoyApi(today);
   for (const failure of todayFailures) api.failNext("getToday", failure);
-  const deps = {
+  return {
     auth,
     api,
     ids: new SequentialIds(),
@@ -80,6 +79,11 @@ export function renderApp({
     queryClient: createQueryClient({ retryQueries: false }),
     persister: createTodayPersister(storage, { throttleMs: 0 }),
   };
+}
+
+/** The whole route tree over fakes, at a given path. */
+export function renderApp({ path = "/", ...options }: RenderAppOptions = {}): RenderedApp {
+  const deps = createFakeDeps(options);
   let goBack = () => {};
   const result = render(
     <AppProviders deps={deps}>
@@ -94,4 +98,18 @@ export function renderApp({
     back: () => act(() => goBack()),
     location: () => result.getByTestId("location").textContent ?? "",
   });
+}
+
+/** One component over the same fakes and providers, with no route tree around it. */
+export function renderInProviders(
+  ui: ReactNode,
+  options: RenderAppOptions = {},
+): RenderResult & { readonly deps: RenderedApp["deps"] } {
+  const deps = createFakeDeps(options);
+  const result = render(
+    <AppProviders deps={deps}>
+      <MemoryRouter initialEntries={[options.path ?? "/"]}>{ui}</MemoryRouter>
+    </AppProviders>,
+  );
+  return Object.assign(result, { deps });
 }

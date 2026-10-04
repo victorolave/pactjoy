@@ -6,9 +6,7 @@ import { Card } from "../../ui/Card.tsx";
 import { IconButton } from "../../ui/IconButton.tsx";
 import { InlineMessage } from "../../ui/InlineMessage.tsx";
 import { Icon } from "../../ui/icon/Icon.tsx";
-import { CheckCircle } from "../entry/CheckCircle.tsx";
-import { useEntrySheet } from "../entry/use-entry-sheet.ts";
-import { useOneTap } from "../entry/use-one-tap.ts";
+import { CheckCircle, useEntrySheet, useOneTap } from "../entry/index.ts";
 import styles from "./PendingYesterday.module.css";
 import type { YesterdayRegistered } from "./today-view-model.ts";
 

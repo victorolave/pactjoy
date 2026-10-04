@@ -5,7 +5,7 @@ import { Card } from "../../ui/Card.tsx";
 import { InlineMessage } from "../../ui/InlineMessage.tsx";
 import { Icon } from "../../ui/icon/Icon.tsx";
 import { Illustration } from "../../ui/Placeholder.tsx";
-import { EntrySheetHost } from "../entry/EntrySheetHost.tsx";
+import { EntrySheetHost } from "../entry/index.ts";
 import { allDoneDetail } from "./all-done-copy.ts";
 import { dayOffText } from "./day-off-copy.ts";
 import { PendingYesterday } from "./PendingYesterday.tsx";
