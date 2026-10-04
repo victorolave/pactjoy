@@ -1,4 +1,11 @@
-import type { Actor, Circle, Invite, MyCircleView, SeasonPhaseName } from "@pactjoy/app";
+import type {
+  Actor,
+  Circle,
+  Invite,
+  InvitePreview,
+  MyCircleView,
+  SeasonPhaseName,
+} from "@pactjoy/app";
 import { presentInstant, presentInstantOrNull } from "./time.ts";
 
 export interface InviteDto {
@@ -101,5 +108,22 @@ export function presentMyCircle(view: MyCircleView): MyCircleDto {
       week: view.season.week,
       approvalCount: view.season.approvalCount,
     },
+  };
+}
+
+export interface InvitePreviewDto {
+  readonly circleName: string;
+  readonly invitedBy: string | null;
+  readonly activeMemberCount: number;
+  readonly expiresAt: string;
+}
+
+/** No circle id and no member id: the code is the only handle, and Q11 still holds. */
+export function presentInvitePreview(preview: InvitePreview): InvitePreviewDto {
+  return {
+    circleName: preview.circleName,
+    invitedBy: preview.invitedBy,
+    activeMemberCount: preview.activeMemberCount,
+    expiresAt: presentInstant(preview.expiresAt),
   };
 }

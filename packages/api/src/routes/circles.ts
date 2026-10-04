@@ -4,10 +4,11 @@ import {
   generateInvite,
   joinCircle,
   leaveCircle,
+  previewInvite,
   renameCircle,
   renameMyDisplayName,
 } from "@pactjoy/app";
-import { presentCircle, presentInvite } from "../presenters/circle.ts";
+import { presentCircle, presentInvite, presentInvitePreview } from "../presenters/circle.ts";
 import { inviteCode, uuid } from "../validation/formats.ts";
 import { object, string } from "../validation/schema.ts";
 import { type ApiDeps, type Route, toResult, validate } from "./support.ts";
@@ -17,6 +18,8 @@ const named = object({ name: string });
 const createBody = object({ name: string, displayName: string });
 const displayNamed = object({ displayName: string });
 const none = object({});
+// Preview is lenient on purpose: a malformed code is the same 404 as an unknown one (IP-R2).
+const previewBody = object({ inviteCode: string });
 const joinBody = object({ inviteCode, displayName: string });
 
 export function circleRoutes(deps: ApiDeps): Route[] {
@@ -85,6 +88,17 @@ export function circleRoutes(deps: ApiDeps): Route[] {
           displayName: input.body.displayName,
         });
         return toResult(result, 200, (circle) => presentCircle(circle, ctx.actor));
+      },
+    },
+    {
+      method: "POST",
+      pattern: "/circles/join/preview",
+      async handle(ctx) {
+        const input = validate(ctx, { params: none, body: previewBody });
+        if (!input.ok) return input.result;
+        // Read-only; the code lives in the body, never the URL, so it stays out of logs.
+        const result = await previewInvite(deps, ctx.actor, { inviteCode: input.body.inviteCode });
+        return toResult(result, 200, presentInvitePreview);
       },
     },
     {

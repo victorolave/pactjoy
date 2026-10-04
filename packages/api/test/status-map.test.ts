@@ -107,7 +107,7 @@ describe("app error status map", () => {
     const index = readFileSync(resolve(import.meta.dirname, "../../app/src/index.ts"), "utf8");
     const source = readFileSync(resolve(import.meta.dirname, "../src/errors/app-error.ts"), "utf8");
     expect(errorCoverageGaps(index, source)).toEqual({ imports: [], union: [] });
-    expect(exportedErrorNames(index).length).toBe(23);
+    expect(exportedErrorNames(index).length).toBe(24);
   });
 
   it("EM-S16: the scan compares exact names, so a new CircleError is detected", () => {

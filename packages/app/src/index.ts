@@ -40,6 +40,12 @@ export type {
 } from "./circle/my-circle.query.ts";
 export { myCircle } from "./circle/my-circle.query.ts";
 export type {
+  InvitePreview,
+  PreviewInviteDeps,
+  PreviewInviteError,
+} from "./circle/preview-invite.ts";
+export { previewInvite } from "./circle/preview-invite.ts";
+export type {
   RenameCircleDeps,
   RenameCircleError,
   RenameCircleInput,

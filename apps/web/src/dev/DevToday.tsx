@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { Link, Navigate, Route, Routes, useParams } from "react-router";
+import { LocalStorageDeviceStore } from "../adapters/local-storage-device-store.ts";
 import { createTodayPersister } from "../adapters/query-persister.ts";
 import type { AppDependencies } from "../composition/dependencies.ts";
 import { AppProviders } from "../composition/providers.tsx";
@@ -8,10 +9,13 @@ import { createSessionEvents, SessionManager } from "../features/auth/index.ts";
 import { TodayScreen } from "../features/today/index.ts";
 import { ApiError } from "../ports/api-error.ts";
 import { AppShell } from "../shell/AppShell.tsx";
+import { FakeAppInstall } from "../testing/fake-app-install.ts";
 import { FakeAuth, fakeSession } from "../testing/fake-auth.ts";
 import { FakeConnectivity } from "../testing/fake-connectivity.ts";
 import { FakeHaptics } from "../testing/fake-haptics.ts";
+import { FakeNotificationPermission } from "../testing/fake-notification-permission.ts";
 import { FakePactJoyApi } from "../testing/fake-pactjoy-api.ts";
+import { FakeSharing } from "../testing/fake-sharing.ts";
 import { FixedClock } from "../testing/fixed-clock.ts";
 import { MemoryStorage } from "../testing/memory-storage.ts";
 import { MemoryTokenStore } from "../testing/memory-token-store.ts";
@@ -37,6 +41,11 @@ function dependenciesFor(scenario: Scenario): AppDependencies {
     haptics: new FakeHaptics(),
     connectivity: new FakeConnectivity(scenario.mode !== "offline"),
     store,
+    device: new LocalStorageDeviceStore(new MemoryStorage()),
+    sharing: new FakeSharing(),
+    appInstall: new FakeAppInstall(),
+    notifications: new FakeNotificationPermission(),
+    clock: new FixedClock(0),
     sessions: new SessionManager(auth, store, new FixedClock(0)),
     sessionEvents: createSessionEvents(),
     queryClient: createQueryClient({ retryQueries: false }),
