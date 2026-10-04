@@ -9,12 +9,14 @@ import { AppProviders } from "../composition/providers.tsx";
 import { createQueryClient } from "../composition/query-client.ts";
 import { createSessionEvents, SessionManager } from "../features/auth/index.ts";
 import type { ApiError } from "../ports/api-error.ts";
+import type { NotificationPermissionState } from "../ports/notification-permission.ts";
 import type { MyCircle } from "../ports/pactjoy-api.ts";
 import { AppRoutes } from "../shell/routes.tsx";
 import { FakeAppInstall } from "./fake-app-install.ts";
 import { FakeAuth, fakeSession } from "./fake-auth.ts";
 import { FakeConnectivity } from "./fake-connectivity.ts";
 import { FakeHaptics } from "./fake-haptics.ts";
+import { FakeNotificationPermission } from "./fake-notification-permission.ts";
 import { FakePactJoyApi } from "./fake-pactjoy-api.ts";
 import { FakeSharing } from "./fake-sharing.ts";
 import { FixedClock } from "./fixed-clock.ts";
@@ -52,6 +54,10 @@ export interface RenderAppOptions {
   readonly canPrompt?: boolean;
   /** The install step was already done or skipped on this device. Defaults to true, so login tests start at login. */
   readonly installDone?: boolean;
+  /** The browser's notification permission. Defaults to `granted`, so the permission step stays out of the way. */
+  readonly notificationPermission?: NotificationPermissionState;
+  /** The permission step was already done or skipped on this device. */
+  readonly notificationStepDone?: boolean;
   /** A name draft already on the device (the name step was done). */
   readonly nameDraft?: string;
   /** `getToday` rejects with these, one per call, before it answers `today`. */
@@ -82,6 +88,7 @@ export interface RenderedApp extends RenderResult {
     readonly device: LocalStorageDeviceStore;
     readonly sharing: FakeSharing;
     readonly appInstall: FakeAppInstall;
+    readonly notifications: FakeNotificationPermission;
     readonly clock: FixedClock;
   };
 }
@@ -95,6 +102,8 @@ function createFakeDeps({
   platform = "other",
   canPrompt = false,
   installDone = true,
+  notificationPermission = "granted",
+  notificationStepDone = false,
   welcomeSeen = true,
   now = DEFAULT_NOW_MS,
   canShare = true,
@@ -113,6 +122,7 @@ function createFakeDeps({
   if (nameDraft !== undefined) device.set("nameDraft", nameDraft);
   if (welcomeSeen) device.set("welcomeSeen", "1");
   if (installDone) device.set("installStep", "1");
+  if (notificationStepDone) device.set("notificationStep", "1");
   for (const failure of todayFailures) api.failNext("getToday", failure);
   return {
     auth,
@@ -124,6 +134,7 @@ function createFakeDeps({
     device,
     sharing: new FakeSharing(canShare),
     appInstall: new FakeAppInstall({ standalone, platform, canPrompt }),
+    notifications: new FakeNotificationPermission(notificationPermission),
     clock,
     sessions: new SessionManager(auth, store, new FixedClock(0)),
     sessionEvents: createSessionEvents(),

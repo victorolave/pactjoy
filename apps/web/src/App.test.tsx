@@ -11,6 +11,7 @@ import { FakeAppInstall } from "./testing/fake-app-install.ts";
 import { FakeAuth, fakeSession } from "./testing/fake-auth.ts";
 import { FakeConnectivity } from "./testing/fake-connectivity.ts";
 import { FakeHaptics } from "./testing/fake-haptics.ts";
+import { FakeNotificationPermission } from "./testing/fake-notification-permission.ts";
 import { FakePactJoyApi } from "./testing/fake-pactjoy-api.ts";
 import { FakeSharing } from "./testing/fake-sharing.ts";
 import { FixedClock } from "./testing/fixed-clock.ts";
@@ -38,6 +39,7 @@ function deps(signedIn: boolean): AppDependencies {
     device,
     sharing: new FakeSharing(),
     appInstall: new FakeAppInstall(),
+    notifications: new FakeNotificationPermission(),
     clock: new FixedClock(0),
     sessions: new SessionManager(auth, store, new FixedClock(0)),
     sessionEvents: createSessionEvents(),
