@@ -2,7 +2,13 @@ import type { TodayView } from "@pactjoy/app";
 import { ApiError } from "../ports/api-error.ts";
 import type { RefreshResult } from "../ports/auth.ts";
 import type {
+  CircleInvite,
+  CircleRef,
+  CreateCircleCommand,
   EditEntryCommand,
+  InvitePreviewView,
+  JoinCircleCommand,
+  MyCircle,
   PactJoyApi,
   RecordEntryCommand,
   RecordedEntry,
@@ -20,7 +26,7 @@ export interface HttpPactJoyApiOptions {
 }
 
 interface HttpRequest {
-  readonly method: "GET" | "POST" | "PUT" | "DELETE";
+  readonly method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   readonly path: string;
   readonly body?: unknown;
   readonly signal?: AbortSignal | undefined;
@@ -38,6 +44,19 @@ const isRecordResult = (data: unknown): boolean =>
   typeof data.replayed === "boolean";
 
 const isTodayView = (data: unknown): boolean => isRecord(data) && typeof data.state === "string";
+
+const isMyCircle = (data: unknown): boolean =>
+  isRecord(data) && "circle" in data && "season" in data;
+
+const isCircleRef = (data: unknown): boolean => isRecord(data) && typeof data.id === "string";
+
+const isInvite = (data: unknown): boolean =>
+  isRecord(data) && typeof data.code === "string" && typeof data.expiresAt === "string";
+
+const isPreview = (data: unknown): boolean =>
+  isRecord(data) && typeof data.circleName === "string" && typeof data.expiresAt === "string";
+
+const circlePath = (circleId: string): string => `/circles/${encodeURIComponent(circleId)}`;
 
 /** Maps a failed response to an ApiError. Without a usable envelope the status decides. */
 async function toApiError(response: Response): Promise<ApiError> {
@@ -88,6 +107,70 @@ export class HttpPactJoyApi implements PactJoyApi {
 
   async deleteEntry(entryId: string): Promise<void> {
     await this.#request({ method: "DELETE", path: `/entries/${encodeURIComponent(entryId)}` });
+  }
+
+  async getMyCircle(signal?: AbortSignal): Promise<MyCircle> {
+    return (await this.#request({
+      method: "GET",
+      path: "/me/circle",
+      signal,
+      valid: isMyCircle,
+    })) as MyCircle;
+  }
+
+  async previewInvite(inviteCode: string, signal?: AbortSignal): Promise<InvitePreviewView> {
+    // The code travels in the body, never the URL, so it stays out of logs.
+    return (await this.#request({
+      method: "POST",
+      path: "/circles/join/preview",
+      body: { inviteCode },
+      signal,
+      valid: isPreview,
+    })) as InvitePreviewView;
+  }
+
+  async createCircle(cmd: CreateCircleCommand): Promise<CircleRef> {
+    const data = await this.#request({
+      method: "POST",
+      path: "/circles",
+      body: cmd,
+      valid: isCircleRef,
+    });
+    return { circleId: (data as { id: string }).id };
+  }
+
+  async joinCircle(cmd: JoinCircleCommand): Promise<CircleRef> {
+    const data = await this.#request({
+      method: "POST",
+      path: "/circles/join",
+      body: cmd,
+      valid: isCircleRef,
+    });
+    return { circleId: (data as { id: string }).id };
+  }
+
+  async generateInvite(circleId: string): Promise<CircleInvite> {
+    return (await this.#request({
+      method: "POST",
+      path: `${circlePath(circleId)}/invite`,
+      valid: isInvite,
+    })) as CircleInvite;
+  }
+
+  async renameCircle(circleId: string, name: string): Promise<void> {
+    await this.#request({ method: "PATCH", path: circlePath(circleId), body: { name } });
+  }
+
+  async renameMyDisplayName(circleId: string, displayName: string): Promise<void> {
+    await this.#request({
+      method: "PATCH",
+      path: `${circlePath(circleId)}/members/me`,
+      body: { displayName },
+    });
+  }
+
+  async leaveCircle(circleId: string): Promise<void> {
+    await this.#request({ method: "POST", path: `${circlePath(circleId)}/leave` });
   }
 
   async #request(request: HttpRequest): Promise<unknown> {

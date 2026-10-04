@@ -6,6 +6,8 @@ const route = (method: HttpMethod, pattern: string) => ({ method, pattern });
 const router = createRouter([
   route("POST", "/habits"),
   route("POST", "/circles/join"),
+  route("POST", "/circles/join/preview"),
+  route("POST", "/circles/:circleId/leave"),
   route("PATCH", "/circles/:circleId"),
   route("GET", "/seasons/:seasonId/standings"),
   route("PUT", "/seasons/:seasonId/commitments/:commitmentId"),
@@ -27,6 +29,15 @@ describe("stripBasePath (RT-S5, RT-S6)", () => {
 });
 
 describe("router.match", () => {
+  it("keeps /circles/join/preview apart from /circles/join and /circles/:circleId/...", () => {
+    const preview = router.match("POST", "/circles/join/preview");
+    expect(preview.kind === "match" && preview.route.pattern).toBe("/circles/join/preview");
+    const join = router.match("POST", "/circles/join");
+    expect(join.kind === "match" && join.route.pattern).toBe("/circles/join");
+    const leave = router.match("POST", "/circles/join/leave");
+    expect(leave.kind === "match" && leave.route.pattern).toBe("/circles/:circleId/leave");
+  });
+
   it("matches a route and extracts decoded params", () => {
     expect(router.match("PUT", "/seasons/s%201/commitments/c2")).toMatchObject({
       kind: "match",

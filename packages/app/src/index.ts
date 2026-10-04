@@ -33,6 +33,19 @@ export { joinCircle } from "./circle/join-circle.ts";
 export type { LeaveCircleDeps, LeaveCircleError, LeaveCircleInput } from "./circle/leave-circle.ts";
 export { leaveCircle } from "./circle/leave-circle.ts";
 export type {
+  MyCircleDeps,
+  MyCircleMember,
+  MyCircleSeason,
+  MyCircleView,
+} from "./circle/my-circle.query.ts";
+export { myCircle } from "./circle/my-circle.query.ts";
+export type {
+  InvitePreview,
+  PreviewInviteDeps,
+  PreviewInviteError,
+} from "./circle/preview-invite.ts";
+export { previewInvite } from "./circle/preview-invite.ts";
+export type {
   RenameCircleDeps,
   RenameCircleError,
   RenameCircleInput,
@@ -190,6 +203,7 @@ export { localDateOfSeasonDay, toSeasonDay } from "./time/season-calendar.ts";
 export type { TimeZone, TimeZoneId } from "./time/time-zone.port.ts";
 export { timeZoneId } from "./time/time-zone.port.ts";
 export type { PendingYesterdayItem } from "./today/pending-yesterday.ts";
+export type { SeasonPhaseName } from "./today/season-phase.ts";
 export type {
   TodayBase,
   TodayCircle,

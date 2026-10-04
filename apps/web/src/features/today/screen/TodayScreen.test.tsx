@@ -6,6 +6,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { ApiError } from "../../../ports/api-error.ts";
 import { longDate } from "../../../shared/format.ts";
+import { NO_CIRCLE } from "../../../testing/fixtures/circle.ts";
 import {
   activeTodayFixture,
   type DayRow,
@@ -29,6 +30,19 @@ describe("Today without a season (TO-R1)", () => {
     ).toBeInTheDocument();
     expect(screen.queryByText(/Para hoy/)).not.toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("noCircle offers a way to create or join a circle, and it leads to the create screen (TO-S1)", async () => {
+    const { location } = renderApp({
+      today: noCircleTodayFixture(),
+      myCircle: NO_CIRCLE,
+      nameDraft: "Andrea",
+    });
+    await userEvent.click(await screen.findByRole("link", { name: "Crear o unirme a un círculo" }));
+    expect(location()).toBe("/circle/new");
+    expect(
+      await screen.findByRole("heading", { name: "Tu círculo empieza aquí" }),
+    ).toBeInTheDocument();
   });
 
   it("noSeason shows the circle name (TO-S2)", async () => {
