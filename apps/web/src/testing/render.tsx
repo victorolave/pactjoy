@@ -46,6 +46,12 @@ export interface RenderAppOptions {
   readonly standalone?: boolean;
   /** The welcome carousel was already seen on this device. Defaults to true, so login tests start at login. */
   readonly welcomeSeen?: boolean;
+  /** The phone's platform. Defaults to `other`. */
+  readonly platform?: "ios" | "other";
+  /** The browser holds a deferred install prompt. Defaults to false. */
+  readonly canPrompt?: boolean;
+  /** The install step was already done or skipped on this device. Defaults to true, so login tests start at login. */
+  readonly installDone?: boolean;
   /** A name draft already on the device (the name step was done). */
   readonly nameDraft?: string;
   /** `getToday` rejects with these, one per call, before it answers `today`. */
@@ -86,6 +92,9 @@ function createFakeDeps({
   myCircle = soloCircleFixture(),
   nameDraft,
   standalone = false,
+  platform = "other",
+  canPrompt = false,
+  installDone = true,
   welcomeSeen = true,
   now = DEFAULT_NOW_MS,
   canShare = true,
@@ -103,6 +112,7 @@ function createFakeDeps({
   const device = new LocalStorageDeviceStore(new MemoryStorage());
   if (nameDraft !== undefined) device.set("nameDraft", nameDraft);
   if (welcomeSeen) device.set("welcomeSeen", "1");
+  if (installDone) device.set("installStep", "1");
   for (const failure of todayFailures) api.failNext("getToday", failure);
   return {
     auth,
@@ -113,7 +123,7 @@ function createFakeDeps({
     store,
     device,
     sharing: new FakeSharing(canShare),
-    appInstall: new FakeAppInstall(standalone),
+    appInstall: new FakeAppInstall({ standalone, platform, canPrompt }),
     clock,
     sessions: new SessionManager(auth, store, new FixedClock(0)),
     sessionEvents: createSessionEvents(),
