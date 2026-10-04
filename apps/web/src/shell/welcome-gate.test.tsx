@@ -40,6 +40,20 @@ describe("WelcomeGate and the carousel (OB-R2, OB-S1)", () => {
     expect(await screen.findByLabelText(LOGIN.name)).toBeInTheDocument();
   });
 
+  it("draws slide 1b as one labelled composition, with no placeholder and no example numbers read out", async () => {
+    const user = userEvent.setup();
+    const { container } = renderApp({ ...fresh, path: "/welcome" });
+    await user.click(await screen.findByRole("button", { name: "Siguiente" }));
+    const goals = screen.getByRole("img", {
+      name: "Las metas de dos personas, cada una con sus compromisos",
+    });
+    expect(container.querySelectorAll('[role="img"][aria-label="Andrea"]')).toHaveLength(1);
+    expect(goals.querySelectorAll("img")).toHaveLength(2);
+    expect(goals.querySelectorAll('[aria-hidden="true"]').length).toBeGreaterThan(0);
+    expect(goals.textContent).toContain("1.000 pts");
+    expect(container.querySelector("[class*='placeholder']")).toBeNull();
+  });
+
   it("lets Saltar leave from the first slide, and marks it seen too", async () => {
     const user = userEvent.setup();
     const app = renderApp({ ...fresh, path: "/welcome" });

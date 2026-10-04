@@ -4,14 +4,15 @@ import { Button } from "../../../ui/Button.tsx";
 import { PagerDots } from "../../../ui/PagerDots.tsx";
 import { Illustration, Logo } from "../../../ui/Placeholder.tsx";
 import { useWelcomeSeen } from "../device-state.ts";
+import { GoalsIllustration } from "./GoalsIllustration.tsx";
 import styles from "./WelcomeCarousel.module.css";
 import { WELCOME_SLIDES } from "./welcome-slides.ts";
 
 /**
- * Where the carousel leads. The install step goes here later (D9: carousel, install, then login);
- * today the next screen is login.
+ * Where the carousel leads: the install step (D9: carousel, install, then login). Where the browser
+ * cannot install, the gate sends the user on to login.
  */
-export const AFTER_WELCOME_PATH = "/login";
+export const AFTER_WELCOME_PATH = "/welcome/install";
 
 /**
  * Designs 1a-c: three slides before login. "Saltar" (the first two slides) and the last slide's
@@ -41,10 +42,14 @@ export function WelcomeCarousel() {
         )}
       </div>
       <div className={styles.slide} aria-live="polite">
-        <Illustration
-          alt={slide.alt}
-          {...(slide.illustration ? { name: slide.illustration } : {})}
-        />
+        {slide.composition === "goals" ? (
+          <GoalsIllustration />
+        ) : (
+          <Illustration
+            alt={slide.alt}
+            {...(slide.illustration ? { name: slide.illustration, size: "story" as const } : {})}
+          />
+        )}
         <h1 className={styles.title}>{slide.title}</h1>
         <p className={styles.body}>{slide.body}</p>
       </div>
