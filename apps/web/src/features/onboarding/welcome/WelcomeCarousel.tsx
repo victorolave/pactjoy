@@ -8,10 +8,10 @@ import styles from "./WelcomeCarousel.module.css";
 import { WELCOME_SLIDES } from "./welcome-slides.ts";
 
 /**
- * Where the carousel leads. The install step goes here later (D9: carousel, install, then login);
- * today the next screen is login.
+ * Where the carousel leads: the install step (D9: carousel, install, then login). Where the browser
+ * cannot install, the gate sends the user on to login.
  */
-export const AFTER_WELCOME_PATH = "/login";
+export const AFTER_WELCOME_PATH = "/welcome/install";
 
 /**
  * Designs 1a-c: three slides before login. "Saltar" (the first two slides) and the last slide's
