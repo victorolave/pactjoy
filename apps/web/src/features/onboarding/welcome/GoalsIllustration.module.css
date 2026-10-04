@@ -3,6 +3,8 @@
   flex: none;
   flex-direction: column;
   gap: var(--space-1);
+  /* Room between the composition and the slide title. */
+  margin-bottom: var(--space-4);
 }
 
 .row {
@@ -15,7 +17,8 @@
   flex-direction: column;
   gap: var(--space-2);
   box-sizing: border-box;
-  height: var(--goals-card-height);
+  /* Grows with its chips instead of letting them spill over the title. */
+  min-height: var(--goals-card-height);
   padding: var(--space-3) calc(var(--space-3) + var(--space-1) / 2);
   background: var(--surface-card);
   border: var(--border-width) solid var(--border-subtle);
