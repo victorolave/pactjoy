@@ -4,6 +4,8 @@
   /* iPhone-first column: on wider screens the app stays this wide and centred (screens, tab bar, toasts, sheets). */
   --app-max-width: 480px;
   --safe-top: env(safe-area-inset-top, 0px);
+  /* Breathing room above the first content of every screen, on top of the safe area; the one place to tune it. */
+  --screen-top-space: var(--space-4);
   --safe-right: env(safe-area-inset-right, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);

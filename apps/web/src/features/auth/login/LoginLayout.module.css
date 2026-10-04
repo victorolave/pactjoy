@@ -4,7 +4,8 @@
   align-items: center;
   min-height: var(--shell-height);
   box-sizing: border-box;
-  padding: var(--safe-top) var(--layout-margin-mobile) var(--safe-bottom);
+  padding: calc(var(--safe-top) + var(--screen-top-space)) var(--layout-margin-mobile)
+    var(--safe-bottom);
   background: var(--surface-page);
 }
 

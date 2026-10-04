@@ -4,7 +4,7 @@
   height: var(--shell-height);
   max-width: var(--app-max-width);
   margin-inline: auto;
-  padding-top: var(--safe-top);
+  padding-top: calc(var(--safe-top) + var(--screen-top-space));
   padding-left: var(--safe-left);
   padding-right: var(--safe-right);
   box-sizing: border-box;
