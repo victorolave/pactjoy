@@ -43,9 +43,11 @@
   height: var(--illustration-hero);
 }
 
+/* Full width, as tall as the art needs (capped), so a cropped picture leaves no empty band above or below. */
 .imageSized[data-size="story"] {
   width: 100%;
-  height: var(--illustration-story);
+  height: auto;
+  max-height: var(--illustration-story);
 }
 
 .imageSized[data-size="banner"] {
