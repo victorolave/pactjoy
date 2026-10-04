@@ -9,9 +9,9 @@ export function EmptyCircle() {
       <h1 className={styles.title}>Círculo</h1>
       <div className={styles.empty}>
         <Illustration
-          name="crear-pacto"
+          name="invitar-circulo"
           size="hero"
-          alt="Dos personas chocan los puños, cada una con su cuaderno"
+          alt="Tres personas conversan unidas por una cinta de color"
         />
         <h2 className={styles.emptyTitle}>Tu círculo empieza aquí.</h2>
         <p className={styles.lead}>

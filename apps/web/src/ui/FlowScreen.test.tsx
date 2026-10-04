@@ -44,6 +44,16 @@ describe("FlowScreen", () => {
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 
+  it("names the back button with backLabel when given", () => {
+    render(
+      <FlowScreen title="Hola" onBack={() => {}} backLabel="Volver al perfil">
+        <p>Contenido</p>
+      </FlowScreen>,
+    );
+    expect(screen.getByRole("button", { name: "Volver al perfil" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Volver" })).not.toBeInTheDocument();
+  });
+
   it("has no pinned action when it is given no footer", () => {
     render(
       <FlowScreen title="Ajustes">

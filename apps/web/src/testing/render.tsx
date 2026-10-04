@@ -9,11 +9,14 @@ import { AppProviders } from "../composition/providers.tsx";
 import { createQueryClient } from "../composition/query-client.ts";
 import { createSessionEvents, SessionManager } from "../features/auth/index.ts";
 import type { ApiError } from "../ports/api-error.ts";
+import type { NotificationPermissionState } from "../ports/notification-permission.ts";
 import type { MyCircle } from "../ports/pactjoy-api.ts";
 import { AppRoutes } from "../shell/routes.tsx";
+import { FakeAppInstall } from "./fake-app-install.ts";
 import { FakeAuth, fakeSession } from "./fake-auth.ts";
 import { FakeConnectivity } from "./fake-connectivity.ts";
 import { FakeHaptics } from "./fake-haptics.ts";
+import { FakeNotificationPermission } from "./fake-notification-permission.ts";
 import { FakePactJoyApi } from "./fake-pactjoy-api.ts";
 import { FakeSharing } from "./fake-sharing.ts";
 import { FixedClock } from "./fixed-clock.ts";
@@ -41,6 +44,22 @@ export interface RenderAppOptions {
   readonly now?: number;
   /** Whether the system share sheet exists. Defaults to true. */
   readonly canShare?: boolean;
+  /** Launched from the home screen. Defaults to false (a browser tab). */
+  readonly standalone?: boolean;
+  /** The welcome carousel was already seen on this device. Defaults to true, so login tests start at login. */
+  readonly welcomeSeen?: boolean;
+  /** The phone's platform. Defaults to `other`. */
+  readonly platform?: "ios" | "other";
+  /** The browser holds a deferred install prompt. Defaults to false. */
+  readonly canPrompt?: boolean;
+  /** The install step was already done or skipped on this device. Defaults to true, so login tests start at login. */
+  readonly installDone?: boolean;
+  /** The browser's notification permission. Defaults to `granted`, so the permission step stays out of the way. */
+  readonly notificationPermission?: NotificationPermissionState;
+  /** The permission step was already done or skipped on this device. */
+  readonly notificationStepDone?: boolean;
+  /** Where the device flags live. A fresh in-memory one by default; pass a throwing one to test blocked storage. */
+  readonly deviceStorage?: Storage;
   /** A name draft already on the device (the name step was done). */
   readonly nameDraft?: string;
   /** `getToday` rejects with these, one per call, before it answers `today`. */
@@ -70,6 +89,8 @@ export interface RenderedApp extends RenderResult {
     readonly store: MemoryTokenStore;
     readonly device: LocalStorageDeviceStore;
     readonly sharing: FakeSharing;
+    readonly appInstall: FakeAppInstall;
+    readonly notifications: FakeNotificationPermission;
     readonly clock: FixedClock;
   };
 }
@@ -79,6 +100,14 @@ function createFakeDeps({
   today = activeTodayFixture(),
   myCircle = soloCircleFixture(),
   nameDraft,
+  standalone = false,
+  platform = "other",
+  canPrompt = false,
+  installDone = true,
+  notificationPermission = "granted",
+  notificationStepDone = false,
+  deviceStorage = new MemoryStorage(),
+  welcomeSeen = true,
   now = DEFAULT_NOW_MS,
   canShare = true,
   myCircleFailures = [],
@@ -92,8 +121,11 @@ function createFakeDeps({
   const api = new FakePactJoyApi(today);
   api.setMyCircle(myCircle);
   for (const failure of myCircleFailures) api.failNext("getMyCircle", failure);
-  const device = new LocalStorageDeviceStore(new MemoryStorage());
+  const device = new LocalStorageDeviceStore(deviceStorage);
   if (nameDraft !== undefined) device.set("nameDraft", nameDraft);
+  if (welcomeSeen) device.set("welcomeSeen", "1");
+  if (installDone) device.set("installStep", "1");
+  if (notificationStepDone) device.set("notificationStep", "1");
   for (const failure of todayFailures) api.failNext("getToday", failure);
   return {
     auth,
@@ -104,6 +136,8 @@ function createFakeDeps({
     store,
     device,
     sharing: new FakeSharing(canShare),
+    appInstall: new FakeAppInstall({ standalone, platform, canPrompt }),
+    notifications: new FakeNotificationPermission(notificationPermission),
     clock,
     sessions: new SessionManager(auth, store, new FixedClock(0)),
     sessionEvents: createSessionEvents(),
