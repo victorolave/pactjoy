@@ -3,9 +3,14 @@ import { type Persister, PersistQueryClientProvider } from "@tanstack/react-quer
 import { type ReactNode, useCallback, useMemo } from "react";
 import { bustFor, persistOptionsFor } from "../adapters/query-persister.ts";
 import { ApiProvider } from "../context/api-context.tsx";
+import { AppInstallProvider } from "../context/app-install-context.tsx";
+import { ClockProvider } from "../context/clock-context.tsx";
 import { ConnectivityProvider } from "../context/connectivity-context.tsx";
+import { DeviceStoreProvider } from "../context/device-store-context.tsx";
 import { HapticsProvider } from "../context/haptics-context.tsx";
 import { IdsProvider } from "../context/ids-context.tsx";
+import { NotificationPermissionProvider } from "../context/notification-permission-context.tsx";
+import { SharingProvider } from "../context/sharing-context.tsx";
 import { ToastProvider } from "../context/toast-context.tsx";
 import { SessionProvider, useSession } from "../features/auth/index.ts";
 import type { AppDependencies } from "./dependencies.ts";
@@ -17,12 +22,15 @@ export function AppProviders({
   readonly deps: AppDependencies;
   readonly children: ReactNode;
 }) {
-  const { queryClient, persister } = deps;
-  // Cached data belongs to the signed-in user: drop it, and the saved copy, whenever the session ends.
+  const { queryClient, persister, device } = deps;
+  // Cached data belongs to the signed-in user: drop it, and the saved copy, whenever the session
+  // ends. So does the name draft. The device flags (welcome seen, install and permission steps)
+  // are about this phone, not the person, so they stay: the carousel does not return on every login.
   const onSessionEnd = useCallback(() => {
     queryClient.clear();
     void persister.removeClient();
-  }, [queryClient, persister]);
+    device.clearSession();
+  }, [queryClient, persister, device]);
   return (
     <SessionProvider
       auth={deps.auth}
@@ -36,7 +44,17 @@ export function AppProviders({
           <IdsProvider ids={deps.ids}>
             <HapticsProvider haptics={deps.haptics}>
               <ConnectivityProvider connectivity={deps.connectivity}>
-                <ToastProvider>{children}</ToastProvider>
+                <DeviceStoreProvider device={deps.device}>
+                  <SharingProvider sharing={deps.sharing}>
+                    <AppInstallProvider appInstall={deps.appInstall}>
+                      <NotificationPermissionProvider notifications={deps.notifications}>
+                        <ClockProvider clock={deps.clock}>
+                          <ToastProvider>{children}</ToastProvider>
+                        </ClockProvider>
+                      </NotificationPermissionProvider>
+                    </AppInstallProvider>
+                  </SharingProvider>
+                </DeviceStoreProvider>
               </ConnectivityProvider>
             </HapticsProvider>
           </IdsProvider>
