@@ -59,3 +59,12 @@ export function weekdayName(isoDate: string): string | null {
   const day = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
   return WEEKDAYS[day.getUTCDay()] ?? null;
 }
+
+/** "2026-10-16" -> "16 de octubre" (calendar date, so the machine's time zone cannot move the day). */
+export function dayMonth(isoDate: string): string {
+  const match = ISO_DATE.exec(isoDate);
+  const monthName = match === null ? undefined : MONTHS[Number(match[2]) - 1];
+  return match === null || monthName === undefined
+    ? isoDate
+    : `${Number(match[3])} de ${monthName}`;
+}

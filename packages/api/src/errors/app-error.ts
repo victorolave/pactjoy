@@ -12,6 +12,7 @@ import type {
   JoinCircleError,
   LeaveCircleError,
   MemberScoreError,
+  PreviewInviteError,
   RecordEntryError,
   RemoveCommitmentError,
   RenameCircleError,
@@ -32,6 +33,7 @@ export type AppError =
   | RenameMyDisplayNameError
   | GenerateInviteError
   | JoinCircleError
+  | PreviewInviteError
   | LeaveCircleError
   | CreateHabitError
   | CreateSeasonError

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { longDate } from "../../../shared/format.ts";
 import { TodayDateContext } from "../../../shared/today-date-context.tsx";
+import { ButtonLink } from "../../../ui/ButtonLink.tsx";
 import { Card } from "../../../ui/Card.tsx";
 import { InlineMessage } from "../../../ui/InlineMessage.tsx";
 import { Icon } from "../../../ui/icon/Icon.tsx";
@@ -41,6 +42,7 @@ export function NoCircle() {
   return (
     <Empty title="Aún no estás en un círculo" alt="Sin círculo todavía">
       <p className={styles.lead}>Cuando te unas a uno, tus compromisos de hoy aparecerán aquí.</p>
+      <ButtonLink to="/circle/new">Crear o unirme a un círculo</ButtonLink>
     </Empty>
   );
 }

@@ -8,7 +8,8 @@ import { describe, expect, it } from "vitest";
  * its patterns cannot say "any other feature, unless the target is its index.ts".
  *
  *  1. A feature is reached only through its `index.ts`, from everywhere else in src.
- *  2. `entry` never imports `today`: the dependency runs one way, today -> entry.
+ *  2. Features depend on each other only along the edges of ALLOWED_FEATURE_DEPS (a one-way DAG).
+ *     Any cross-feature edge that is not listed fails, so a new dependency is a deliberate edit.
  *  3. Features never import `composition` or `shell`, the layers that assemble features.
  *  4. The base layers (shared, ui, ports, adapters, context, platform) never import a feature.
  *
@@ -26,6 +27,16 @@ function filesUnder(dir: string): string[] {
     return /\.(ts|tsx)$/.test(name) ? [path] : [];
   });
 }
+
+/** feature -> the features it may reach (always through their index.ts). */
+const ALLOWED_FEATURE_DEPS: Readonly<Record<string, readonly string[]>> = {
+  today: ["entry"],
+  entry: [],
+  auth: [],
+  circle: ["onboarding"],
+  onboarding: [],
+  profile: ["auth", "circle"],
+};
 
 const BASE_LAYERS = /^(shared|ui|ports|adapters|context|platform)\//;
 
@@ -49,8 +60,10 @@ function violationsOf(file: string, specifiers: readonly string[]): string[] {
         `${file} imports ${target}: reach "${into.feature}" through features/${into.feature}/index.ts`,
       );
     }
-    if (own === "entry" && into?.feature === "today") {
-      found.push(`${file} imports ${target}: entry must not depend on today (today -> entry only)`);
+    if (own !== undefined && into !== null && into.feature !== own) {
+      if (!ALLOWED_FEATURE_DEPS[own]?.includes(into.feature)) {
+        found.push(`${file} imports ${target}: "${own}" may not depend on "${into.feature}"`);
+      }
     }
     if (own !== undefined && /^(composition|shell)\//.test(target)) {
       found.push(`${file} imports ${target}: features must not import composition or shell`);
@@ -95,6 +108,12 @@ describe("the folder architecture", () => {
       1,
     );
     expect(violationsOf("features/entry/Foo.tsx", ["../today/index.ts"])).toHaveLength(1);
+    expect(violationsOf("features/onboarding/Foo.tsx", ["../circle/index.ts"])).toHaveLength(1);
+    expect(violationsOf("features/circle/Foo.tsx", ["../profile/index.ts"])).toHaveLength(1);
+    expect(
+      violationsOf("features/profile/Foo.tsx", ["../circle/index.ts", "../auth/index.ts"]),
+    ).toEqual([]);
+    expect(violationsOf("features/circle/Foo.tsx", ["../onboarding/index.ts"])).toEqual([]);
     expect(
       violationsOf("features/entry/Foo.tsx", ["../../composition/providers.tsx"]),
     ).toHaveLength(1);

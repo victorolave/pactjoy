@@ -1,0 +1,110 @@
+.stack {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.row {
+  position: relative;
+  padding-top: var(--goals-lift);
+}
+
+/* The second card sits closer to the first; its picture overlaps only the first card's bottom padding. */
+.row + .row {
+  padding-top: var(--goals-lift-second);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  box-sizing: border-box;
+  /* Grows with its chips instead of letting them spill over the title. */
+  min-height: var(--goals-card-height);
+  padding: var(--space-3) calc(var(--space-3) + var(--space-1) / 2);
+  background: var(--surface-card);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-card);
+}
+
+.row[data-person="Andrea"] .card {
+  padding-right: var(--goals-pad-andrea);
+}
+
+.row[data-person="Victor"] .card {
+  padding-left: var(--goals-pad-victor);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--space-1) * 1.5);
+}
+
+.name {
+  flex: 1;
+  font: var(--font-small);
+  font-weight: var(--weight-bold);
+}
+
+.points {
+  font: var(--font-body);
+  font-weight: var(--weight-extrabold);
+}
+
+.goals {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-1);
+}
+
+.goal {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: var(--goals-chip-height);
+  padding: 0 calc(var(--space-1) * 1.5);
+  border-radius: var(--space-2);
+  font: var(--font-meta);
+  color: var(--pj-ink);
+}
+
+.goal[data-tint="orange"] {
+  background: var(--orange-300);
+}
+
+.goal[data-tint="coral"] {
+  background: var(--coral-300);
+}
+
+.goal[data-tint="pink"] {
+  background: var(--pink-200);
+}
+
+.goal[data-tint="purple"] {
+  background: var(--purple-200);
+}
+
+/* The picture sits on the card's lower corner and spills over the edge. */
+.picture {
+  position: absolute;
+  bottom: var(--space-1);
+  z-index: 1;
+}
+
+.picture img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.row[data-person="Andrea"] .picture {
+  right: var(--goals-bleed-andrea);
+  width: var(--goals-art-andrea);
+}
+
+.row[data-person="Victor"] .picture {
+  left: var(--goals-bleed-victor);
+  width: var(--goals-art-victor);
+}

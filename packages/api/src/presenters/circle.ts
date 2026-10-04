@@ -1,4 +1,11 @@
-import type { Actor, Circle, Invite } from "@pactjoy/app";
+import type {
+  Actor,
+  Circle,
+  Invite,
+  InvitePreview,
+  MyCircleView,
+  SeasonPhaseName,
+} from "@pactjoy/app";
 import { presentInstant, presentInstantOrNull } from "./time.ts";
 
 export interface InviteDto {
@@ -52,5 +59,71 @@ export function presentCircle(circle: Circle, viewer: Actor): CircleDto {
     createdAt: presentInstant(circle.createdAt),
     archivedAt: presentInstantOrNull(circle.archivedAt),
     version: circle.version,
+  };
+}
+
+export interface MyCircleDto {
+  readonly circle: null | {
+    readonly id: string;
+    readonly name: string;
+    readonly members: readonly {
+      readonly id: string;
+      readonly displayName: string;
+      readonly joinedAt: string;
+      readonly isYou: boolean;
+    }[];
+    readonly invite: InviteDto | null;
+  };
+  readonly season: null | {
+    readonly id: string;
+    readonly phase: SeasonPhaseName;
+    readonly lengthWeeks: number;
+    readonly week: number | null;
+    readonly approvalCount: number;
+  };
+}
+
+/** The Circle tab's read model: active members only, so no status, `leftAt`, version or archive fields. */
+export function presentMyCircle(view: MyCircleView): MyCircleDto {
+  return {
+    circle: view.circle && {
+      id: view.circle.id,
+      name: view.circle.name,
+      members: view.circle.members.map((member) => ({
+        id: member.id,
+        displayName: member.displayName,
+        joinedAt: presentInstant(member.joinedAt),
+        isYou: member.isYou,
+      })),
+      invite: view.circle.invite && {
+        code: view.circle.invite.code,
+        createdAt: presentInstant(view.circle.invite.createdAt),
+        expiresAt: presentInstant(view.circle.invite.expiresAt),
+      },
+    },
+    season: view.season && {
+      id: view.season.id,
+      phase: view.season.phase,
+      lengthWeeks: view.season.lengthWeeks,
+      week: view.season.week,
+      approvalCount: view.season.approvalCount,
+    },
+  };
+}
+
+export interface InvitePreviewDto {
+  readonly circleName: string;
+  readonly invitedBy: string | null;
+  readonly activeMemberCount: number;
+  readonly expiresAt: string;
+}
+
+/** No circle id and no member id: the code is the only handle, and Q11 still holds. */
+export function presentInvitePreview(preview: InvitePreview): InvitePreviewDto {
+  return {
+    circleName: preview.circleName,
+    invitedBy: preview.invitedBy,
+    activeMemberCount: preview.activeMemberCount,
+    expiresAt: presentInstant(preview.expiresAt),
   };
 }

@@ -8,7 +8,9 @@ const block = (selector: string): string =>
 
 describe("the shell's top spacing", () => {
   it("keeps clear of the iPhone's top inset", () => {
-    expect(block("shell")).toContain("padding-top: var(--safe-top)");
+    expect(block("shell")).toContain(
+      "padding-top: calc(var(--safe-top) + var(--screen-top-space))",
+    );
   });
 
   it("adds a design-scale gap before the date and greeting, from a spacing token", () => {

@@ -10,6 +10,12 @@
   font-weight: var(--weight-extrabold);
 }
 
+.xs {
+  width: var(--avatar-xs);
+  height: var(--avatar-xs);
+  font-size: calc(var(--avatar-xs) * 0.42);
+}
+
 .sm {
   width: var(--icon-lg);
   height: var(--icon-lg);
@@ -20,6 +26,18 @@
   width: var(--control-height-sm);
   height: var(--control-height-sm);
   font-size: calc(var(--control-height-sm) * 0.42);
+}
+
+.xl {
+  width: var(--avatar-xl);
+  height: var(--avatar-xl);
+  font-size: calc(var(--avatar-xl) * 0.42);
+}
+
+.lg {
+  width: var(--avatar-lg);
+  height: var(--avatar-lg);
+  font-size: calc(var(--avatar-lg) * 0.42);
 }
 
 .stack {

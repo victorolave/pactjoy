@@ -9,16 +9,23 @@ describe("AppRoutes", () => {
   it("shows Perfil when its tab is pressed (WF-S3)", async () => {
     renderAt("/");
     await userEvent.click(screen.getByRole("link", { name: "Perfil" }));
-    expect(screen.getByRole("heading", { name: "Perfil" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Victor" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Perfil" })).toBeInTheDocument();
   });
 
   it.each([
     ["/season", "Temporada"],
     ["/circle", "Círculo"],
-    ["/profile", "Perfil"],
   ])("renders %s with the tab bar", (path, title) => {
     renderAt(path);
     expect(screen.getByRole("heading", { name: title })).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "Principal" })).toBeInTheDocument();
+  });
+
+  it("renders /profile with the tab bar, titled Perfil and showing the member's name", async () => {
+    renderAt("/profile");
+    expect(screen.getByRole("heading", { level: 1, name: "Perfil" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Victor" })).toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: "Principal" })).toBeInTheDocument();
   });
 

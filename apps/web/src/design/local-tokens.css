@@ -4,6 +4,8 @@
   /* iPhone-first column: on wider screens the app stays this wide and centred (screens, tab bar, toasts, sheets). */
   --app-max-width: 480px;
   --safe-top: env(safe-area-inset-top, 0px);
+  /* Breathing room above the first content of every screen, on top of the safe area; the one place to tune it. */
+  --screen-top-space: var(--space-4);
   --safe-right: env(safe-area-inset-right, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
@@ -11,7 +13,45 @@
   --illustration-lg: 200px;
   --illustration-md: 130px;
   --illustration-banner: 150px;
+  /* The create-circle hero (design 4): 220 high. */
+  --illustration-hero: 220px;
+  /* The welcome carousel picture (design 1a): 320 high. */
+  --illustration-story: 320px;
+  /* The welcome slide 1b composition (design 1b): two season cards, the pictures overhanging each. */
+  --icon-xs: 12px;
+  --goals-card-height: 118px;
+  --goals-lift: 62px;
+  --goals-lift-second: 8px;
+  --goals-chip-height: 26px;
+  --goals-art-andrea: 206px;
+  --goals-art-victor: 176px;
+  --goals-pad-andrea: 180px;
+  --goals-pad-victor: 172px;
+  --goals-bleed-andrea: -10px;
+  --goals-bleed-victor: -8px;
+  /* The name step avatar (design 3): 96 square. */
+  --avatar-lg: 96px;
+  /* Member rows and the waiting room (designs 7, 31a): 56 square. */
+  --avatar-xl: 56px;
+  /* The avatars inside the goals cards of welcome slide 1b: 22 square. */
+  --avatar-xs: 22px;
+  /* The welcome carousel header row with the logo and Saltar (design 1a-c): 52 high. */
+  --welcome-header-height: 52px;
+  /* Pager dots (design 1a-c): 6 px, the current one a 20 px pill. */
+  --pager-dot: 6px;
+  --pager-dot-current: 20px;
   --border-width-control: 1.5px;
+  /* The empty member slot of the waiting room (design 7): a 2 px dashed ring. */
+  --border-width-slot: 2px;
+  /* The code input (design 6a, 6b): six 56 px boxes, 6 px apart; the focused box has a 2 px border. */
+  --code-box-height: 56px;
+  --code-box-gap: 6px;
+  --border-width-focus: 2px;
+  /* A text field under 16 px makes iOS zoom the page on focus. */
+  --font-size-no-zoom: 16px;
+  /* Invite codes (design 5, 7): monospaced, 40 px on the invite screen and 24 px in the waiting room. */
+  --font-code-lg: 800 40px / 44px ui-monospace, Menlo, monospace;
+  --font-code: 800 24px / 30px ui-monospace, Menlo, monospace;
   /* The check's fill and pop in the prototype (design 16, 20): 160 ms, none under reduced motion. */
   --motion-check: 160ms;
   /* Loading skeleton of Today (design 15e). */
