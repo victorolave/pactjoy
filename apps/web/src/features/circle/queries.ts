@@ -35,6 +35,8 @@ export function useInvitePreview(code: string) {
     enabled: code.length === 6,
     retry: false,
     gcTime: 0,
+    // Offline, a paused query would leave the screen searching forever: fail fast with NetworkError.
+    networkMode: "always",
   });
 }
 

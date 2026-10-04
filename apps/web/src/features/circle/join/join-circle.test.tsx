@@ -204,6 +204,20 @@ describe("join a circle: errors (design 6b)", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
+  it("shows Sin conexión instead of searching forever when the browser is offline (WC-S9)", async () => {
+    const { deps } = renderJoin({ online: false });
+    await codeField();
+    // TanStack listens for the event only once a query is mounted, so go offline after rendering.
+    window.dispatchEvent(new Event("offline"));
+    try {
+      deps.api.failNext("previewInvite", new ApiError("NetworkError", 0, null));
+      await typeCode();
+      expect(await screen.findByRole("alert")).toHaveTextContent("Sin conexión");
+    } finally {
+      window.dispatchEvent(new Event("online"));
+    }
+  });
+
   it("shows a join that fails with a code error under the boxes, keeping the preview", async () => {
     const { deps, location } = renderJoin();
     deps.api.failNext("joinCircle", new ApiError("CircleFull", 409, null));

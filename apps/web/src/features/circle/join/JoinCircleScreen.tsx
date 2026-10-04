@@ -67,6 +67,7 @@ export function JoinCircleScreen() {
   const changeCode = (next: string) => {
     setCode(next);
     setJoinError(null);
+    setNameError(undefined);
   };
 
   const submit = async (event: FormEvent) => {
