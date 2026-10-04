@@ -96,6 +96,10 @@ The owner answered Q1 to Q15 on 2026-10-01, following the recommendations except
 
 Also decided, and done (change `unique-active-circle`): a unique partial index `circle_members_active_user_key` on `circle_members(user_id) WHERE status = 'active'` (one active circle per user), in migration `20261001000700`. The db adapter maps a race's 23505 on that constraint to `ConcurrencyConflict` (409), matched by constraint name; a client retry then sees the winner and gets `AlreadyInActiveCircle`. The create+join and create+create races are covered in `api-http-concurrency.pg.test.ts`.
 
+### Addendum: Circle tab read model (change `pwa-onboarding-circle-profile`)
+
+16. Q16: `GET /me/circle` is a viewer read model for the PWA's Circle tab: the viewer's active circle with active members only (`id`, `displayName`, `joinedAt`, `isYou`; never a user id), the current invite (always returned, because the viewer is active by construction; the client compares `expiresAt` with its own clock instead of trusting a server `expired` flag that would go stale in a cache) and a season summary (`id`, `phase` of `pactOpen`/`notStarted`/`active`/`ended`, `lengthWeeks`, `week`, `approvalCount`). It is total: no circle is `200 {circle: null, season: null}`, never 404, and a `closed` latest season is reported as no season (same rule as `GET /me/today`). The phase is derived by `seasonPhase()`, shared with Today, so the two screens cannot drift. It adds no migration and changes no existing contract; it is not a replacement for `GET /circles/:id`, which needs the circle id first.
+
 ### Operational checklist (hosted Supabase, manual; the owner executes it)
 
 Nothing here runs from CI or from the repository.
@@ -107,7 +111,7 @@ Nothing here runs from CI or from the repository.
   - `ALLOWED_ORIGINS`: comma-separated exact origins (for example the PWA origin); empty allows no browser origin;
   - `API_JWT_ISSUER`: optional; defaults to `${SUPABASE_URL}/auth/v1`, which is right on hosted.
 - S0.2 (gate for C8, do this BEFORE treating the shell as done): `supabase functions deploy api --use-docker` first, then `--use-api`. Then `supabase functions download api` and check that the out-of-tree `packages/*/src` files, `postgres` and `jose` are in the bundle. Call the deployed function once to confirm the imports resolve at runtime. Record the result in the Spike results above; if the files are missing, choose between the fallbacks in "Deploy-bundling risk".
-- S0.3: smoke test with a real OTP-login token: `POST /api/circles` returns 201, an invalid token returns 401 with the envelope, a browser preflight from an allowed origin returns 204. Check the pooler under concurrency and the cold start once.
+- S0.3: smoke test with a real OTP-login token: `POST /api/circles` returns 201, then `GET /api/me/circle` returns that circle with `isYou: true` (Q16, no new secret or migration), an invalid token returns 401 with the envelope, a browser preflight from an allowed origin returns 204. Check the pooler under concurrency and the cold start once.
 - Q4: run `supabase config push` to apply `supabase/config.toml` (auth and API settings) to the linked hosted project, and review the diff it prints first.
 - Add the `db` and `deno` CI checks to branch protection.
 - If the deploy cannot resolve out-of-tree imports, apply fallback F1 or F2 (shell and import map only) and update this ADR.
