@@ -83,6 +83,7 @@ export function CircleScreen() {
         // the second member and swaps the waiting room for the members view.
         <section className={styles.screen}>
           <CircleHeader
+            circleId={circle.id}
             name={circle.name}
             eyebrow={
               !solo && data.season?.phase === "active" && data.season.week !== null
