@@ -7,5 +7,6 @@ export { type CircleFailure, type CircleField, circleFailure } from "./circle-me
 export { CreateCircleScreen } from "./create/CreateCircleScreen.tsx";
 export { InviteScreen } from "./invite/InviteScreen.tsx";
 export { JoinCircleScreen } from "./join/JoinCircleScreen.tsx";
+export { LeaveCircleSheet } from "./leave/LeaveCircleSheet.tsx";
 export { invalidateCircleState, useInvitePreview, useMyCircle } from "./queries.ts";
 export { CircleScreen } from "./screen/CircleScreen.tsx";

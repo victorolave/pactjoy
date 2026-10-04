@@ -103,3 +103,13 @@ export function useRenameCircle(circleId: string) {
     onSettled: () => invalidateCircleState(client),
   });
 }
+
+/** Leaves the circle; Today and the circle are refetched before it settles, so the user lands on `noCircle`. */
+export function useLeaveCircle(circleId: string) {
+  const api = usePactJoyApi();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.leaveCircle(circleId),
+    onSettled: () => invalidateCircleState(client),
+  });
+}

@@ -18,6 +18,7 @@ import {
   RefreshCw,
   Repeat,
   RotateCw,
+  Settings,
   Share2,
   Sun,
   Trash2,
@@ -57,6 +58,7 @@ const GLYPHS = {
   share: Share2,
   "user-plus": UserPlus,
   handshake: Handshake,
+  settings: Settings,
 } as const satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof GLYPHS;
