@@ -4,7 +4,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { App } from "./App.tsx";
 import { createTodayPersister } from "./adapters/query-persister.ts";
-import type { AppDependencies } from "./app/dependencies.ts";
+import type { AppDependencies } from "./composition/dependencies.ts";
 import { createSessionEvents } from "./features/auth/session-events.ts";
 import { SessionManager } from "./features/auth/session-manager.ts";
 import { FakeAuth, fakeSession } from "./testing/fake-auth.ts";

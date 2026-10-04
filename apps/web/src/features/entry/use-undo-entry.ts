@@ -1,4 +1,4 @@
-import { useToasts } from "../../app/toast-context.tsx";
+import { useToasts } from "../../context/toast-context.tsx";
 import { useDeleteEntry } from "./queries.ts";
 
 /**

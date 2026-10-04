@@ -1,6 +1,6 @@
 import type { TodayRow } from "@pactjoy/app";
 import { useEffect, useState } from "react";
-import { useOnline } from "../../app/connectivity-context.tsx";
+import { useOnline } from "../../context/connectivity-context.tsx";
 import { Button } from "../../ui/Button.tsx";
 import { Centered } from "../../ui/Centered.tsx";
 import { IconButton } from "../../ui/IconButton.tsx";

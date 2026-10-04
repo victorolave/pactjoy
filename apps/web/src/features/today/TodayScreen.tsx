@@ -1,10 +1,10 @@
-import { useOnline } from "../../app/connectivity-context.tsx";
+import { useOnline } from "../../context/connectivity-context.tsx";
 import { ApiError } from "../../ports/api-error.ts";
 import { longDate } from "../../shared/format.ts";
 import { toUiError } from "../../shared/ui-error.ts";
 import { Button } from "../../ui/Button.tsx";
 import { Icon } from "../../ui/icon/Icon.tsx";
-import { OfflineBanner } from "../offline/OfflineBanner.tsx";
+import { OfflineBanner } from "../../platform/offline/OfflineBanner.tsx";
 import { useToday } from "./queries.ts";
 import styles from "./TodayScreen.module.css";
 import { TodaySkeleton } from "./TodaySkeleton.tsx";

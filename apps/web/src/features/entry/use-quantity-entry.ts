@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { useIds } from "../../app/ids-context.tsx";
+import { useIds } from "../../context/ids-context.tsx";
 import type { EntryValueInput } from "../../ports/pactjoy-api.ts";
 import { toUiError, type UiKind } from "../../shared/ui-error.ts";
 import { useTodayDates } from "../today/today-date-context.tsx";

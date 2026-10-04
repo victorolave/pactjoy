@@ -31,7 +31,7 @@ describe("the shell's width", () => {
   });
 
   it("caps the toasts and the bottom sheets to the same column", () => {
-    for (const file of ["toast-context.module.css", "../ui/Sheet.module.css"]) {
+    for (const file of ["../context/toast-context.module.css", "../ui/Sheet.module.css"]) {
       const other = readFileSync(join(import.meta.dirname, file), "utf8");
       expect(other).toContain("max-width");
       expect(other).toContain("--app-max-width");

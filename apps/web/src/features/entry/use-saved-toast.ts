@@ -1,4 +1,4 @@
-import { useToasts } from "../../app/toast-context.tsx";
+import { useToasts } from "../../context/toast-context.tsx";
 import { useUndoEntry } from "./use-undo-entry.ts";
 
 /** The toast that follows a new registro (design 16, 20): the message and Deshacer. */

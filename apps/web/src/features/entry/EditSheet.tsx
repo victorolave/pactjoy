@@ -1,7 +1,7 @@
 import type { TodayEntry, TodayRow } from "@pactjoy/app";
 import { type ReactNode, useEffect, useState } from "react";
-import { useOnline } from "../../app/connectivity-context.tsx";
-import { useToasts } from "../../app/toast-context.tsx";
+import { useOnline } from "../../context/connectivity-context.tsx";
+import { useToasts } from "../../context/toast-context.tsx";
 import { addDays } from "../../shared/date.ts";
 import { longDate, weekdayName } from "../../shared/format.ts";
 import { Button } from "../../ui/Button.tsx";

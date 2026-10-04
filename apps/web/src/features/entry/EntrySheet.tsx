@@ -1,6 +1,6 @@
 import type { MeasureView, PendingYesterdayItem, TodayRow } from "@pactjoy/app";
 import { type ReactNode, useRef, useState } from "react";
-import { useOnline } from "../../app/connectivity-context.tsx";
+import { useOnline } from "../../context/connectivity-context.tsx";
 import { fromScaled, toScaled } from "../../shared/decimal.ts";
 import { pointsText } from "../../shared/format.ts";
 import { Button } from "../../ui/Button.tsx";

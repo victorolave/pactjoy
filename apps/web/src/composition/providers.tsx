@@ -2,13 +2,13 @@ import type { QueryClient } from "@tanstack/react-query";
 import { type Persister, PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { type ReactNode, useCallback, useMemo } from "react";
 import { bustFor, persistOptionsFor } from "../adapters/query-persister.ts";
+import { ApiProvider } from "../context/api-context.tsx";
+import { ConnectivityProvider } from "../context/connectivity-context.tsx";
+import { HapticsProvider } from "../context/haptics-context.tsx";
+import { IdsProvider } from "../context/ids-context.tsx";
+import { ToastProvider } from "../context/toast-context.tsx";
 import { SessionProvider, useSession } from "../features/auth/session-context.tsx";
-import { ApiProvider } from "./api-context.tsx";
-import { ConnectivityProvider } from "./connectivity-context.tsx";
 import type { AppDependencies } from "./dependencies.ts";
-import { HapticsProvider } from "./haptics-context.tsx";
-import { IdsProvider } from "./ids-context.tsx";
-import { ToastProvider } from "./toast-context.tsx";
 
 export function AppProviders({
   deps,

@@ -1,14 +1,14 @@
 import { useMemo } from "react";
 import { Link, Navigate, Route, Routes, useParams } from "react-router";
 import { createTodayPersister } from "../adapters/query-persister.ts";
-import { AppShell } from "../app/AppShell.tsx";
-import type { AppDependencies } from "../app/dependencies.ts";
-import { AppProviders } from "../app/providers.tsx";
-import { createQueryClient } from "../app/query-client.ts";
+import type { AppDependencies } from "../composition/dependencies.ts";
+import { AppProviders } from "../composition/providers.tsx";
+import { createQueryClient } from "../composition/query-client.ts";
 import { createSessionEvents } from "../features/auth/session-events.ts";
 import { SessionManager } from "../features/auth/session-manager.ts";
 import { TodayScreen } from "../features/today/TodayScreen.tsx";
 import { ApiError } from "../ports/api-error.ts";
+import { AppShell } from "../shell/AppShell.tsx";
 import { FakeAuth, fakeSession } from "../testing/fake-auth.ts";
 import { FakeConnectivity } from "../testing/fake-connectivity.ts";
 import { FakeHaptics } from "../testing/fake-haptics.ts";

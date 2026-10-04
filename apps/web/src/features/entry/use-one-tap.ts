@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { useHaptics } from "../../app/haptics-context.tsx";
-import { useIds } from "../../app/ids-context.tsx";
-import { useToasts } from "../../app/toast-context.tsx";
+import { useHaptics } from "../../context/haptics-context.tsx";
+import { useIds } from "../../context/ids-context.tsx";
+import { useToasts } from "../../context/toast-context.tsx";
 import type { RecordEntryCommand } from "../../ports/pactjoy-api.ts";
 import { useTodayDates } from "../today/today-date-context.tsx";
 import { entryFailure } from "./entry-messages.ts";

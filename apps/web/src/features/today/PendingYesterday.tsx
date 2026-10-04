@@ -1,5 +1,5 @@
 import type { PendingYesterdayItem, TodayEntry } from "@pactjoy/app";
-import { useOnline } from "../../app/connectivity-context.tsx";
+import { useOnline } from "../../context/connectivity-context.tsx";
 import { weekdayDay } from "../../shared/format.ts";
 import { Card } from "../../ui/Card.tsx";
 import { IconButton } from "../../ui/IconButton.tsx";

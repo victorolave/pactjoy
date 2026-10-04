@@ -2,6 +2,8 @@ import { QueryClient } from "@tanstack/react-query";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { createTodayPersister } from "../adapters/query-persister.ts";
+import { useIds } from "../context/ids-context.tsx";
+import { useToasts } from "../context/toast-context.tsx";
 import { useSession } from "../features/auth/session-context.tsx";
 import { createSessionEvents } from "../features/auth/session-events.ts";
 import { SessionManager } from "../features/auth/session-manager.ts";
@@ -15,9 +17,7 @@ import { MemoryStorage } from "../testing/memory-storage.ts";
 import { MemoryTokenStore } from "../testing/memory-token-store.ts";
 import { SequentialIds } from "../testing/sequential-ids.ts";
 import type { AppDependencies } from "./dependencies.ts";
-import { useIds } from "./ids-context.tsx";
 import { AppProviders } from "./providers.tsx";
-import { useToasts } from "./toast-context.tsx";
 
 function deps(overrides: Partial<AppDependencies> = {}): AppDependencies {
   const auth = new FakeAuth();

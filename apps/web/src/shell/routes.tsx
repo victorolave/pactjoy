@@ -6,9 +6,9 @@ import { EmailStep } from "../features/auth/EmailStep.tsx";
 import { LoginLayout } from "../features/auth/LoginLayout.tsx";
 import { RedirectIfSignedIn, RequireSession } from "../features/auth/RequireSession.tsx";
 import { ProfileScreen } from "../features/profile/ProfileScreen.tsx";
-import { StubScreen } from "../features/stubs/StubScreen.tsx";
 import { TodayScreen } from "../features/today/TodayScreen.tsx";
 import { AppShell } from "./AppShell.tsx";
+import { StubScreen } from "./StubScreen.tsx";
 
 /** The Today scenario gallery; `null` in production (see `loadDevToday`). */
 const DevToday = loadDevToday === null ? null : lazy(loadDevToday);

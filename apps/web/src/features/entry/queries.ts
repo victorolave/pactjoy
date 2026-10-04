@@ -1,5 +1,5 @@
 import { type UseMutationOptions, useMutation } from "@tanstack/react-query";
-import { usePactJoyApi } from "../../app/api-context.tsx";
+import { usePactJoyApi } from "../../context/api-context.tsx";
 import type { ApiError } from "../../ports/api-error.ts";
 import type {
   EditEntryCommand,
