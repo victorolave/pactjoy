@@ -10,10 +10,14 @@ import { describe, expect, it } from "vitest";
  *  1. A feature is reached only through its `index.ts`, from everywhere else in src.
  *  2. `entry` never imports `today`: the dependency runs one way, today -> entry.
  *  3. Features never import `composition` or `shell`, the layers that assemble features.
+ *  4. The base layers (shared, ui, ports, adapters, context, platform) never import a feature.
+ *
+ * Besides `import` and `from`, the specifiers of `vi.mock`, `vi.doMock` and `vi.importActual` count.
  */
 
 const SRC = resolve(import.meta.dirname, "..", "src");
-const IMPORT = /(?:\bfrom\s*|\bimport\s*\(?\s*)["'](\.{1,2}\/[^"']+)["']/g;
+const IMPORT =
+  /(?:\bfrom\s*|\bimport\s*\(?\s*|\bvi\.(?:mock|doMock|importActual)\s*(?:<[^>]*>)?\(\s*)["'](\.{1,2}\/[^"']+)["']/g;
 
 function filesUnder(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -22,6 +26,8 @@ function filesUnder(dir: string): string[] {
     return /\.(ts|tsx)$/.test(name) ? [path] : [];
   });
 }
+
+const BASE_LAYERS = /^(shared|ui|ports|adapters|context|platform)\//;
 
 /** `features/today/rows/DayRow.tsx` -> { feature: "today", rest: "rows/DayRow.tsx" }. */
 function featureOf(srcPath: string): { feature: string; rest: string } | null {
@@ -49,6 +55,9 @@ function violationsOf(file: string, specifiers: readonly string[]): string[] {
     if (own !== undefined && /^(composition|shell)\//.test(target)) {
       found.push(`${file} imports ${target}: features must not import composition or shell`);
     }
+    if (BASE_LAYERS.test(file) && into !== null) {
+      found.push(`${file} imports ${target}: base layers sit below features and never import them`);
+    }
   }
   return found;
 }
@@ -65,6 +74,19 @@ describe("the folder architecture", () => {
     expect(found).toEqual([]);
   });
 
+  it("reads the specifiers of vi.mock, vi.doMock and vi.importActual too", () => {
+    const source = [
+      'vi.mock("../entry/sheet/EntrySheet.tsx", () => ({}));',
+      'vi.doMock("../entry/queries.ts");',
+      'await vi.importActual<typeof import("x")>("../entry/use.ts");',
+    ].join("\n");
+    expect([...source.matchAll(IMPORT)].map((m) => m[1])).toEqual([
+      "../entry/sheet/EntrySheet.tsx",
+      "../entry/queries.ts",
+      "../entry/use.ts",
+    ]);
+  });
+
   it("notices each kind of violation, so the guard cannot go quiet", () => {
     expect(violationsOf("features/today/Foo.tsx", ["../entry/sheet/EntrySheet.tsx"])).toHaveLength(
       1,
@@ -76,6 +98,9 @@ describe("the folder architecture", () => {
     expect(
       violationsOf("features/entry/Foo.tsx", ["../../composition/providers.tsx"]),
     ).toHaveLength(1);
+    // Base layers never reach a feature, not even through its index.
+    expect(violationsOf("shared/format.ts", ["../features/today/index.ts"])).toHaveLength(1);
+    expect(violationsOf("ui/Button.tsx", ["../shared/format.ts"])).toEqual([]);
     expect(
       violationsOf("features/today/Foo.tsx", ["../entry/index.ts", "./rows/DayRow.tsx"]),
     ).toEqual([]);
