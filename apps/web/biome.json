@@ -21,7 +21,8 @@
               "localStorage": "Browser storage lives in src/adapters behind the TokenStore port (ADR-0012).",
               "sessionStorage": "Browser storage lives in src/adapters (ADR-0012).",
               "indexedDB": "Browser storage lives in src/adapters (ADR-0012).",
-              "navigator": "Browser capabilities live in src/adapters behind a port such as Connectivity (ADR-0012)."
+              "navigator": "Browser capabilities live in src/adapters behind a port such as Connectivity (ADR-0012).",
+              "Notification": "The notification permission lives in src/adapters behind the NotificationPermissionPort (ADR-0012)."
             }
           }
         },

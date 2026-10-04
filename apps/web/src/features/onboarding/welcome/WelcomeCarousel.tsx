@@ -4,6 +4,7 @@ import { Button } from "../../../ui/Button.tsx";
 import { PagerDots } from "../../../ui/PagerDots.tsx";
 import { Illustration, Logo } from "../../../ui/Placeholder.tsx";
 import { useWelcomeSeen } from "../device-state.ts";
+import { GoalsIllustration } from "./GoalsIllustration.tsx";
 import styles from "./WelcomeCarousel.module.css";
 import { WELCOME_SLIDES } from "./welcome-slides.ts";
 
@@ -41,10 +42,14 @@ export function WelcomeCarousel() {
         )}
       </div>
       <div className={styles.slide} aria-live="polite">
-        <Illustration
-          alt={slide.alt}
-          {...(slide.illustration ? { name: slide.illustration } : {})}
-        />
+        {slide.composition === "goals" ? (
+          <GoalsIllustration />
+        ) : (
+          <Illustration
+            alt={slide.alt}
+            {...(slide.illustration ? { name: slide.illustration, size: "story" as const } : {})}
+          />
+        )}
         <h1 className={styles.title}>{slide.title}</h1>
         <p className={styles.body}>{slide.body}</p>
       </div>

@@ -1,4 +1,6 @@
 import {
+  BookOpen,
+  Brain,
   CalendarDays,
   Check,
   ChevronLeft,
@@ -6,13 +8,19 @@ import {
   CircleCheck,
   CirclePause,
   CloudOff,
+  Coffee,
   Copy,
+  Dumbbell,
+  EyeOff,
+  Flower2,
+  Footprints,
   Handshake,
   History,
   Info,
   type LucideIcon,
   MessageSquarePlus,
   Minus,
+  Palette,
   Pencil,
   Plus,
   RefreshCw,
@@ -59,10 +67,18 @@ const GLYPHS = {
   "user-plus": UserPlus,
   handshake: Handshake,
   settings: Settings,
+  "book-open": BookOpen,
+  brain: Brain,
+  coffee: Coffee,
+  dumbbell: Dumbbell,
+  "eye-off": EyeOff,
+  "flower-2": Flower2,
+  footprints: Footprints,
+  palette: Palette,
 } as const satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof GLYPHS;
-export type IconSize = "sm" | "md" | "lg";
+export type IconSize = "xs" | "sm" | "md" | "lg";
 
 /** Mirrors the design system's `--icon-stroke` token (SVG attributes cannot read CSS variables). */
 const STROKE_WIDTH = 1.8;
