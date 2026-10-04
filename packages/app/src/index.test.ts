@@ -40,6 +40,7 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "isSeasonLengthWeeks",
   "localDateOfSeasonDay",
   "memberId",
+  "myCircle",
   "memberScore",
   "ok",
   "recordEntry",

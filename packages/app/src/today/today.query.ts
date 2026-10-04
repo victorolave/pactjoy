@@ -1,5 +1,4 @@
 import type { MemberId } from "@pactjoy/engine";
-import { seasonDay } from "@pactjoy/engine";
 import type { MemberScoreView } from "../score/member-score.query.ts";
 import { memberScoreView } from "../score/member-score.query.ts";
 import { type ScoreQueryDeps, scoreContextOf } from "../score/score-context.ts";
@@ -9,14 +8,12 @@ import type { SeasonLengthWeeks } from "../season/season.ts";
 import type { Actor } from "../shared/actor.ts";
 import type { CircleId, SeasonId } from "../shared/ids.ts";
 import type { LocalDate } from "../time/local-date.ts";
-import { toSeasonDay } from "../time/season-calendar.ts";
 import type { TimeZoneId } from "../time/time-zone.port.ts";
 import { type PendingYesterdayItem, pendingYesterday } from "./pending-yesterday.ts";
+import { seasonPhase, weekOf } from "./season-phase.ts";
 import { type TodayRow, todayRows } from "./today-rows.ts";
 
 export type TodayDeps = ScoreQueryDeps;
-
-const DAYS_PER_WEEK = 7;
 
 export interface TodayCircle {
   readonly id: CircleId;
@@ -111,22 +108,17 @@ export async function today(deps: TodayDeps, actor: Actor): Promise<TodayView> {
         actualStart: season.actualStart,
       },
     };
-    if (season.status === "pactOpen") {
-      return { state: "pactOpen", ...base };
+    const phase = seasonPhase(season, base.today);
+    if (phase.phase === "pactOpen" || phase.phase === "notStarted") {
+      return { state: phase.phase, ...base };
     }
-    if (season.actualStart === null) {
-      return { state: "notStarted", ...base };
+    const actualStart = season.actualStart;
+    if (actualStart === null) {
+      // Unreachable: seasonPhase returns notStarted without a start day.
+      throw new Error(`season ${season.id} is ${phase.phase} without an actual start`);
     }
-    const day = toSeasonDay(base.today, season.actualStart);
-    if (day.kind === "beforeStart") {
-      return { state: "notStarted", ...base };
-    }
-
-    const totalDays = season.lengthWeeks * DAYS_PER_WEEK;
-    const ended = day.day >= totalDays;
-    // Scoring reads the last season day once the season is over (design: ended).
-    const lastDay = seasonDay(totalDays - 1);
-    const scoringDay = ended ? lastDay : day.day;
+    const { day, scoringDay, lastDay } = phase;
+    const ended = phase.phase === "ended";
     const context = scoreContextOf(deps, season, circle, actor);
     if (!context.ok) {
       // Unreachable: `viewer` above is an active member, which scoreContextOf always accepts.
@@ -134,7 +126,7 @@ export async function today(deps: TodayDeps, actor: Actor): Promise<TodayView> {
     }
     const started = {
       ...context.value,
-      start: { actualStart: season.actualStart, today: scoringDay },
+      start: { actualStart, today: scoringDay },
     };
     const data = {
       entries: await repos.entries.listBySeason(season.id),
@@ -144,12 +136,12 @@ export async function today(deps: TodayDeps, actor: Actor): Promise<TodayView> {
     const habits = await repos.habits.getMany(mine.map((commitment) => commitment.habitId));
     const rowsInput = {
       season,
-      actualStart: season.actualStart,
+      actualStart,
       commitments: mine,
       habits,
       entries: data.entries.filter((entry) => entry.memberId === viewer.id),
       pauses: data.pauses.filter((pause) => pause.memberId === viewer.id),
-      today: day.day,
+      today: day,
       refDay: scoringDay,
     };
     const { rows, pointsToday } = todayRows(rowsInput);
@@ -159,7 +151,7 @@ export async function today(deps: TodayDeps, actor: Actor): Promise<TodayView> {
       rows,
       pendingYesterday: pendingYesterday(rowsInput),
       summary: {
-        week: (scoringDay - (scoringDay % DAYS_PER_WEEK)) / DAYS_PER_WEEK + 1,
+        week: weekOf(scoringDay),
         weekCount: season.lengthWeeks,
         daysLeft: lastDay - scoringDay,
         pointsToday,

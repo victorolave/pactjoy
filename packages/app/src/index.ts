@@ -33,6 +33,13 @@ export { joinCircle } from "./circle/join-circle.ts";
 export type { LeaveCircleDeps, LeaveCircleError, LeaveCircleInput } from "./circle/leave-circle.ts";
 export { leaveCircle } from "./circle/leave-circle.ts";
 export type {
+  MyCircleDeps,
+  MyCircleMember,
+  MyCircleSeason,
+  MyCircleView,
+} from "./circle/my-circle.query.ts";
+export { myCircle } from "./circle/my-circle.query.ts";
+export type {
   RenameCircleDeps,
   RenameCircleError,
   RenameCircleInput,
