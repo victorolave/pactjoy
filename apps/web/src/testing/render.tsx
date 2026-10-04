@@ -2,6 +2,7 @@ import type { TodayView } from "@pactjoy/app";
 import { act, type RenderResult, render } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter, useLocation, useNavigate } from "react-router";
+import { LocalStorageDeviceStore } from "../adapters/local-storage-device-store.ts";
 import { createTodayPersister } from "../adapters/query-persister.ts";
 import type { AppDependencies } from "../composition/dependencies.ts";
 import { AppProviders } from "../composition/providers.tsx";
@@ -13,6 +14,7 @@ import { FakeAuth, fakeSession } from "./fake-auth.ts";
 import { FakeConnectivity } from "./fake-connectivity.ts";
 import { FakeHaptics } from "./fake-haptics.ts";
 import { FakePactJoyApi } from "./fake-pactjoy-api.ts";
+import { FakeSharing } from "./fake-sharing.ts";
 import { FixedClock } from "./fixed-clock.ts";
 import { activeTodayFixture } from "./fixtures/today.ts";
 import { MemoryStorage } from "./memory-storage.ts";
@@ -52,6 +54,8 @@ export interface RenderedApp extends RenderResult {
     readonly connectivity: FakeConnectivity;
     readonly haptics: FakeHaptics;
     readonly store: MemoryTokenStore;
+    readonly device: LocalStorageDeviceStore;
+    readonly sharing: FakeSharing;
   };
 }
 
@@ -73,6 +77,8 @@ function createFakeDeps({
     haptics: new FakeHaptics(),
     connectivity: new FakeConnectivity(online),
     store,
+    device: new LocalStorageDeviceStore(new MemoryStorage()),
+    sharing: new FakeSharing(),
     sessions: new SessionManager(auth, store, new FixedClock(0)),
     sessionEvents: createSessionEvents(),
     queryClient: createQueryClient({ retryQueries: false }),

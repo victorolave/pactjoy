@@ -3,9 +3,11 @@ import type { Persister } from "@tanstack/react-query-persist-client";
 import type { SessionEvents, SessionManager } from "../features/auth/index.ts";
 import type { AuthPort } from "../ports/auth.ts";
 import type { Connectivity } from "../ports/connectivity.ts";
+import type { DeviceStore } from "../ports/device-store.ts";
 import type { Haptics } from "../ports/haptics.ts";
 import type { IdSource } from "../ports/ids.ts";
 import type { PactJoyApi } from "../ports/pactjoy-api.ts";
+import type { Sharing } from "../ports/sharing.ts";
 import type { TokenStore } from "../ports/token-store.ts";
 
 /** Everything the composition root wires: ports implemented by adapters (or by fakes in tests). */
@@ -16,6 +18,9 @@ export interface AppDependencies {
   readonly haptics: Haptics;
   readonly connectivity: Connectivity;
   readonly store: TokenStore;
+  /** Device flags and the name draft; only the draft is cleared when the session ends. */
+  readonly device: DeviceStore;
+  readonly sharing: Sharing;
   readonly sessions: SessionManager;
   /** The API adapter's `onUnauthorized` calls `sessionEvents.expire`. */
   readonly sessionEvents: SessionEvents;

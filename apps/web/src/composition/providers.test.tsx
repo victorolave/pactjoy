@@ -1,6 +1,7 @@
 import { QueryClient } from "@tanstack/react-query";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { LocalStorageDeviceStore } from "../adapters/local-storage-device-store.ts";
 import { createTodayPersister } from "../adapters/query-persister.ts";
 import { useIds } from "../context/ids-context.tsx";
 import { useToasts } from "../context/toast-context.tsx";
@@ -9,6 +10,7 @@ import { FakeAuth, fakeSession } from "../testing/fake-auth.ts";
 import { FakeConnectivity } from "../testing/fake-connectivity.ts";
 import { FakeHaptics } from "../testing/fake-haptics.ts";
 import { FakePactJoyApi } from "../testing/fake-pactjoy-api.ts";
+import { FakeSharing } from "../testing/fake-sharing.ts";
 import { FixedClock } from "../testing/fixed-clock.ts";
 import { noCircleTodayFixture } from "../testing/fixtures/today.ts";
 import { MemoryStorage } from "../testing/memory-storage.ts";
@@ -28,6 +30,8 @@ function deps(overrides: Partial<AppDependencies> = {}): AppDependencies {
     haptics: new FakeHaptics(),
     connectivity: new FakeConnectivity(),
     store,
+    device: new LocalStorageDeviceStore(new MemoryStorage()),
+    sharing: new FakeSharing(),
     sessions: new SessionManager(auth, store, new FixedClock(0)),
     sessionEvents: createSessionEvents(),
     queryClient: new QueryClient(),
@@ -63,6 +67,24 @@ describe("AppProviders", () => {
     act(() => sessionEvents.expire());
     expect(screen.getByLabelText("who")).toHaveTextContent("none");
     expect(queryClient.getQueryData(["today"])).toBeUndefined();
+  });
+
+  it("clears only the name draft when the session ends; device flags survive (owner decision)", () => {
+    const device = new LocalStorageDeviceStore(new MemoryStorage());
+    for (const key of ["welcomeSeen", "installStep", "notificationStep", "nameDraft"] as const) {
+      device.set(key, "1");
+    }
+    const sessionEvents = createSessionEvents();
+    render(
+      <AppProviders deps={deps({ device, sessionEvents })}>
+        <Who />
+      </AppProviders>,
+    );
+    act(() => sessionEvents.expire());
+    expect(device.get("nameDraft")).toBeNull();
+    expect(
+      (["welcomeSeen", "installStep", "notificationStep"] as const).map((key) => device.get(key)),
+    ).toEqual(["1", "1", "1"]);
   });
 
   it("provides the ids port and the toast host to the tree", () => {

@@ -3,6 +3,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { App } from "./App.tsx";
+import { LocalStorageDeviceStore } from "./adapters/local-storage-device-store.ts";
 import { createTodayPersister } from "./adapters/query-persister.ts";
 import type { AppDependencies } from "./composition/dependencies.ts";
 import { createSessionEvents, SessionManager } from "./features/auth/index.ts";
@@ -10,6 +11,7 @@ import { FakeAuth, fakeSession } from "./testing/fake-auth.ts";
 import { FakeConnectivity } from "./testing/fake-connectivity.ts";
 import { FakeHaptics } from "./testing/fake-haptics.ts";
 import { FakePactJoyApi } from "./testing/fake-pactjoy-api.ts";
+import { FakeSharing } from "./testing/fake-sharing.ts";
 import { FixedClock } from "./testing/fixed-clock.ts";
 import { activeTodayFixture, noCircleTodayFixture } from "./testing/fixtures/today.ts";
 import { MemoryStorage } from "./testing/memory-storage.ts";
@@ -28,6 +30,8 @@ function deps(signedIn: boolean): AppDependencies {
     haptics: new FakeHaptics(),
     connectivity: new FakeConnectivity(),
     store,
+    device: new LocalStorageDeviceStore(new MemoryStorage()),
+    sharing: new FakeSharing(),
     sessions: new SessionManager(auth, store, new FixedClock(0)),
     sessionEvents: createSessionEvents(),
     queryClient: new QueryClient(),
