@@ -17,6 +17,7 @@ export interface CreateHabitInput {
   readonly name: string;
   readonly why?: string | null;
   readonly category?: string | null;
+  readonly icon?: string | null;
 }
 
 export type CreateHabitError = BuildHabitError;
@@ -38,6 +39,7 @@ export async function createHabit(
       name: input.name,
       why: input.why ?? null,
       category: input.category ?? null,
+      icon: input.icon ?? null,
       now: deps.clock.now(),
     });
     if (!built.ok) {

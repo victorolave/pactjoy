@@ -14,6 +14,8 @@ export interface Habit {
   readonly name: string;
   readonly why: string | null;
   readonly category: string | null;
+  /** Opaque icon key; the backend checks only its format, the closed list lives in the client. */
+  readonly icon: string | null;
   readonly createdAt: Instant;
   readonly version: number;
 }
@@ -24,11 +26,16 @@ export interface Habit {
  */
 export const MAX_CATEGORY_LENGTH = 40;
 
+/** Icon keys are lowercase kebab-case, at most 32 characters; which keys exist is a UI concern. */
+export const MAX_ICON_LENGTH = 32;
+const ICON_FORMAT = /^[a-z][a-z0-9-]*$/;
+
 export type BuildHabitError =
   | { readonly kind: "InvalidName" }
   | { readonly kind: "InvalidWhy" }
   | { readonly kind: "InvalidCategory" }
-  | { readonly kind: "CategoryTooLong" };
+  | { readonly kind: "CategoryTooLong" }
+  | { readonly kind: "InvalidIcon" };
 
 export interface BuildHabitInput {
   readonly id: HabitId;
@@ -36,6 +43,7 @@ export interface BuildHabitInput {
   readonly name: string;
   readonly why?: string | null;
   readonly category?: string | null;
+  readonly icon?: string | null;
   readonly now: Instant;
 }
 
@@ -44,13 +52,20 @@ function trimmedOrNull(value: string | null | undefined): string | null {
   return trimmed ? trimmed : null;
 }
 
-/**
- * Pure constructor for a brand-new {@link Habit} (SS-1, SS-2). `create-habit.ts`
- * is the only production caller -- it supplies ids/clock via ports, this
- * function only validates and assembles (same split as `circle.ts`'s
- * `buildCircle`).
- */
-export function buildHabit(input: BuildHabitInput): Result<Habit, BuildHabitError> {
+export interface HabitFields {
+  readonly name: string;
+  readonly why: string | null;
+  readonly category: string | null;
+  readonly icon: string | null;
+}
+
+/** Normalizes and validates the editable fields; shared by creation and update. */
+export function validateHabitFields(input: {
+  readonly name: string;
+  readonly why?: string | null;
+  readonly category?: string | null;
+  readonly icon?: string | null;
+}): Result<HabitFields, BuildHabitError> {
   const name = input.name.trim();
   if (name.length === 0 || !isStorableText(name)) {
     return err({ kind: "InvalidName" });
@@ -69,12 +84,30 @@ export function buildHabit(input: BuildHabitInput): Result<Habit, BuildHabitErro
     return err({ kind: "CategoryTooLong" });
   }
 
+  // Not trimmed: a key with spaces is malformed, not "almost right".
+  const icon = input.icon ?? null;
+  if (icon !== null && (icon.length > MAX_ICON_LENGTH || !ICON_FORMAT.test(icon))) {
+    return err({ kind: "InvalidIcon" });
+  }
+
+  return ok({ name, why, category, icon });
+}
+
+/**
+ * Pure constructor for a brand-new {@link Habit} (SS-1, SS-2). `create-habit.ts`
+ * is the only production caller -- it supplies ids/clock via ports, this
+ * function only validates and assembles (same split as `circle.ts`'s
+ * `buildCircle`).
+ */
+export function buildHabit(input: BuildHabitInput): Result<Habit, BuildHabitError> {
+  const fields = validateHabitFields(input);
+  if (!fields.ok) {
+    return fields;
+  }
   return ok({
     id: input.id,
     ownerId: input.ownerId,
-    name,
-    why,
-    category,
+    ...fields.value,
     createdAt: input.now,
     version: 0,
   });

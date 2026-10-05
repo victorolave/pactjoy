@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Habit } from "../habit/habit.ts";
 import { ConcurrencyConflict } from "../shared/errors.ts";
-import { habitId } from "../shared/ids.ts";
+import { habitId, userId } from "../shared/ids.ts";
 import { ok } from "../shared/result.ts";
 import { instant } from "../time/instant.ts";
 import { type ContractSubject, HABIT, type HabitRepositories } from "./fixtures.ts";
@@ -83,6 +83,46 @@ export function describeHabitRepositoryContract(
       };
       await saveHabit(uow, habit, null);
       expect(await readHabit(uow)).toEqual(habit);
+    });
+
+    it("round-trips an icon key and a null icon", async () => {
+      const { uow } = await factory();
+      const withIcon = { ...HABIT, icon: "book-open" };
+      await saveHabit(uow, withIcon, null);
+      expect(await readHabit(uow)).toEqual(withIcon);
+      const cleared = { ...withIcon, icon: null, version: 1 };
+      await saveHabit(uow, cleared, 0);
+      expect(await readHabit(uow)).toEqual(cleared);
+    });
+
+    describe("listByOwner", () => {
+      const OTHER_OWNER = userId("00000000-0000-4000-8000-0000000000b2");
+      const OLD = { ...HABIT, id: habitId("00000000-0000-4000-8000-0000000000e1") };
+      const NEW = {
+        ...HABIT,
+        id: habitId("00000000-0000-4000-8000-0000000000e2"),
+        createdAt: instant(1_700_000_005_000),
+      };
+      const FOREIGN = {
+        ...HABIT,
+        id: habitId("00000000-0000-4000-8000-0000000000e3"),
+        ownerId: OTHER_OWNER,
+      };
+
+      it("returns only the owner's habits, newest first", async () => {
+        const { uow } = await factory();
+        await saveHabit(uow, OLD, null);
+        await saveHabit(uow, FOREIGN, null);
+        await saveHabit(uow, NEW, null);
+        const mine = await uow.read(({ habits }) => habits.listByOwner(HABIT.ownerId));
+        expect(mine).toEqual([NEW, OLD]);
+      });
+
+      it("returns [] for an owner with no habits", async () => {
+        const { uow } = await factory();
+        await saveHabit(uow, FOREIGN, null);
+        expect(await uow.read(({ habits }) => habits.listByOwner(HABIT.ownerId))).toEqual([]);
+      });
     });
 
     describe("getMany (HG-S1..S3)", () => {

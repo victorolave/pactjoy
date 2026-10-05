@@ -11,6 +11,7 @@ const HABIT: Habit = {
   name: "Read",
   why: null,
   category: null,
+  icon: null,
   createdAt: instant(1_700_000_000_000),
   version: 0,
 };
@@ -59,5 +60,12 @@ describe("habit repository on Postgres", () => {
 
     expect(error).not.toBeInstanceOf(ConcurrencyConflict);
     expect(error).toMatchObject({ code: "23514", constraint_name: "habits_version_check" });
+  });
+
+  it("a malformed icon breaks habits_icon_check (23514) and surfaces raw", async () => {
+    const error = await save({ ...HABIT, icon: "Bad Icon" }, null).catch((e) => e);
+
+    expect(error).not.toBeInstanceOf(ConcurrencyConflict);
+    expect(error).toMatchObject({ code: "23514", constraint_name: "habits_icon_check" });
   });
 });

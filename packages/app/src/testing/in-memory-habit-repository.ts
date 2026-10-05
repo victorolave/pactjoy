@@ -1,7 +1,7 @@
 import type { HabitRepository } from "../habit/habit.repository.ts";
 import type { Habit } from "../habit/habit.ts";
 import { ConcurrencyConflict } from "../shared/errors.ts";
-import type { HabitId } from "../shared/ids.ts";
+import type { HabitId, UserId } from "../shared/ids.ts";
 
 interface StagedWrite {
   readonly habit: Habit;
@@ -45,9 +45,16 @@ export function createInMemoryHabitRepository(): InMemoryHabitRepository {
     return found;
   }
 
+  const newestFirst = (a: Habit, b: Habit) =>
+    b.createdAt - a.createdAt || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+
   return {
     async get(id: HabitId): Promise<Habit | null> {
       return store.get(id) ?? null;
+    },
+
+    async listByOwner(ownerId: UserId): Promise<readonly Habit[]> {
+      return [...store.values()].filter((h) => h.ownerId === ownerId).sort(newestFirst);
     },
 
     async getMany(ids: readonly HabitId[]): Promise<readonly Habit[]> {
@@ -77,6 +84,12 @@ export function createInMemoryHabitRepository(): InMemoryHabitRepository {
 
         async getMany(ids: readonly HabitId[]): Promise<readonly Habit[]> {
           return pick(ids, view);
+        },
+
+        async listByOwner(ownerId: UserId): Promise<readonly Habit[]> {
+          const merged = new Map(store);
+          for (const [id, { habit }] of staged) merged.set(id, habit);
+          return [...merged.values()].filter((h) => h.ownerId === ownerId).sort(newestFirst);
         },
 
         async save(habit: Habit, expectedVersion: number | null): Promise<void> {

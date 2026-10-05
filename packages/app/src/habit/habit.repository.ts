@@ -1,4 +1,4 @@
-import type { HabitId } from "../shared/ids.ts";
+import type { HabitId, UserId } from "../shared/ids.ts";
 import type { Habit } from "./habit.ts";
 
 /**
@@ -17,6 +17,8 @@ export interface HabitRepository {
    * (returns `[]`), consistent with `get`.
    */
   getMany(ids: readonly HabitId[]): Promise<readonly Habit[]>;
+  /** The habits owned by `ownerId`, newest first (`createdAt` descending, ties by id); `[]` for none. */
+  listByOwner(ownerId: UserId): Promise<readonly Habit[]>;
   /** @throws {ConcurrencyConflict} if the stored version no longer matches `expectedVersion` (D5). */
   save(habit: Habit, expectedVersion: number | null): Promise<void>;
 }

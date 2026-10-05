@@ -68,6 +68,7 @@ export interface HabitFixtureOptions {
   readonly name?: string;
   readonly why?: string | null;
   readonly category?: string | null;
+  readonly icon?: string | null;
   readonly createdAt?: Instant;
   readonly version?: number;
 }
@@ -80,6 +81,7 @@ export function habitFixture(options: HabitFixtureOptions): Habit {
     name: options.name ?? "Test Habit",
     why: options.why ?? null,
     category: options.category ?? null,
+    icon: options.icon ?? null,
     createdAt: options.createdAt ?? DEFAULT_INSTANT,
     version: options.version ?? 0,
   };

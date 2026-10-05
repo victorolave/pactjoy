@@ -22,6 +22,7 @@ describe("buildHabit", () => {
         name: "Correr",
         why: null,
         category: null,
+        icon: null,
         createdAt: NOW,
         version: 0,
       },

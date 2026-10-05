@@ -11,6 +11,7 @@ const habit = (n: number): Habit => ({
   name: `Habit ${n}`,
   why: null,
   category: null,
+  icon: null,
   createdAt: instant(1_700_000_000_000),
   version: 0,
 });

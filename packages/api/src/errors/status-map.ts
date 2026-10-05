@@ -6,7 +6,7 @@ import type { AppError, AppErrorKind } from "./app-error.ts";
  * kind AND an extra stale key a compile error.
  */
 export const APP_ERROR_STATUS = {
-  // 422 (34)
+  // 422 (35)
   CategoryTooLong: 422,
   CustomLabelBlank: 422,
   CustomLabelHasInvisibleCharacters: 422,
@@ -19,6 +19,7 @@ export const APP_ERROR_STATUS = {
   InvalidCategory: 422,
   InvalidClientRequestId: 422,
   InvalidDisplayName: 422,
+  InvalidIcon: 422,
   InvalidLengthWeeks: 422,
   InvalidName: 422,
   InvalidNote: 422,
@@ -46,10 +47,11 @@ export const APP_ERROR_STATUS = {
   EntryNotOwned: 403,
   NotAMember: 403,
   NotOwner: 403,
-  // 404 (6)
+  // 404 (7)
   CircleNotFound: 404,
   CommitmentNotFound: 404,
   EntryNotFound: 404,
+  HabitNotFound: 404,
   InviteNotFound: 404,
   MemberNotFound: 404,
   SeasonNotFound: 404,
