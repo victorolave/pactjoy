@@ -60,3 +60,41 @@ describe("POST /habits (UE-C-S9)", () => {
     expect(transaction).not.toHaveBeenCalled();
   });
 });
+
+describe("GET /habits and PATCH /habits/:habitId (HB-R1..R3)", () => {
+  it("POST accepts an icon and rejects a malformed key with 422 InvalidIcon", async () => {
+    const { call } = setup();
+    const ok = await call("POST", "/habits", "andrea", { name: "Read", icon: "book-open" });
+    expect([ok.status, ok.json.data.icon]).toEqual([201, "book-open"]);
+    const bad = await call("POST", "/habits", "andrea", { name: "Read", icon: "Book Open" });
+    expect([bad.status, bad.json.error.code]).toEqual([422, "InvalidIcon"]);
+  });
+
+  it("GET lists only the caller's habits as { habits } and [] when none", async () => {
+    const { call } = setup();
+    expect((await call("GET", "/habits", "andrea")).json.data).toEqual({ habits: [] });
+    await call("POST", "/habits", "andrea", { name: "Read", icon: "book" });
+    await call("POST", "/habits", "victor", { name: "Other" });
+    const { status, json } = await call("GET", "/habits", "andrea");
+    expect(status).toBe(200);
+    expect(json.data.habits.map((h: { name: string }) => h.name)).toEqual(["Read"]);
+    expect(json.data.habits[0]).toMatchObject({ icon: "book", version: 0 });
+  });
+
+  it("PATCH edits a partial body; not the owner is 404 and a stale version is 409", async () => {
+    const { call } = setup();
+    const created = await call("POST", "/habits", "andrea", { name: "Read", why: "Calm" });
+    const id = created.json.data.id;
+    const edited = await call("PATCH", `/habits/${id}`, "andrea", {
+      expectedVersion: 0,
+      icon: "star",
+    });
+    expect(edited.status).toBe(200);
+    expect(edited.json.data).toMatchObject({ name: "Read", why: "Calm", icon: "star", version: 1 });
+
+    const stranger = await call("PATCH", `/habits/${id}`, "victor", { expectedVersion: 1 });
+    expect([stranger.status, stranger.json.error.code]).toEqual([404, "HabitNotFound"]);
+    const stale = await call("PATCH", `/habits/${id}`, "andrea", { expectedVersion: 0 });
+    expect([stale.status, stale.json.error.code]).toEqual([409, "ConcurrencyConflict"]);
+  });
+});
