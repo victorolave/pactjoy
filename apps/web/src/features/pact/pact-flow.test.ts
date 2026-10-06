@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { pactFlow } from "./pact-flow.ts";
+import { pactFlow, viewerMemberId } from "./pact-flow.ts";
 
 describe("pact flow (WF-R6–R8)", () => {
   it("shows review until this viewer approves, then waiting", () => {
@@ -15,5 +15,26 @@ describe("pact flow (WF-R6–R8)", () => {
     expect(pactFlow({ status: "active", approvals: [] }, "andrea")).toBe("closed");
     expect(pactFlow({ status: "active", approvals: [] }, "andrea", true)).toBe("today");
     expect(pactFlow({ status: "closed", approvals: [] }, "andrea")).toBe("today");
+  });
+  it("matches approvals by the circle member id, never the auth user id", () => {
+    const myCircle = {
+      circle: {
+        id: "c1",
+        name: "Casa",
+        invite: null,
+        members: [
+          { id: "m-victor", displayName: "Victor", joinedAt: "x", isYou: false },
+          { id: "m-andrea", displayName: "Andrea", joinedAt: "x", isYou: true },
+        ],
+      },
+    };
+    const season = {
+      status: "pactOpen" as const,
+      approvals: [{ memberId: "m-andrea", approvedAt: "x" }],
+    };
+    expect(viewerMemberId(myCircle)).toBe("m-andrea");
+    expect(pactFlow(season, viewerMemberId(myCircle) ?? "")).toBe("waiting");
+    expect(pactFlow(season, "user-andrea")).toBe("review");
+    expect(viewerMemberId({ circle: null })).toBeNull();
   });
 });
