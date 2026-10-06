@@ -1,5 +1,5 @@
 import { addDays } from "../../../shared/date.ts";
-import { longDate, weekdayName } from "../../../shared/format.ts";
+import { dayMonth, longDate, weekdayName } from "../../../shared/format.ts";
 
 export type SeasonLengthWeeks = 4 | 6 | 8 | 12;
 export type ReviewCadenceWeeks = 1 | 2 | 3;
@@ -63,4 +63,20 @@ export function seasonCadenceMessage(
   return isDefault
     ? `Recomendada para ${lengthWeeks} semanas. Unos 60 segundos para ver cómo vas.`
     : "Unos 60 segundos para ver cómo vas.";
+}
+
+/**
+ * Validation error message for season start date outside the allowed [today..today+30] window.
+ * Owner approved copy: "Elige una fecha entre hoy y el {d de mes}."
+ */
+export function invalidDateMessage(maxDate: string): string {
+  return `Elige una fecha entre hoy y el ${dayMonth(maxDate)}.`;
+}
+
+const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Validates whether a candidate date falls within the valid [today..maxDate] window. */
+export function isValidStartDate(date: string, today: string, maxDate: string): boolean {
+  if (!ISO_DATE_PATTERN.test(date)) return false;
+  return date >= today && date <= maxDate;
 }

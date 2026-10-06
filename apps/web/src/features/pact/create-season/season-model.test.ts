@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  invalidDateMessage,
+  isValidStartDate,
   reviewCadenceForLength,
   seasonCadenceMessage,
   seasonEndDate,
@@ -47,5 +49,26 @@ describe("season-model", () => {
     expect(seasonCadenceMessage(12, 3)).toBe(
       "Recomendada para 12 semanas. Unos 60 segundos para ver cómo vas.",
     );
+  });
+
+  it("formats invalid date error message with formatted max date", () => {
+    expect(invalidDateMessage("2026-11-05")).toBe("Elige una fecha entre hoy y el 5 de noviembre.");
+  });
+
+  it("validates start date falls within [today..maxDate] window", () => {
+    const today = "2026-10-06";
+    const maxDate = "2026-11-05";
+
+    expect(isValidStartDate(today, today, maxDate)).toBe(true);
+    expect(isValidStartDate("2026-10-07", today, maxDate)).toBe(true);
+    expect(isValidStartDate(maxDate, today, maxDate)).toBe(true);
+
+    // Outside bounds
+    expect(isValidStartDate("2026-10-05", today, maxDate)).toBe(false);
+    expect(isValidStartDate("2026-11-06", today, maxDate)).toBe(false);
+
+    // Invalid format
+    expect(isValidStartDate("invalid", today, maxDate)).toBe(false);
+    expect(isValidStartDate("", today, maxDate)).toBe(false);
   });
 });
