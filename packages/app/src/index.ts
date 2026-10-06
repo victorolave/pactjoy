@@ -162,6 +162,12 @@ export type {
 } from "./score/standings.query.ts";
 export { standings } from "./score/standings.query.ts";
 export type {
+  PreviewProgressError,
+  PreviewProgressInput,
+  PreviewProgressView,
+} from "./scoring/preview-progress.query.ts";
+export { previewProgress } from "./scoring/preview-progress.query.ts";
+export type {
   CreateSeasonDeps,
   CreateSeasonError,
   CreateSeasonInput,

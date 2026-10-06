@@ -6,7 +6,7 @@ import type { AppError, AppErrorKind } from "./app-error.ts";
  * kind AND an extra stale key a compile error.
  */
 export const APP_ERROR_STATUS = {
-  // 422 (35)
+  // 422 (36)
   CategoryTooLong: 422,
   CustomLabelBlank: 422,
   CustomLabelHasInvisibleCharacters: 422,
@@ -22,6 +22,7 @@ export const APP_ERROR_STATUS = {
   InvalidIcon: 422,
   InvalidLengthWeeks: 422,
   InvalidName: 422,
+  InvalidPreviewValues: 422,
   InvalidNote: 422,
   InvalidPrecision: 422,
   InvalidQuantity: 422,

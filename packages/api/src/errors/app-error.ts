@@ -13,6 +13,7 @@ import type {
   LeaveCircleError,
   MemberScoreError,
   PreviewInviteError,
+  PreviewProgressError,
   RecordEntryError,
   RemoveCommitmentError,
   RenameCircleError,
@@ -24,7 +25,7 @@ import type {
 } from "@pactjoy/app";
 
 /**
- * Every error a use case can return, from the 21 `*Error` unions the app exports. The
+ * Every error a use case can return, from the app's exported `*Error` unions. The
  * sub-unions (ValidateCommitmentError, EntryValueError, EntryWindowError) are already
  * members of these. A new use case must be added here (a boundary test scans the app index).
  */
@@ -35,6 +36,7 @@ export type AppError =
   | GenerateInviteError
   | JoinCircleError
   | PreviewInviteError
+  | PreviewProgressError
   | LeaveCircleError
   | CreateHabitError
   | UpdateHabitError
