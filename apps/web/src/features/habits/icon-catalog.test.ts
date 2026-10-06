@@ -26,4 +26,9 @@ describe("habit icon catalog", () => {
       expect(HABIT_ICONS.some((icon) => icon.key === key)).toBe(true);
     }
   });
+  it("keeps the domain pause glyph out of the habit catalog", () => {
+    expect(CATEGORY_ICONS["Dormir mejor"]).toBe("moon");
+    expect(iconFor(CATEGORY_ICONS["Dormir mejor"])).toBe("moon");
+    expect(HABIT_ICONS.map((icon) => icon.glyph)).not.toContain("circle-pause");
+  });
 });
