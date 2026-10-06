@@ -1,6 +1,12 @@
 import type { TodayView } from "@pactjoy/app";
 import { describe, expect, it } from "vitest";
-import { activeTodayFixture, dayRowFixture, endedTodayFixture, weekRowFixture } from "./today.ts";
+import {
+  activeTodayFixture,
+  dayRowFixture,
+  endedTodayFixture,
+  pactOpenTodayFixture,
+  weekRowFixture,
+} from "./today.ts";
 
 type Active = Extract<TodayView, { state: "active" | "ended" }>;
 
@@ -13,6 +19,10 @@ const daysBetween = (from: string, to: string) => Math.round((utc(to) - utc(from
 const scheduleOf = (row: Active["rows"][number]) => row.measure.schedule;
 
 describe("Today fixtures only describe what the server can produce", () => {
+  it("a pactOpen fixture has an empty own-commitment list", () => {
+    expect(pactOpenTodayFixture().myCommitments).toEqual([]);
+  });
+
   it("a day row implies perSession + specificDays (today-rows.ts)", () => {
     for (const row of [dayRowFixture(), ...activeTodayFixture().rows]) {
       if (row.kind !== "day") continue;
