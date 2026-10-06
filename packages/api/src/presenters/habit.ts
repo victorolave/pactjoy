@@ -6,6 +6,7 @@ export interface HabitDto {
   readonly name: string;
   readonly why: string | null;
   readonly category: string | null;
+  readonly icon: string | null;
   readonly createdAt: string;
   readonly version: number;
 }
@@ -21,6 +22,7 @@ export function presentHabit(habit: Habit): HabitDto {
     name: habit.name,
     why: habit.why,
     category: habit.category,
+    icon: habit.icon,
     createdAt: presentInstant(habit.createdAt),
     version: habit.version,
   };

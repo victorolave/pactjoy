@@ -11,6 +11,7 @@ const HABIT: Habit = {
   name: "Read",
   why: null,
   category: null,
+  icon: null,
   createdAt: instant(1_700_000_000_000),
   version: 0,
 };
@@ -31,6 +32,16 @@ const save = (habit: Habit, expected: number | null) =>
   });
 
 describe("habit repository on Postgres", () => {
+  it("indexes the owner-scoped newest-first list with the id tie-break", async () => {
+    const rows = await admin.unsafe(
+      "select indexdef from pg_indexes where schemaname = 'pactjoy' and tablename = 'habits' and indexname = 'habits_owner_created_at_idx'",
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.indexdef).toBe(
+      "CREATE INDEX habits_owner_created_at_idx ON pactjoy.habits USING btree (owner_id, created_at DESC, id)",
+    );
+  });
+
   it("HP-S8: two concurrent updates at expected version 0, exactly one wins", async () => {
     await save(HABIT, null);
 
@@ -59,5 +70,12 @@ describe("habit repository on Postgres", () => {
 
     expect(error).not.toBeInstanceOf(ConcurrencyConflict);
     expect(error).toMatchObject({ code: "23514", constraint_name: "habits_version_check" });
+  });
+
+  it("a malformed icon breaks habits_icon_check (23514) and surfaces raw", async () => {
+    const error = await save({ ...HABIT, icon: "Bad Icon" }, null).catch((e) => e);
+
+    expect(error).not.toBeInstanceOf(ConcurrencyConflict);
+    expect(error).toMatchObject({ code: "23514", constraint_name: "habits_icon_check" });
   });
 });

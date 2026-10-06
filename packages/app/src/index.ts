@@ -119,6 +119,14 @@ export type {
 export { createHabit } from "./habit/create-habit.ts";
 export type { HabitRepository } from "./habit/habit.repository.ts";
 export type { Habit } from "./habit/habit.ts";
+export type { ListMyHabitsDeps } from "./habit/list-my-habits.query.ts";
+export { listMyHabits } from "./habit/list-my-habits.query.ts";
+export type {
+  UpdateHabitDeps,
+  UpdateHabitError,
+  UpdateHabitInput,
+} from "./habit/update-habit.ts";
+export { updateHabit } from "./habit/update-habit.ts";
 export type {
   ApprovePactDeps,
   ApprovePactError,

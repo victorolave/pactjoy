@@ -14,11 +14,12 @@ interface HabitRow {
   name: string;
   why: string | null;
   category: string | null;
+  icon: string | null;
   created_at: Instant;
   version: number;
 }
 
-const COLUMNS = "id, owner_id, name, why, category, created_at, version";
+const COLUMNS = "id, owner_id, name, why, category, icon, created_at, version";
 
 function toHabit(row: HabitRow): Habit {
   return {
@@ -27,6 +28,7 @@ function toHabit(row: HabitRow): Habit {
     name: row.name,
     why: row.why,
     category: row.category,
+    icon: row.icon,
     createdAt: row.created_at,
     version: row.version,
   };
@@ -44,6 +46,15 @@ export function createPgHabitRepository(exec: SqlExecutor): HabitRepository {
       return row ? toHabit(row) : null;
     },
 
+    // Newest first; the id tie-break keeps the order deterministic.
+    async listByOwner(ownerId) {
+      const { rows } = await exec.query<HabitRow>(
+        `select ${COLUMNS} from pactjoy.habits where owner_id = $1 order by created_at desc, id`,
+        [ownerId],
+      );
+      return rows.map(toHabit);
+    },
+
     // A single query; `= any` already collapses repeated ids. No query at all for no ids.
     async getMany(ids) {
       if (ids.length === 0) return [];
@@ -59,13 +70,14 @@ export function createPgHabitRepository(exec: SqlExecutor): HabitRepository {
       if (expectedVersion === null) {
         // A duplicate id raises 23505 on habits_pkey, which the unit of work maps to ConcurrencyConflict.
         await exec.query(
-          "insert into pactjoy.habits (id, owner_id, name, why, category, created_at, version) values ($1, $2, $3, $4, $5, $6::timestamptz, $7)",
+          "insert into pactjoy.habits (id, owner_id, name, why, category, icon, created_at, version) values ($1, $2, $3, $4, $5, $6, $7::timestamptz, $8)",
           [
             habit.id,
             habit.ownerId,
             habit.name,
             habit.why,
             habit.category,
+            habit.icon,
             createdAt,
             habit.version,
           ],
@@ -74,13 +86,14 @@ export function createPgHabitRepository(exec: SqlExecutor): HabitRepository {
       }
       // The key column (id) is never in SET: updating one would upgrade the row lock (ADR-0010).
       const { rowCount } = await exec.query(
-        "update pactjoy.habits set owner_id = $2, name = $3, why = $4, category = $5, created_at = $6::timestamptz, version = $7 where id = $1 and version = $8",
+        "update pactjoy.habits set owner_id = $2, name = $3, why = $4, category = $5, icon = $6, created_at = $7::timestamptz, version = $8 where id = $1 and version = $9",
         [
           habit.id,
           habit.ownerId,
           habit.name,
           habit.why,
           habit.category,
+          habit.icon,
           createdAt,
           habit.version,
           expectedVersion,

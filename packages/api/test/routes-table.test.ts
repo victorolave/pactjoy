@@ -13,6 +13,8 @@ const { spies, USE_CASE_NAMES } = vi.hoisted(() => ({
     "joinCircle",
     "leaveCircle",
     "createHabit",
+    "listMyHabits",
+    "updateHabit",
     "createSeason",
     "editSeasonParams",
     "addCommitment",
@@ -53,6 +55,8 @@ const TABLE: Row[] = [
   ["joinCircle", "POST", "/circles/join", { inviteCode: "ABCDEF", displayName: "Vic" }],
   ["leaveCircle", "POST", `/circles/${ID}/leave`],
   ["createHabit", "POST", "/habits", { name: "Run" }],
+  ["listMyHabits", "GET", "/habits"],
+  ["updateHabit", "PATCH", `/habits/${ID}`, { expectedVersion: 0 }],
   [
     "createSeason",
     "POST",
@@ -91,8 +95,8 @@ const TABLE: Row[] = [
 ];
 
 describe("route table completeness (RT-S4)", () => {
-  it("has 22 routes over exactly the 21 use cases, the score one routed twice", () => {
-    expect(TABLE).toHaveLength(22);
+  it("has 24 routes over exactly the 23 use cases, the score one routed twice", () => {
+    expect(TABLE).toHaveLength(24);
     expect(new Set(TABLE.map(([name]) => name))).toEqual(new Set(USE_CASE_NAMES));
     expect(TABLE.filter(([name]) => name === "memberScore")).toHaveLength(2);
   });
@@ -112,6 +116,7 @@ describe("route table completeness (RT-S4)", () => {
     for (const [method, path] of [
       ["GET", "/circles"],
       ["PUT", "/habits"],
+      ["DELETE", `/habits/${ID}`],
       ["POST", `/seasons/${ID}/standings`],
       ["DELETE", `/seasons/${ID}/score`],
       ["PATCH", `/entries/${ID}`],
