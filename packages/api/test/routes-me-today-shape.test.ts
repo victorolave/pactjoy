@@ -165,14 +165,22 @@ describe("GET /me/today emits exactly the documented keys (ADR-0011)", () => {
     const { call } = await given("2023-11-14", false);
     const res = await call("GET", "/me/today", "andrea");
     expect(res.json.data.state).toBe("pactOpen");
-    expect(keys(res.json.data)).toEqual(BASE);
+    expect(keys(res.json.data)).toEqual([...BASE, "myCommitments"].sort());
   });
 
   it("notStarted", async () => {
     const { call } = await given("2023-11-20", true);
     const res = await call("GET", "/me/today", "andrea");
     expect(res.json.data.state).toBe("notStarted");
-    expect(keys(res.json.data)).toEqual(BASE);
+    expect(keys(res.json.data)).toEqual(
+      [
+        ...BASE,
+        "myCommitments",
+        ...["id", "habitName", "icon", "weightPercent", "maxPoints"].map(
+          (key) => `myCommitments[].${key}`,
+        ),
+      ].sort(),
+    );
   });
 
   it("active, with a day row and a week row", async () => {

@@ -7,7 +7,7 @@ import {
   seasonId,
   seasonView,
 } from "@pactjoy/app";
-import { presentSeasonFor } from "../presenters/season.ts";
+import { presentSeasonFor, presentSeasonView } from "../presenters/season.ts";
 import { uuid } from "../validation/formats.ts";
 import { number, object, optional, string } from "../validation/schema.ts";
 import { type ApiDeps, type Route, toResult, validate } from "./support.ts";
@@ -66,7 +66,7 @@ export function seasonRoutes(deps: ApiDeps): Route[] {
         const result = await seasonView(deps, ctx.actor, {
           seasonId: seasonId(input.params.seasonId),
         });
-        return toResult(result, 200, presentSeasonFor);
+        return toResult(result, 200, presentSeasonView);
       },
     },
     {

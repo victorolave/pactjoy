@@ -4,7 +4,7 @@ import { memberId } from "../circle/circle.ts";
 import { buildCommitment, commitmentId, type Measure } from "../commitment/commitment.ts";
 import { habitId, seasonId, userId } from "../shared/ids.ts";
 import { createTestApp } from "../testing/app-harness.ts";
-import { circleFixture, memberFixture } from "../testing/builders.ts";
+import { circleFixture, habitFixture, memberFixture } from "../testing/builders.ts";
 import { fixtureTimeZone, givenActiveSeason, localInstant } from "../testing/entry-fixtures.ts";
 import { localDate } from "../time/local-date.ts";
 import { seasonView } from "./season-view.query.ts";
@@ -29,6 +29,15 @@ async function setup() {
   const given = await givenActiveSeason(app, MINUTES);
   const victor = given.season.commitments.filter((c) => c.memberId !== ANDREA);
   await app.uow.transaction(async (repos) => {
+    await repos.habits.save(
+      habitFixture({
+        id: habitId("habit-secret"),
+        ownerId: given.andrea.userId,
+        name: "Secret",
+        icon: "book",
+      }),
+      null,
+    );
     await repos.seasons.save(
       {
         ...given.season,
@@ -65,6 +74,9 @@ describe("seasonView: the season with the member who is asking", () => {
     });
     if (!result.ok) throw new Error("expected a season");
     expect(result.value.season.commitments.map((c) => c.id)).toContain(SECRET);
+    expect(result.value).toMatchObject({
+      habits: expect.arrayContaining([expect.objectContaining({ name: "Secret", icon: "book" })]),
+    });
   });
 
   it("SV-S2: another member gets the same season with their own viewer id", async () => {
@@ -74,7 +86,11 @@ describe("seasonView: the season with the member who is asking", () => {
 
     expect(result).toMatchObject({
       ok: true,
-      value: { viewerId: VICTOR, season: { id: given.season.id } },
+      value: {
+        viewerId: VICTOR,
+        season: { id: given.season.id },
+        habits: [expect.objectContaining({ name: "Leer" })],
+      },
     });
   });
 

@@ -74,6 +74,7 @@ describe("GET /me/today (TD-R1, TD-S11)", () => {
       season: { id: season.json.data.id, lengthWeeks: 4, nominalStart: "2023-11-14" },
     });
     expect(res.json.data.season.actualStart).toBeNull();
+    expect(res.json.data.myCommitments).toEqual([]);
     expect(res.json.data).not.toHaveProperty("rows");
     expect(res.json.data).not.toHaveProperty("standings");
     expect(keysDeep(res.json).has("userId")).toBe(false);
@@ -100,6 +101,15 @@ describe("GET /me/today (TD-R1, TD-S11)", () => {
     const res = await ctx.call("GET", "/me/today", "andrea");
     expect(res.status).toBe(200);
     expect(res.json.data.state).toBe("notStarted");
+    expect(res.json.data.myCommitments).toEqual([
+      {
+        id: added.json.data.commitments[0].id,
+        habitName: "Run",
+        icon: null,
+        weightPercent: 100,
+        maxPoints: 1000,
+      },
+    ]);
     expect(res.json.data.today).toBe("2023-11-14");
     expect(res.json.data).not.toHaveProperty("rows");
   });

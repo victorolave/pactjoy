@@ -145,7 +145,17 @@ export function presentToday(view: TodayView): TodayView {
       return { state: "noSeason", circle: { id: view.circle.id, name: view.circle.name } };
     case "pactOpen":
     case "notStarted":
-      return { state: view.state, ...presentBase(view) };
+      return {
+        state: view.state,
+        ...presentBase(view),
+        myCommitments: view.myCommitments.map((c) => ({
+          id: c.id,
+          habitName: c.habitName,
+          icon: c.icon,
+          weightPercent: c.weightPercent,
+          maxPoints: c.maxPoints,
+        })),
+      };
     case "active":
     case "ended":
       return presentActive(view);

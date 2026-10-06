@@ -1,5 +1,7 @@
 import type { MemberId } from "@pactjoy/engine";
+import type { Habit } from "../habit/habit.ts";
 import type { Repositories } from "../ports/repositories.ts";
+import { canSeeDetail } from "../score/privacy.ts";
 import { findViewer } from "../score/score-context.ts";
 import type { Actor } from "../shared/actor.ts";
 import type { SeasonId } from "../shared/ids.ts";
@@ -24,6 +26,7 @@ export type SeasonViewError = { readonly kind: "SeasonNotFound" } | { readonly k
 export interface SeasonView {
   readonly season: Season;
   readonly viewerId: MemberId;
+  readonly habits: readonly Habit[];
 }
 
 /**
@@ -43,6 +46,9 @@ export async function seasonView(
     }
     const circle = await repos.circles.get(season.circleId);
     const viewer = circle ? findViewer(season, circle, actor) : undefined;
-    return viewer ? ok({ season, viewerId: viewer.id }) : err({ kind: "NotAMember" });
+    if (!viewer) return err({ kind: "NotAMember" });
+    const visible = season.commitments.filter((c) => canSeeDetail(c, viewer.id));
+    const habits = await repos.habits.getMany(visible.map((c) => c.habitId));
+    return ok({ season, viewerId: viewer.id, habits });
   });
 }

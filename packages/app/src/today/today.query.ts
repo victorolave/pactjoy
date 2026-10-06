@@ -61,7 +61,16 @@ export interface TodaySummary {
 export type TodayView =
   | { readonly state: "noCircle" }
   | { readonly state: "noSeason"; readonly circle: TodayCircle }
-  | ({ readonly state: "pactOpen" | "notStarted" } & TodayBase)
+  | ({
+      readonly state: "pactOpen" | "notStarted";
+      readonly myCommitments: readonly {
+        readonly id: string;
+        readonly habitName: string;
+        readonly icon: string | null;
+        readonly weightPercent: number;
+        readonly maxPoints: number;
+      }[];
+    } & TodayBase)
   | ({
       readonly state: "active" | "ended";
       readonly summary: TodaySummary;
@@ -110,7 +119,22 @@ export async function today(deps: TodayDeps, actor: Actor): Promise<TodayView> {
     };
     const phase = seasonPhase(season, base.today);
     if (phase.phase === "pactOpen" || phase.phase === "notStarted") {
-      return { state: phase.phase, ...base };
+      const mine = season.commitments.filter((c) => c.memberId === viewer.id);
+      const habits = new Map(
+        (await repos.habits.getMany(mine.map((c) => c.habitId))).map((h) => [h.id, h]),
+      );
+      const myCommitments = mine.map((c) => {
+        const habit = habits.get(c.habitId);
+        if (!habit) throw new Error(`habit ${c.habitId} of commitment ${c.id} not found`);
+        return {
+          id: c.id,
+          habitName: habit.name,
+          icon: habit.icon,
+          weightPercent: c.weightPercent,
+          maxPoints: c.weightPercent * 10,
+        };
+      });
+      return { state: phase.phase, ...base, myCommitments };
     }
     const actualStart = season.actualStart;
     if (actualStart === null) {
