@@ -4,6 +4,7 @@ import {
   type MeasureView,
   type Season,
   type SeasonMutationResult,
+  type SeasonView,
   toDecimalString,
 } from "@pactjoy/app";
 import type { MemberId } from "@pactjoy/engine";
@@ -15,6 +16,8 @@ export type CommitmentDto =
       readonly id: string;
       readonly memberId: string;
       readonly habitId: string;
+      /** Present on viewer reads; mutation responses keep their existing shape. */
+      readonly habit?: { readonly name: string; readonly icon: string | null };
       readonly weightPercent: number;
       readonly privacy: "visible" | "private";
       readonly measure: MeasureView;
@@ -117,3 +120,20 @@ export function presentSeason(season: Season, viewer: MemberId): SeasonDto {
 /** A season (read or mutation result) projected for the member who is asking. */
 export const presentSeasonFor = ({ season, viewerId }: SeasonMutationResult): SeasonDto =>
   presentSeason(season, viewerId);
+
+/** Enrich detail only, after the app authorized and batch-read the visible habits. */
+export function presentSeasonView(view: SeasonView): SeasonDto {
+  const dto = presentSeasonFor(view);
+  const habits = new Map<string, SeasonView["habits"][number]>(
+    view.habits.map((habit) => [habit.id, habit]),
+  );
+  return {
+    ...dto,
+    commitments: dto.commitments.map((commitment) => {
+      if (commitment.kind === "hidden") return commitment;
+      const habit = habits.get(commitment.habitId);
+      if (!habit) throw new Error(`habit ${commitment.habitId} not found`);
+      return { ...commitment, habit: { name: habit.name, icon: habit.icon } };
+    }),
+  };
+}

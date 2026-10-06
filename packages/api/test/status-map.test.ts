@@ -45,9 +45,9 @@ function errorCoverageGaps(index: string, source: string) {
 }
 
 describe("app error status map", () => {
-  it("EM-S1..S5: 62 kinds, 35x422 4x403 7x404 15x409 1x410", () => {
-    expect(KINDS).toHaveLength(62);
-    expect(kindsWith(422)).toHaveLength(35);
+  it("EM-S1..S5: 63 kinds, 36x422 4x403 7x404 15x409 1x410", () => {
+    expect(KINDS).toHaveLength(63);
+    expect(kindsWith(422)).toHaveLength(36);
     expect(kindsWith(403)).toEqual([
       "CommitmentNotOwned",
       "EntryNotOwned",
@@ -108,7 +108,7 @@ describe("app error status map", () => {
     const index = readFileSync(resolve(import.meta.dirname, "../../app/src/index.ts"), "utf8");
     const source = readFileSync(resolve(import.meta.dirname, "../src/errors/app-error.ts"), "utf8");
     expect(errorCoverageGaps(index, source)).toEqual({ imports: [], union: [] });
-    expect(exportedErrorNames(index).length).toBe(25);
+    expect(exportedErrorNames(index).length).toBe(26);
   });
 
   it("EM-S16: the scan compares exact names, so a new CircleError is detected", () => {

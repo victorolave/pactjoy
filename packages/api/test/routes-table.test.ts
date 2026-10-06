@@ -15,6 +15,7 @@ const { spies, USE_CASE_NAMES } = vi.hoisted(() => ({
     "createHabit",
     "listMyHabits",
     "updateHabit",
+    "previewProgress",
     "createSeason",
     "editSeasonParams",
     "addCommitment",
@@ -56,6 +57,12 @@ const TABLE: Row[] = [
   ["leaveCircle", "POST", `/circles/${ID}/leave`],
   ["createHabit", "POST", "/habits", { name: "Run" }],
   ["listMyHabits", "GET", "/habits"],
+  [
+    "previewProgress",
+    "POST",
+    "/scoring/preview",
+    { measure: { unit: "done", frequency: { kind: "timesPerWeek", times: 3 } }, values: ["1"] },
+  ],
   ["updateHabit", "PATCH", `/habits/${ID}`, { expectedVersion: 0 }],
   [
     "createSeason",
@@ -95,8 +102,8 @@ const TABLE: Row[] = [
 ];
 
 describe("route table completeness (RT-S4)", () => {
-  it("has 24 routes over exactly the 23 use cases, the score one routed twice", () => {
-    expect(TABLE).toHaveLength(24);
+  it("has 25 routes over exactly the 24 use cases, the score one routed twice", () => {
+    expect(TABLE).toHaveLength(25);
     expect(new Set(TABLE.map(([name]) => name))).toEqual(new Set(USE_CASE_NAMES));
     expect(TABLE.filter(([name]) => name === "memberScore")).toHaveLength(2);
   });
@@ -138,7 +145,13 @@ describe("route to use case wiring (AC-S8)", () => {
       for (const [other, spy] of Object.entries(spies)) {
         expect([other, spy.mock.calls.length]).toEqual([other, other === name ? 1 : 0]);
       }
-      const [deps, actor] = spies[name]?.mock.calls[0] ?? [];
+      const args = spies[name]?.mock.calls[0] ?? [];
+      if (name === "previewProgress") {
+        expect(args[0]).toEqual({ userId: ANDREA });
+        expect(args[1]).toEqual(body);
+        return;
+      }
+      const [deps, actor] = args;
       expect(actor).toEqual({ userId: ANDREA });
       expect(deps).toHaveProperty("uow");
       expect(deps).toHaveProperty("clock");

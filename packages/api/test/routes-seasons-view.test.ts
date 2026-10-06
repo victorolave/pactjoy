@@ -5,12 +5,14 @@ import { givenSeason } from "./season-fixture.ts";
 describe("GET /seasons/:seasonId (SV-S1..S4, SV-S7)", () => {
   it("SV-S1: the owner sees their own private commitment in full, marked private", async () => {
     const { call, path, secretHabit } = await givenSeason();
+    await call("PATCH", `/habits/${secretHabit}`, "andrea", { expectedVersion: 0, icon: "book" });
     const { status, json } = await call("GET", path, "andrea");
     expect(status).toBe(200);
     const [secret, open] = json.data.commitments;
     expect(secret).toMatchObject({
       kind: "detail",
       habitId: secretHabit,
+      habit: { name: "Secret-habit", icon: "book" },
       weightPercent: 60,
       privacy: "private",
       measure: { unit: "minutes", target: { minimum: "10", ideal: "30" } },
@@ -29,7 +31,12 @@ describe("GET /seasons/:seasonId (SV-S1..S4, SV-S7)", () => {
       memberId: expect.any(String),
       weightPercent: 60,
     });
-    expect(open).toMatchObject({ kind: "detail", habitId: openHabit });
+    expect(open).toMatchObject({
+      kind: "detail",
+      habitId: openHabit,
+      habit: { name: "Open-habit", icon: null },
+    });
+    expect(JSON.stringify(json)).not.toContain("Secret-habit");
     expect(JSON.stringify(json)).not.toContain("minutes");
   });
 

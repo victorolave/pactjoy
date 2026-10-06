@@ -125,14 +125,47 @@ describe("today: states (TD-R2, TD-R3)", () => {
     });
     expect(view).not.toHaveProperty("summary");
     expect(view).not.toHaveProperty("standings");
+    expect(view).toMatchObject({
+      myCommitments: [
+        {
+          id: given.andreaCommitment,
+          habitName: "Meditar",
+          icon: null,
+          weightPercent: 100,
+          maxPoints: 1000,
+        },
+      ],
+    });
   });
 
   it("TD-S4: an active season starting tomorrow is notStarted", async () => {
     const { app, given } = await setup("active", localDate("2026-09-30"));
     const view = await today(app, given.andrea);
-    expect(view).toMatchObject({ state: "notStarted", today: "2026-09-30" });
+    expect(view).toMatchObject({
+      state: "notStarted",
+      today: "2026-09-30",
+      myCommitments: [{ id: given.andreaCommitment, maxPoints: 1000 }],
+    });
     expect(view).not.toHaveProperty("summary");
   });
+
+  it.each(["pactOpen", "active"] as const)(
+    "SR-R2: %s never includes other members' commitments when the caller has none",
+    async (status) => {
+      const { app, given } = await setup(status, localDate("2026-09-30"));
+      const others = given.season.commitments.filter((c) => c.memberId !== ANDREA);
+      expect(others).toHaveLength(1);
+      await app.uow.transaction(async (repos) => {
+        await repos.seasons.save({ ...given.season, commitments: others }, given.season.version);
+        return { ok: true, value: undefined };
+      });
+      const view = await today(app, given.andrea);
+      expect(view.state).toBe(status === "pactOpen" ? "pactOpen" : "notStarted");
+      if (view.state !== "pactOpen" && view.state !== "notStarted")
+        throw new Error("unexpected state");
+      expect(view.myCommitments).toEqual([]);
+    },
+  );
 
   it("active: day 3 reports week 1 of 4, days left, own score and standings with names", async () => {
     const { app, given } = await setup("active", DAY(3));
