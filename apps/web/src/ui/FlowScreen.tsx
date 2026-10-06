@@ -4,6 +4,8 @@ import { IconButton } from "./IconButton.tsx";
 
 export interface FlowScreenProps {
   readonly title: string;
+  /** Context or subtitle above the heading (e.g. circle name or season progress). */
+  readonly meta?: ReactNode;
   /** The primary action, pinned below the scrolling content (design 3, 4). Settings has none. */
   readonly footer?: ReactNode;
   readonly children: ReactNode;
@@ -21,6 +23,7 @@ export interface FlowScreenProps {
  */
 export function FlowScreen({
   title,
+  meta,
   footer,
   children,
   onSubmit,
@@ -35,7 +38,14 @@ export function FlowScreen({
         </div>
       )}
       <div className={styles.content}>
-        <h1 className={styles.title}>{title}</h1>
+        {meta !== undefined ? (
+          <div>
+            <div className={styles.meta}>{meta}</div>
+            <h1 className={styles.titleWithMeta}>{title}</h1>
+          </div>
+        ) : (
+          <h1 className={styles.title}>{title}</h1>
+        )}
         {children}
       </div>
       {footer !== undefined && <div className={styles.footer}>{footer}</div>}

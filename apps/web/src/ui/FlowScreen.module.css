@@ -34,6 +34,17 @@
   letter-spacing: var(--type-h2-track);
 }
 
+.titleWithMeta {
+  margin: var(--space-1) 0 0;
+  font: var(--font-h2);
+  letter-spacing: var(--type-h2-track);
+}
+
+.meta {
+  font: var(--font-meta);
+  color: var(--text-secondary);
+}
+
 .footer {
   flex: none;
   padding: var(--space-3) var(--layout-margin-mobile) calc(var(--space-5) + var(--safe-bottom));
