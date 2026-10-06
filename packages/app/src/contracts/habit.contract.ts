@@ -123,6 +123,17 @@ export function describeHabitRepositoryContract(
         await saveHabit(uow, FOREIGN, null);
         expect(await uow.read(({ habits }) => habits.listByOwner(HABIT.ownerId))).toEqual([]);
       });
+
+      it("breaks equal createdAt ties by id ascending, not insertion order", async () => {
+        const { uow } = await factory();
+        const tied = { ...NEW, createdAt: OLD.createdAt };
+        await saveHabit(uow, tied, null);
+        await saveHabit(uow, OLD, null);
+        expect(await uow.read(({ habits }) => habits.listByOwner(HABIT.ownerId))).toEqual([
+          OLD,
+          tied,
+        ]);
+      });
     });
 
     describe("getMany (HG-S1..S3)", () => {

@@ -7,6 +7,38 @@ function actorFor(id: string) {
   return { userId: userId(id) };
 }
 
+describe("createHabit icon", () => {
+  it("stores a valid icon and null when omitted", async () => {
+    const app = createTestApp();
+    const withIcon = await createHabit(app, actorFor("user-andrea"), {
+      name: "Leer",
+      icon: "book-open",
+    });
+    const without = await createHabit(app, actorFor("user-andrea"), { name: "Correr" });
+    expect(withIcon.ok && withIcon.value.icon).toBe("book-open");
+    expect(without.ok && without.value.icon).toBeNull();
+  });
+
+  it.each(["Book", "1book", "book icon", "", "a".repeat(33), "libro_"])(
+    "rejects the malformed key %j with InvalidIcon",
+    async (icon) => {
+      const result = await createHabit(createTestApp(), actorFor("user-andrea"), {
+        name: "Leer",
+        icon,
+      });
+      expect(result).toEqual({ ok: false, error: { kind: "InvalidIcon" } });
+    },
+  );
+
+  it("accepts a key of exactly 32 characters", async () => {
+    const result = await createHabit(createTestApp(), actorFor("user-andrea"), {
+      name: "Leer",
+      icon: "a".repeat(32),
+    });
+    expect(result.ok).toBe(true);
+  });
+});
+
 describe("createHabit", () => {
   it("SS-1: creates a habit owned by the actor, with name only", async () => {
     const app = createTestApp();

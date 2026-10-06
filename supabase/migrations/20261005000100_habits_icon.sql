@@ -9,8 +9,12 @@
 --
 -- Rollback: a forward migration `..._drop_habits_icon.sql`
 -- (`alter table pactjoy.habits drop column icon`), or a dev reset.
+-- Drop habits_owner_created_at_idx separately if also rolling back the list index.
 -- No grant is needed: the table-level privileges were revoked in 000500.
 
 alter table pactjoy.habits
   add column icon text
   constraint habits_icon_check check (icon is null or icon ~ '^[a-z][a-z0-9-]{0,31}$');
+
+-- Matches listByOwner's filter and deterministic newest-first order.
+create index habits_owner_created_at_idx on pactjoy.habits (owner_id, created_at desc, id);

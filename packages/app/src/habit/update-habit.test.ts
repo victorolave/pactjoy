@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ConcurrencyConflict } from "../shared/errors.ts";
 import { userId } from "../shared/ids.ts";
 import { createTestApp } from "../testing/app-harness.ts";
+import { instant } from "../time/instant.ts";
 import { createHabit } from "./create-habit.ts";
 import { listMyHabits } from "./list-my-habits.query.ts";
 import { updateHabit } from "./update-habit.ts";
@@ -15,32 +16,6 @@ async function seed() {
   if (!created.ok) throw new Error("seed failed");
   return { app, habit: created.value };
 }
-
-describe("createHabit icon", () => {
-  it("stores a valid icon and null when omitted", async () => {
-    const app = createTestApp();
-    const withIcon = await createHabit(app, ANDREA, { name: "Leer", icon: "book-open" });
-    const without = await createHabit(app, ANDREA, { name: "Correr" });
-    expect(withIcon.ok && withIcon.value.icon).toBe("book-open");
-    expect(without.ok && without.value.icon).toBeNull();
-  });
-
-  it.each(["Book", "1book", "book icon", "", "a".repeat(33), "libro_"])(
-    "rejects the malformed key %j with InvalidIcon",
-    async (icon) => {
-      const result = await createHabit(createTestApp(), ANDREA, { name: "Leer", icon });
-      expect(result).toEqual({ ok: false, error: { kind: "InvalidIcon" } });
-    },
-  );
-
-  it("accepts a key of exactly 32 characters", async () => {
-    const result = await createHabit(createTestApp(), ANDREA, {
-      name: "Leer",
-      icon: "a".repeat(32),
-    });
-    expect(result.ok).toBe(true);
-  });
-});
 
 describe("updateHabit", () => {
   it("edits the owner's habit and bumps the version", async () => {
@@ -101,11 +76,14 @@ describe("updateHabit", () => {
 });
 
 describe("listMyHabits", () => {
-  it("returns only the caller's habits and [] when none", async () => {
+  it("returns only the caller's habits newest first and [] when none", async () => {
     const app = createTestApp();
     expect(await listMyHabits(app, ANDREA)).toEqual([]);
     await createHabit(app, ANDREA, { name: "Leer" });
     await createHabit(app, VICTOR, { name: "Ajeno" });
-    expect((await listMyHabits(app, ANDREA)).map((h) => h.name)).toEqual(["Leer"]);
+    await createHabit({ ...app, clock: { now: () => instant(app.clock.now() + 1_000) } }, ANDREA, {
+      name: "Correr",
+    });
+    expect((await listMyHabits(app, ANDREA)).map((h) => h.name)).toEqual(["Correr", "Leer"]);
   });
 });
