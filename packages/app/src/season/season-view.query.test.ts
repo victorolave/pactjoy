@@ -92,6 +92,9 @@ describe("seasonView: the season with the member who is asking", () => {
         habits: [expect.objectContaining({ name: "Leer" })],
       },
     });
+    if (!result.ok) throw new Error("expected a season");
+    expect(result.value.habits.map((habit) => habit.name)).toEqual(["Leer"]);
+    expect(result.value.habits).toHaveLength(1);
   });
 
   it("SV-S3: a user outside the circle is NotAMember", async () => {

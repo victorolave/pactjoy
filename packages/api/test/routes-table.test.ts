@@ -148,6 +148,7 @@ describe("route to use case wiring (AC-S8)", () => {
       const args = spies[name]?.mock.calls[0] ?? [];
       if (name === "previewProgress") {
         expect(args[0]).toEqual({ userId: ANDREA });
+        expect(args[1]).toEqual(body);
         return;
       }
       const [deps, actor] = args;

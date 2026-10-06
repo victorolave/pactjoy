@@ -149,6 +149,24 @@ describe("today: states (TD-R2, TD-R3)", () => {
     expect(view).not.toHaveProperty("summary");
   });
 
+  it.each(["pactOpen", "active"] as const)(
+    "SR-R2: %s never includes other members' commitments when the caller has none",
+    async (status) => {
+      const { app, given } = await setup(status, localDate("2026-09-30"));
+      const others = given.season.commitments.filter((c) => c.memberId !== ANDREA);
+      expect(others).toHaveLength(1);
+      await app.uow.transaction(async (repos) => {
+        await repos.seasons.save({ ...given.season, commitments: others }, given.season.version);
+        return { ok: true, value: undefined };
+      });
+      const view = await today(app, given.andrea);
+      expect(view.state).toBe(status === "pactOpen" ? "pactOpen" : "notStarted");
+      if (view.state !== "pactOpen" && view.state !== "notStarted")
+        throw new Error("unexpected state");
+      expect(view.myCommitments).toEqual([]);
+    },
+  );
+
   it("active: day 3 reports week 1 of 4, days left, own score and standings with names", async () => {
     const { app, given } = await setup("active", DAY(3));
     const view = await today(app, given.andrea);

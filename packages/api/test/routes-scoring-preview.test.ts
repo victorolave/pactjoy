@@ -22,6 +22,30 @@ describe("POST /scoring/preview (SR-R3)", () => {
     expect(read).not.toHaveBeenCalled();
     expect(transaction).not.toHaveBeenCalled();
   });
+  it("returns limit progress at the ideal, tolerance and beyond tolerance", async () => {
+    const { call } = setup();
+    const result = await call("POST", "/scoring/preview", "andrea", {
+      measure: {
+        unit: "hours",
+        direction: "limit",
+        ideal: "2",
+        tolerance: "4",
+        schedule: { period: "weeklyTotal" },
+      },
+      values: ["2", "2.5", "4", "4.01"],
+    });
+    expect([result.status, result.json.data]).toEqual([
+      200,
+      {
+        rows: [
+          { value: "2", progressPercent: "100" },
+          { value: "2.5", progressPercent: "88" },
+          { value: "4", progressPercent: "50" },
+          { value: "4.01", progressPercent: "0" },
+        ],
+      },
+    ]);
+  });
   it.each([
     [{ measure: REACH, values: Array(9).fill("1") }, "InvalidRequest"],
     [{ measure: REACH, values: [] }, "InvalidPreviewValues"],

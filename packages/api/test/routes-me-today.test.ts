@@ -1,8 +1,9 @@
-import { instant } from "@pactjoy/app";
+import { instant, localDate, seasonId } from "@pactjoy/app";
 import { describe, expect, it } from "vitest";
 import { createCircleBody, joinCircleBody } from "../src/testing/index.ts";
 import { givenTwoMemberSeason } from "./entries-fixture.ts";
 import { ANDREA, setup, VICTOR } from "./harness.ts";
+import { givenSeason } from "./season-fixture.ts";
 
 // The clock sits on 2023-11-14 (America/Bogota), which is season day 0.
 const DAILY = {
@@ -113,6 +114,30 @@ describe("GET /me/today (TD-R1, TD-S11)", () => {
     expect(res.json.data.today).toBe("2023-11-14");
     expect(res.json.data).not.toHaveProperty("rows");
   });
+
+  it.each(["pactOpen", "notStarted"] as const)(
+    "SR-R2: %s returns no commitments for a caller with none, even when others have them",
+    async (state) => {
+      const ctx = await givenSeason();
+      const stored = await ctx.app.seasons.get(seasonId(ctx.path.slice("/seasons/".length)));
+      if (!stored) throw new Error("fixture setup failed");
+      expect(stored.commitments).toHaveLength(2);
+      if (state === "notStarted") {
+        await ctx.app.seasons.save(
+          { ...stored, status: "active", actualStart: localDate("2023-11-15") },
+          stored.version,
+        );
+      }
+      const res = await ctx.call("GET", "/me/today", "victor");
+      expect([res.status, res.json.data.state, res.json.data.myCommitments]).toEqual([
+        200,
+        state,
+        [],
+      ]);
+      expect(JSON.stringify(res.json)).not.toContain("Secret-habit");
+      expect(JSON.stringify(res.json)).not.toContain("Open-habit");
+    },
+  );
 
   it("active: viewer, rows, summary and standings as plain JSON, no userId", async () => {
     const { call, seasonId, commitmentIds, circleId, app } = await givenTwoMemberSeason(DAILY);
