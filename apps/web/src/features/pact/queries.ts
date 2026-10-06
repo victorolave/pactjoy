@@ -71,9 +71,13 @@ export function useRemoveCommitment() {
       readonly seasonId: string;
       readonly commitmentId: string;
     }) => api.removeCommitment(seasonId, commitmentId),
+    onSuccess: (data, { seasonId }) => {
+      client.setQueryData(seasonKey(seasonId), data);
+    },
     onSettled: async (_data, _err, { seasonId }) => {
       await Promise.all([
         client.invalidateQueries({ queryKey: seasonKey(seasonId) }),
+        client.invalidateQueries({ queryKey: todayKey }),
         client.invalidateQueries({ queryKey: myCircleKey }),
       ]);
     },

@@ -169,18 +169,22 @@ describe("choose habits screen (design 10)", () => {
     // Checked commitments belonging to the viewer
     const meditarCheck = await screen.findByRole("checkbox", { name: "Meditar" });
     expect(meditarCheck).toBeChecked();
+    expect(meditarCheck).toHaveAttribute("aria-describedby", "commitment-sub-c-meditar");
     expect(screen.getByText("3 veces por semana · hecho / no hecho")).toBeInTheDocument();
 
     const leerCheck = screen.getByRole("checkbox", { name: "Leer" });
     expect(leerCheck).toBeChecked();
+    expect(leerCheck).toHaveAttribute("aria-describedby", "commitment-sub-c-leer");
     expect(screen.getByText("5 veces por semana · mín. 10 · ideal 30 min")).toBeInTheDocument();
 
     // Andrea's commitment should not appear as viewer's commitment
     expect(screen.queryByText("Correr")).not.toBeInTheDocument();
 
-    // Unassigned habit is unchecked with no subtitle
+    // Unassigned habit is unchecked with no subtitle and accessible hint
     const caminarCheck = screen.getByRole("checkbox", { name: "Caminar" });
     expect(caminarCheck).not.toBeChecked();
+    expect(caminarCheck).toHaveAttribute("aria-describedby", "habit-hint-h-caminar");
+    expect(screen.getByText("Configurar compromiso para esta temporada")).toBeInTheDocument();
 
     // Counter recommendation
     expect(screen.getByText("2 compromisos elegidos. Sugerimos entre 2 y 5.")).toBeInTheDocument();
@@ -189,18 +193,91 @@ describe("choose habits screen (design 10)", () => {
     expect(screen.getByRole("button", { name: "Repartir pesos" })).toBeEnabled();
   });
 
-  it("unchecking a commitment calls removeCommitment", async () => {
+  it("renders a skeleton while queries are loading (CRITICAL 2)", async () => {
     const season = seasonFixture();
     const { deps } = renderChooseHabits({ season });
-    deps.api.setPactResponse("removeCommitment", season);
+    const release = deps.api.hold("getSeason");
+
+    // Since getSeason is held, the screen is in loading state
+    expect(document.querySelector('[aria-busy="true"]')).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Repartir pesos" })).toBeDisabled();
+
+    release();
+    expect(await screen.findByRole("checkbox", { name: "Meditar" })).toBeInTheDocument();
+    expect(document.querySelector('[aria-busy="true"]')).not.toBeInTheDocument();
+  });
+
+  it("renders error state when circle or season load fails and supports retry (W3)", async () => {
+    const { deps } = renderChooseHabits();
+    deps.api.failNext("getSeason", new ApiError("NetworkError", 0, null));
+
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(screen.getByText("Algo salió mal")).toBeInTheDocument();
+    expect(screen.getByText("Revisa tu conexión e inténtalo de nuevo.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Repartir pesos" })).toBeDisabled();
+
+    // Click retry
+    const retryBtn = screen.getByRole("button", { name: "Reintentar" });
+    await userEvent.click(retryBtn);
+
+    expect(await screen.findByRole("checkbox", { name: "Meditar" })).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("unchecking a commitment calls removeCommitment and moves it to unassigned (W5)", async () => {
+    const season = seasonFixture();
+    const updatedSeason: SeasonDto = {
+      ...season,
+      commitments: season.commitments.filter((c) => c.id !== "c-meditar"),
+    };
+    const { deps } = renderChooseHabits({ season });
+    deps.api.setPactResponse("removeCommitment", updatedSeason);
 
     const meditarCheck = await screen.findByRole("checkbox", { name: "Meditar" });
+    expect(meditarCheck).toBeChecked();
+    expect(screen.getByText("3 veces por semana · hecho / no hecho")).toBeInTheDocument();
+
+    deps.api.setPactResponse("getSeason", updatedSeason);
     await userEvent.click(meditarCheck);
 
     expect(deps.api.pactCommands.find((c) => c.method === "removeCommitment")).toEqual({
       method: "removeCommitment",
       args: ["s-1", "c-meditar"],
     });
+
+    // Meditar is now unchecked and moved to unassigned habits (no subtitle)
+    await screen.findByText("1 compromiso elegido. Sugerimos entre 2 y 5.");
+    const updatedMeditarCheck = screen.getByRole("checkbox", { name: "Meditar" });
+    expect(updatedMeditarCheck).not.toBeChecked();
+    expect(screen.queryByText("3 veces por semana · hecho / no hecho")).not.toBeInTheDocument();
+  });
+
+  it("disables row checkbox and 'Repartir pesos' while removal is pending (W4, CRITICAL 1)", async () => {
+    const season = seasonFixture();
+    const updatedSeason: SeasonDto = {
+      ...season,
+      commitments: season.commitments.filter((c) => c.id !== "c-meditar"),
+    };
+    const { deps } = renderChooseHabits({ season });
+    deps.api.setPactResponse("removeCommitment", updatedSeason);
+
+    const meditarCheck = await screen.findByRole("checkbox", { name: "Meditar" });
+    expect(meditarCheck).toBeChecked();
+
+    const release = deps.api.hold("removeCommitment");
+    deps.api.setPactResponse("getSeason", updatedSeason);
+
+    await userEvent.click(meditarCheck);
+
+    // While pending
+    expect(meditarCheck).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Repartir pesos" })).toBeDisabled();
+
+    release();
+
+    // After completion
+    await screen.findByText("1 compromiso elegido. Sugerimos entre 2 y 5.");
+    expect(screen.getByRole("button", { name: "Repartir pesos" })).toBeEnabled();
   });
 
   it("checking an unassigned habit navigates to the commitment wizard prefilled with habitId (OD-1A)", async () => {
@@ -235,8 +312,10 @@ describe("choose habits screen (design 10)", () => {
     renderChooseHabits({ season: emptySeason });
 
     await screen.findByRole("heading", { level: 1, name: "¿Qué vas a trabajar esta temporada?" });
+    expect(
+      await screen.findByText("0 compromisos elegidos. Sugerimos entre 2 y 5."),
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Repartir pesos" })).toBeDisabled();
-    expect(screen.getByText("0 compromisos elegidos. Sugerimos entre 2 y 5.")).toBeInTheDocument();
   });
 
   it("shows an error message when removing a commitment fails", async () => {

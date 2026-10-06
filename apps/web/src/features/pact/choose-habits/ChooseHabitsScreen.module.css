@@ -13,13 +13,20 @@
   display: flex;
   gap: var(--space-3);
   align-items: center;
+  min-height: var(--touch-target);
   padding: var(--space-3) 0;
   border-bottom: var(--border-width) solid var(--pj-hairline);
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .habitRow:last-child {
   border-bottom: none;
+}
+
+.habitRowDisabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .habitInfo {
@@ -56,6 +63,10 @@
   cursor: pointer;
 }
 
+.habitRowDisabled .checkboxInput {
+  cursor: not-allowed;
+}
+
 .checkBox {
   width: var(--space-6);
   height: var(--space-6);
@@ -86,4 +97,13 @@
   font: var(--font-small);
   color: var(--text-secondary);
   text-wrap: pretty;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: var(--border-width);
+  height: var(--border-width);
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
