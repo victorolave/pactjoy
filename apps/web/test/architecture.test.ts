@@ -30,7 +30,9 @@ function filesUnder(dir: string): string[] {
 
 /** feature -> the features it may reach (always through their index.ts). */
 const ALLOWED_FEATURE_DEPS: Readonly<Record<string, readonly string[]>> = {
-  today: ["entry"],
+  today: ["entry", "habits"],
+  habits: [],
+  pact: ["habits"],
   entry: [],
   auth: [],
   circle: ["onboarding"],
@@ -76,6 +78,11 @@ function violationsOf(file: string, specifiers: readonly string[]): string[] {
 }
 
 describe("the folder architecture", () => {
+  it("allows pact and Today to consume habits only through its public index", () => {
+    expect(violationsOf("features/pact/Foo.ts", ["../habits/index.ts"])).toEqual([]);
+    expect(violationsOf("features/today/Foo.ts", ["../habits/index.ts"])).toEqual([]);
+    expect(violationsOf("features/habits/Foo.ts", ["../pact/index.ts"])).toHaveLength(1);
+  });
   it("keeps every import inside the dependency rules", () => {
     const found = filesUnder(SRC).flatMap((path) => {
       const file = relative(SRC, path).split(sep).join("/");

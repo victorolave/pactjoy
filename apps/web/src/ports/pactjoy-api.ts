@@ -1,5 +1,29 @@
-import type { InvitePreview, MyCircleView, TodayView } from "@pactjoy/app";
-import type { Serialized } from "./wire.ts";
+import type {
+  AddCommitmentInput,
+  CreateHabitInput,
+  CreateSeasonInput,
+  EditCommitmentInput,
+  EditSeasonParamsInput,
+  InvitePreview,
+  MyCircleView,
+  PreviewProgressInput,
+  PreviewProgressView,
+  TodayView,
+  UpdateHabitInput,
+} from "@pactjoy/app";
+import type { HabitDto, SeasonDto, Serialized } from "./wire.ts";
+
+export type CreateHabitCommand = Serialized<CreateHabitInput>;
+export type UpdateHabitCommand = Omit<Serialized<UpdateHabitInput>, "habitId">;
+export type CreateSeasonCommand = Omit<Serialized<CreateSeasonInput>, "circleId">;
+export type EditSeasonCommand = Omit<Serialized<EditSeasonParamsInput>, "seasonId">;
+export type AddCommitmentCommand = Omit<Serialized<AddCommitmentInput>, "seasonId">;
+export type EditCommitmentCommand = Omit<
+  Serialized<EditCommitmentInput>,
+  "seasonId" | "commitmentId"
+>;
+export type PreviewScoringCommand = Serialized<PreviewProgressInput>;
+export type ScoringPreview = Serialized<PreviewProgressView>;
 
 export type EntryValueInput =
   | { readonly kind: "done" }
@@ -52,6 +76,22 @@ export interface JoinCircleCommand {
 
 /** Everything the screens know about the backend. Adapters throw `ApiError`. */
 export interface PactJoyApi {
+  listHabits(signal?: AbortSignal): Promise<readonly HabitDto[]>;
+  createHabit(input: CreateHabitCommand): Promise<HabitDto>;
+  updateHabit(id: string, patch: UpdateHabitCommand): Promise<HabitDto>;
+  createSeason(circleId: string, input: CreateSeasonCommand): Promise<SeasonDto>;
+  editSeason(seasonId: string, input: EditSeasonCommand): Promise<SeasonDto>;
+  getSeason(seasonId: string, signal?: AbortSignal): Promise<SeasonDto>;
+  addCommitment(seasonId: string, input: AddCommitmentCommand): Promise<SeasonDto>;
+  editCommitment(
+    seasonId: string,
+    commitmentId: string,
+    input: EditCommitmentCommand,
+  ): Promise<SeasonDto>;
+  removeCommitment(seasonId: string, commitmentId: string): Promise<SeasonDto>;
+  approvePact(seasonId: string, expectedPactRevision: number): Promise<SeasonDto>;
+  withdrawApproval(seasonId: string): Promise<SeasonDto>;
+  previewScoring(input: PreviewScoringCommand, signal?: AbortSignal): Promise<ScoringPreview>;
   getToday(signal?: AbortSignal): Promise<TodayView>;
   recordEntry(cmd: RecordEntryCommand): Promise<RecordedEntry>;
   editEntry(cmd: EditEntryCommand): Promise<void>;

@@ -1,20 +1,27 @@
 import type { TodayView } from "@pactjoy/app";
 import type { ApiError } from "../ports/api-error.ts";
 import type {
+  AddCommitmentCommand,
   CircleInvite,
   CircleRef,
   CreateCircleCommand,
+  CreateHabitCommand,
+  CreateSeasonCommand,
+  EditCommitmentCommand,
   EditEntryCommand,
+  EditSeasonCommand,
   InvitePreviewView,
   JoinCircleCommand,
   MyCircle,
   PactJoyApi,
+  PreviewScoringCommand,
   RecordEntryCommand,
   RecordedEntry,
+  UpdateHabitCommand,
 } from "../ports/pactjoy-api.ts";
 import { NO_CIRCLE } from "./fixtures/circle.ts";
 
-type Method =
+type ExistingMethod =
   | "getToday"
   | "recordEntry"
   | "editEntry"
@@ -27,6 +34,10 @@ type Method =
   | "renameCircle"
   | "renameMyDisplayName"
   | "leaveCircle";
+
+type Method = keyof PactJoyApi;
+type PactMethod = Exclude<Method, ExistingMethod>;
+type PactResult<K extends PactMethod> = Awaited<ReturnType<PactJoyApi[K]>>;
 
 const INVITE: CircleInvite = {
   code: "7K4Q2M",
@@ -46,6 +57,18 @@ const PREVIEW: InvitePreviewView = {
  */
 export class FakePactJoyApi implements PactJoyApi {
   readonly calls: Record<Method, number> = {
+    listHabits: 0,
+    createHabit: 0,
+    updateHabit: 0,
+    createSeason: 0,
+    editSeason: 0,
+    getSeason: 0,
+    addCommitment: 0,
+    editCommitment: 0,
+    removeCommitment: 0,
+    approvePact: 0,
+    withdrawApproval: 0,
+    previewScoring: 0,
     getToday: 0,
     recordEntry: 0,
     editEntry: 0,
@@ -68,6 +91,13 @@ export class FakePactJoyApi implements PactJoyApi {
   readonly recorded: RecordEntryCommand[] = [];
   readonly edited: EditEntryCommand[] = [];
   readonly deleted: string[] = [];
+
+  readonly pactCommands: { readonly method: PactMethod; readonly args: readonly unknown[] }[] = [];
+  readonly #pactResults = new Map<PactMethod, unknown>([["listHabits", []]]);
+
+  setPactResponse<K extends PactMethod>(method: K, value: PactResult<K>): void {
+    this.#pactResults.set(method, value);
+  }
 
   #today: TodayView;
   #myCircle: MyCircle = NO_CIRCLE;
@@ -112,6 +142,56 @@ export class FakePactJoyApi implements PactJoyApi {
       }),
     );
     return release;
+  }
+
+  async listHabits(_signal?: AbortSignal) {
+    return this.#pactCall("listHabits", []);
+  }
+  async createHabit(input: CreateHabitCommand) {
+    return this.#pactCall("createHabit", [input]);
+  }
+  async updateHabit(id: string, patch: UpdateHabitCommand) {
+    return this.#pactCall("updateHabit", [id, patch]);
+  }
+  async createSeason(circleId: string, input: CreateSeasonCommand) {
+    return this.#pactCall("createSeason", [circleId, input]);
+  }
+  async editSeason(seasonId: string, input: EditSeasonCommand) {
+    return this.#pactCall("editSeason", [seasonId, input]);
+  }
+  async getSeason(seasonId: string, _signal?: AbortSignal) {
+    return this.#pactCall("getSeason", [seasonId]);
+  }
+  async addCommitment(seasonId: string, input: AddCommitmentCommand) {
+    return this.#pactCall("addCommitment", [seasonId, input]);
+  }
+  async editCommitment(seasonId: string, commitmentId: string, input: EditCommitmentCommand) {
+    return this.#pactCall("editCommitment", [seasonId, commitmentId, input]);
+  }
+  async removeCommitment(seasonId: string, commitmentId: string) {
+    return this.#pactCall("removeCommitment", [seasonId, commitmentId]);
+  }
+  async approvePact(seasonId: string, expectedPactRevision: number) {
+    return this.#pactCall("approvePact", [seasonId, expectedPactRevision]);
+  }
+  async withdrawApproval(seasonId: string) {
+    return this.#pactCall("withdrawApproval", [seasonId]);
+  }
+  async previewScoring(input: PreviewScoringCommand, _signal?: AbortSignal) {
+    return this.#pactCall("previewScoring", [input]);
+  }
+
+  /** Script wire responses, not scoring or pact business rules. */
+  async #pactCall<K extends PactMethod>(
+    method: K,
+    args: readonly unknown[],
+  ): Promise<PactResult<K>> {
+    const gate = this.#takeGate(method);
+    this.pactCommands.push({ method, args });
+    this.#enter(method);
+    await gate;
+    if (!this.#pactResults.has(method)) throw new Error(`No pact response scripted for ${method}`);
+    return this.#pactResults.get(method) as PactResult<K>;
   }
 
   async getToday(_signal?: AbortSignal): Promise<TodayView> {

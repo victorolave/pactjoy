@@ -1,4 +1,4 @@
-import type { Instant } from "@pactjoy/app";
+import type { CommitmentRecord, Habit, Instant, MeasureView, Season } from "@pactjoy/app";
 
 /**
  * What a use-case view looks like after the API's JSON round trip: an `Instant` becomes an ISO
@@ -20,3 +20,25 @@ export type Serialized<T> = T extends Instant
         : T extends object
           ? { readonly [Key in keyof T]: Serialized<T[Key]> }
           : T;
+
+/** Habits are owner-only; the HTTP presenter deliberately omits ownerId. */
+export type HabitDto = Omit<Serialized<Habit>, "ownerId">;
+export type CommitmentDto =
+  | (Pick<
+      Serialized<CommitmentRecord>,
+      "id" | "memberId" | "habitId" | "weightPercent" | "privacy"
+    > & {
+      readonly kind: "detail";
+      readonly measure: Serialized<MeasureView>;
+      /** Viewer GETs enrich this; mutation responses intentionally omit it. */
+      readonly habit?: { readonly name: string; readonly icon: string | null };
+    })
+  | {
+      readonly kind: "hidden";
+      readonly id: string;
+      readonly memberId: string;
+      readonly weightPercent: number;
+    };
+export type SeasonDto = Omit<Serialized<Season>, "commitments"> & {
+  readonly commitments: readonly CommitmentDto[];
+};

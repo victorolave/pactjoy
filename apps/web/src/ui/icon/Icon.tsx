@@ -20,6 +20,7 @@ import {
   type LucideIcon,
   MessageSquarePlus,
   Minus,
+  Moon,
   Palette,
   Pencil,
   Plus,
@@ -75,6 +76,7 @@ const GLYPHS = {
   "flower-2": Flower2,
   footprints: Footprints,
   palette: Palette,
+  moon: Moon,
 } as const satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof GLYPHS;

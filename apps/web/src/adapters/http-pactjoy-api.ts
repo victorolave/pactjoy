@@ -2,17 +2,27 @@ import type { TodayView } from "@pactjoy/app";
 import { ApiError } from "../ports/api-error.ts";
 import type { RefreshResult } from "../ports/auth.ts";
 import type {
+  AddCommitmentCommand,
   CircleInvite,
   CircleRef,
   CreateCircleCommand,
+  CreateHabitCommand,
+  CreateSeasonCommand,
+  EditCommitmentCommand,
   EditEntryCommand,
+  EditSeasonCommand,
   InvitePreviewView,
   JoinCircleCommand,
   MyCircle,
   PactJoyApi,
+  PreviewScoringCommand,
   RecordEntryCommand,
   RecordedEntry,
+  ScoringPreview,
+  UpdateHabitCommand,
 } from "../ports/pactjoy-api.ts";
+
+import type { HabitDto, SeasonDto } from "../ports/wire.ts";
 
 export interface HttpPactJoyApiOptions {
   readonly baseUrl: string;
@@ -56,6 +66,28 @@ const isInvite = (data: unknown): boolean =>
 const isPreview = (data: unknown): boolean =>
   isRecord(data) && typeof data.circleName === "string" && typeof data.expiresAt === "string";
 
+const seasonPath = (id: string): string => `/seasons/${encodeURIComponent(id)}`;
+const commitmentPath = (sid: string, cid: string): string =>
+  `${seasonPath(sid)}/commitments/${encodeURIComponent(cid)}`;
+/** Required fields only: enough to reject a wrong or truncated body, not a full schema check. */
+const isHabitDto = (data: unknown): boolean =>
+  isRecord(data) &&
+  typeof data.id === "string" &&
+  typeof data.name === "string" &&
+  (data.icon === null || typeof data.icon === "string") &&
+  typeof data.version === "number";
+const isHabitList = (data: unknown): boolean =>
+  isRecord(data) && Array.isArray(data.habits) && data.habits.every(isHabitDto);
+const isSeasonDto = (data: unknown): boolean =>
+  isRecord(data) &&
+  typeof data.id === "string" &&
+  typeof data.status === "string" &&
+  Array.isArray(data.commitments) &&
+  Array.isArray(data.approvals) &&
+  typeof data.pactRevision === "number" &&
+  typeof data.version === "number";
+const isScoringPreview = (data: unknown): boolean => isRecord(data) && Array.isArray(data.rows);
+
 const circlePath = (circleId: string): string => `/circles/${encodeURIComponent(circleId)}`;
 
 /** Maps a failed response to an ApiError. Without a usable envelope the status decides. */
@@ -77,6 +109,121 @@ export class HttpPactJoyApi implements PactJoyApi {
 
   constructor(options: HttpPactJoyApiOptions) {
     this.#options = options;
+  }
+
+  async listHabits(signal?: AbortSignal): Promise<readonly HabitDto[]> {
+    const data = await this.#request({
+      method: "GET",
+      path: "/habits",
+      signal,
+      valid: isHabitList,
+    });
+    return (data as { habits: readonly HabitDto[] }).habits;
+  }
+
+  async createHabit(input: CreateHabitCommand): Promise<HabitDto> {
+    return (await this.#request({
+      method: "POST",
+      path: "/habits",
+      body: input,
+      valid: isHabitDto,
+    })) as HabitDto;
+  }
+
+  async updateHabit(id: string, patch: UpdateHabitCommand): Promise<HabitDto> {
+    return (await this.#request({
+      method: "PATCH",
+      path: `/habits/${encodeURIComponent(id)}`,
+      body: patch,
+      valid: isHabitDto,
+    })) as HabitDto;
+  }
+
+  async createSeason(circleId: string, input: CreateSeasonCommand): Promise<SeasonDto> {
+    return (await this.#request({
+      method: "POST",
+      path: `${circlePath(circleId)}/seasons`,
+      body: input,
+      valid: isSeasonDto,
+    })) as SeasonDto;
+  }
+
+  async editSeason(seasonId: string, input: EditSeasonCommand): Promise<SeasonDto> {
+    return (await this.#request({
+      method: "PATCH",
+      path: seasonPath(seasonId),
+      body: input,
+      valid: isSeasonDto,
+    })) as SeasonDto;
+  }
+
+  async getSeason(seasonId: string, signal?: AbortSignal): Promise<SeasonDto> {
+    return (await this.#request({
+      method: "GET",
+      path: seasonPath(seasonId),
+      signal,
+      valid: isSeasonDto,
+    })) as SeasonDto;
+  }
+
+  async addCommitment(seasonId: string, input: AddCommitmentCommand): Promise<SeasonDto> {
+    return (await this.#request({
+      method: "POST",
+      path: `${seasonPath(seasonId)}/commitments`,
+      body: input,
+      valid: isSeasonDto,
+    })) as SeasonDto;
+  }
+
+  async editCommitment(
+    seasonId: string,
+    commitmentId: string,
+    input: EditCommitmentCommand,
+  ): Promise<SeasonDto> {
+    return (await this.#request({
+      method: "PUT",
+      path: commitmentPath(seasonId, commitmentId),
+      body: input,
+      valid: isSeasonDto,
+    })) as SeasonDto;
+  }
+
+  async removeCommitment(seasonId: string, commitmentId: string): Promise<SeasonDto> {
+    return (await this.#request({
+      method: "DELETE",
+      path: commitmentPath(seasonId, commitmentId),
+      valid: isSeasonDto,
+    })) as SeasonDto;
+  }
+
+  async approvePact(seasonId: string, expectedPactRevision: number): Promise<SeasonDto> {
+    return (await this.#request({
+      method: "PUT",
+      path: `${seasonPath(seasonId)}/approval`,
+      body: { expectedPactRevision },
+      valid: isSeasonDto,
+    })) as SeasonDto;
+  }
+
+  async withdrawApproval(seasonId: string): Promise<SeasonDto> {
+    return (await this.#request({
+      method: "DELETE",
+      path: `${seasonPath(seasonId)}/approval`,
+      valid: isSeasonDto,
+    })) as SeasonDto;
+  }
+
+  async previewScoring(
+    input: PreviewScoringCommand,
+    signal?: AbortSignal,
+  ): Promise<ScoringPreview> {
+    return (await this.#request({
+      method: "POST",
+      path: "/scoring/preview",
+      body: input,
+      signal,
+      valid: isScoringPreview,
+    })) as ScoringPreview;
   }
 
   async getToday(signal?: AbortSignal): Promise<TodayView> {
