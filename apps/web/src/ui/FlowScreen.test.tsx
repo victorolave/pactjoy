@@ -16,6 +16,16 @@ describe("FlowScreen", () => {
     expect(screen.getByRole("button", { name: "Seguir" })).toBeInTheDocument();
   });
 
+  it("renders the meta subtitle above the title when provided", () => {
+    render(
+      <FlowScreen title="Nueva temporada" meta="Andrea & Victor">
+        <p>Contenido</p>
+      </FlowScreen>,
+    );
+    expect(screen.getByText("Andrea & Victor")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Nueva temporada" })).toBeInTheDocument();
+  });
+
   it("submits as a form when it has onSubmit, so Enter in a field works", async () => {
     const onSubmit = vi.fn((event: { preventDefault(): void }) => event.preventDefault());
     render(
