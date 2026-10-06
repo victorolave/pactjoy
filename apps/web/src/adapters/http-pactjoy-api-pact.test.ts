@@ -3,77 +3,94 @@ import type { PactJoyApi } from "../ports/pactjoy-api.ts";
 import { HttpPactJoyApi } from "./http-pactjoy-api.ts";
 
 const habit = { name: "Leer", icon: "book" };
+const habitDto = {
+  id: "h1",
+  name: "Leer",
+  why: null,
+  category: null,
+  icon: "book",
+  createdAt: "2026-10-01T00:00:00.000Z",
+  version: 1,
+};
+const seasonDto = {
+  id: "s1",
+  status: "pactOpen",
+  commitments: [],
+  approvals: [],
+  pactRevision: 0,
+  version: 1,
+};
 const measure = { unit: "done", frequency: { kind: "timesPerWeek", times: 3 } } as const;
 const commitment = { habitId: "h1", measure, privacy: "private", weightPercent: 100 } as const;
 const season = { timezone: "America/Bogota", startDate: "2026-10-07", lengthWeeks: 8 } as const;
 type Case = [string, (api: PactJoyApi) => Promise<unknown>, string, unknown, unknown, unknown];
 const cases: Case[] = [
-  ["GET", (a) => a.listHabits(), "/habits", undefined, { habits: [{ id: "h1" }] }, [{ id: "h1" }]],
-  ["POST", (a) => a.createHabit(habit), "/habits", habit, { id: "h1" }, { id: "h1" }],
+  ["GET", (a) => a.listHabits(), "/habits", undefined, { habits: [habitDto] }, [habitDto]],
+  ["POST", (a) => a.createHabit(habit), "/habits", habit, habitDto, habitDto],
   [
     "PATCH",
     (a) => a.updateHabit("h/1", { expectedVersion: 2, icon: null }),
     "/habits/h%2F1",
     { expectedVersion: 2, icon: null },
-    { id: "h1" },
-    { id: "h1" },
+    habitDto,
+    habitDto,
   ],
   [
     "POST",
     (a) => a.createSeason("c/1", season),
     "/circles/c%2F1/seasons",
     season,
-    { id: "s1" },
-    { id: "s1" },
+    seasonDto,
+    seasonDto,
   ],
-  ["GET", (a) => a.getSeason("s/1"), "/seasons/s%2F1", undefined, { id: "s1" }, { id: "s1" }],
+  ["GET", (a) => a.getSeason("s/1"), "/seasons/s%2F1", undefined, seasonDto, seasonDto],
   [
     "PATCH",
     (a) => a.editSeason("s1", { lengthWeeks: 6 }),
     "/seasons/s1",
     { lengthWeeks: 6 },
-    { id: "s1" },
-    { id: "s1" },
+    seasonDto,
+    seasonDto,
   ],
   [
     "POST",
     (a) => a.addCommitment("s1", commitment),
     "/seasons/s1/commitments",
     commitment,
-    { id: "s1" },
-    { id: "s1" },
+    seasonDto,
+    seasonDto,
   ],
   [
     "PUT",
     (a) => a.editCommitment("s1", "c/1", { measure, privacy: "visible", weightPercent: 50 }),
     "/seasons/s1/commitments/c%2F1",
     { measure, privacy: "visible", weightPercent: 50 },
-    { id: "s1" },
-    { id: "s1" },
+    seasonDto,
+    seasonDto,
   ],
   [
     "DELETE",
     (a) => a.removeCommitment("s1", "c/1"),
     "/seasons/s1/commitments/c%2F1",
     undefined,
-    { id: "s1" },
-    { id: "s1" },
+    seasonDto,
+    seasonDto,
   ],
   [
     "PUT",
     (a) => a.approvePact("s1", 7),
     "/seasons/s1/approval",
     { expectedPactRevision: 7 },
-    { id: "s1" },
-    { id: "s1" },
+    seasonDto,
+    seasonDto,
   ],
   [
     "DELETE",
     (a) => a.withdrawApproval("s1"),
     "/seasons/s1/approval",
     undefined,
-    { id: "s1" },
-    { id: "s1" },
+    seasonDto,
+    seasonDto,
   ],
   [
     "POST",
@@ -128,5 +145,16 @@ describe("HttpPactJoyApi habit, season, commitment, pact and preview methods", (
       setup({ rows: "nope" }).api.previewScoring({ measure, values: ["1"] }),
     ).rejects.toMatchObject({ code: "Internal" });
     await expect(setup({}).api.getSeason("s1")).rejects.toMatchObject({ code: "Internal" });
+  });
+  it("rejects habit and season bodies that only carry an id", async () => {
+    const internal = { code: "Internal" };
+    await expect(setup({ id: "h1" }).api.createHabit(habit)).rejects.toMatchObject(internal);
+    await expect(setup({ habits: [{ id: "h1" }] }).api.listHabits()).rejects.toMatchObject(
+      internal,
+    );
+    await expect(setup({ id: "s1" }).api.getSeason("s1")).rejects.toMatchObject(internal);
+    await expect(
+      setup({ ...seasonDto, commitments: null }).api.approvePact("s1", 0),
+    ).rejects.toMatchObject(internal);
   });
 });

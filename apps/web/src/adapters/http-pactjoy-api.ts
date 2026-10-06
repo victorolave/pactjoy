@@ -69,7 +69,23 @@ const isPreview = (data: unknown): boolean =>
 const seasonPath = (id: string): string => `/seasons/${encodeURIComponent(id)}`;
 const commitmentPath = (sid: string, cid: string): string =>
   `${seasonPath(sid)}/commitments/${encodeURIComponent(cid)}`;
-const isHabitList = (data: unknown): boolean => isRecord(data) && Array.isArray(data.habits);
+/** Required fields only: enough to reject a wrong or truncated body, not a full schema check. */
+const isHabitDto = (data: unknown): boolean =>
+  isRecord(data) &&
+  typeof data.id === "string" &&
+  typeof data.name === "string" &&
+  (data.icon === null || typeof data.icon === "string") &&
+  typeof data.version === "number";
+const isHabitList = (data: unknown): boolean =>
+  isRecord(data) && Array.isArray(data.habits) && data.habits.every(isHabitDto);
+const isSeasonDto = (data: unknown): boolean =>
+  isRecord(data) &&
+  typeof data.id === "string" &&
+  typeof data.status === "string" &&
+  Array.isArray(data.commitments) &&
+  Array.isArray(data.approvals) &&
+  typeof data.pactRevision === "number" &&
+  typeof data.version === "number";
 const isScoringPreview = (data: unknown): boolean => isRecord(data) && Array.isArray(data.rows);
 
 const circlePath = (circleId: string): string => `/circles/${encodeURIComponent(circleId)}`;
@@ -110,7 +126,7 @@ export class HttpPactJoyApi implements PactJoyApi {
       method: "POST",
       path: "/habits",
       body: input,
-      valid: isCircleRef,
+      valid: isHabitDto,
     })) as HabitDto;
   }
 
@@ -119,7 +135,7 @@ export class HttpPactJoyApi implements PactJoyApi {
       method: "PATCH",
       path: `/habits/${encodeURIComponent(id)}`,
       body: patch,
-      valid: isCircleRef,
+      valid: isHabitDto,
     })) as HabitDto;
   }
 
@@ -128,7 +144,7 @@ export class HttpPactJoyApi implements PactJoyApi {
       method: "POST",
       path: `${circlePath(circleId)}/seasons`,
       body: input,
-      valid: isCircleRef,
+      valid: isSeasonDto,
     })) as SeasonDto;
   }
 
@@ -137,7 +153,7 @@ export class HttpPactJoyApi implements PactJoyApi {
       method: "PATCH",
       path: seasonPath(seasonId),
       body: input,
-      valid: isCircleRef,
+      valid: isSeasonDto,
     })) as SeasonDto;
   }
 
@@ -146,7 +162,7 @@ export class HttpPactJoyApi implements PactJoyApi {
       method: "GET",
       path: seasonPath(seasonId),
       signal,
-      valid: isCircleRef,
+      valid: isSeasonDto,
     })) as SeasonDto;
   }
 
@@ -155,7 +171,7 @@ export class HttpPactJoyApi implements PactJoyApi {
       method: "POST",
       path: `${seasonPath(seasonId)}/commitments`,
       body: input,
-      valid: isCircleRef,
+      valid: isSeasonDto,
     })) as SeasonDto;
   }
 
@@ -168,7 +184,7 @@ export class HttpPactJoyApi implements PactJoyApi {
       method: "PUT",
       path: commitmentPath(seasonId, commitmentId),
       body: input,
-      valid: isCircleRef,
+      valid: isSeasonDto,
     })) as SeasonDto;
   }
 
@@ -176,7 +192,7 @@ export class HttpPactJoyApi implements PactJoyApi {
     return (await this.#request({
       method: "DELETE",
       path: commitmentPath(seasonId, commitmentId),
-      valid: isCircleRef,
+      valid: isSeasonDto,
     })) as SeasonDto;
   }
 
@@ -185,7 +201,7 @@ export class HttpPactJoyApi implements PactJoyApi {
       method: "PUT",
       path: `${seasonPath(seasonId)}/approval`,
       body: { expectedPactRevision },
-      valid: isCircleRef,
+      valid: isSeasonDto,
     })) as SeasonDto;
   }
 
@@ -193,7 +209,7 @@ export class HttpPactJoyApi implements PactJoyApi {
     return (await this.#request({
       method: "DELETE",
       path: `${seasonPath(seasonId)}/approval`,
-      valid: isCircleRef,
+      valid: isSeasonDto,
     })) as SeasonDto;
   }
 
