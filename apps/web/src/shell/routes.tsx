@@ -20,7 +20,7 @@ import {
   NotificationStep,
   WelcomeCarousel,
 } from "../features/onboarding/index.ts";
-import { CreateSeasonScreen } from "../features/pact/index.ts";
+import { ChooseHabitsScreen, CreateSeasonScreen } from "../features/pact/index.ts";
 import { ProfileScreen, SettingsScreen } from "../features/profile/index.ts";
 import { TodayScreen } from "../features/today/index.ts";
 import { AppShell } from "./AppShell.tsx";
@@ -63,7 +63,13 @@ export function AppRoutes() {
           <Route path="circle/join" element={<JoinCircleScreen />} />
           <Route path="circle/invite" element={<InviteScreen />} />
           <Route path="season/new" element={<CreateSeasonScreen />} />
-          <Route path="season/:seasonId/habits" element={<StubScreen title="Hábitos" />} />
+          <Route path="season/:seasonId/habits" element={<ChooseHabitsScreen />} />
+          <Route
+            path="season/:seasonId/weights"
+            element={<StubScreen title="Distribuir pesos" />}
+          />
+          <Route path="season/:seasonId/habits/new" element={<StubScreen title="Nuevo hábito" />} />
+          <Route path="season/:seasonId/pact" element={<StubScreen title="Revisión del pacto" />} />
           <Route path="profile/settings" element={<SettingsScreen />} />
           <Route element={<AppShell />}>
             <Route index element={<TodayScreen />} />

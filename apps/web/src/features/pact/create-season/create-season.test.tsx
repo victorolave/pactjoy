@@ -118,24 +118,23 @@ describe("create season (design 8)", () => {
   it("creates season with chosen parameters and navigates to habits screen", async () => {
     const { deps, location } = renderCreateSeason();
     deps.api.setPactResponse("createSeason", seasonFixture("s-new"));
+    deps.api.setPactResponse("getSeason", seasonFixture("s-new"));
 
     await screen.findByRole("heading", { level: 1, name: "Nueva temporada" });
     await userEvent.click(screen.getByRole("button", { name: "Continuar" }));
 
     await waitFor(() => expect(location()).toBe("/season/s-new/habits"));
-    expect(deps.api.pactCommands).toEqual([
-      {
-        method: "createSeason",
-        args: [
-          "circle-1",
-          expect.objectContaining({
-            lengthWeeks: 8,
-            startDate: "2026-10-07",
-            reviewCadenceWeeks: 2,
-          }),
-        ],
-      },
-    ]);
+    expect(deps.api.pactCommands.find((c) => c.method === "createSeason")).toEqual({
+      method: "createSeason",
+      args: [
+        "circle-1",
+        expect.objectContaining({
+          lengthWeeks: 8,
+          startDate: "2026-10-07",
+          reviewCadenceWeeks: 2,
+        }),
+      ],
+    });
   });
 
   it("navigates directly to the pact/habits screen if circle already has a season (WF-R1)", async () => {
@@ -147,12 +146,13 @@ describe("create season (design 8)", () => {
       approvalCount: 1,
     });
     const { deps, location } = renderCreateSeason(existingCircle);
+    deps.api.setPactResponse("getSeason", seasonFixture("s-existing"));
 
     await screen.findByRole("heading", { level: 1, name: "Nueva temporada" });
     await userEvent.click(screen.getByRole("button", { name: "Continuar" }));
 
     await waitFor(() => expect(location()).toBe("/season/s-existing/habits"));
-    expect(deps.api.pactCommands).toEqual([]);
+    expect(deps.api.pactCommands.filter((c) => c.method === "createSeason")).toEqual([]);
   });
 
   it("supports roving tabindex and arrow key navigation across duration options (S1)", async () => {
