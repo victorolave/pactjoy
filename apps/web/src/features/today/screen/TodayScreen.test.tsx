@@ -75,7 +75,49 @@ describe("Today without a season (TO-R1)", () => {
     expect(
       screen.getByText(/Los registros se abren el lunes 28 de septiembre/),
     ).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Tu primera semana" })).not.toBeInTheDocument();
   });
+
+  it.each([1, 2])(
+    "WF-R9: pre-season Today renders %i owned commitments with their server points",
+    async (count) => {
+      const base = pactOpenTodayFixture();
+      const commitments: typeof base.myCommitments = [
+        {
+          id: dayRowFixture().commitmentId,
+          habitName: "Leer",
+          icon: "book",
+          weightPercent: 35,
+          maxPoints: 350,
+        },
+        {
+          id: weekRowFixture().commitmentId,
+          habitName: "Meditar",
+          icon: "brain",
+          weightPercent: 65,
+          maxPoints: 650,
+        },
+      ].slice(0, count);
+      renderToday({
+        ...base,
+        state: "notStarted",
+        season: { ...base.season, actualStart: "2026-10-03" as typeof base.today },
+        myCommitments: commitments,
+      });
+
+      expect(await screen.findByRole("heading", { name: "Tu primera semana" })).toBeInTheDocument();
+      expect(screen.getByText("Empieza mañana")).toBeInTheDocument();
+      expect(screen.getAllByText(/^(350|650) pts$/)).toHaveLength(count);
+      for (const commitment of commitments) {
+        const row = screen.getByText(commitment.habitName).parentElement;
+        if (!row) throw new Error("commitment row missing");
+        expect(within(row).getByText(`${commitment.maxPoints} pts`)).toBeInTheDocument();
+      }
+      if (count === 1) expect(screen.queryByText("Meditar")).not.toBeInTheDocument();
+      expect(screen.queryByRole("heading", { name: "Para hoy" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /Registrar/ })).not.toBeInTheDocument();
+    },
+  );
 
   it("notStarted displays 'Empieza mañana' when season starts tomorrow and 'La temporada empieza en N días' when further ahead", async () => {
     const pactOpen = pactOpenTodayFixture();

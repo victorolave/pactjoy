@@ -144,12 +144,13 @@ describe("PactScreen: Screen 12a (Review and Approve)", () => {
   });
 
   it("submits approval sending expectedPactRevision", async () => {
-    const { deps } = renderPact();
+    const season = { ...pairSeasonFixture(), pactRevision: 7 };
+    const { deps } = renderPact({ season });
     const approveBtn = await screen.findByRole("button", { name: "Aprobar el pacto" });
 
     // Mock approval response where viewer is now approved
     const approvedSeason: SeasonDto = {
-      ...pairSeasonFixture(),
+      ...season,
       approvals: [{ memberId: "member-victor", approvedAt: "2026-10-06T12:00:00Z" }],
     };
     deps.api.setPactResponse("approvePact", approvedSeason);
@@ -158,17 +159,46 @@ describe("PactScreen: Screen 12a (Review and Approve)", () => {
 
     // Transitions to 12b waiting
     expect(await screen.findByRole("heading", { name: "Esperando a Andrea" })).toBeInTheDocument();
+    expect(deps.api.pactCommands.filter((command) => command.method === "approvePact")).toEqual([
+      { method: "approvePact", args: ["s-1", 7] },
+    ]);
   });
 
   it("handles StaleSeason error by showing inline error and refetching", async () => {
-    const { deps } = renderPact();
+    const season = { ...pairSeasonFixture(), pactRevision: 7 };
+    const { deps } = renderPact({ season });
     const approveBtn = await screen.findByRole("button", { name: "Aprobar el pacto" });
 
+    const refreshed: SeasonDto = {
+      ...season,
+      pactRevision: 8,
+      commitments: season.commitments.map((commitment) =>
+        commitment.id === "c-1" && commitment.kind === "detail"
+          ? { ...commitment, habit: { name: "Lectura actualizada", icon: "book" } }
+          : commitment,
+      ),
+    };
+    const readsBefore = deps.api.calls.getSeason;
+    deps.api.setPactResponse("getSeason", refreshed);
     deps.api.failNext("approvePact", new ApiError("StaleSeason", 409, null));
 
     await userEvent.click(approveBtn);
 
     expect(await screen.findByText("El pacto cambió. Revísalo de nuevo.")).toBeInTheDocument();
+    expect(await screen.findByText("Lectura actualizada")).toBeInTheDocument();
+    expect(screen.queryByText("Leer")).not.toBeInTheDocument();
+    expect(deps.api.calls.getSeason).toBeGreaterThan(readsBefore);
+
+    deps.api.setPactResponse("approvePact", {
+      ...refreshed,
+      approvals: [{ memberId: "member-victor", approvedAt: "2026-10-06T12:00:00Z" }],
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Aprobar el pacto" }));
+    expect(await screen.findByRole("heading", { name: "Esperando a Andrea" })).toBeInTheDocument();
+    expect(deps.api.pactCommands.filter((command) => command.method === "approvePact")).toEqual([
+      { method: "approvePact", args: ["s-1", 7] },
+      { method: "approvePact", args: ["s-1", 8] },
+    ]);
   });
 
   it("handles CommitmentWeightsNotFull error by showing inline error and navigating to weights", async () => {

@@ -239,18 +239,21 @@ describe("create season (design 8)", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
-  it("maps API 422 StartDateInPast / StartDateTooFarAhead to inline error message (W2)", async () => {
-    const { deps, location } = renderCreateSeason();
-    deps.api.failNext("createSeason", new ApiError("StartDateInPast", 422, null));
+  it.each(["StartDateInPast", "StartDateTooFarAhead", "InvalidStartDate"])(
+    "maps API 422 %s to the approved date error copy (W2)",
+    async (code) => {
+      const { deps, location } = renderCreateSeason();
+      deps.api.failNext("createSeason", new ApiError(code, 422, null));
 
-    await screen.findByRole("heading", { level: 1, name: "Nueva temporada" });
-    await userEvent.click(screen.getByRole("button", { name: "Continuar" }));
+      await screen.findByRole("heading", { level: 1, name: "Nueva temporada" });
+      await userEvent.click(screen.getByRole("button", { name: "Continuar" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Elige una fecha entre hoy y el 5 de noviembre.",
-    );
-    expect(location()).toBe("/season/new");
-  });
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Elige una fecha entre hoy y el 5 de noviembre.",
+      );
+      expect(location()).toBe("/season/new");
+    },
+  );
 
   it("disables Continue button until circle is loaded (W3)", async () => {
     renderCreateSeason({ circle: null, season: null });
