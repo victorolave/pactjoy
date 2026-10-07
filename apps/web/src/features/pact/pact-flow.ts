@@ -3,6 +3,10 @@ import type { SeasonDto } from "../../ports/wire.ts";
 
 export type PactScreen = "review" | "waiting" | "closed" | "today";
 
+export function commitmentCount(count: number): string {
+  return `${count} ${count === 1 ? "compromiso" : "compromisos"}`;
+}
+
 /**
  * Approvals are keyed by circle member id, never by the auth user id. The season read carries no
  * viewer field, so the member id comes from the viewer's own circle row (`isYou`).
