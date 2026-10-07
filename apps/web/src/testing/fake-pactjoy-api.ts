@@ -204,10 +204,14 @@ export class FakePactJoyApi implements PactJoyApi {
     return this.#pactCall("removeCommitment", [seasonId, commitmentId]);
   }
   async approvePact(seasonId: string, expectedPactRevision: number) {
-    return this.#pactCall("approvePact", [seasonId, expectedPactRevision]);
+    const res = await this.#pactCall("approvePact", [seasonId, expectedPactRevision]);
+    this.#pactResults.set("getSeason", res);
+    return res;
   }
   async withdrawApproval(seasonId: string) {
-    return this.#pactCall("withdrawApproval", [seasonId]);
+    const res = await this.#pactCall("withdrawApproval", [seasonId]);
+    this.#pactResults.set("getSeason", res);
+    return res;
   }
   async previewScoring(input: PreviewScoringCommand, _signal?: AbortSignal) {
     return this.#pactCall("previewScoring", [input]);

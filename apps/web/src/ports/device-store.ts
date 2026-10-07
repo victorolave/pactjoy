@@ -4,7 +4,12 @@
  * Device-scoped, they survive sign out: `welcomeSeen`, `installStep`, `notificationStep`.
  * Session-scoped, personal, cleared when the session ends: `nameDraft`.
  */
-export type DeviceKey = "welcomeSeen" | "installStep" | "notificationStep" | "nameDraft";
+export type DeviceKey =
+  | "welcomeSeen"
+  | "installStep"
+  | "notificationStep"
+  | "nameDraft"
+  | `pact-closed-seen:${string}`;
 
 /** Small flags and drafts kept on this device only. Storage failures never throw. */
 export interface DeviceStore {
