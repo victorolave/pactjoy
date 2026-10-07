@@ -4,7 +4,7 @@
 
 **PactJoy**: a social habits app. Personal (hobby) project; if it works it could become a product, but that decision is not being made yet.
 
-Status (2026-10-04): MVP specification and design are complete; stack chosen (2026-09-24). Phase 1 done: `packages/engine` implements the full scoring engine and passes all 96 worked-example rows. Phase 2 (backend) done in code: `packages/app` use cases (`app-foundation`), Postgres adapter (ADR-0010) and the API (`packages/api` + the `api` Edge Function, ADR-0011), plus follow-ups (pact integrity, per-circle display names, viewer read models). Phase 3 in progress: `apps/web` PWA with Today and Entry (design batches 0–1, change `pwa-today-entry`, ADR-0012) and onboarding, circle and profile (design batch 5, change `pwa-onboarding-circle-profile`: welcome carousel, install and notification-permission steps, name step, create/join a circle with an invite preview, Circle tab, profile and settings; `GET /me/circle` and `POST /circles/join/preview`, ADR-0011 Q16–Q17, ADR-0012 addendum). Runs against local Supabase; hosted setup is pending (see Next steps). Tests: engine 401, app 906, api 538, db 330 (real Postgres), web 1313.
+Status (2026-10-07): MVP specification and design are complete; stack chosen (2026-09-24). Phase 1 done: `packages/engine` implements the full scoring engine and passes all 96 worked-example rows. Phase 2 (backend) done in code: `packages/app` use cases (`app-foundation`), Postgres adapter (ADR-0010) and the API (`packages/api` + the `api` Edge Function, ADR-0011), plus follow-ups (pact integrity, per-circle display names, viewer read models). Phase 3 in progress: `apps/web` PWA with Today and Entry (design batches 0–1, change `pwa-today-entry`, ADR-0012), onboarding, circle and profile (design batch 5, change `pwa-onboarding-circle-profile`), and season, habits and pact (design batch 3, change `pwa-season-habits-pact`). Runs against local Supabase; hosted setup is pending (see Next steps).
 
 The author works in Spanish: reply in Spanish. Code, commits and repository docs are in English.
 
@@ -131,7 +131,7 @@ Full detail in the Mechanics page in Notion.
 4. ~~C: the API~~: done (change `api-edge-function-auth`, PRs #76–#108; ADR-0011 records decisions Q1–Q15), plus merged follow-ups: pact integrity, unique active circle, circle display names (`PATCH /circles/:circleId/members/me`) and viewer read models (`GET /me/today`, viewer-aware `GET /seasons/:seasonId` with `pactRevision`).
 5. ~~PWA, Today and Entry (design batches 0–1)~~: done (change `pwa-today-entry`, PRs #141–#200; ADR-0012).
    - ~~Onboarding, circle and profile (design batch 5)~~: done (change `pwa-onboarding-circle-profile`, PRs #237–#257). Pending: real-device checks on iOS and Android (install step, notification permission, single login in the installed app) and rate limiting on `POST /circles/join/preview` before real users (ADR-0011 Q17 checklist).
-   - Next: design batch 3 (season, habits, pact; includes per-habit icons), then batches 2 and 4.
+   - Season, habits and pact (design batch 3): in progress (change `pwa-season-habits-pact`, PRs #259–#264 merged; habit wizard, pact review and pre-season Today in progress). Next: batches 2 and 4.
 6. Later, in order:
    - A2: pause workflow; it must wire `pauseGraceExtensionDays`, currently hard-coded to 0 in the entry use cases. D: scheduled jobs (they trigger use cases).
    - A3: social.
