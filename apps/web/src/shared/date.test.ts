@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDays } from "./date.ts";
+import { addDays, daysBetween } from "./date.ts";
 
 describe("addDays", () => {
   it("moves a calendar date forward and back", () => {
@@ -28,5 +28,18 @@ describe("addDays", () => {
 
   it("returns the input when it is not a date", () => {
     expect(addDays("ayer", 1)).toBe("ayer");
+  });
+});
+
+describe("daysBetween", () => {
+  it("computes whole calendar days between two dates", () => {
+    expect(daysBetween("2026-08-23", "2026-08-25")).toBe(2);
+    expect(daysBetween("2026-08-25", "2026-08-25")).toBe(0);
+    expect(daysBetween("2026-08-26", "2026-08-25")).toBe(-1);
+    expect(daysBetween("2026-08-31", "2026-09-01")).toBe(1);
+  });
+
+  it("returns 0 for malformed input", () => {
+    expect(daysBetween("invalid", "2026-08-25")).toBe(0);
   });
 });

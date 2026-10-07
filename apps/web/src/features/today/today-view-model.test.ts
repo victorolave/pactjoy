@@ -11,7 +11,23 @@ import {
   pactOpenTodayFixture,
   weekRowFixture,
 } from "../../testing/fixtures/today.ts";
-import { toTodayModel } from "./today-view-model.ts";
+import { formatCountdown, toTodayModel } from "./today-view-model.ts";
+
+describe("formatCountdown", () => {
+  it("formats countdown for starts today, tomorrow and multiple days (full mode)", () => {
+    expect(formatCountdown(0)).toBe("La temporada empieza hoy");
+    expect(formatCountdown(-1)).toBe("La temporada empieza hoy");
+    expect(formatCountdown(1)).toBe("Empieza mañana");
+    expect(formatCountdown(2)).toBe("La temporada empieza en 2 días");
+    expect(formatCountdown(5)).toBe("La temporada empieza en 5 días");
+  });
+
+  it("formats countdown in short mode matching 'Empieza hoy' when replaced from 'Empieza mañana'", () => {
+    expect(formatCountdown(0, "short")).toBe("Empieza hoy");
+    expect(formatCountdown(1, "short")).toBe("Empieza mañana");
+    expect(formatCountdown(3, "short")).toBe("Empieza en 3 días");
+  });
+});
 
 describe("toTodayModel: states without a season", () => {
   it("noCircle carries nothing", () => {
@@ -27,9 +43,10 @@ describe("toTodayModel: states without a season", () => {
 });
 
 describe("toTodayModel: pact open and not started", () => {
-  it("pactOpen shows the circle, the season length and the nominal start", () => {
+  it("pactOpen shows the circle, the season length, id and the nominal start", () => {
     expect(toTodayModel(pactOpenTodayFixture())).toEqual({
       kind: "pactOpen",
+      seasonId: "season-1",
       circleName: "Los de siempre",
       lengthWeeks: 4,
       startDate: "2026-09-28",
@@ -48,7 +65,13 @@ describe("toTodayModel: pact open and not started", () => {
 
   it("notStarted falls back to the nominal start when the actual start is not set", () => {
     const view = { ...pactOpenTodayFixture(), state: "notStarted" } as TodayView;
-    expect(toTodayModel(view)).toMatchObject({ kind: "notStarted", startDate: "2026-09-28" });
+    expect(toTodayModel(view)).toMatchObject({
+      kind: "notStarted",
+      seasonId: "season-1",
+      startDate: "2026-09-28",
+      daysUntilStart: 0,
+      myCommitments: [],
+    });
   });
 });
 

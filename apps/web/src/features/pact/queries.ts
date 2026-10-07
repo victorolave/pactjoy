@@ -110,3 +110,47 @@ export function useEditCommitment() {
     },
   });
 }
+
+/** Approves the pact with the expected revision. Sets query data on success and invalidates on settle. */
+export function useApprovePact() {
+  const api = usePactJoyApi();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      seasonId,
+      expectedPactRevision,
+    }: {
+      readonly seasonId: string;
+      readonly expectedPactRevision: number;
+    }) => api.approvePact(seasonId, expectedPactRevision),
+    onSuccess: (data, { seasonId }) => {
+      client.setQueryData(seasonKey(seasonId), data);
+    },
+    onSettled: async (_data, _err, { seasonId }) => {
+      await Promise.all([
+        client.invalidateQueries({ queryKey: seasonKey(seasonId) }),
+        client.invalidateQueries({ queryKey: todayKey }),
+        client.invalidateQueries({ queryKey: myCircleKey }),
+      ]);
+    },
+  });
+}
+
+/** Withdraws the viewer's approval on the pact. Sets query data on success and invalidates on settle. */
+export function useWithdrawApproval() {
+  const api = usePactJoyApi();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ seasonId }: { readonly seasonId: string }) => api.withdrawApproval(seasonId),
+    onSuccess: (data, { seasonId }) => {
+      client.setQueryData(seasonKey(seasonId), data);
+    },
+    onSettled: async (_data, _err, { seasonId }) => {
+      await Promise.all([
+        client.invalidateQueries({ queryKey: seasonKey(seasonId) }),
+        client.invalidateQueries({ queryKey: todayKey }),
+        client.invalidateQueries({ queryKey: myCircleKey }),
+      ]);
+    },
+  });
+}
