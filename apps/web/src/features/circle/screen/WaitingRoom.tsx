@@ -42,8 +42,18 @@ function ComingSoon({
  * The viewer alone in the circle (design 7). It does not promise a notification: the tab looks for
  * a second member by itself (WC-R8). A solo circle is valid, so nothing here says it is incomplete.
  */
-export function WaitingRoom({ circle }: { readonly circle: Circle }) {
+export function WaitingRoom({
+  circle,
+  season,
+}: {
+  readonly circle: Circle;
+  readonly season: MyCircle["season"];
+}) {
   const navigate = useNavigate();
+  const canPrepare = season === null || season.phase === "pactOpen";
+  // The pact route applies pactFlow, including the onward redirect to Today.
+  const destination =
+    season === null ? "/season/new" : `/season/${season.id}/${canPrepare ? "habits" : "pact"}`;
   const me = circle.members[0]?.displayName ?? "";
   return (
     <>
@@ -66,8 +76,8 @@ export function WaitingRoom({ circle }: { readonly circle: Circle }) {
         </p>
       </div>
       <InviteStrip circleId={circle.id} invite={circle.invite} />
-      <Button block onClick={() => navigate("/season/new")}>
-        Preparar la temporada
+      <Button block onClick={() => navigate(destination)}>
+        {canPrepare ? "Preparar la temporada" : "Ver el pacto"}
       </Button>
       <ComingSoon variant="ghost">Solo crear mis hábitos</ComingSoon>
     </>

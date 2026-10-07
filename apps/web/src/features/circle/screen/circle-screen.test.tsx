@@ -2,7 +2,12 @@ import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "../../../ports/api-error.ts";
-import { NO_CIRCLE, pairCircleFixture } from "../../../testing/fixtures/circle.ts";
+import type { SeasonDto } from "../../../ports/wire.ts";
+import {
+  NO_CIRCLE,
+  pairCircleFixture,
+  soloCircleFixture,
+} from "../../../testing/fixtures/circle.ts";
 import { renderApp } from "../../../testing/render.tsx";
 
 const ACTIVE = {
@@ -12,6 +17,23 @@ const ACTIVE = {
   week: 5,
   approvalCount: 2,
 } as const;
+
+const SEASON: SeasonDto = {
+  id: ACTIVE.id,
+  circleId: "circle-1",
+  timeZone: "UTC",
+  nominalStart: "2026-10-04",
+  actualStart: null,
+  lengthWeeks: 8,
+  reviewCadenceWeeks: 2,
+  status: "pactOpen",
+  approvals: [],
+  commitments: [],
+  pactClosedAt: null,
+  createdAt: "2026-10-01T00:00:00.000Z",
+  version: 1,
+  pactRevision: 1,
+};
 
 afterEach(() => vi.useRealTimers());
 
@@ -33,6 +55,37 @@ describe("Circle tab, no circle (31b)", () => {
 });
 
 describe("Circle tab, alone in the circle: the waiting room (7)", () => {
+  it("resumes habit selection directly while the pact is open", async () => {
+    const { location, deps } = renderApp({
+      path: "/circle",
+      myCircle: { ...soloCircleFixture(), season: { ...ACTIVE, phase: "pactOpen" } },
+    });
+    deps.api.setPactResponse("getSeason", SEASON);
+    deps.api.setPactResponse("listHabits", []);
+    await userEvent.click(await screen.findByRole("button", { name: "Preparar la temporada" }));
+    expect(
+      await screen.findByRole("heading", { name: "¿Qué vas a trabajar esta temporada?" }),
+    ).toBeVisible();
+    expect(location()).toBe(`/season/${ACTIVE.id}/habits`);
+  });
+
+  it.each(["notStarted", "active"] as const)(
+    "opens the closed pact instead of preparation in phase %s",
+    async (phase) => {
+      const { location, deps } = renderApp({
+        path: "/circle",
+        myCircle: { ...soloCircleFixture(), season: { ...ACTIVE, phase } },
+      });
+      deps.api.setPactResponse("getSeason", { ...SEASON, status: "active" });
+      await userEvent.click(await screen.findByRole("button", { name: "Ver el pacto" }));
+      expect(await screen.findByRole("heading", { name: "Pacto cerrado" })).toBeVisible();
+      expect(location()).toBe(`/season/${ACTIVE.id}/pact`);
+      expect(
+        screen.queryByRole("button", { name: "Preparar la temporada" }),
+      ).not.toBeInTheDocument();
+    },
+  );
+
   it("shows the code and lets the viewer copy it (WC-S8)", async () => {
     const { deps } = renderApp({ path: "/circle" });
     expect(
