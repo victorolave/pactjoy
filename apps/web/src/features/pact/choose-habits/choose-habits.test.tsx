@@ -318,6 +318,57 @@ describe("choose habits screen (design 10)", () => {
     expect(screen.getByRole("button", { name: "Repartir pesos" })).toBeDisabled();
   });
 
+  it.each([5, 6])("WF-R4: %i selected habits do not impose a hard limit", async (count) => {
+    const season = seasonFixture();
+    const template = season.commitments.find((commitment) => commitment.kind === "detail");
+    if (!template) throw new Error("fixture commitment missing");
+    const habits = ["Leer", "Meditar", "Caminar", "Dibujar", "Estudiar", "Dormir"].map(
+      (name, index): HabitDto => ({
+        id: `habit-${index}`,
+        name,
+        why: null,
+        category: null,
+        icon: "book",
+        createdAt: "2026-10-01T12:00:00.000Z",
+        version: 0,
+      }),
+    );
+    const { location } = renderChooseHabits({
+      habits,
+      season: {
+        ...season,
+        commitments: habits.slice(0, count).map((habit, index) => ({
+          ...template,
+          id: `commitment-${index}`,
+          habitId: habit.id,
+          habit: { name: habit.name, icon: habit.icon },
+          weightPercent: index < 2 ? 20 : 15,
+        })),
+      },
+    });
+
+    expect(
+      await screen.findByText(`${count} compromisos elegidos. Sugerimos entre 2 y 5.`),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole("checkbox")).toHaveLength(6);
+    expect(screen.getAllByRole("checkbox", { checked: true })).toHaveLength(count);
+    for (const habit of habits.slice(0, count)) {
+      expect(screen.getByRole("checkbox", { name: habit.name })).toBeChecked();
+    }
+    if (count === 5) {
+      const sixth = screen.getByRole("checkbox", { name: "Dormir" });
+      expect(sixth).not.toBeChecked();
+      expect(sixth).toBeEnabled();
+      await userEvent.click(sixth);
+      expect(location()).toBe("/season/s-1/habits/new?habitId=habit-5");
+      return;
+    }
+    const continueButton = screen.getByRole("button", { name: "Repartir pesos" });
+    expect(continueButton).toBeEnabled();
+    await userEvent.click(continueButton);
+    expect(location()).toBe("/season/s-1/weights");
+  });
+
   it("shows an error message when removing a commitment fails", async () => {
     const { deps } = renderChooseHabits();
     deps.api.failNext("removeCommitment", new ApiError("InternalError", 500, null));

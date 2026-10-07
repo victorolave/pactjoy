@@ -1,6 +1,7 @@
-import { instant } from "@pactjoy/app";
+import { instant, seasonId } from "@pactjoy/app";
 import { describe, expect, it } from "vitest";
 import { ANDREA, setup } from "./harness.ts";
+import { givenSeason } from "./season-fixture.ts";
 
 describe("POST /habits (UE-C-S9)", () => {
   it("S9: 201 with the habit owned by the caller (owner never echoed)", async () => {
@@ -26,6 +27,14 @@ describe("POST /habits (UE-C-S9)", () => {
       category: null,
     });
     expect(nulls.status).toBe(201);
+  });
+
+  it("HB-R1: POST icon:null is returned and stored as null", async () => {
+    const { call } = setup();
+    const created = await call("POST", "/habits", "andrea", { name: "Read", icon: null });
+    expect(created.status).toBe(201);
+    expect(created.json.data).toMatchObject({ name: "Read", icon: null });
+    expect((await call("GET", "/habits", "andrea")).json.data.habits).toEqual([created.json.data]);
   });
 
   it("RV-S22: the app owns content rules (NUL in name is InvalidName 422 from the app)", async () => {
@@ -159,4 +168,44 @@ describe("GET /habits and PATCH /habits/:habitId (HB-R1..R3)", () => {
     expect(transaction).not.toHaveBeenCalled();
     expect(read).not.toHaveBeenCalled();
   });
+});
+
+describe("HB-R4: habit metadata is independent of the pact", () => {
+  it.each(["private", "visible"] as const)(
+    "PATCH a %s habit preserves commitments, approvals and pactRevision",
+    async (privacy) => {
+      const { app, call, path, secretHabit, openHabit } = await givenSeason();
+      const view = await call("GET", path, "andrea");
+      expect(view.status).toBe(200);
+      const approved = await call("PUT", `${path}/approval`, "andrea", {
+        expectedPactRevision: view.json.data.pactRevision,
+      });
+      expect(approved.status).toBe(200);
+      const id = seasonId(view.json.data.id);
+      const before = await app.seasons.get(id);
+      if (!before) throw new Error("fixture season missing");
+      expect(before.status).toBe("pactOpen");
+      expect(before.commitments).toHaveLength(2);
+      expect(before.approvals).toHaveLength(1);
+      expect(before.pactRevision).toBeGreaterThan(0);
+
+      const habit = privacy === "private" ? secretHabit : openHabit;
+      const metadata = { name: "Reading", why: "Calm", category: "Mind", icon: "book" };
+      const edited = await call("PATCH", `/habits/${habit}`, "andrea", {
+        expectedVersion: 0,
+        ...metadata,
+      });
+      expect(edited.status).toBe(200);
+      expect(edited.json.data).toMatchObject({ ...metadata, version: 1 });
+      expect((await call("GET", "/habits", "andrea")).json.data.habits).toContainEqual(
+        edited.json.data,
+      );
+
+      const after = await app.seasons.get(id);
+      expect(after?.commitments).toEqual(before.commitments);
+      expect(after?.approvals).toEqual(before.approvals);
+      expect(after?.pactRevision).toBe(before.pactRevision);
+      expect(after).toEqual(before);
+    },
+  );
 });

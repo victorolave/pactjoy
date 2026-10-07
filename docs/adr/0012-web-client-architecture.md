@@ -111,6 +111,10 @@ New browser capabilities follow the same rule as the first ports: a port in `src
 
 **`myCircle` is not persisted offline.** Only `["today"]` is persisted. A saved `myCircle` would restore a stale `noCircle` or circle after a leave or join. `CACHE_VERSION` changes only when a persisted query changes shape or a new key becomes persisted.
 
+## Addendum: season timezone (change `pwa-season-habits-pact`, D7)
+
+**Owner decision, 2026-10-07.** Circles have no timezone. At season creation the client captures the creator's device IANA timezone and sends it with the start date. That timezone is stored on the season and stays fixed for its calendar; a subsequent device timezone change does not change it. The default start is tomorrow in this season timezone, with the editable date window resolved in the same zone. This corrects D7's earlier wording, "circle timezone", without changing the existing implementation.
+
 ## References
 
 - ADR-0003 (Biome), ADR-0008 (ports), ADR-0011 (API layer)
