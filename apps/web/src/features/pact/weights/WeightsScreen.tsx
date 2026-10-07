@@ -40,6 +40,10 @@ export function WeightsScreen() {
   const myMemberId = viewerMemberId(circleQuery.data ?? { circle: null });
   const season = seasonQuery.data;
 
+  if (!isLoadError && season && season.status !== "pactOpen") {
+    return <Navigate to={`/season/${season.id}/pact`} replace />;
+  }
+
   const myCommitments =
     season?.commitments.filter(
       (c): c is Extract<CommitmentDto, { kind: "detail" }> =>
@@ -220,7 +224,7 @@ export function WeightsScreen() {
               </div>
             </div>
 
-            <div>
+            <div className={styles.equalize}>
               <Button
                 variant="ghost"
                 size="sm"

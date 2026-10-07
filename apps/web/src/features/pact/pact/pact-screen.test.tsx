@@ -362,6 +362,7 @@ describe("PactScreen: Solo Circle Rule", () => {
     // Directly transitions to 14a celebration
     expect(await screen.findByRole("heading", { name: "Pacto cerrado" })).toBeInTheDocument();
     expect(screen.getByText("🤝")).toBeInTheDocument();
+    expect(screen.getByText("1 compromiso · 8 semanas")).toBeVisible();
   });
 });
 

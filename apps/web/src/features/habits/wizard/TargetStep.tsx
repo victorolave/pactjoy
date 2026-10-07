@@ -29,8 +29,8 @@ function Threshold({
 }) {
   const scaled = toScaled(value) ?? 0n;
   return (
-    <div className={styles.field}>
-      <span>{label}</span>
+    <fieldset className={styles.field} aria-label={label}>
+      <span className={styles.hint}>{label}</span>
       <div className={styles.row}>
         <IconButton
           icon="minus"
@@ -51,7 +51,7 @@ function Threshold({
         />
       </div>
       <span className={styles.hint}>{hint}</span>
-    </div>
+    </fieldset>
   );
 }
 

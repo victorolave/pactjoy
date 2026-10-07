@@ -1,5 +1,5 @@
 import { useEffect, useReducer, useRef, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router";
+import { Navigate, useNavigate, useParams, useSearchParams } from "react-router";
 import type { CommitmentDto, HabitDto } from "../../../ports/wire.ts";
 import { Button } from "../../../ui/Button.tsx";
 import { FlowScreen } from "../../../ui/FlowScreen.tsx";
@@ -9,7 +9,7 @@ import { Skeleton } from "../../../ui/Skeleton.tsx";
 import { useSaveWizard, useWizardData } from "../queries.ts";
 import { IdentityStep } from "./IdentityStep.tsx";
 import { MeasureStep } from "./MeasureStep.tsx";
-import { PrivacyStep, wizardSummary } from "./PrivacyStep.tsx";
+import { PrivacyStep, WizardSummary } from "./PrivacyStep.tsx";
 import { TargetStep } from "./TargetStep.tsx";
 import styles from "./Wizard.module.css";
 import { initialWizard, prefillWizard, wizardReducer } from "./wizard-model.ts";
@@ -36,16 +36,19 @@ export function HabitWizard() {
       item.id === commitmentId && item.kind === "detail" && item.memberId === memberId,
   );
   const habit = queries.habits.data?.find((item) => item.id === (commitment?.habitId ?? habitId));
+  if (!seasonId) return <Navigate to="/" replace />;
   const invalid =
-    !seasonId ||
-    (!isLoading &&
-      (!memberId ||
-        !season ||
-        season.circleId !== circle?.id ||
-        season.status !== "pactOpen" ||
-        (commitmentId !== undefined && !commitment) ||
-        ((habitId !== null || commitmentId !== undefined) && !habit)));
-  if (isError || isLoading || invalid) {
+    !isLoading &&
+    (!memberId ||
+      !season ||
+      season.circleId !== circle?.id ||
+      season.status !== "pactOpen" ||
+      (commitmentId !== undefined && !commitment) ||
+      ((habitId !== null || commitmentId !== undefined) && !habit));
+  if (!isError && invalid) {
+    return <Navigate to={`/season/${seasonId}/pact`} replace />;
+  }
+  if (isError || isLoading) {
     return (
       <FlowScreen
         title="¿Qué hábito quieres trabajar?"
@@ -54,7 +57,7 @@ export function HabitWizard() {
         onBack={() => (seasonId ? navigate(`/season/${seasonId}/habits`) : navigate(-1))}
       >
         <div aria-busy={isLoading}>
-          {isLoading && !invalid ? (
+          {isLoading ? (
             <Skeleton shape="card" lines={3} />
           ) : (
             <InlineMessage
@@ -114,7 +117,19 @@ function WizardForm({
   const heading = useRef<HTMLHeadingElement>(null);
   // biome-ignore lint/correctness/useExhaustiveDependencies: step transitions intentionally trigger heading focus, not edits within a step
   useEffect(() => {
-    heading.current?.focus();
+    const title = heading.current;
+    if (!title) return;
+    // A scripted focus can inherit :focus-visible from the previous field in Chromium.
+    title.dataset.stepFocus = "true";
+    title.focus();
+    const clear = () => title.removeAttribute("data-step-focus");
+    title.addEventListener("blur", clear, { once: true });
+    title.addEventListener("keydown", clear, { once: true });
+    return () => {
+      clear();
+      title.removeEventListener("blur", clear);
+      title.removeEventListener("keydown", clear);
+    };
   }, [draft.step]);
   const measure = draft.measure;
   const title =
@@ -209,11 +224,13 @@ function WizardForm({
         </div>
       }
     >
-      <div className={styles.bars} aria-hidden="true">
-        {[0, 1, 2, 3].map((step) => (
-          <span key={step} className={styles.bar} data-current={step <= draft.step} />
-        ))}
-      </div>
+      {draft.step < 4 && (
+        <div className={styles.bars} aria-hidden="true">
+          {[0, 1, 2, 3].map((step) => (
+            <span key={step} className={styles.bar} data-current={step <= draft.step} />
+          ))}
+        </div>
+      )}
       <fieldset className={styles.editor} disabled={save.isPending} aria-busy={save.isPending}>
         {draft.step === 0 && <IdentityStep draft={draft} dispatch={dispatch} />}
         {draft.step === 1 && <MeasureStep draft={draft} dispatch={dispatch} />}
@@ -222,9 +239,9 @@ function WizardForm({
         {draft.step === 4 && (
           <div className={styles.stack} role="status">
             <span className={styles.success}>
-              <Icon name="circle-check" size="lg" />
+              <Icon name="check" size="lg" />
             </span>
-            <p>{wizardSummary(draft)}</p>
+            <WizardSummary draft={draft} saved />
           </div>
         )}
       </fieldset>

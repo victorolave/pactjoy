@@ -45,6 +45,11 @@
   color: var(--text-secondary);
 }
 
+/* Heading focus announces the new step without a pointer-focus ring. Keyboard focus stays visible. */
+.content h1[data-step-focus="true"]:focus {
+  outline: none;
+}
+
 .footer {
   flex: none;
   padding: var(--space-3) var(--layout-margin-mobile) calc(var(--space-5) + var(--safe-bottom));

@@ -93,7 +93,7 @@ export function CircleScreen() {
             onInvite={solo ? undefined : () => navigate("/circle/invite")}
           />
           {solo ? (
-            <WaitingRoom circle={circle} />
+            <WaitingRoom circle={circle} season={data.season} />
           ) : (
             <MembersView circle={circle} season={data.season} />
           )}

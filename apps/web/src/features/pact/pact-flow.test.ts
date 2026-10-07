@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { pactFlow, viewerMemberId } from "./pact-flow.ts";
+import { commitmentCount, pactFlow, viewerMemberId } from "./pact-flow.ts";
 
 describe("pact flow (WF-R6–R8)", () => {
+  it.each([
+    [0, "0 compromisos"],
+    [1, "1 compromiso"],
+    [4, "4 compromisos"],
+  ])("pluralizes %i commitments as %s", (count, expected) => {
+    expect(commitmentCount(count)).toBe(expected);
+  });
   it("shows review until this viewer approves, then waiting", () => {
     const season = {
       status: "pactOpen" as const,

@@ -14,7 +14,7 @@ import { Card } from "../../../ui/Card.tsx";
 import { FlowScreen } from "../../../ui/FlowScreen.tsx";
 import { InlineMessage } from "../../../ui/InlineMessage.tsx";
 import { Skeleton } from "../../../ui/Skeleton.tsx";
-import { pactFlow, viewerMemberId } from "../pact-flow.ts";
+import { commitmentCount, pactFlow, viewerMemberId } from "../pact-flow.ts";
 import { useApprovePact, useCurrentCircle, useSeason, useWithdrawApproval } from "../queries.ts";
 import styles from "./PactScreen.module.css";
 
@@ -146,7 +146,7 @@ export function PactScreen() {
           <p className={styles.celebrationLead}>{celebrationLead}</p>
           <div className={styles.celebrationMeta}>
             <AvatarStack names={circle.members.map((m) => m.displayName)} size="sm" />
-            <span>{`${season.commitments.length} compromisos · ${season.lengthWeeks} semanas`}</span>
+            <span>{`${commitmentCount(season.commitments.length)} · ${season.lengthWeeks} semanas`}</span>
           </div>
         </div>
         <div className={styles.celebrationFooter}>

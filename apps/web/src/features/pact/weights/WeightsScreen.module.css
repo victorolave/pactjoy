@@ -130,3 +130,8 @@
   color: var(--text-secondary);
   text-wrap: pretty;
 }
+
+.equalize {
+  display: flex;
+  justify-content: center;
+}

@@ -1,4 +1,4 @@
-import { act, screen, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { ApiError } from "../../../ports/api-error.ts";
@@ -31,6 +31,44 @@ async function lastStep() {
 }
 
 describe("habit wizard routes (screens 9/9c)", () => {
+  it("groups the frequency stepper and target helpers into their cards", async () => {
+    setup();
+    await ready();
+    await next();
+    await next();
+    const frequency = within(screen.getByRole("group", { name: "Frecuencia" }));
+    expect(frequency.getByRole("status")).toHaveTextContent("5 veces por semana");
+    expect(frequency.getByRole("button", { name: "Sumar veces por semana" })).toBeVisible();
+    const minimum = within(screen.getByRole("group", { name: "Mínimo" }));
+    expect(minimum.getByRole("status")).toHaveTextContent("10 min");
+    expect(minimum.getByText("para un día difícil")).toBeVisible();
+    const ideal = within(screen.getByRole("group", { name: "Ideal" }));
+    expect(ideal.getByRole("status")).toHaveTextContent("30 min");
+    expect(ideal.getByText("da el 100 %")).toBeVisible();
+  });
+
+  it("renders a titled summary and reuses it with the chosen icon after saving", async () => {
+    setup();
+    await ready();
+    await userEvent.click(screen.getByRole("radio", { name: "Café" }));
+    await lastStep();
+    expect(screen.getByRole("main").querySelectorAll("[data-current]")).toHaveLength(4);
+    const summary = within(screen.getByRole("region", { name: "Resumen" }));
+    expect(summary.getByRole("heading", { level: 2, name: "Leer" })).toBeVisible();
+    const measure = "5 veces por semana · mín. 10, ideal 30 min · visible";
+    expect(summary.getByText(measure)).toBeVisible();
+    expect(summary.getByText("Los puntos se calculan cuando repartas los pesos.")).toBeVisible();
+    await userEvent.click(screen.getByRole("button", { name: "Guardar hábito" }));
+    expect(await screen.findByRole("heading", { name: "Hábito guardado" })).toHaveFocus();
+    expect(screen.getByRole("main").querySelectorAll("[data-current]")).toHaveLength(0);
+    const saved = within(screen.getByRole("region", { name: "Resumen" }));
+    expect(saved.getByRole("heading", { level: 2, name: "Leer" })).toBeVisible();
+    expect(saved.getByText(measure)).toBeVisible();
+    expect(saved.getByRole("img", { name: "Café" })).toBeVisible();
+    expect(screen.queryByText(/Los puntos se calculan/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Crear otro hábito" })).toBeEnabled();
+  });
+
   it("exposes all 20 icon choices with owner-approved Spanish accessible names", async () => {
     setup();
     await ready();
@@ -66,6 +104,9 @@ describe("habit wizard routes (screens 9/9c)", () => {
     setup();
     await ready();
     expect(screen.getByRole("heading", { level: 1 })).toHaveFocus();
+    expect(screen.getByRole("heading", { level: 1 })).toHaveAttribute("data-step-focus", "true");
+    await userEvent.keyboard("{Tab}");
+    expect(screen.getByRole("heading", { level: 1 })).not.toHaveAttribute("data-step-focus");
     expect(screen.getByText("Paso 1 de 4")).toHaveAttribute("role", "status");
     const name = screen.getByRole("textbox", { name: "Nombre" });
     await userEvent.type(name, "!");
@@ -74,6 +115,7 @@ describe("habit wizard routes (screens 9/9c)", () => {
     expect(cancel.querySelector("svg")).toHaveClass("lucide-x");
     await next();
     expect(screen.getByRole("heading", { name: "¿Cómo lo mides?" })).toHaveFocus();
+    expect(screen.getByRole("heading", { level: 1 })).toHaveAttribute("data-step-focus", "true");
     expect(screen.getByText("Paso 2 de 4")).toHaveAttribute("role", "status");
     const reach = screen.getByRole("radio", { name: "Alcanzar" });
     expect(reach).not.toHaveAttribute("aria-label");
@@ -153,8 +195,12 @@ describe("habit wizard routes (screens 9/9c)", () => {
   });
 
   it("does not substitute a new habit when a requested habitId is not owned", async () => {
-    setup(`/season/${wizardSeason.id}/habits/new?habitId=someone-elses-habit`);
-    expect(await screen.findByRole("alert")).toHaveTextContent("Algo salió mal");
+    const { location } = setup(`/season/${wizardSeason.id}/habits/new?habitId=someone-elses-habit`);
+    await waitFor(() => expect(location()).toBe(`/season/${wizardSeason.id}/pact`));
+    expect(
+      await screen.findByRole("heading", { name: "Revisa el pacto antes de aceptar" }),
+    ).toBeVisible();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(screen.queryByRole("textbox", { name: "Nombre" })).not.toBeInTheDocument();
   });
 
@@ -360,13 +406,31 @@ describe("habit wizard routes (screens 9/9c)", () => {
   });
 
   it("does not expose or edit a commitment owned by another member", async () => {
-    const { deps } = setup(`/season/${wizardSeason.id}/commitments/commitment-read/edit`);
+    const { deps, location } = setup(`/season/${wizardSeason.id}/commitments/commitment-read/edit`);
     deps.api.setPactResponse("getSeason", {
       ...wizardSeason,
       commitments: wizardSeason.commitments.map((c) => ({ ...c, memberId: "member-andrea" })),
     });
-    expect(await screen.findByRole("alert")).toHaveTextContent("Algo salió mal");
+    await waitFor(() => expect(location()).toBe(`/season/${wizardSeason.id}/pact`));
+    expect(
+      await screen.findByRole("heading", { name: "Revisa el pacto antes de aceptar" }),
+    ).toBeVisible();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(screen.queryByRole("textbox", { name: "Nombre" })).not.toBeInTheDocument();
     expect(deps.api.calls.editCommitment).toBe(0);
   });
+
+  it.each(["habits/new", "commitments/commitment-read/edit"])(
+    "redirects a closed pact from %s without a connection error",
+    async (path) => {
+      const { deps, location } = setup(`/season/${wizardSeason.id}/${path}`);
+      deps.api.setPactResponse("getSeason", { ...wizardSeason, status: "active" });
+      expect(await screen.findByRole("heading", { name: "Pacto cerrado" })).toBeVisible();
+      expect(location()).toBe(`/season/${wizardSeason.id}/pact`);
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+      expect(screen.queryByRole("textbox", { name: "Nombre" })).not.toBeInTheDocument();
+      expect(deps.api.calls.createHabit).toBe(0);
+      expect(deps.api.calls.editCommitment).toBe(0);
+    },
+  );
 });

@@ -1,5 +1,7 @@
 import type { Dispatch } from "react";
 import { Card } from "../../../ui/Card.tsx";
+import { Icon } from "../../../ui/icon/Icon.tsx";
+import { HABIT_ICON_LABELS, HABIT_ICONS, iconFor } from "../icon-catalog.ts";
 import { Choices } from "./Choices.tsx";
 import { WEEKDAYS } from "./FrequencyPicker.tsx";
 import styles from "./Wizard.module.css";
@@ -31,6 +33,34 @@ export function wizardSummary(draft: WizardDraft): string {
   return `${schedule} · ${target} · ${draft.privacy === "visible" ? "visible" : "privado"}`;
 }
 
+export function WizardSummary({
+  draft,
+  saved = false,
+}: {
+  readonly draft: WizardDraft;
+  readonly saved?: boolean;
+}) {
+  const icon = HABIT_ICONS.find((item) => item.key === draft.icon);
+  return (
+    <Card as="section" aria-label="Resumen" flush>
+      <div className={styles.summary}>
+        {!saved && <span className={styles.summaryLabel}>Resumen</span>}
+        <div className={styles.summaryHeading}>
+          {saved && (
+            <Icon
+              name={iconFor(draft.icon)}
+              {...(icon ? { label: HABIT_ICON_LABELS[icon.key] } : {})}
+            />
+          )}
+          <h2 className={styles.summaryTitle}>{draft.name}</h2>
+        </div>
+        <p className={styles.summaryMeasure}>{wizardSummary(draft)}</p>
+        {!saved && <p className={styles.hint}>Los puntos se calculan cuando repartas los pesos.</p>}
+      </div>
+    </Card>
+  );
+}
+
 export function PrivacyStep({
   draft,
   dispatch,
@@ -53,14 +83,7 @@ export function PrivacyStep({
         ]}
         onChange={(privacy) => dispatch({ type: "patch", patch: { privacy } })}
       />
-      <Card>
-        <div className={styles.stack}>
-          <span className={styles.hint}>Resumen</span>
-          <strong>{draft.name}</strong>
-          <p>{wizardSummary(draft)}</p>
-          <p className={styles.hint}>Los puntos se calculan cuando repartas los pesos.</p>
-        </div>
-      </Card>
+      <WizardSummary draft={draft} />
     </div>
   );
 }

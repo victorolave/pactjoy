@@ -22,7 +22,7 @@ export function FrequencyPicker({
   readonly onChange: (value: Frequency) => void;
 }) {
   return (
-    <div className={styles.stack}>
+    <div className={styles.frequency}>
       <strong>Frecuencia</strong>
       <SegmentedControl
         label="Tipo de frecuencia"
@@ -36,7 +36,7 @@ export function FrequencyPicker({
         }
       />
       {value.kind === "timesPerWeek" ? (
-        <div className={styles.row}>
+        <fieldset className={styles.frequencyCard} aria-label="Frecuencia">
           <IconButton
             icon="minus"
             label="Restar veces por semana"
@@ -56,7 +56,7 @@ export function FrequencyPicker({
             disabled={value.times >= 7}
             onClick={() => onChange({ ...value, times: value.times + 1 })}
           />
-        </div>
+        </fieldset>
       ) : (
         <fieldset className={styles.days} aria-label="Días de la semana">
           {DAYS.map((day) => (

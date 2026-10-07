@@ -96,6 +96,8 @@
 /* 14a celebration */
 .celebration {
   display: flex;
+  max-width: var(--app-max-width);
+  margin-inline: auto;
   flex-direction: column;
   min-height: var(--shell-height);
   background: var(--pj-ink);
