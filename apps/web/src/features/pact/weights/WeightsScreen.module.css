@@ -1,0 +1,132 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.weightsList {
+  display: flex;
+  flex-direction: column;
+}
+
+.weightRow {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  min-height: var(--touch-target);
+  padding: var(--space-2) 0;
+  border-bottom: var(--border-width) solid var(--pj-hairline);
+  box-sizing: border-box;
+}
+
+.weightRow:last-child {
+  border-bottom: none;
+}
+
+.habitInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.habitName {
+  font: var(--font-label);
+  color: var(--text-primary);
+}
+
+.pointsSubtitle {
+  font: var(--font-small);
+  color: var(--text-secondary);
+}
+
+.stepButton {
+  width: var(--touch-target);
+  height: var(--touch-target);
+  border-radius: var(--radius-control);
+  border: var(--border-width) solid var(--border-control);
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-primary);
+  flex: none;
+  padding: 0;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard);
+}
+
+.stepButton:hover:not(:disabled) {
+  background: var(--ink-50);
+}
+
+.stepButton:focus-visible {
+  outline: var(--focus-width) solid var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+.stepButton:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.weightValue {
+  min-width: var(--space-7);
+  text-align: center;
+  font: var(--weight-extrabold) var(--type-lead-size) / 1 var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.summarySection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.summaryHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font: var(--font-small);
+}
+
+.summaryLabel {
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+}
+
+.summaryMessage {
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+}
+
+.summaryMessage[data-tone="success"] {
+  color: var(--pj-success);
+}
+
+.progressTrack {
+  height: var(--space-2);
+  border-radius: var(--space-1);
+  background: var(--pj-cream-alt);
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: var(--space-1);
+  background: var(--pj-ink);
+  transition:
+    width var(--motion-fast) var(--ease-standard),
+    background-color var(--motion-fast) var(--ease-standard);
+}
+
+.progressFill[data-tone="success"] {
+  background: var(--pj-success);
+}
+
+.hint {
+  font: var(--font-small);
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}

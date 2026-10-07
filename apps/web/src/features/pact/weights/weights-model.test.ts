@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { changeWeight, equalWeights, weightSummary } from "./weights-model.ts";
+import { changeWeight, equalWeights, measureViewToInput, weightSummary } from "./weights-model.ts";
 
 describe("pact weights (WF-R5)", () => {
   it("changes by five, clamps at five and one hundred, and rejects off-step weights", () => {
@@ -40,4 +40,67 @@ describe("pact weights (WF-R5)", () => {
       expect(weightSummary(weights as number[])).toEqual({ total, canContinue, message, tone });
     },
   );
+
+  it("converts done, reach, and limit measure views to edit input format", () => {
+    expect(
+      measureViewToInput({
+        unit: "done",
+        schedule: {
+          period: "perSession",
+          frequency: { kind: "timesPerWeek", times: 3 },
+        },
+      }),
+    ).toEqual({
+      unit: "done",
+      frequency: { kind: "timesPerWeek", times: 3 },
+    });
+
+    expect(
+      measureViewToInput({
+        unit: "minutes",
+        customLabel: null,
+        precision: "integer",
+        target: { direction: "reach", minimum: "10", ideal: "30" },
+        schedule: {
+          period: "perSession",
+          frequency: { kind: "timesPerWeek", times: 5 },
+        },
+      }),
+    ).toEqual({
+      unit: "minutes",
+      customLabel: null,
+      precision: "integer",
+      direction: "reach",
+      minimum: "10",
+      ideal: "30",
+      schedule: {
+        period: "perSession",
+        frequency: { kind: "timesPerWeek", times: 5 },
+      },
+    });
+
+    expect(
+      measureViewToInput({
+        unit: "glasses",
+        customLabel: null,
+        precision: "integer",
+        target: { direction: "limit", ideal: "2", tolerance: "4" },
+        schedule: {
+          period: "perSession",
+          frequency: { kind: "specificDays", weekdays: [1, 2, 3, 4, 5] },
+        },
+      }),
+    ).toEqual({
+      unit: "glasses",
+      customLabel: null,
+      precision: "integer",
+      direction: "limit",
+      ideal: "2",
+      tolerance: "4",
+      schedule: {
+        period: "perSession",
+        frequency: { kind: "specificDays", weekdays: [1, 2, 3, 4, 5] },
+      },
+    });
+  });
 });
