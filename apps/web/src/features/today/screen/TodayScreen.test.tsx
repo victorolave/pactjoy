@@ -6,7 +6,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { ApiError } from "../../../ports/api-error.ts";
 import { longDate } from "../../../shared/format.ts";
-import { NO_CIRCLE } from "../../../testing/fixtures/circle.ts";
+import { NO_CIRCLE, pairCircleFixture } from "../../../testing/fixtures/circle.ts";
 import {
   activeTodayFixture,
   type DayRow,
@@ -51,6 +51,19 @@ describe("Today without a season (TO-R1)", () => {
       await screen.findByRole("heading", { name: "Todavía no hay temporada" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Los de siempre")).toBeInTheDocument();
+  });
+
+  it("noSeason lets any member prepare a season from Today (WF-R1)", async () => {
+    const { location } = renderApp({
+      path: "/",
+      today: noSeasonTodayFixture(),
+      myCircle: pairCircleFixture(),
+    });
+    const prepare = await screen.findByRole("link", { name: "Preparar la temporada" });
+    expect(prepare).toHaveAttribute("href", "/season/new");
+    await userEvent.click(prepare);
+    expect(await screen.findByRole("heading", { name: "Nueva temporada" })).toBeVisible();
+    expect(location()).toBe("/season/new");
   });
 
   it("pactOpen shows the season summary, with no rows and a CTA to prepare the season (TO-S3)", async () => {

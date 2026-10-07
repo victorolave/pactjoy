@@ -53,6 +53,7 @@ export function NoSeason({ circleName }: { readonly circleName: string }) {
     <Empty title="Todavía no hay temporada" alt="Sin temporada todavía">
       <p className={styles.meta}>{circleName}</p>
       <p className={styles.lead}>Cuando el círculo cree una, la verás aquí.</p>
+      <ButtonLink to="/season/new">Preparar la temporada</ButtonLink>
     </Empty>
   );
 }
