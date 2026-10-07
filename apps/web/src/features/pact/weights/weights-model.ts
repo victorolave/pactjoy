@@ -1,3 +1,6 @@
+import type { MeasureInput, MeasureView } from "@pactjoy/app";
+import type { Serialized } from "../../../ports/wire.ts";
+
 /** Mirrors the engine's WEIGHT_STEP_PERCENT; the server still validates every pact. */
 const WEIGHT_STEP = 5;
 
@@ -40,4 +43,34 @@ export function weightSummary(weights: readonly number[]): WeightSummary {
   else if (!allValid) message = "Cada peso va de 5 % a 100 %, en pasos de 5 %";
   else message = "Listo";
   return { total, canContinue, message, tone: canContinue ? "success" : "neutral" };
+}
+
+/** Converts a commitment's read model (or serialized wire format) back to the input shape required for editing. */
+export function measureViewToInput(measure: Serialized<MeasureView> | MeasureView): MeasureInput {
+  if (measure.unit === "done") {
+    return {
+      unit: "done",
+      frequency: measure.schedule.frequency,
+    };
+  }
+  if (measure.target.direction === "reach") {
+    return {
+      unit: measure.unit,
+      customLabel: measure.customLabel,
+      precision: measure.precision,
+      direction: "reach",
+      minimum: measure.target.minimum,
+      ideal: measure.target.ideal,
+      schedule: measure.schedule,
+    };
+  }
+  return {
+    unit: measure.unit,
+    customLabel: measure.customLabel,
+    precision: measure.precision,
+    direction: "limit",
+    ideal: measure.target.ideal,
+    tolerance: measure.target.tolerance,
+    schedule: measure.schedule,
+  };
 }

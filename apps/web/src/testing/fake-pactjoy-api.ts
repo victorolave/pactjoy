@@ -1,5 +1,5 @@
 import type { TodayView } from "@pactjoy/app";
-import type { ApiError } from "../ports/api-error.ts";
+import { ApiError } from "../ports/api-error.ts";
 import type {
   AddCommitmentCommand,
   CircleInvite,
@@ -19,6 +19,7 @@ import type {
   RecordedEntry,
   UpdateHabitCommand,
 } from "../ports/pactjoy-api.ts";
+import type { SeasonDto } from "../ports/wire.ts";
 import { NO_CIRCLE } from "./fixtures/circle.ts";
 
 type ExistingMethod =
@@ -106,6 +107,7 @@ export class FakePactJoyApi implements PactJoyApi {
   readonly #failures = new Map<Method, ApiError[]>();
   readonly #idByRequest = new Map<string, string>();
   readonly #gates = new Map<Method, Promise<void>>();
+  #editingCommitment = false;
 
   constructor(today: TodayView) {
     this.#today = today;
@@ -166,7 +168,37 @@ export class FakePactJoyApi implements PactJoyApi {
     return this.#pactCall("addCommitment", [seasonId, input]);
   }
   async editCommitment(seasonId: string, commitmentId: string, input: EditCommitmentCommand) {
-    return this.#pactCall("editCommitment", [seasonId, commitmentId, input]);
+    if (this.#editingCommitment) {
+      throw new ApiError("ConcurrencyConflict", 409, null);
+    }
+    this.#editingCommitment = true;
+    try {
+      await Promise.resolve();
+      const currentSeason = this.#pactResults.get("getSeason") as SeasonDto | undefined;
+      const calculatedSeason = currentSeason
+        ? {
+            ...currentSeason,
+            version: currentSeason.version + 1,
+            commitments: currentSeason.commitments.map((c) =>
+              c.id === commitmentId ? { ...c, weightPercent: input.weightPercent } : c,
+            ),
+          }
+        : undefined;
+
+      if (!this.#pactResults.has("editCommitment") && calculatedSeason) {
+        this.#pactResults.set("editCommitment", calculatedSeason);
+      }
+
+      const res = await this.#pactCall("editCommitment", [seasonId, commitmentId, input]);
+
+      const updatedSeason = calculatedSeason ?? (res as SeasonDto);
+      if (calculatedSeason) {
+        this.#pactResults.set("getSeason", updatedSeason);
+      }
+      return updatedSeason;
+    } finally {
+      this.#editingCommitment = false;
+    }
   }
   async removeCommitment(seasonId: string, commitmentId: string) {
     return this.#pactCall("removeCommitment", [seasonId, commitmentId]);
