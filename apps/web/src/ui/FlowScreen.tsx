@@ -1,6 +1,7 @@
-import type { FormEventHandler, ReactNode } from "react";
+import type { FormEventHandler, ReactNode, Ref } from "react";
 import styles from "./FlowScreen.module.css";
 import { IconButton } from "./IconButton.tsx";
+import type { IconName } from "./icon/Icon.tsx";
 
 export interface FlowScreenProps {
   readonly title: string;
@@ -15,6 +16,9 @@ export interface FlowScreenProps {
   readonly onBack?: () => void;
   /** The back button's accessible name; "Volver" by default. */
   readonly backLabel?: string;
+  readonly backIcon?: IconName;
+  /** Opt-in programmatic heading focus for multi-step flows. */
+  readonly headingRef?: Ref<HTMLHeadingElement>;
 }
 
 /**
@@ -29,22 +33,32 @@ export function FlowScreen({
   onSubmit,
   onBack,
   backLabel = "Volver",
+  backIcon = "chevron-left",
+  headingRef,
 }: FlowScreenProps) {
   const body = (
     <>
       {onBack !== undefined && (
         <div className={styles.back}>
-          <IconButton icon="chevron-left" label={backLabel} onClick={onBack} />
+          <IconButton icon={backIcon} label={backLabel} onClick={onBack} />
         </div>
       )}
       <div className={styles.content}>
         {meta !== undefined ? (
           <div>
             <div className={styles.meta}>{meta}</div>
-            <h1 className={styles.titleWithMeta}>{title}</h1>
+            <h1
+              ref={headingRef}
+              tabIndex={headingRef ? -1 : undefined}
+              className={styles.titleWithMeta}
+            >
+              {title}
+            </h1>
           </div>
         ) : (
-          <h1 className={styles.title}>{title}</h1>
+          <h1 ref={headingRef} tabIndex={headingRef ? -1 : undefined} className={styles.title}>
+            {title}
+          </h1>
         )}
         {children}
       </div>

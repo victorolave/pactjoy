@@ -86,7 +86,16 @@ const isSeasonDto = (data: unknown): boolean =>
   Array.isArray(data.approvals) &&
   typeof data.pactRevision === "number" &&
   typeof data.version === "number";
-const isScoringPreview = (data: unknown): boolean => isRecord(data) && Array.isArray(data.rows);
+const isScoringPreview = (data: unknown): boolean =>
+  isRecord(data) &&
+  Array.isArray(data.rows) &&
+  data.rows.every(
+    (row: unknown) =>
+      isRecord(row) &&
+      typeof row.value === "string" &&
+      typeof row.progressPercent === "string" &&
+      /^(?:100|\d{1,2})$/.test(row.progressPercent),
+  );
 
 const circlePath = (circleId: string): string => `/circles/${encodeURIComponent(circleId)}`;
 
