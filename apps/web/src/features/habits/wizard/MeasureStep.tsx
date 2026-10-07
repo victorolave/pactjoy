@@ -3,7 +3,7 @@ import { TextField } from "../../../ui/TextField.tsx";
 import { Choices } from "./Choices.tsx";
 import styles from "./Wizard.module.css";
 import { UNITS } from "./wizard-copy.ts";
-import type { WizardAction, WizardDraft } from "./wizard-model.ts";
+import { MAX_CUSTOM_LABEL_LENGTH, type WizardAction, type WizardDraft } from "./wizard-model.ts";
 
 export function MeasureStep({
   draft,
@@ -27,7 +27,7 @@ export function MeasureStep({
         <TextField
           label="Unidad personalizada"
           value={measure.customLabel ?? ""}
-          maxLength={30}
+          maxLength={MAX_CUSTOM_LABEL_LENGTH}
           onChange={(event) =>
             dispatch({
               type: "patch",

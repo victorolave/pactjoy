@@ -4,6 +4,7 @@ import { ApiError } from "../../../ports/api-error.ts";
 import { habitsKey, myCircleKey, seasonKey, todayKey } from "../../../shared/query-keys.ts";
 import { renderInProviders } from "../../../testing/render.tsx";
 import { useSaveWizard } from "../queries.ts";
+import { defaultMeasure } from "./measure-defaults.ts";
 import { wizardHabit, wizardSeason } from "./wizard-fixtures.ts";
 import { initialWizard, prefillWizard } from "./wizard-model.ts";
 
@@ -31,6 +32,23 @@ function setup(existing = false) {
 }
 
 describe("wizard save orchestration", () => {
+  it.each([false, true])("trims custom labels before saving (editing=%s)", async (editing) => {
+    const { deps, result } = setup(editing);
+    const commitment = wizardSeason.commitments[0];
+    if (commitment?.kind !== "detail") throw new Error("Detail fixture required");
+    const draft = {
+      ...(editing ? prefillWizard(wizardHabit, commitment) : initialWizard()),
+      measure: { ...defaultMeasure("custom"), customLabel: "  vueltas  " },
+    };
+    await act(async () => {
+      await result.current.mutateAsync({ draft, ...(editing ? { commitment } : {}) });
+    });
+    const command = deps.api.pactCommands.find(
+      (c) => c.method === (editing ? "editCommitment" : "addCommitment"),
+    );
+    expect(command?.args[editing ? 2 : 1]).toMatchObject({ measure: { customLabel: "vueltas" } });
+    expect(draft.measure.customLabel).toBe("  vueltas  ");
+  });
   it("creates the habit before adding a provisional 5 percent commitment, and caches responses", async () => {
     const { deps, result } = setup();
     const release = deps.api.hold("createHabit");

@@ -11,24 +11,27 @@ import {
   todayKey,
 } from "../../shared/query-keys.ts";
 import type { WizardMeasure } from "./wizard/measure-defaults.ts";
-import { habitPatch, previewValues, type WizardDraft } from "./wizard/wizard-model.ts";
+import { habitPatch, previewValues, type WizardDraft, wireMeasure } from "./wizard/wizard-model.ts";
 
 /** Debounce the entire command and retain rows together with the unit that produced them. */
 export function useScoringPreview(measure: WizardMeasure) {
   const api = usePactJoyApi();
-  const input = useMemo(() => ({ measure, values: previewValues(measure) }), [measure]);
-  const [command, setCommand] = useState<PreviewScoringCommand | null>(null);
+  const input = useMemo(
+    () => ({ measure: wireMeasure(measure), values: previewValues(measure) }),
+    [measure],
+  );
+  const [command, setCommand] = useState<PreviewScoringCommand>(() => input);
   useEffect(() => {
+    if (input === command) return;
     const timer = setTimeout(() => setCommand(input), 250);
     return () => clearTimeout(timer);
-  }, [input]);
+  }, [input, command]);
   return useQuery({
     queryKey: scoringPreviewKey(JSON.stringify(command)),
     queryFn: async ({ signal }) => {
-      if (command === null) throw new Error("Preview command required");
       return { result: await api.previewScoring(command, signal), measure: command.measure };
     },
-    enabled: command !== null && command.values.length > 0,
+    enabled: command.values.length > 0,
     placeholderData: keepPreviousData,
   });
 }
@@ -97,7 +100,7 @@ export function useSaveWizard(seasonId: string, originalHabit?: HabitDto) {
       const input = {
         weightPercent: commitment?.weightPercent ?? 5,
         privacy: draft.privacy,
-        measure: draft.measure,
+        measure: wireMeasure(draft.measure),
       };
       return commitment === undefined
         ? api.addCommitment(seasonId, { ...input, habitId: habit.id })

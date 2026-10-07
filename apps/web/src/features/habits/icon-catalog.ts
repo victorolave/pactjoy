@@ -4,7 +4,7 @@ import type { IconName } from "../../ui/icon/Icon.tsx";
  * Persisted keys are a client catalog, independent of the glyph vendor. Domain status glyphs
  * (such as the pause one) stay out so a habit icon never reads as a season state.
  */
-export const HABIT_ICONS: readonly { readonly key: string; readonly glyph: IconName }[] = [
+export const HABIT_ICONS = [
   { key: "book", glyph: "book-open" },
   { key: "brain", glyph: "brain" },
   { key: "coffee", glyph: "coffee" },
@@ -25,7 +25,31 @@ export const HABIT_ICONS: readonly { readonly key: string; readonly glyph: IconN
   { key: "settings", glyph: "settings" },
   { key: "completed", glyph: "circle-check" },
   { key: "moon", glyph: "moon" },
-];
+] as const satisfies readonly { readonly key: string; readonly glyph: IconName }[];
+
+/** Owner-approved accessible copy, separate from opaque persisted keys and glyph names. */
+export const HABIT_ICON_LABELS = {
+  book: "Libro",
+  brain: "Cerebro",
+  coffee: "Café",
+  dumbbell: "Pesas",
+  flower: "Flor",
+  footprints: "Pasos",
+  palette: "Arte",
+  sun: "Sol",
+  calendar: "Calendario",
+  check: "Hecho",
+  repeat: "Repetición",
+  history: "Historial",
+  pencil: "Lápiz",
+  plus: "Más",
+  users: "Grupo",
+  handshake: "Acuerdo",
+  user: "Persona",
+  settings: "Ajustes",
+  completed: "Completado",
+  moon: "Luna",
+} as const satisfies Record<(typeof HABIT_ICONS)[number]["key"], string>;
 
 export const CATEGORY_ICONS = {
   Leer: "book",

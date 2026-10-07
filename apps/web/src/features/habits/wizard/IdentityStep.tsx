@@ -2,7 +2,7 @@ import type { Dispatch } from "react";
 import { useId } from "react";
 import { Icon } from "../../../ui/icon/Icon.tsx";
 import { TextField } from "../../../ui/TextField.tsx";
-import { CATEGORY_ICONS, HABIT_ICONS, iconFor } from "../icon-catalog.ts";
+import { CATEGORY_ICONS, HABIT_ICON_LABELS, HABIT_ICONS, iconFor } from "../icon-catalog.ts";
 import { Choices } from "./Choices.tsx";
 import styles from "./Wizard.module.css";
 import type { Category, WizardAction, WizardDraft } from "./wizard-model.ts";
@@ -21,7 +21,7 @@ export function IdentityStep({
     <div className={styles.stack}>
       <Choices
         label="¿Qué hábito quieres trabajar?"
-        value={CATEGORIES.find((category) => category === draft.category) ?? null}
+        value={CATEGORIES.find((category) => category === draft.category) ?? "Crear el mío"}
         compact
         options={CATEGORIES.map((category) => ({
           value: category,
@@ -62,7 +62,7 @@ export function IdentityStep({
           compact
           options={HABIT_ICONS.map((icon) => ({
             value: icon.key,
-            label: icon.key,
+            label: HABIT_ICON_LABELS[icon.key],
             icon: <Icon name={icon.glyph} />,
           }))}
           onChange={(icon) => dispatch({ type: "patch", patch: { icon } })}

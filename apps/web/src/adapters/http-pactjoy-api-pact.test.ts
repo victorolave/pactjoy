@@ -146,6 +146,19 @@ describe("HttpPactJoyApi habit, season, commitment, pact and preview methods", (
     ).rejects.toMatchObject({ code: "Internal" });
     await expect(setup({}).api.getSeason("s1")).rejects.toMatchObject({ code: "Internal" });
   });
+  it.each([
+    [null],
+    [{}],
+    [{ value: 1, progressPercent: "100" }],
+    [{ value: "1", progressPercent: 100 }],
+    [{ value: "1", progressPercent: "not a percent" }],
+    [{ value: "1", progressPercent: "101" }],
+    [{ value: "1", progressPercent: "-1" }],
+  ])("rejects malformed preview rows %j", async (row) => {
+    await expect(
+      setup({ rows: [row] }).api.previewScoring({ measure, values: ["1"] }),
+    ).rejects.toMatchObject({ code: "Internal" });
+  });
   it("rejects habit and season bodies that only carry an id", async () => {
     const internal = { code: "Internal" };
     await expect(setup({ id: "h1" }).api.createHabit(habit)).rejects.toMatchObject(internal);

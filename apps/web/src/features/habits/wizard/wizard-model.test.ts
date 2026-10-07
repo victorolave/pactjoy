@@ -151,7 +151,7 @@ describe("habit wizard model", () => {
     });
     expect(
       prefillWizard({ ...habit, name: "Mi hábito", category: null, icon: null }),
-    ).toMatchObject({ name: "Mi hábito", category: null, icon: null });
+    ).toMatchObject({ name: "Mi hábito", category: null, icon: null, measure: { unit: "done" } });
   });
 
   it("prefills commitment thresholds, frequency and privacy without losing decimals", () => {

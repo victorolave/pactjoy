@@ -63,6 +63,24 @@ describe("FlowScreen", () => {
     expect(screen.getByRole("button", { name: "Volver al perfil" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Volver" })).not.toBeInTheDocument();
   });
+  it("supports a cancel icon without changing the default back icon", () => {
+    const { rerender } = render(
+      <FlowScreen title="Hola" onBack={() => {}} backLabel="Cancelar" backIcon="x">
+        <p>Contenido</p>
+      </FlowScreen>,
+    );
+    expect(screen.getByRole("button", { name: "Cancelar" }).querySelector("svg")).toHaveClass(
+      "lucide-x",
+    );
+    rerender(
+      <FlowScreen title="Hola" onBack={() => {}}>
+        Contenido
+      </FlowScreen>,
+    );
+    expect(screen.getByRole("button", { name: "Volver" }).querySelector("svg")).toHaveClass(
+      "lucide-chevron-left",
+    );
+  });
 
   it("has no pinned action when it is given no footer", () => {
     render(

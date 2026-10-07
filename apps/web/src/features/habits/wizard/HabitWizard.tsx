@@ -1,4 +1,4 @@
-import { useReducer, useState } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import type { CommitmentDto, HabitDto } from "../../../ports/wire.ts";
 import { Button } from "../../../ui/Button.tsx";
@@ -47,7 +47,12 @@ export function HabitWizard() {
         ((habitId !== null || commitmentId !== undefined) && !habit)));
   if (isError || isLoading || invalid) {
     return (
-      <FlowScreen title="¿Qué hábito quieres trabajar?" onBack={() => navigate(-1)}>
+      <FlowScreen
+        title="¿Qué hábito quieres trabajar?"
+        backIcon="x"
+        backLabel="Cancelar"
+        onBack={() => (seasonId ? navigate(`/season/${seasonId}/habits`) : navigate(-1))}
+      >
         <div aria-busy={isLoading}>
           {isLoading && !invalid ? (
             <Skeleton shape="card" lines={3} />
@@ -106,6 +111,11 @@ function WizardForm({
     habit ? prefillWizard(habit, commitment) : initialWizard(),
   );
   const save = useSaveWizard(seasonId, habit);
+  const heading = useRef<HTMLHeadingElement>(null);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: step transitions intentionally trigger heading focus, not edits within a step
+  useEffect(() => {
+    heading.current?.focus();
+  }, [draft.step]);
   const measure = draft.measure;
   const title =
     draft.step === 0
@@ -150,10 +160,18 @@ function WizardForm({
   return (
     <FlowScreen
       title={title}
+      headingRef={heading}
       meta={
-        draft.step === 4
-          ? "Listo"
-          : `Paso ${draft.step + 1} de 4${draft.step > 0 ? ` · ${draft.name}` : ""}`
+        draft.step === 4 ? (
+          "Listo"
+        ) : (
+          <>
+            <span role="status" aria-live="polite" aria-atomic="true">
+              Paso {draft.step + 1} de 4
+            </span>
+            {draft.step > 0 ? ` · ${draft.name}` : ""}
+          </>
+        )
       }
       {...(save.isPending
         ? {}
@@ -163,6 +181,7 @@ function WizardForm({
             },
           })}
       backLabel={draft.step === 4 ? "Volver" : "Cancelar"}
+      backIcon={draft.step === 4 ? "chevron-left" : "x"}
       onSubmit={(event) => {
         event.preventDefault();
         void submit();

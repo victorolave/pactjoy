@@ -39,7 +39,7 @@ function Threshold({
           disabled={scaled <= min}
           onClick={() => onChange(fromScaled(scaled - step < min ? min : scaled - step))}
         />
-        <output aria-label={label}>
+        <output aria-label={`${label}: ${value} ${suffix}`}>
           {value} {suffix}
         </output>
         <IconButton
@@ -129,6 +129,11 @@ export function TargetStep({
         </div>
       )}
       <ScoringPreview measure={measure} />
+      {measure.unit !== "done" && measure.direction === "limit" && (
+        <p className={styles.hint}>
+          Frecuencia: todos los días (en “no exceder” cada día es una oportunidad).
+        </p>
+      )}
     </div>
   );
 }

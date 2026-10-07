@@ -10,6 +10,15 @@ import {
 } from "./measure-defaults.ts";
 
 export type Category = keyof typeof CATEGORY_ICONS;
+/** Mirrors the API's MAX_CUSTOM_LABEL_LENGTH without importing runtime application code. */
+export const MAX_CUSTOM_LABEL_LENGTH = 20;
+
+/** Normalize transport values without changing the user's editable draft. */
+export function wireMeasure(measure: WizardMeasure): WizardMeasure {
+  return measure.unit === "custom"
+    ? { ...measure, customLabel: measure.customLabel?.trim() ?? null }
+    : measure;
+}
 export interface WizardDraft {
   readonly step: number;
   readonly name: string;
@@ -118,7 +127,7 @@ export function prefillWizard(habit: HabitDto, commitment?: DetailCommitment): W
     ? Object.keys(CATEGORY_ICONS).find((key): key is Category => key === habit.category)
     : undefined;
   const draft = {
-    ...initialWizard(category),
+    ...initialWizard(category ?? "Crear el mío"),
     name: habit.name,
     why: habit.why ?? "",
     category: habit.category,

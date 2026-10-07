@@ -39,24 +39,26 @@ export function FrequencyPicker({
         <div className={styles.row}>
           <IconButton
             icon="minus"
-            label="Restar Frecuencia"
+            label="Restar veces por semana"
             variant="outline"
             disabled={value.times <= 1}
             onClick={() => onChange({ ...value, times: value.times - 1 })}
           />
-          <output aria-label="Frecuencia">
+          <output
+            aria-label={`Frecuencia: ${value.times} ${value.times === 1 ? "vez" : "veces"} por semana`}
+          >
             {value.times} {value.times === 1 ? "vez" : "veces"} por semana
           </output>
           <IconButton
             icon="plus"
-            label="Sumar Frecuencia"
+            label="Sumar veces por semana"
             variant="outline"
             disabled={value.times >= 7}
             onClick={() => onChange({ ...value, times: value.times + 1 })}
           />
         </div>
       ) : (
-        <div className={styles.days}>
+        <fieldset className={styles.days} aria-label="Días de la semana">
           {DAYS.map((day) => (
             <button
               key={day}
@@ -76,7 +78,7 @@ export function FrequencyPicker({
               {day === 2 ? "X" : WEEKDAYS[day].charAt(0)}
             </button>
           ))}
-        </div>
+        </fieldset>
       )}
     </div>
   );

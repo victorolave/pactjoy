@@ -1,4 +1,5 @@
 import type { KeyboardEvent, ReactNode } from "react";
+import { useId } from "react";
 import styles from "./Wizard.module.css";
 
 export interface Choice<T extends string> {
@@ -24,6 +25,7 @@ export function Choices<T extends string>({
   readonly compact?: boolean;
   readonly iconsOnly?: boolean;
 }) {
+  const id = useId();
   const move = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
     const delta = ["ArrowRight", "ArrowDown"].includes(event.key)
       ? 1
@@ -55,7 +57,8 @@ export function Choices<T extends string>({
             key={option.value}
             role="radio"
             aria-checked={checked}
-            aria-label={option.label}
+            aria-label={iconsOnly ? option.label : undefined}
+            aria-describedby={!iconsOnly && option.hint ? `${id}-${index}-hint` : undefined}
             tabIndex={checked || first ? 0 : -1}
             className={styles.choice}
             onClick={() => onChange(option.value)}
@@ -65,7 +68,11 @@ export function Choices<T extends string>({
             {!iconsOnly && (
               <span className={styles.choiceText}>
                 <strong>{option.label}</strong>
-                {option.hint && <span className={styles.hint}>{option.hint}</span>}
+                {option.hint && (
+                  <span id={`${id}-${index}-hint`} className={styles.hint} aria-hidden="true">
+                    {option.hint}
+                  </span>
+                )}
               </span>
             )}
           </button>

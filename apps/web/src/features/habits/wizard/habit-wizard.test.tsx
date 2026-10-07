@@ -31,6 +31,96 @@ async function lastStep() {
 }
 
 describe("habit wizard routes (screens 9/9c)", () => {
+  it("exposes all 20 icon choices with owner-approved Spanish accessible names", async () => {
+    setup();
+    await ready();
+    const icons = within(screen.getByRole("radiogroup", { name: "Ícono" })).getAllByRole("radio");
+    const names = [
+      "Libro",
+      "Cerebro",
+      "Café",
+      "Pesas",
+      "Flor",
+      "Pasos",
+      "Arte",
+      "Sol",
+      "Calendario",
+      "Hecho",
+      "Repetición",
+      "Historial",
+      "Lápiz",
+      "Más",
+      "Grupo",
+      "Acuerdo",
+      "Persona",
+      "Ajustes",
+      "Completado",
+      "Luna",
+    ];
+    expect(icons).toHaveLength(20);
+    icons.forEach((icon, index) => {
+      expect(icon).toHaveAccessibleName(names[index]);
+    });
+  });
+  it("focuses the heading and announces progress on forward and backward step changes", async () => {
+    setup();
+    await ready();
+    expect(screen.getByRole("heading", { level: 1 })).toHaveFocus();
+    expect(screen.getByText("Paso 1 de 4")).toHaveAttribute("role", "status");
+    const name = screen.getByRole("textbox", { name: "Nombre" });
+    await userEvent.type(name, "!");
+    expect(name).toHaveFocus();
+    const cancel = screen.getByRole("button", { name: "Cancelar" });
+    expect(cancel.querySelector("svg")).toHaveClass("lucide-x");
+    await next();
+    expect(screen.getByRole("heading", { name: "¿Cómo lo mides?" })).toHaveFocus();
+    expect(screen.getByText("Paso 2 de 4")).toHaveAttribute("role", "status");
+    const reach = screen.getByRole("radio", { name: "Alcanzar" });
+    expect(reach).not.toHaveAttribute("aria-label");
+    expect(reach).toHaveAccessibleDescription("Más es mejor, hasta tu ideal.");
+    expect(screen.getByRole("radio", { name: "No exceder" })).toHaveAccessibleDescription(
+      "Menos es mejor. Registras cada día, aunque sea 0.",
+    );
+    await next();
+    expect(screen.getByRole("heading", { name: "¿Cuánto y cada cuánto?" })).toHaveFocus();
+    expect(screen.getByText("Paso 3 de 4")).toHaveAttribute("role", "status");
+    expect(screen.getByRole("button", { name: "Restar veces por semana" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Sumar veces por semana" })).toBeVisible();
+    expect(screen.getByRole("status", { name: "Frecuencia: 5 veces por semana" })).toBeVisible();
+    await next();
+    expect(screen.getByRole("heading", { name: "¿Quién lo ve?" })).toHaveFocus();
+    expect(screen.getByText("Paso 4 de 4")).toHaveAttribute("role", "status");
+    await userEvent.click(screen.getByRole("button", { name: "Atrás" }));
+    expect(screen.getByRole("heading", { name: "¿Cuánto y cada cuánto?" })).toHaveFocus();
+  });
+
+  it("limits custom labels to the backend's 20 characters", async () => {
+    setup();
+    await ready();
+    await next();
+    await userEvent.click(screen.getByRole("radio", { name: "Personalizada" }));
+    const label = screen.getByRole("textbox", { name: "Unidad personalizada" });
+    expect(label).toHaveAttribute("maxlength", "20");
+    await userEvent.type(label, "123456789012345678901");
+    expect(label).toHaveValue("12345678901234567890");
+  });
+
+  it.each(["loading", "error"])(
+    "cancels from %s directly to the season habit list",
+    async (state) => {
+      const { deps, location } = setup();
+      const release = deps.api.hold("getSeason");
+      if (state === "error") {
+        deps.api.failNext("getSeason", new ApiError("NetworkError", 0, null));
+        await act(async () => release());
+        await screen.findByRole("alert");
+      }
+      await userEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+      expect(location()).toBe(`/season/${wizardSeason.id}/habits`);
+      if (state === "loading") await act(async () => release());
+    },
+  );
+
   it("keeps integer minimum steppers positive and disables empty weekday selections", async () => {
     setup();
     await ready();
@@ -38,9 +128,12 @@ describe("habit wizard routes (screens 9/9c)", () => {
     await userEvent.click(screen.getByRole("radio", { name: "Páginas" }));
     await next();
     await userEvent.click(screen.getByRole("button", { name: "Restar Mínimo" }));
-    expect(screen.getByLabelText("Mínimo")).toHaveTextContent("5 páginas");
+    expect(screen.getByRole("status", { name: "Mínimo: 5 páginas" })).toHaveTextContent(
+      "5 páginas",
+    );
     expect(screen.getByRole("button", { name: "Restar Mínimo" })).toBeDisabled();
     await userEvent.click(screen.getByRole("radio", { name: "Días concretos" }));
+    expect(screen.getByRole("group", { name: "Días de la semana" })).toBeVisible();
     for (const name of ["Martes", "Jueves", "Sábado"])
       await userEvent.click(screen.getByRole("button", { name }));
     expect(screen.getByRole("button", { name: "Continuar" })).toBeDisabled();
@@ -54,9 +147,9 @@ describe("habit wizard routes (screens 9/9c)", () => {
     await next();
     await next();
     await userEvent.click(screen.getByRole("button", { name: "Sumar Ideal" }));
-    expect(screen.getByLabelText("Ideal")).toHaveTextContent("1.75 km");
+    expect(screen.getByRole("status", { name: "Ideal: 1.75 km" })).toHaveTextContent("1.75 km");
     await userEvent.click(screen.getByRole("button", { name: "Restar Ideal" }));
-    expect(screen.getByLabelText("Ideal")).toHaveTextContent("0.75 km");
+    expect(screen.getByRole("status", { name: "Ideal: 0.75 km" })).toHaveTextContent("0.75 km");
   });
 
   it("does not substitute a new habit when a requested habitId is not owned", async () => {
@@ -73,10 +166,7 @@ describe("habit wizard routes (screens 9/9c)", () => {
     expect(within(icons).getAllByRole("radio")).toHaveLength(20);
     await userEvent.click(screen.getByRole("radio", { name: "Movimiento" }));
     expect(screen.getByRole("textbox", { name: "Nombre" })).toHaveValue("Movimiento");
-    expect(screen.getByRole("radio", { name: "footprints" })).toHaveAttribute(
-      "aria-checked",
-      "true",
-    );
+    expect(screen.getByRole("radio", { name: "Pasos" })).toHaveAttribute("aria-checked", "true");
     await userEvent.click(screen.getByRole("radio", { name: "Creatividad" }));
     await next();
     expect(screen.getByRole("heading", { name: "¿Cómo lo mides?" })).toBeVisible();
@@ -100,6 +190,9 @@ describe("habit wizard routes (screens 9/9c)", () => {
     await next();
     expect(screen.getByRole("heading", { name: "¿Cuánto como máximo?" })).toBeVisible();
     expect(screen.getByText("Tolerancia")).toBeVisible();
+    expect(
+      screen.getByText("Frecuencia: todos los días (en “no exceder” cada día es una oportunidad)."),
+    ).toBeVisible();
     expect(screen.queryByText("Mínimo")).not.toBeInTheDocument();
     expect(
       screen.queryByRole("radiogroup", { name: "Tipo de frecuencia" }),
@@ -129,7 +222,7 @@ describe("habit wizard routes (screens 9/9c)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Lunes" }));
     expect(screen.getByRole("button", { name: "Lunes" })).toHaveAttribute("aria-pressed", "true");
     await userEvent.click(screen.getByRole("button", { name: "Sumar Ideal" }));
-    expect(screen.getByLabelText("Ideal")).toHaveTextContent("4 vueltas");
+    expect(screen.getByRole("status", { name: "Ideal: 4 vueltas" })).toHaveTextContent("4 vueltas");
     await next();
     expect(screen.getByText(/Los puntos se calculan cuando repartas los pesos/)).toBeVisible();
     expect(screen.queryByRole("switch")).not.toBeInTheDocument();
@@ -139,8 +232,8 @@ describe("habit wizard routes (screens 9/9c)", () => {
   it("creates a habit then commitment, disables duplicate saves and renders done", async () => {
     const { deps, location } = setup();
     await ready();
-    await userEvent.click(screen.getByRole("radio", { name: "coffee" }));
-    expect(screen.getByRole("radio", { name: "coffee" })).toHaveAttribute("aria-checked", "true");
+    await userEvent.click(screen.getByRole("radio", { name: "Café" }));
+    expect(screen.getByRole("radio", { name: "Café" })).toHaveAttribute("aria-checked", "true");
     await lastStep();
     await userEvent.click(screen.getByRole("radio", { name: /Privado/ }));
     const release = deps.api.hold("createHabit");
@@ -185,14 +278,37 @@ describe("habit wizard routes (screens 9/9c)", () => {
     });
   });
 
+  it("prefills uncategorized habits as custom/done without changing null metadata", async () => {
+    const { deps } = setup(`/season/${wizardSeason.id}/habits/new?habitId=${wizardHabit.id}`);
+    deps.api.setPactResponse("listHabits", [{ ...wizardHabit, category: null }]);
+    await ready();
+    expect(screen.getByRole("radio", { name: "Crear el mío" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    await next();
+    expect(screen.getByRole("radio", { name: "Hecho / no hecho" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    await next();
+    await next();
+    await userEvent.click(screen.getByRole("button", { name: "Guardar hábito" }));
+    expect(await screen.findByRole("heading", { name: "Hábito guardado" })).toHaveFocus();
+    expect(deps.api.calls.updateHabit).toBe(0);
+    expect(deps.api.pactCommands.find((c) => c.method === "addCommitment")?.args[1]).toMatchObject({
+      measure: { unit: "done" },
+    });
+  });
+
   it("prefills edit measure, days and privacy; skips unchanged habit PATCH and preserves weight", async () => {
     const { deps, location } = setup(`/season/${wizardSeason.id}/commitments/commitment-read/edit`);
     await ready();
     await next();
     expect(screen.getByRole("radio", { name: "Km" })).toHaveAttribute("aria-checked", "true");
     await next();
-    expect(screen.getByLabelText("Mínimo")).toHaveTextContent("0.15 km");
-    expect(screen.getByLabelText("Ideal")).toHaveTextContent("0.75 km");
+    expect(screen.getByRole("status", { name: "Mínimo: 0.15 km" })).toHaveTextContent("0.15 km");
+    expect(screen.getByRole("status", { name: "Ideal: 0.75 km" })).toHaveTextContent("0.75 km");
     expect(screen.getByRole("button", { name: "Lunes" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: "Viernes" })).toHaveAttribute("aria-pressed", "true");
     await next();
