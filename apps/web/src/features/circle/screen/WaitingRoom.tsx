@@ -1,5 +1,4 @@
 import { useId } from "react";
-import { useNavigate } from "react-router";
 import type { MyCircle } from "../../../ports/pactjoy-api.ts";
 import { Avatar } from "../../../ui/Avatar.tsx";
 import { Button } from "../../../ui/Button.tsx";
@@ -8,6 +7,7 @@ import { Illustration } from "../../../ui/Placeholder.tsx";
 import { Tag } from "../../../ui/Tag.tsx";
 import { InviteStrip } from "../invite/InviteStrip.tsx";
 import styles from "./CircleScreen.module.css";
+import { SeasonAction } from "./SeasonAction.tsx";
 
 type Circle = NonNullable<MyCircle["circle"]>;
 
@@ -49,11 +49,6 @@ export function WaitingRoom({
   readonly circle: Circle;
   readonly season: MyCircle["season"];
 }) {
-  const navigate = useNavigate();
-  const canPrepare = season === null || season.phase === "pactOpen";
-  // The pact route applies pactFlow, including the onward redirect to Today.
-  const destination =
-    season === null ? "/season/new" : `/season/${season.id}/${canPrepare ? "habits" : "pact"}`;
   const me = circle.members[0]?.displayName ?? "";
   return (
     <>
@@ -76,9 +71,7 @@ export function WaitingRoom({
         </p>
       </div>
       <InviteStrip circleId={circle.id} invite={circle.invite} />
-      <Button block onClick={() => navigate(destination)}>
-        {canPrepare ? "Preparar la temporada" : "Ver el pacto"}
-      </Button>
+      <SeasonAction season={season} />
       <ComingSoon variant="ghost">Solo crear mis hábitos</ComingSoon>
     </>
   );

@@ -151,6 +151,46 @@ describe("Circle tab, alone in the circle: the waiting room (7)", () => {
 });
 
 describe("Circle tab with people (31a-lite)", () => {
+  it("lets a member prepare the first season from a multi-member circle (WF-R1)", async () => {
+    const { location } = renderApp({ path: "/circle", myCircle: pairCircleFixture() });
+    await userEvent.click(await screen.findByRole("button", { name: "Preparar la temporada" }));
+    expect(await screen.findByRole("heading", { name: "Nueva temporada" })).toBeVisible();
+    expect(location()).toBe("/season/new");
+  });
+
+  it("resumes habit selection from a multi-member circle while the pact is open", async () => {
+    const { location, deps } = renderApp({
+      path: "/circle",
+      myCircle: pairCircleFixture({ ...ACTIVE, phase: "pactOpen", week: null }),
+    });
+    deps.api.setPactResponse("getSeason", SEASON);
+    deps.api.setPactResponse("listHabits", []);
+    await userEvent.click(await screen.findByRole("button", { name: "Preparar la temporada" }));
+    expect(
+      await screen.findByRole("heading", { name: "¿Qué vas a trabajar esta temporada?" }),
+    ).toBeVisible();
+    expect(location()).toBe(`/season/${ACTIVE.id}/habits`);
+  });
+
+  it("opens the approved pact before the season starts instead of preparing it again", async () => {
+    const { location, deps } = renderApp({
+      path: "/circle",
+      myCircle: pairCircleFixture({ ...ACTIVE, phase: "notStarted", week: null }),
+    });
+    deps.api.setPactResponse("getSeason", { ...SEASON, status: "active" });
+    await userEvent.click(await screen.findByRole("button", { name: "Ver el pacto" }));
+    expect(await screen.findByRole("heading", { name: "Pacto cerrado" })).toBeVisible();
+    expect(location()).toBe(`/season/${ACTIVE.id}/pact`);
+    expect(screen.queryByRole("button", { name: "Preparar la temporada" })).not.toBeInTheDocument();
+  });
+
+  it("keeps the running season view without a preparation or pact action (design 31a)", async () => {
+    renderApp({ path: "/circle", myCircle: pairCircleFixture(ACTIVE) });
+    expect(await screen.findByText("Pacto activo")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Preparar la temporada" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Ver el pacto" })).not.toBeInTheDocument();
+  });
+
   it("lists the members with their initials and marks the viewer (WC-R7)", async () => {
     renderApp({ path: "/circle", myCircle: pairCircleFixture() });
     expect(await screen.findByRole("heading", { name: "Andrea & Victor" })).toBeInTheDocument();

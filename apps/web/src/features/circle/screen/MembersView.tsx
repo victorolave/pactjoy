@@ -3,6 +3,7 @@ import { Avatar } from "../../../ui/Avatar.tsx";
 import { Badge } from "../../../ui/Badge.tsx";
 import { Card } from "../../../ui/Card.tsx";
 import styles from "./CircleScreen.module.css";
+import { SeasonAction } from "./SeasonAction.tsx";
 import { seasonStatus } from "./season-status.ts";
 
 type Circle = NonNullable<MyCircle["circle"]>;
@@ -43,6 +44,7 @@ export function MembersView({
           {status.detail !== null && <span className={styles.small}>{status.detail}</span>}
         </div>
       )}
+      {season?.phase !== "active" && <SeasonAction season={season} />}
     </>
   );
 }
