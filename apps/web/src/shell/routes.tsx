@@ -14,6 +14,7 @@ import {
   InviteScreen,
   JoinCircleScreen,
 } from "../features/circle/index.ts";
+import { HabitWizard } from "../features/habits/index.ts";
 import {
   InstallStep,
   NameStep,
@@ -68,7 +69,8 @@ export function AppRoutes() {
             path="season/:seasonId/weights"
             element={<StubScreen title="Distribuir pesos" />}
           />
-          <Route path="season/:seasonId/habits/new" element={<StubScreen title="Nuevo hábito" />} />
+          <Route path="season/:seasonId/habits/new" element={<HabitWizard />} />
+          <Route path="season/:seasonId/commitments/:commitmentId/edit" element={<HabitWizard />} />
           <Route path="season/:seasonId/pact" element={<StubScreen title="Revisión del pacto" />} />
           <Route path="profile/settings" element={<SettingsScreen />} />
           <Route element={<AppShell />}>
