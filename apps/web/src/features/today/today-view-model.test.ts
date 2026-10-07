@@ -27,9 +27,10 @@ describe("toTodayModel: states without a season", () => {
 });
 
 describe("toTodayModel: pact open and not started", () => {
-  it("pactOpen shows the circle, the season length and the nominal start", () => {
+  it("pactOpen shows the circle, the season length, id and the nominal start", () => {
     expect(toTodayModel(pactOpenTodayFixture())).toEqual({
       kind: "pactOpen",
+      seasonId: "season-1",
       circleName: "Los de siempre",
       lengthWeeks: 4,
       startDate: "2026-09-28",
@@ -48,7 +49,13 @@ describe("toTodayModel: pact open and not started", () => {
 
   it("notStarted falls back to the nominal start when the actual start is not set", () => {
     const view = { ...pactOpenTodayFixture(), state: "notStarted" } as TodayView;
-    expect(toTodayModel(view)).toMatchObject({ kind: "notStarted", startDate: "2026-09-28" });
+    expect(toTodayModel(view)).toMatchObject({
+      kind: "notStarted",
+      seasonId: "season-1",
+      startDate: "2026-09-28",
+      daysUntilStart: 0,
+      myCommitments: [],
+    });
   });
 });
 

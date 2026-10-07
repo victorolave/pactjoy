@@ -53,23 +53,27 @@ describe("Today without a season (TO-R1)", () => {
     expect(screen.getByText("Los de siempre")).toBeInTheDocument();
   });
 
-  it("pactOpen shows the season summary, with no rows and no register control (TO-S3)", async () => {
+  it("pactOpen shows the season summary, with no rows and a CTA to prepare the season (TO-S3)", async () => {
     renderToday(pactOpenTodayFixture());
     expect(
       await screen.findByRole("heading", { name: "El pacto sigue abierto" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Temporada de 4 semanas")).toBeInTheDocument();
     expect(screen.getByText("Empieza el lunes 28 de septiembre")).toBeInTheDocument();
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Preparar la temporada" })).toHaveAttribute(
+      "href",
+      "/season/season-1/pact",
+    );
     expect(screen.queryByText(/Para hoy/)).not.toBeInTheDocument();
   });
 
-  it("notStarted tells the start date (TO-S4)", async () => {
+  it("notStarted tells the start date and pre-season countdown (TO-S4)", async () => {
     renderToday({ ...pactOpenTodayFixture(), state: "notStarted" } as TodayView);
+    expect(await screen.findByText("Pacto cerrado con Los de siempre")).toBeInTheDocument();
+    expect(screen.getByText("Lunes 28 de septiembre · 4 semanas")).toBeInTheDocument();
     expect(
-      await screen.findByRole("heading", { name: "Tu temporada aún no empieza" }),
+      screen.getByText(/Los registros se abren el lunes 28 de septiembre/),
     ).toBeInTheDocument();
-    expect(screen.getByText("Empieza el lunes 28 de septiembre.")).toBeInTheDocument();
   });
 });
 

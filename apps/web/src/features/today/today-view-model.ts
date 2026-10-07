@@ -1,5 +1,5 @@
 import type { TodayView } from "@pactjoy/app";
-import { addDays } from "../../shared/date.ts";
+import { addDays, daysBetween } from "../../shared/date.ts";
 import { longDate } from "../../shared/format.ts";
 
 type Seasoned = Extract<TodayView, { state: "pactOpen" | "notStarted" | "active" | "ended" }>;
@@ -15,11 +15,27 @@ export type TodayModel =
   | { readonly kind: "noCircle" }
   | { readonly kind: "noSeason"; readonly circleName: string }
   | {
-      readonly kind: "pactOpen" | "notStarted";
+      readonly kind: "pactOpen";
+      readonly seasonId: string;
       readonly circleName: string;
       readonly lengthWeeks: number;
-      /** ISO local date the season starts (or is meant to start). */
       readonly startDate: string;
+    }
+  | {
+      readonly kind: "notStarted";
+      readonly seasonId: string;
+      readonly circleName: string;
+      readonly lengthWeeks: number;
+      readonly startDate: string;
+      readonly today: string;
+      readonly daysUntilStart: number;
+      readonly myCommitments: readonly {
+        readonly id: string;
+        readonly habitName: string;
+        readonly icon: string | null;
+        readonly weightPercent: number;
+        readonly maxPoints: number;
+      }[];
     }
   | {
       readonly kind: "active" | "ended";
@@ -87,6 +103,7 @@ export type StandingsPairModel =
     };
 
 const seasonOf = (view: Seasoned) => ({
+  seasonId: view.season.id,
   circleName: view.circle.name,
   lengthWeeks: view.season.lengthWeeks,
   startDate: view.season.actualStart ?? view.season.nominalStart,
@@ -240,8 +257,17 @@ export function toTodayModel(view: TodayView): TodayModel {
     case "noSeason":
       return { kind: "noSeason", circleName: view.circle.name };
     case "pactOpen":
-    case "notStarted":
-      return { kind: view.state, ...seasonOf(view) };
+      return { kind: "pactOpen", ...seasonOf(view) };
+    case "notStarted": {
+      const base = seasonOf(view);
+      return {
+        kind: "notStarted",
+        ...base,
+        today: view.today,
+        daysUntilStart: Math.max(0, daysBetween(view.today, base.startDate)),
+        myCommitments: view.myCommitments ?? [],
+      };
+    }
     case "active":
     case "ended":
       return running(view);

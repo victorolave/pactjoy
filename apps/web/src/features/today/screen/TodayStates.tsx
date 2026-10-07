@@ -16,7 +16,8 @@ import { allDoneDetail } from "./all-done-copy.ts";
 import { dayOffText } from "./day-off-copy.ts";
 import styles from "./TodayScreen.module.css";
 
-type SeasonModel = Extract<TodayModel, { kind: "pactOpen" | "notStarted" }>;
+type PactOpenModel = Extract<TodayModel, { kind: "pactOpen" }>;
+type NotStartedModel = Extract<TodayModel, { kind: "notStarted" }>;
 type RunningModel = Extract<TodayModel, { kind: "active" | "ended" }>;
 
 /** Copy here is placeholder (P8) except where the design has wording. */
@@ -56,23 +57,58 @@ export function NoSeason({ circleName }: { readonly circleName: string }) {
   );
 }
 
-export function PactOpen({ model }: { readonly model: SeasonModel }) {
+export function PactOpen({ model }: { readonly model: PactOpenModel }) {
   return (
     <Empty title="El pacto sigue abierto" alt="Pacto abierto">
       <p className={styles.meta}>{model.circleName}</p>
       <p className={styles.lead}>Temporada de {model.lengthWeeks} semanas</p>
       <p className={styles.lead}>Empieza el {longDate(model.startDate, false)}</p>
       <p className={styles.lead}>Falta que todos aprueben el pacto para empezar.</p>
+      <ButtonLink to={`/season/${model.seasonId}/pact`}>Preparar la temporada</ButtonLink>
     </Empty>
   );
 }
 
-export function NotStarted({ model }: { readonly model: SeasonModel }) {
+export function NotStarted({ model }: { readonly model: NotStartedModel }) {
+  const countdown =
+    model.daysUntilStart === 1
+      ? "Empieza mañana"
+      : `La temporada empieza en ${model.daysUntilStart} días`;
   return (
-    <Empty title="Tu temporada aún no empieza" alt="Temporada por empezar">
-      <p className={styles.meta}>{model.circleName}</p>
-      <p className={styles.lead}>Empieza el {longDate(model.startDate, false)}.</p>
-    </Empty>
+    <section className={styles.empty}>
+      <header className={styles.header}>
+        <div className={styles.meta}>{longDate(model.today)}</div>
+        <h1 className={styles.title}>Hola</h1>
+      </header>
+      <Card>
+        <div className={styles.preSeasonCard}>
+          <div className={styles.meta}>Pacto cerrado con {model.circleName}</div>
+          <div className={styles.countdownTitle}>{countdown}</div>
+          <div className={styles.meta}>
+            {longDate(model.startDate)} · {model.lengthWeeks} semanas
+          </div>
+        </div>
+      </Card>
+      {model.myCommitments.length > 0 && (
+        <div className={styles.section}>
+          <h2 className={styles.sectionTitle}>Tu primera semana</h2>
+          <Card>
+            <div className={styles.commitmentList}>
+              {model.myCommitments.map((c) => (
+                <div key={c.id} className={styles.commitmentRow}>
+                  <b>{c.habitName}</b>
+                  <span className={styles.meta}>{c.maxPoints} pts</span>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+      )}
+      <p className={styles.lead}>
+        Los registros se abren el {longDate(model.startDate, false)}. Hasta entonces no hay nada que
+        hacer.
+      </p>
+    </section>
   );
 }
 
