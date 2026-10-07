@@ -190,7 +190,9 @@ describe("PactScreen: Screen 12b (Waiting)", () => {
 
     expect(await screen.findByRole("heading", { name: "Esperando a Andrea" })).toBeInTheDocument();
     expect(
-      screen.getByText("Aprobaste el pacto. Cuando Andrea lo apruebe, quedará cerrado y te avisaremos."),
+      screen.getByText(
+        "Aprobaste el pacto. Cuando Andrea lo apruebe, quedará cerrado y te avisaremos.",
+      ),
     ).toBeInTheDocument();
 
     // Member status card

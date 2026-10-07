@@ -183,10 +183,7 @@ export function PactScreen() {
               {circle.members.map((member) => {
                 const isApproved = season.approvals.some((a) => a.memberId === member.id);
                 return (
-                  <div
-                    key={member.id}
-                    className={styles.statusRow}
-                  >
+                  <div key={member.id} className={styles.statusRow}>
                     <Avatar name={member.displayName} size="sm" />
                     <span className={styles.statusName}>
                       {member.id === viewerId ? "Tú" : member.displayName}
@@ -268,7 +265,8 @@ export function PactScreen() {
     >
       <div className={styles.section}>
         <p className={styles.lead}>
-          Cada uno persigue sus propias metas. Durante la temporada no se podrán editar; solo pausar.
+          Cada uno persigue sus propias metas. Durante la temporada no se podrán editar; solo
+          pausar.
         </p>
 
         {sortedMembers.map((member) => {
@@ -295,17 +293,14 @@ export function PactScreen() {
                   {memberCommitments.map((c: CommitmentDto) => {
                     const isPrivate = c.kind === "hidden" || c.privacy === "private";
                     const isHiddenOther = c.kind === "hidden";
-                    const name = isHiddenOther ? "Meta privada" : c.habit?.name ?? "Hábito";
+                    const name = isHiddenOther ? "Meta privada" : (c.habit?.name ?? "Hábito");
                     const detail = isHiddenOther
                       ? `Solo ${member.displayName} ve los detalles`
                       : formatMeasureDetail(c.measure);
                     const privacyTag = isPrivate ? "Privado" : "Visible";
 
                     return (
-                      <div
-                        key={c.id}
-                        className={styles.commitmentRow}
-                      >
+                      <div key={c.id} className={styles.commitmentRow}>
                         <div className={styles.commitmentInfo}>
                           <div className={styles.commitmentName}>{name}</div>
                           <div className={styles.commitmentDetail}>{detail}</div>
@@ -342,8 +337,8 @@ export function PactScreen() {
             Editar mis compromisos
           </Button>
           <p className={styles.footnote}>
-            Mientras el pacto no esté cerrado, cada uno puede editar sus compromisos. Cualquier cambio
-            reinicia todas las aprobaciones.
+            Mientras el pacto no esté cerrado, cada uno puede editar sus compromisos. Cualquier
+            cambio reinicia todas las aprobaciones.
           </p>
         </div>
       </div>

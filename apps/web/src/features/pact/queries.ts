@@ -141,8 +141,7 @@ export function useWithdrawApproval() {
   const api = usePactJoyApi();
   const client = useQueryClient();
   return useMutation({
-    mutationFn: ({ seasonId }: { readonly seasonId: string }) =>
-      api.withdrawApproval(seasonId),
+    mutationFn: ({ seasonId }: { readonly seasonId: string }) => api.withdrawApproval(seasonId),
     onSuccess: (data, { seasonId }) => {
       client.setQueryData(seasonKey(seasonId), data);
     },
