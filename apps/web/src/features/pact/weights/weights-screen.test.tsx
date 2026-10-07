@@ -75,6 +75,24 @@ function renderWeightsScreen({
 }
 
 describe("weights screen (design 11)", () => {
+  it.each([true, false])(
+    "redirects a closed pact before weight editing (has commitments: %s)",
+    async (hasCommitments) => {
+      const season = twoCommitmentsSeasonFixture();
+      const { location, deps } = renderWeightsScreen({
+        season: {
+          ...season,
+          status: "active",
+          commitments: hasCommitments ? season.commitments : [],
+        },
+      });
+      expect(await screen.findByRole("heading", { name: "Pacto cerrado" })).toBeVisible();
+      expect(location()).toBe("/season/s-1/pact");
+      expect(screen.queryByRole("button", { name: "Repartir por igual" })).not.toBeInTheDocument();
+      expect(deps.api.calls.editCommitment).toBe(0);
+    },
+  );
+
   it("renders screen 11 with commitments, points, sum bar, and ready CTA", async () => {
     renderWeightsScreen();
 

@@ -124,6 +124,23 @@ function renderChooseHabits({
 }
 
 describe("choose habits screen (design 10)", () => {
+  it("redirects a closed pact to its screen without showing editable habits", async () => {
+    const { location, deps } = renderChooseHabits({
+      season: { ...seasonFixture(), status: "active" },
+    });
+    expect(await screen.findByRole("heading", { name: "Pacto cerrado" })).toBeVisible();
+    expect(location()).toBe("/season/s-1/pact");
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(deps.api.calls.removeCommitment).toBe(0);
+  });
+
+  it("lets the pact flow send an ended season onward to Today", async () => {
+    const { location } = renderChooseHabits({ season: { ...seasonFixture(), status: "closed" } });
+    expect(await screen.findByRole("heading", { name: /^Hola/ })).toBeVisible();
+    expect(location()).toBe("/");
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+  });
+
   it("formats commitment subtitles and counter messages accurately", () => {
     expect(chosenCommitmentsMessage(1)).toBe("1 compromiso elegido. Sugerimos entre 2 y 5.");
     expect(chosenCommitmentsMessage(4)).toBe("4 compromisos elegidos. Sugerimos entre 2 y 5.");

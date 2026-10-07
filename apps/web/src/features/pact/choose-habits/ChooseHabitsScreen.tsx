@@ -1,6 +1,6 @@
 import type { MeasureView } from "@pactjoy/app";
 import { useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { Navigate, useNavigate, useParams } from "react-router";
 import type { CommitmentDto, Serialized } from "../../../ports/wire.ts";
 import { weekdayDay } from "../../../shared/format.ts";
 import { scheduleText, targetText } from "../../../shared/row-labels.ts";
@@ -63,6 +63,10 @@ export function ChooseHabitsScreen() {
   const myMemberId = viewerMemberId(circleQuery.data ?? { circle: null });
   const season = seasonQuery.data;
   const habits = habitsQuery.data ?? [];
+
+  if (!isLoadError && season && season.status !== "pactOpen") {
+    return <Navigate to={`/season/${season.id}/pact`} replace />;
+  }
 
   const mySeasonCommitments =
     season?.commitments.filter(
