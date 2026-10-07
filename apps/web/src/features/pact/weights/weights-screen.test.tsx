@@ -97,8 +97,13 @@ describe("weights screen (design 11)", () => {
     expect(screen.getByText("Suma 100 %")).toBeInTheDocument();
     expect(screen.getByText("Listo")).toBeInTheDocument();
 
+    const summaryHead = screen.getByText("Suma 100 %").closest("div");
+    expect(summaryHead).toHaveAttribute("aria-live", "polite");
+    expect(summaryHead).toHaveAttribute("aria-atomic", "true");
+
     const progressBar = screen.getByRole("progressbar", { name: "Suma de pesos" });
     expect(progressBar).toHaveAttribute("aria-valuenow", "100");
+    expect(progressBar).toHaveAttribute("aria-valuetext", "100 %");
 
     // Hint
     expect(
@@ -115,29 +120,34 @@ describe("weights screen (design 11)", () => {
 
     await screen.findByText("Meditar");
 
-    const [plusFirst] = screen.getAllByRole("button", { name: "Sumar 5 %" });
-    const [minusFirst] = screen.getAllByRole("button", { name: "Restar 5 %" });
-    if (!plusFirst || !minusFirst) throw new Error("stepper buttons not found");
+    const plusMeditar = screen.getByRole("button", { name: "Sumar 5 % a Meditar" });
+    const minusMeditar = screen.getByRole("button", { name: "Restar 5 % a Meditar" });
 
     // Increase first commitment to 55%
-    await userEvent.click(plusFirst);
+    await userEvent.click(plusMeditar);
 
     expect(screen.getByText("55 %")).toBeInTheDocument();
     expect(screen.getByText("550 pts posibles")).toBeInTheDocument();
     expect(screen.getByText("Suma 105 %")).toBeInTheDocument();
     expect(screen.getByText("Te sobran 5 %")).toBeInTheDocument();
 
+    const progressBar = screen.getByRole("progressbar", { name: "Suma de pesos" });
+    expect(progressBar).toHaveAttribute("aria-valuenow", "100");
+    expect(progressBar).toHaveAttribute("aria-valuetext", "105 %");
+
     const cta = screen.getByRole("button", { name: "La suma debe ser 100 %" });
     expect(cta).toBeDisabled();
 
     // Decrease first commitment by 10% (55 -> 50 -> 45%)
-    await userEvent.click(minusFirst);
-    await userEvent.click(minusFirst);
+    await userEvent.click(minusMeditar);
+    await userEvent.click(minusMeditar);
 
     expect(screen.getByText("45 %")).toBeInTheDocument();
     expect(screen.getByText("450 pts posibles")).toBeInTheDocument();
     expect(screen.getByText("Suma 95 %")).toBeInTheDocument();
     expect(screen.getByText("Te faltan 5 %")).toBeInTheDocument();
+    expect(progressBar).toHaveAttribute("aria-valuenow", "95");
+    expect(progressBar).toHaveAttribute("aria-valuetext", "95 %");
     expect(cta).toBeDisabled();
   });
 
@@ -145,15 +155,14 @@ describe("weights screen (design 11)", () => {
     renderWeightsScreen();
 
     await screen.findByText("Meditar");
-    const [plusFirst] = screen.getAllByRole("button", { name: "Sumar 5 %" });
-    const [, minusSecond] = screen.getAllByRole("button", { name: "Restar 5 %" });
-    if (!plusFirst || !minusSecond) throw new Error("stepper buttons not found");
+    const plusMeditar = screen.getByRole("button", { name: "Sumar 5 % a Meditar" });
+    const minusLeer = screen.getByRole("button", { name: "Restar 5 % a Leer" });
 
     // Make weights unequal: Meditar 60%, Leer 40%
-    await userEvent.click(plusFirst);
-    await userEvent.click(plusFirst);
-    await userEvent.click(minusSecond);
-    await userEvent.click(minusSecond);
+    await userEvent.click(plusMeditar);
+    await userEvent.click(plusMeditar);
+    await userEvent.click(minusLeer);
+    await userEvent.click(minusLeer);
 
     expect(screen.getByText("60 %")).toBeInTheDocument();
     expect(screen.getByText("40 %")).toBeInTheDocument();
@@ -175,13 +184,12 @@ describe("weights screen (design 11)", () => {
     deps.api.setPactResponse("editCommitment", season);
 
     await screen.findByText("Meditar");
-    const [plusFirst] = screen.getAllByRole("button", { name: "Sumar 5 %" });
-    const [, minusSecond] = screen.getAllByRole("button", { name: "Restar 5 %" });
-    if (!plusFirst || !minusSecond) throw new Error("stepper buttons not found");
+    const plusMeditar = screen.getByRole("button", { name: "Sumar 5 % a Meditar" });
+    const minusLeer = screen.getByRole("button", { name: "Restar 5 % a Leer" });
 
     // Change to Meditar 55%, Leer 45% (sum = 100%)
-    await userEvent.click(plusFirst);
-    await userEvent.click(minusSecond);
+    await userEvent.click(plusMeditar);
+    await userEvent.click(minusLeer);
 
     const cta = screen.getByRole("button", { name: "Revisar el pacto" });
     await userEvent.click(cta);
@@ -251,13 +259,12 @@ describe("weights screen (design 11)", () => {
     deps.api.failNext("editCommitment", new ApiError("InternalError", 500, null));
 
     await screen.findByText("Meditar");
-    const [plusFirst] = screen.getAllByRole("button", { name: "Sumar 5 %" });
-    const [, minusSecond] = screen.getAllByRole("button", { name: "Restar 5 %" });
-    if (!plusFirst || !minusSecond) throw new Error("stepper buttons not found");
+    const plusMeditar = screen.getByRole("button", { name: "Sumar 5 % a Meditar" });
+    const minusLeer = screen.getByRole("button", { name: "Restar 5 % a Leer" });
 
     // Change to Meditar 55%, Leer 45%
-    await userEvent.click(plusFirst);
-    await userEvent.click(minusSecond);
+    await userEvent.click(plusMeditar);
+    await userEvent.click(minusLeer);
 
     const cta = screen.getByRole("button", { name: "Revisar el pacto" });
     await userEvent.click(cta);
@@ -265,6 +272,58 @@ describe("weights screen (design 11)", () => {
     expect(
       await screen.findByText("No pudimos guardar los pesos. Inténtalo de nuevo."),
     ).toBeInTheDocument();
+  });
+
+  it("refetches season and shows real saved state when an edit fails mid-way (CRITICAL & W4)", async () => {
+    const season = twoCommitmentsSeasonFixture();
+    const { deps, location } = renderWeightsScreen({ season });
+
+    await screen.findByText("Meditar");
+    const plusMeditar = screen.getByRole("button", { name: "Sumar 5 % a Meditar" });
+    const minusLeer = screen.getByRole("button", { name: "Restar 5 % a Leer" });
+
+    // Change Meditar to 55%, Leer to 45% (both changed, sum = 100%)
+    await userEvent.click(plusMeditar);
+    await userEvent.click(minusLeer);
+
+    // Hold the first edit call so we can script failNext for the second call
+    const releaseFirst = deps.api.hold("editCommitment");
+
+    const cta = screen.getByRole("button", { name: "Revisar el pacto" });
+    await userEvent.click(cta);
+
+    // Queue failure for the second edit call while the first call is in flight
+    deps.api.failNext("editCommitment", new ApiError("ConcurrencyConflict", 409, null));
+
+    // Release first call, allowing it to succeed
+    releaseFirst();
+
+    // After failure: error message is displayed
+    expect(
+      await screen.findByText("No pudimos guardar los pesos. Inténtalo de nuevo."),
+    ).toBeInTheDocument();
+
+    // Did NOT navigate
+    expect(location()).toBe("/season/s-1/weights");
+
+    // Real saved state is shown: Meditar was saved at 55% (550 pts), Leer failed and stayed at 50% (500 pts)
+    expect(screen.getByText("55 %")).toBeInTheDocument();
+    expect(screen.getByText("550 pts posibles")).toBeInTheDocument();
+    expect(screen.getByText("50 %")).toBeInTheDocument();
+    expect(screen.getByText("500 pts posibles")).toBeInTheDocument();
+
+    // Total reflects the real saved sum: 55 + 50 = 105%
+    expect(screen.getByText("Suma 105 %")).toBeInTheDocument();
+    expect(screen.getByText("Te sobran 5 %")).toBeInTheDocument();
+  });
+
+  it("redirects to /season/:seasonId/habits when viewer has no commitments in the season (S1)", async () => {
+    const season: SeasonDto = {
+      ...twoCommitmentsSeasonFixture(),
+      commitments: [],
+    };
+    const { location } = renderWeightsScreen({ season });
+    await waitFor(() => expect(location()).toBe("/season/s-1/habits"));
   });
 
   it("disables decrement button when weight reaches minimum 5%", async () => {
@@ -289,7 +348,7 @@ describe("weights screen (design 11)", () => {
     renderWeightsScreen({ season });
 
     await screen.findByText("Bajo peso");
-    const minusBtn = screen.getByRole("button", { name: "Restar 5 %" });
+    const minusBtn = screen.getByRole("button", { name: "Restar 5 % a Bajo peso" });
     expect(minusBtn).toBeDisabled();
   });
 
@@ -315,7 +374,7 @@ describe("weights screen (design 11)", () => {
     renderWeightsScreen({ season });
 
     await screen.findByText("Max peso");
-    const plusBtn = screen.getByRole("button", { name: "Sumar 5 %" });
+    const plusBtn = screen.getByRole("button", { name: "Sumar 5 % a Max peso" });
     expect(plusBtn).toBeDisabled();
   });
 
@@ -355,12 +414,11 @@ describe("weights screen (design 11)", () => {
     deps.api.setPactResponse("editCommitment", season);
 
     await screen.findByText("Meditar");
-    const [plusFirst] = screen.getAllByRole("button", { name: "Sumar 5 %" });
-    const [, minusSecond] = screen.getAllByRole("button", { name: "Restar 5 %" });
-    if (!plusFirst || !minusSecond) throw new Error("stepper buttons not found");
+    const plusMeditar = screen.getByRole("button", { name: "Sumar 5 % a Meditar" });
+    const minusLeer = screen.getByRole("button", { name: "Restar 5 % a Leer" });
 
-    await userEvent.click(plusFirst);
-    await userEvent.click(minusSecond);
+    await userEvent.click(plusMeditar);
+    await userEvent.click(minusLeer);
 
     const release = deps.api.hold("editCommitment");
     const cta = screen.getByRole("button", { name: "Revisar el pacto" });
@@ -368,7 +426,7 @@ describe("weights screen (design 11)", () => {
 
     // While saving is pending
     expect(cta).toBeDisabled();
-    expect(plusFirst).toBeDisabled();
+    expect(plusMeditar).toBeDisabled();
     expect(screen.getByRole("button", { name: "Repartir por igual" })).toBeDisabled();
 
     release();

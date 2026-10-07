@@ -46,32 +46,31 @@ export function weightSummary(weights: readonly number[]): WeightSummary {
 }
 
 /** Converts a commitment's read model (or serialized wire format) back to the input shape required for editing. */
-export function measureViewToInput(measure: MeasureView | Serialized<MeasureView>): MeasureInput {
-  const mv = measure as MeasureView;
-  if (mv.unit === "done") {
+export function measureViewToInput(measure: Serialized<MeasureView> | MeasureView): MeasureInput {
+  if (measure.unit === "done") {
     return {
       unit: "done",
-      frequency: mv.schedule.frequency,
+      frequency: measure.schedule.frequency,
     };
   }
-  if (mv.target.direction === "reach") {
+  if (measure.target.direction === "reach") {
     return {
-      unit: mv.unit,
-      customLabel: mv.customLabel,
-      precision: mv.precision,
+      unit: measure.unit,
+      customLabel: measure.customLabel,
+      precision: measure.precision,
       direction: "reach",
-      minimum: mv.target.minimum,
-      ideal: mv.target.ideal,
-      schedule: mv.schedule,
+      minimum: measure.target.minimum,
+      ideal: measure.target.ideal,
+      schedule: measure.schedule,
     };
   }
   return {
-    unit: mv.unit,
-    customLabel: mv.customLabel,
-    precision: mv.precision,
+    unit: measure.unit,
+    customLabel: measure.customLabel,
+    precision: measure.precision,
     direction: "limit",
-    ideal: mv.target.ideal,
-    tolerance: mv.target.tolerance,
-    schedule: mv.schedule,
+    ideal: measure.target.ideal,
+    tolerance: measure.target.tolerance,
+    schedule: measure.schedule,
   };
 }

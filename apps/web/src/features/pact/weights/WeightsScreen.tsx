@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { Navigate, useNavigate, useParams } from "react-router";
 import type { CommitmentDto } from "../../../ports/wire.ts";
 import { Button } from "../../../ui/Button.tsx";
 import { Card } from "../../../ui/Card.tsx";
@@ -46,6 +46,10 @@ export function WeightsScreen() {
         c.kind === "detail" && c.memberId === myMemberId,
     ) ?? [];
 
+  if (!isLoading && !isLoadError && myCommitments.length === 0 && seasonId) {
+    return <Navigate to={`/season/${seasonId}/habits`} replace />;
+  }
+
   const currentWeights = myCommitments.map((c) => weights[c.id] ?? c.weightPercent);
   const summary = weightSummary(currentWeights);
 
@@ -83,24 +87,26 @@ export function WeightsScreen() {
     );
 
     try {
-      if (changed.length > 0) {
-        await Promise.all(
-          changed.map((c) =>
-            editCommitment.mutateAsync({
-              seasonId,
-              commitmentId: c.id,
-              input: {
-                weightPercent: weights[c.id] ?? c.weightPercent,
-                privacy: c.privacy,
-                measure: measureViewToInput(c.measure),
-              },
-            }),
-          ),
-        );
+      for (const c of changed) {
+        await editCommitment.mutateAsync({
+          seasonId,
+          commitmentId: c.id,
+          input: {
+            weightPercent: weights[c.id] ?? c.weightPercent,
+            privacy: c.privacy,
+            measure: measureViewToInput(c.measure),
+          },
+        });
       }
       navigate(`/season/${seasonId}/pact`);
     } catch {
       setFailure("No pudimos guardar los pesos. Inténtalo de nuevo.");
+      setWeights({});
+      try {
+        await seasonQuery.refetch();
+      } catch {
+        // refetch error ignored
+      }
     } finally {
       setIsSaving(false);
     }
@@ -166,7 +172,7 @@ export function WeightsScreen() {
                         </div>
                         <button
                           type="button"
-                          aria-label="Restar 5 %"
+                          aria-label={`Restar 5 % a ${habitName}`}
                           disabled={isMutating || weight <= 5}
                           className={styles.stepButton}
                           onClick={() => handleStep(c.id, -5)}
@@ -176,7 +182,7 @@ export function WeightsScreen() {
                         <span className={styles.weightValue}>{weight} %</span>
                         <button
                           type="button"
-                          aria-label="Sumar 5 %"
+                          aria-label={`Sumar 5 % a ${habitName}`}
                           disabled={isMutating || weight >= 100}
                           className={styles.stepButton}
                           onClick={() => handleStep(c.id, 5)}
@@ -191,7 +197,7 @@ export function WeightsScreen() {
             )}
 
             <div className={styles.summarySection}>
-              <div className={styles.summaryHead}>
+              <div className={styles.summaryHead} aria-live="polite" aria-atomic="true">
                 <span className={styles.summaryLabel}>Suma {summary.total} %</span>
                 <span className={styles.summaryMessage} data-tone={summary.tone}>
                   {summary.message}
@@ -200,9 +206,10 @@ export function WeightsScreen() {
               <div
                 className={styles.progressTrack}
                 role="progressbar"
-                aria-valuenow={summary.total}
+                aria-valuenow={Math.min(100, summary.total)}
                 aria-valuemin={0}
                 aria-valuemax={100}
+                aria-valuetext={`${summary.total} %`}
                 aria-label="Suma de pesos"
               >
                 <div
