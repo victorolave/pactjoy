@@ -43,17 +43,16 @@ describe("Circle tab, alone in the circle: the waiting room (7)", () => {
     expect(deps.sharing.copied).toEqual(["7K4Q2M"]);
   });
 
-  it("keeps the season and habit actions visible, disabled and labelled, and they do nothing (Q4, WC-S8)", async () => {
+  it("enables season preparation and keeps habit action disabled (Q4, WC-S8)", async () => {
     const { location } = renderApp({ path: "/circle" });
     const prepare = await screen.findByRole("button", { name: "Preparar la temporada" });
     const habits = screen.getByRole("button", { name: "Solo crear mis hábitos" });
-    expect(prepare).toBeDisabled();
+    expect(prepare).toBeEnabled();
     expect(habits).toBeDisabled();
-    expect(screen.getAllByText("Próximamente")).toHaveLength(2);
-    expect(prepare).toHaveAccessibleDescription("Próximamente");
+    expect(screen.getAllByText("Próximamente")).toHaveLength(1);
     expect(habits).toHaveAccessibleDescription("Próximamente");
     await userEvent.click(prepare);
-    expect(location()).toBe("/circle");
+    expect(location()).toBe("/season/new");
   });
 
   it("promises no push and never calls a solo circle incomplete (WC-R8, OB-R7)", async () => {

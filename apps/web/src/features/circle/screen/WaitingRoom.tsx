@@ -1,4 +1,5 @@
 import { useId } from "react";
+import { useNavigate } from "react-router";
 import type { MyCircle } from "../../../ports/pactjoy-api.ts";
 import { Avatar } from "../../../ui/Avatar.tsx";
 import { Button } from "../../../ui/Button.tsx";
@@ -42,6 +43,7 @@ function ComingSoon({
  * a second member by itself (WC-R8). A solo circle is valid, so nothing here says it is incomplete.
  */
 export function WaitingRoom({ circle }: { readonly circle: Circle }) {
+  const navigate = useNavigate();
   const me = circle.members[0]?.displayName ?? "";
   return (
     <>
@@ -64,7 +66,9 @@ export function WaitingRoom({ circle }: { readonly circle: Circle }) {
         </p>
       </div>
       <InviteStrip circleId={circle.id} invite={circle.invite} />
-      <ComingSoon>Preparar la temporada</ComingSoon>
+      <Button block onClick={() => navigate("/season/new")}>
+        Preparar la temporada
+      </Button>
       <ComingSoon variant="ghost">Solo crear mis hábitos</ComingSoon>
     </>
   );
