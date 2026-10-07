@@ -31,6 +31,44 @@ async function lastStep() {
 }
 
 describe("habit wizard routes (screens 9/9c)", () => {
+  it("groups the frequency stepper and target helpers into their cards", async () => {
+    setup();
+    await ready();
+    await next();
+    await next();
+    const frequency = within(screen.getByRole("group", { name: "Frecuencia" }));
+    expect(frequency.getByRole("status")).toHaveTextContent("5 veces por semana");
+    expect(frequency.getByRole("button", { name: "Sumar veces por semana" })).toBeVisible();
+    const minimum = within(screen.getByRole("group", { name: "Mínimo" }));
+    expect(minimum.getByRole("status")).toHaveTextContent("10 min");
+    expect(minimum.getByText("para un día difícil")).toBeVisible();
+    const ideal = within(screen.getByRole("group", { name: "Ideal" }));
+    expect(ideal.getByRole("status")).toHaveTextContent("30 min");
+    expect(ideal.getByText("da el 100 %")).toBeVisible();
+  });
+
+  it("renders a titled summary and reuses it with the chosen icon after saving", async () => {
+    setup();
+    await ready();
+    await userEvent.click(screen.getByRole("radio", { name: "Café" }));
+    await lastStep();
+    expect(screen.getByRole("main").querySelectorAll("[data-current]")).toHaveLength(4);
+    const summary = within(screen.getByRole("region", { name: "Resumen" }));
+    expect(summary.getByRole("heading", { level: 2, name: "Leer" })).toBeVisible();
+    const measure = "5 veces por semana · mín. 10, ideal 30 min · visible";
+    expect(summary.getByText(measure)).toBeVisible();
+    expect(summary.getByText("Los puntos se calculan cuando repartas los pesos.")).toBeVisible();
+    await userEvent.click(screen.getByRole("button", { name: "Guardar hábito" }));
+    expect(await screen.findByRole("heading", { name: "Hábito guardado" })).toHaveFocus();
+    expect(screen.getByRole("main").querySelectorAll("[data-current]")).toHaveLength(0);
+    const saved = within(screen.getByRole("region", { name: "Resumen" }));
+    expect(saved.getByRole("heading", { level: 2, name: "Leer" })).toBeVisible();
+    expect(saved.getByText(measure)).toBeVisible();
+    expect(saved.getByRole("img", { name: "Café" })).toBeVisible();
+    expect(screen.queryByText(/Los puntos se calculan/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Crear otro hábito" })).toBeEnabled();
+  });
+
   it("exposes all 20 icon choices with owner-approved Spanish accessible names", async () => {
     setup();
     await ready();
@@ -66,6 +104,9 @@ describe("habit wizard routes (screens 9/9c)", () => {
     setup();
     await ready();
     expect(screen.getByRole("heading", { level: 1 })).toHaveFocus();
+    expect(screen.getByRole("heading", { level: 1 })).toHaveAttribute("data-step-focus", "true");
+    await userEvent.keyboard("{Tab}");
+    expect(screen.getByRole("heading", { level: 1 })).not.toHaveAttribute("data-step-focus");
     expect(screen.getByText("Paso 1 de 4")).toHaveAttribute("role", "status");
     const name = screen.getByRole("textbox", { name: "Nombre" });
     await userEvent.type(name, "!");
@@ -74,6 +115,7 @@ describe("habit wizard routes (screens 9/9c)", () => {
     expect(cancel.querySelector("svg")).toHaveClass("lucide-x");
     await next();
     expect(screen.getByRole("heading", { name: "¿Cómo lo mides?" })).toHaveFocus();
+    expect(screen.getByRole("heading", { level: 1 })).toHaveAttribute("data-step-focus", "true");
     expect(screen.getByText("Paso 2 de 4")).toHaveAttribute("role", "status");
     const reach = screen.getByRole("radio", { name: "Alcanzar" });
     expect(reach).not.toHaveAttribute("aria-label");

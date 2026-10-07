@@ -60,10 +60,11 @@ export function Choices<T extends string>({
             aria-label={iconsOnly ? option.label : undefined}
             aria-describedby={!iconsOnly && option.hint ? `${id}-${index}-hint` : undefined}
             tabIndex={checked || first ? 0 : -1}
-            className={styles.choice}
+            className={compact ? styles.chip : styles.choice}
             onClick={() => onChange(option.value)}
             onKeyDown={(event) => move(event, index)}
           >
+            {!compact && <span className={styles.radioIndicator} aria-hidden="true" />}
             {option.icon}
             {!iconsOnly && (
               <span className={styles.choiceText}>

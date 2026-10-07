@@ -9,7 +9,7 @@ import { Skeleton } from "../../../ui/Skeleton.tsx";
 import { useSaveWizard, useWizardData } from "../queries.ts";
 import { IdentityStep } from "./IdentityStep.tsx";
 import { MeasureStep } from "./MeasureStep.tsx";
-import { PrivacyStep, wizardSummary } from "./PrivacyStep.tsx";
+import { PrivacyStep, WizardSummary } from "./PrivacyStep.tsx";
 import { TargetStep } from "./TargetStep.tsx";
 import styles from "./Wizard.module.css";
 import { initialWizard, prefillWizard, wizardReducer } from "./wizard-model.ts";
@@ -114,7 +114,19 @@ function WizardForm({
   const heading = useRef<HTMLHeadingElement>(null);
   // biome-ignore lint/correctness/useExhaustiveDependencies: step transitions intentionally trigger heading focus, not edits within a step
   useEffect(() => {
-    heading.current?.focus();
+    const title = heading.current;
+    if (!title) return;
+    // A scripted focus can inherit :focus-visible from the previous field in Chromium.
+    title.dataset.stepFocus = "true";
+    title.focus();
+    const clear = () => title.removeAttribute("data-step-focus");
+    title.addEventListener("blur", clear, { once: true });
+    title.addEventListener("keydown", clear, { once: true });
+    return () => {
+      clear();
+      title.removeEventListener("blur", clear);
+      title.removeEventListener("keydown", clear);
+    };
   }, [draft.step]);
   const measure = draft.measure;
   const title =
@@ -209,11 +221,13 @@ function WizardForm({
         </div>
       }
     >
-      <div className={styles.bars} aria-hidden="true">
-        {[0, 1, 2, 3].map((step) => (
-          <span key={step} className={styles.bar} data-current={step <= draft.step} />
-        ))}
-      </div>
+      {draft.step < 4 && (
+        <div className={styles.bars} aria-hidden="true">
+          {[0, 1, 2, 3].map((step) => (
+            <span key={step} className={styles.bar} data-current={step <= draft.step} />
+          ))}
+        </div>
+      )}
       <fieldset className={styles.editor} disabled={save.isPending} aria-busy={save.isPending}>
         {draft.step === 0 && <IdentityStep draft={draft} dispatch={dispatch} />}
         {draft.step === 1 && <MeasureStep draft={draft} dispatch={dispatch} />}
@@ -222,9 +236,9 @@ function WizardForm({
         {draft.step === 4 && (
           <div className={styles.stack} role="status">
             <span className={styles.success}>
-              <Icon name="circle-check" size="lg" />
+              <Icon name="check" size="lg" />
             </span>
-            <p>{wizardSummary(draft)}</p>
+            <WizardSummary draft={draft} saved />
           </div>
         )}
       </fieldset>
