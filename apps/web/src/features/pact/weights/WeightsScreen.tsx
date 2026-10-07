@@ -220,7 +220,7 @@ export function WeightsScreen() {
               </div>
             </div>
 
-            <div>
+            <div className={styles.equalize}>
               <Button
                 variant="ghost"
                 size="sm"
