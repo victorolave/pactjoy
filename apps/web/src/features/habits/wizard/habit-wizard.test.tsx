@@ -1,4 +1,4 @@
-import { act, screen, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { ApiError } from "../../../ports/api-error.ts";
@@ -195,8 +195,12 @@ describe("habit wizard routes (screens 9/9c)", () => {
   });
 
   it("does not substitute a new habit when a requested habitId is not owned", async () => {
-    setup(`/season/${wizardSeason.id}/habits/new?habitId=someone-elses-habit`);
-    expect(await screen.findByRole("alert")).toHaveTextContent("Algo salió mal");
+    const { location } = setup(`/season/${wizardSeason.id}/habits/new?habitId=someone-elses-habit`);
+    await waitFor(() => expect(location()).toBe(`/season/${wizardSeason.id}/pact`));
+    expect(
+      await screen.findByRole("heading", { name: "Revisa el pacto antes de aceptar" }),
+    ).toBeVisible();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(screen.queryByRole("textbox", { name: "Nombre" })).not.toBeInTheDocument();
   });
 
@@ -402,13 +406,31 @@ describe("habit wizard routes (screens 9/9c)", () => {
   });
 
   it("does not expose or edit a commitment owned by another member", async () => {
-    const { deps } = setup(`/season/${wizardSeason.id}/commitments/commitment-read/edit`);
+    const { deps, location } = setup(`/season/${wizardSeason.id}/commitments/commitment-read/edit`);
     deps.api.setPactResponse("getSeason", {
       ...wizardSeason,
       commitments: wizardSeason.commitments.map((c) => ({ ...c, memberId: "member-andrea" })),
     });
-    expect(await screen.findByRole("alert")).toHaveTextContent("Algo salió mal");
+    await waitFor(() => expect(location()).toBe(`/season/${wizardSeason.id}/pact`));
+    expect(
+      await screen.findByRole("heading", { name: "Revisa el pacto antes de aceptar" }),
+    ).toBeVisible();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(screen.queryByRole("textbox", { name: "Nombre" })).not.toBeInTheDocument();
     expect(deps.api.calls.editCommitment).toBe(0);
   });
+
+  it.each(["habits/new", "commitments/commitment-read/edit"])(
+    "redirects a closed pact from %s without a connection error",
+    async (path) => {
+      const { deps, location } = setup(`/season/${wizardSeason.id}/${path}`);
+      deps.api.setPactResponse("getSeason", { ...wizardSeason, status: "active" });
+      expect(await screen.findByRole("heading", { name: "Pacto cerrado" })).toBeVisible();
+      expect(location()).toBe(`/season/${wizardSeason.id}/pact`);
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+      expect(screen.queryByRole("textbox", { name: "Nombre" })).not.toBeInTheDocument();
+      expect(deps.api.calls.createHabit).toBe(0);
+      expect(deps.api.calls.editCommitment).toBe(0);
+    },
+  );
 });

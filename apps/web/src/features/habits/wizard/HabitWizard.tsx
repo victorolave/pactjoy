@@ -1,5 +1,5 @@
 import { useEffect, useReducer, useRef, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router";
+import { Navigate, useNavigate, useParams, useSearchParams } from "react-router";
 import type { CommitmentDto, HabitDto } from "../../../ports/wire.ts";
 import { Button } from "../../../ui/Button.tsx";
 import { FlowScreen } from "../../../ui/FlowScreen.tsx";
@@ -36,16 +36,19 @@ export function HabitWizard() {
       item.id === commitmentId && item.kind === "detail" && item.memberId === memberId,
   );
   const habit = queries.habits.data?.find((item) => item.id === (commitment?.habitId ?? habitId));
+  if (!seasonId) return <Navigate to="/" replace />;
   const invalid =
-    !seasonId ||
-    (!isLoading &&
-      (!memberId ||
-        !season ||
-        season.circleId !== circle?.id ||
-        season.status !== "pactOpen" ||
-        (commitmentId !== undefined && !commitment) ||
-        ((habitId !== null || commitmentId !== undefined) && !habit)));
-  if (isError || isLoading || invalid) {
+    !isLoading &&
+    (!memberId ||
+      !season ||
+      season.circleId !== circle?.id ||
+      season.status !== "pactOpen" ||
+      (commitmentId !== undefined && !commitment) ||
+      ((habitId !== null || commitmentId !== undefined) && !habit));
+  if (!isError && invalid) {
+    return <Navigate to={`/season/${seasonId}/pact`} replace />;
+  }
+  if (isError || isLoading) {
     return (
       <FlowScreen
         title="¿Qué hábito quieres trabajar?"
@@ -54,7 +57,7 @@ export function HabitWizard() {
         onBack={() => (seasonId ? navigate(`/season/${seasonId}/habits`) : navigate(-1))}
       >
         <div aria-busy={isLoading}>
-          {isLoading && !invalid ? (
+          {isLoading ? (
             <Skeleton shape="card" lines={3} />
           ) : (
             <InlineMessage
