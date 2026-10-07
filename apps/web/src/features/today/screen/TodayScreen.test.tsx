@@ -70,10 +70,28 @@ describe("Today without a season (TO-R1)", () => {
   it("notStarted tells the start date and pre-season countdown (TO-S4)", async () => {
     renderToday({ ...pactOpenTodayFixture(), state: "notStarted" } as TodayView);
     expect(await screen.findByText("Pacto cerrado con Los de siempre")).toBeInTheDocument();
+    expect(screen.getByText("La temporada empieza hoy")).toBeInTheDocument();
     expect(screen.getByText("Lunes 28 de septiembre · 4 semanas")).toBeInTheDocument();
     expect(
       screen.getByText(/Los registros se abren el lunes 28 de septiembre/),
     ).toBeInTheDocument();
+  });
+
+  it("notStarted displays 'Empieza mañana' when season starts tomorrow and 'La temporada empieza en N días' when further ahead", async () => {
+    const pactOpen = pactOpenTodayFixture();
+    renderToday({
+      ...pactOpen,
+      state: "notStarted",
+      season: { ...pactOpen.season, actualStart: "2026-10-03" as typeof pactOpen.today },
+    } as TodayView);
+    expect(await screen.findByText("Empieza mañana")).toBeInTheDocument();
+
+    renderToday({
+      ...pactOpen,
+      state: "notStarted",
+      season: { ...pactOpen.season, actualStart: "2026-10-05" as typeof pactOpen.today },
+    } as TodayView);
+    expect(await screen.findByText("La temporada empieza en 3 días")).toBeInTheDocument();
   });
 });
 

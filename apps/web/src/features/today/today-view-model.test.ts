@@ -11,7 +11,23 @@ import {
   pactOpenTodayFixture,
   weekRowFixture,
 } from "../../testing/fixtures/today.ts";
-import { toTodayModel } from "./today-view-model.ts";
+import { formatCountdown, toTodayModel } from "./today-view-model.ts";
+
+describe("formatCountdown", () => {
+  it("formats countdown for starts today, tomorrow and multiple days (full mode)", () => {
+    expect(formatCountdown(0)).toBe("La temporada empieza hoy");
+    expect(formatCountdown(-1)).toBe("La temporada empieza hoy");
+    expect(formatCountdown(1)).toBe("Empieza mañana");
+    expect(formatCountdown(2)).toBe("La temporada empieza en 2 días");
+    expect(formatCountdown(5)).toBe("La temporada empieza en 5 días");
+  });
+
+  it("formats countdown in short mode matching 'Empieza hoy' when replaced from 'Empieza mañana'", () => {
+    expect(formatCountdown(0, "short")).toBe("Empieza hoy");
+    expect(formatCountdown(1, "short")).toBe("Empieza mañana");
+    expect(formatCountdown(3, "short")).toBe("Empieza en 3 días");
+  });
+});
 
 describe("toTodayModel: states without a season", () => {
   it("noCircle carries nothing", () => {

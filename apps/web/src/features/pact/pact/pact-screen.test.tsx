@@ -171,6 +171,42 @@ describe("PactScreen: Screen 12a (Review and Approve)", () => {
     expect(await screen.findByText("El pacto cambió. Revísalo de nuevo.")).toBeInTheDocument();
   });
 
+  it("handles CommitmentWeightsNotFull error by showing inline error and navigating to weights", async () => {
+    const { deps, location } = renderPact();
+    const approveBtn = await screen.findByRole("button", { name: "Aprobar el pacto" });
+
+    deps.api.failNext("approvePact", new ApiError("CommitmentWeightsNotFull", 409, null));
+
+    await userEvent.click(approveBtn);
+
+    expect(await screen.findByText("La suma debe ser 100 %")).toBeInTheDocument();
+    const weightsBtn = screen.getByRole("button", { name: "Repartir pesos" });
+    await userEvent.click(weightsBtn);
+
+    expect(location()).toBe("/season/s-1/weights");
+  });
+
+  it("prevents double submit on approve while request is pending", async () => {
+    const { deps } = renderPact();
+    const approveBtn = await screen.findByRole("button", { name: "Aprobar el pacto" });
+
+    const release = deps.api.hold("approvePact");
+    deps.api.setPactResponse("approvePact", {
+      ...pairSeasonFixture(),
+      approvals: [{ memberId: "member-victor", approvedAt: "2026-10-06T12:00:00Z" }],
+    });
+
+    await userEvent.click(approveBtn);
+    expect(approveBtn).toBeDisabled();
+
+    // Secondary submit attempt ignored
+    await userEvent.click(approveBtn);
+
+    release();
+    expect(await screen.findByRole("heading", { name: "Esperando a Andrea" })).toBeInTheDocument();
+    expect(deps.api.calls.approvePact).toBe(1);
+  });
+
   it("navigates to habits screen on Editar mis compromisos", async () => {
     const { location } = renderPact();
     const editBtn = await screen.findByRole("button", { name: "Editar mis compromisos" });
@@ -182,7 +218,7 @@ describe("PactScreen: Screen 12a (Review and Approve)", () => {
 });
 
 describe("PactScreen: Screen 12b (Waiting)", () => {
-  it("renders waiting state with member status card, late start note, and lets viewer withdraw approval", async () => {
+  it("renders waiting state with member status card, dynamic approval count, and lets viewer withdraw approval", async () => {
     const waitingSeason = pairSeasonFixture("pactOpen", [
       { memberId: "member-victor", approvedAt: "2026-10-06T12:00:00Z" },
     ]);
@@ -201,11 +237,14 @@ describe("PactScreen: Screen 12b (Waiting)", () => {
     expect(screen.getByText("Andrea")).toBeInTheDocument();
     expect(screen.getByText("Pendiente")).toBeInTheDocument();
 
-    // Late start note
-    expect(screen.getByText(/Si Andrea aprueba después del/)).toBeInTheDocument();
+    // Dynamic approval count note (S2: las 2 aprobaciones)
+    expect(screen.getByText(/las 2 aprobaciones se reinician/)).toBeInTheDocument();
+
+    // Actions present on 12b
+    expect(screen.getByRole("button", { name: "Ver el pacto" })).toBeInTheDocument();
+    const withdrawBtn = screen.getByRole("button", { name: "Retirar mi aprobación" });
 
     // Withdraw approval
-    const withdrawBtn = screen.getByRole("button", { name: "Retirar mi aprobación" });
     const resetSeason: SeasonDto = {
       ...waitingSeason,
       approvals: [],
@@ -218,6 +257,54 @@ describe("PactScreen: Screen 12b (Waiting)", () => {
     expect(
       await screen.findByRole("heading", { name: "Revisa el pacto antes de aceptar" }),
     ).toBeInTheDocument();
+  });
+
+  it("renders 'Ver el pacto' action and allows viewing pact commitments and returning", async () => {
+    const waitingSeason = pairSeasonFixture("pactOpen", [
+      { memberId: "member-victor", approvedAt: "2026-10-06T12:00:00Z" },
+    ]);
+    renderPact({ season: waitingSeason });
+
+    const viewPactBtn = await screen.findByRole("button", { name: "Ver el pacto" });
+    await userEvent.click(viewPactBtn);
+
+    // Now viewing 12a review
+    expect(
+      await screen.findByRole("heading", { name: "Revisa el pacto antes de aceptar" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Leer")).toBeInTheDocument();
+
+    // Clicking Volver returns to 12b waiting
+    const backBtn = screen.getByRole("button", { name: "Volver" });
+    await userEvent.click(backBtn);
+
+    expect(await screen.findByRole("heading", { name: "Esperando a Andrea" })).toBeInTheDocument();
+  });
+
+  it("prevents double submit on withdraw approval while request is pending", async () => {
+    const waitingSeason = pairSeasonFixture("pactOpen", [
+      { memberId: "member-victor", approvedAt: "2026-10-06T12:00:00Z" },
+    ]);
+    const { deps } = renderPact({ season: waitingSeason });
+
+    const withdrawBtn = await screen.findByRole("button", { name: "Retirar mi aprobación" });
+    const release = deps.api.hold("withdrawApproval");
+    deps.api.setPactResponse("withdrawApproval", {
+      ...waitingSeason,
+      approvals: [],
+    });
+
+    await userEvent.click(withdrawBtn);
+    expect(withdrawBtn).toBeDisabled();
+
+    // Secondary click attempt
+    await userEvent.click(withdrawBtn);
+
+    release();
+    expect(
+      await screen.findByRole("heading", { name: "Revisa el pacto antes de aceptar" }),
+    ).toBeInTheDocument();
+    expect(deps.api.calls.withdrawApproval).toBe(1);
   });
 });
 

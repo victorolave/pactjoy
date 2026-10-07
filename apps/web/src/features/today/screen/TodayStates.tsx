@@ -11,7 +11,7 @@ import { PendingYesterday } from "../pending-yesterday/PendingYesterday.tsx";
 import { RowWithControls } from "../rows/RowWithControls.tsx";
 import { SeasonCard } from "../season/SeasonCard.tsx";
 import { StandingsPair } from "../season/StandingsPair.tsx";
-import type { TodayModel } from "../today-view-model.ts";
+import { formatCountdown, type TodayModel } from "../today-view-model.ts";
 import { allDoneDetail } from "./all-done-copy.ts";
 import { dayOffText } from "./day-off-copy.ts";
 import styles from "./TodayScreen.module.css";
@@ -70,10 +70,7 @@ export function PactOpen({ model }: { readonly model: PactOpenModel }) {
 }
 
 export function NotStarted({ model }: { readonly model: NotStartedModel }) {
-  const countdown =
-    model.daysUntilStart === 1
-      ? "Empieza mañana"
-      : `La temporada empieza en ${model.daysUntilStart} días`;
+  const countdown = formatCountdown(model.daysUntilStart);
   return (
     <section className={styles.empty}>
       <header className={styles.header}>

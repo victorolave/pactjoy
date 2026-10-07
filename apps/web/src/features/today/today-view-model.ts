@@ -273,3 +273,19 @@ export function toTodayModel(view: TodayView): TodayModel {
       return running(view);
   }
 }
+
+/**
+ * Formats countdown for pre-season notStarted state.
+ * Where the element normally reads "La temporada empieza en {n} días", full format uses "La temporada empieza hoy".
+ * Where it reads "Empieza mañana", short format uses "Empieza hoy".
+ */
+export function formatCountdown(daysUntilStart: number, mode: "full" | "short" = "full"): string {
+  if (mode === "short") {
+    if (daysUntilStart <= 0) return "Empieza hoy";
+    if (daysUntilStart === 1) return "Empieza mañana";
+    return `Empieza en ${daysUntilStart} días`;
+  }
+  if (daysUntilStart <= 0) return "La temporada empieza hoy";
+  if (daysUntilStart === 1) return "Empieza mañana";
+  return `La temporada empieza en ${daysUntilStart} días`;
+}

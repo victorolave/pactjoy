@@ -62,7 +62,12 @@ export function PactScreen() {
   const approveMutation = useApprovePact();
   const withdrawMutation = useWithdrawApproval();
 
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [approveError, setApproveError] = useState<{
+    message: string;
+    action?: "weights";
+  } | null>(null);
+  const [withdrawError, setWithdrawError] = useState<string | null>(null);
+  const [isViewingPact, setIsViewingPact] = useState(false);
   const [isMutating, setIsMutating] = useState(false);
 
   if (seasonQuery.isLoading || circleQuery.isLoading) {
@@ -154,14 +159,15 @@ export function PactScreen() {
   }
 
   // 12b Waiting screen
-  if (screenKind === "waiting") {
+  if (screenKind === "waiting" && !isViewingPact) {
     const handleWithdraw = async () => {
+      if (isMutating || withdrawMutation.isPending) return;
       try {
-        setErrorMessage(null);
+        setWithdrawError(null);
         setIsMutating(true);
         await withdrawMutation.mutateAsync({ seasonId: season.id });
       } catch {
-        setErrorMessage("No pudimos retirar la aprobación. Inténtalo de nuevo.");
+        setWithdrawError("No pudimos retirar la aprobación. Inténtalo de nuevo.");
       } finally {
         setIsMutating(false);
       }
@@ -201,15 +207,23 @@ export function PactScreen() {
           </Card>
           <p className={styles.lead}>
             Si {otherNames} aprueba después del {startFormatted}, la temporada empezará el día
-            siguiente a su aprobación. Si alguien edita sus compromisos, las dos aprobaciones se
-            reinician.
+            siguiente a su aprobación. Si alguien edita sus compromisos, las {circle.members.length}{" "}
+            aprobaciones se reinician.
           </p>
-          {errorMessage && <InlineMessage tone="error">{errorMessage}</InlineMessage>}
+          {withdrawError && <InlineMessage tone="error">{withdrawError}</InlineMessage>}
           <div className={styles.actions}>
             <Button
               variant="secondary"
               block
-              disabled={isMutating}
+              disabled={isMutating || withdrawMutation.isPending}
+              onClick={() => setIsViewingPact(true)}
+            >
+              Ver el pacto
+            </Button>
+            <Button
+              variant="ghost"
+              block
+              disabled={isMutating || withdrawMutation.isPending}
               onClick={() => void handleWithdraw()}
             >
               Retirar mi aprobación
@@ -234,23 +248,26 @@ export function PactScreen() {
   });
 
   const handleApprove = async () => {
+    if (isMutating || approveMutation.isPending) return;
     try {
-      setErrorMessage(null);
+      setApproveError(null);
       setIsMutating(true);
       await approveMutation.mutateAsync({
         seasonId: season.id,
         expectedPactRevision: season.pactRevision,
       });
     } catch (err) {
-      if (err instanceof ApiError && (err.code === "StaleSeason" || err.status === 409)) {
-        setErrorMessage("El pacto cambió. Revísalo de nuevo.");
+      if (err instanceof ApiError && err.code === "StaleSeason") {
+        setApproveError({ message: "El pacto cambió. Revísalo de nuevo." });
         try {
           await seasonQuery.refetch();
         } catch {
           // ignore
         }
+      } else if (err instanceof ApiError && err.code === "CommitmentWeightsNotFull") {
+        setApproveError({ message: "La suma debe ser 100 %", action: "weights" });
       } else {
-        setErrorMessage("No pudimos aprobar el pacto. Inténtalo de nuevo.");
+        setApproveError({ message: "No pudimos aprobar el pacto. Inténtalo de nuevo." });
       }
     } finally {
       setIsMutating(false);
@@ -261,7 +278,13 @@ export function PactScreen() {
     <FlowScreen
       title="Revisa el pacto antes de aceptar"
       meta={metaLine}
-      onBack={() => navigate(-1)}
+      onBack={() => {
+        if (isViewingPact) {
+          setIsViewingPact(false);
+        } else {
+          navigate(-1);
+        }
+      }}
     >
       <div className={styles.section}>
         <p className={styles.lead}>
@@ -316,13 +339,30 @@ export function PactScreen() {
           );
         })}
 
-        {errorMessage && <InlineMessage tone="error">{errorMessage}</InlineMessage>}
+        {approveError && (
+          <InlineMessage
+            tone="error"
+            action={
+              approveError.action === "weights" ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate(`/season/${season.id}/weights`)}
+                >
+                  Repartir pesos
+                </Button>
+              ) : undefined
+            }
+          >
+            {approveError.message}
+          </InlineMessage>
+        )}
 
         <div className={styles.actions}>
           <Button
             block
             leadingIcon="handshake"
-            disabled={isMutating}
+            disabled={isMutating || approveMutation.isPending}
             onClick={() => void handleApprove()}
           >
             Aprobar el pacto
@@ -331,7 +371,7 @@ export function PactScreen() {
             variant="secondary"
             block
             leadingIcon="pencil"
-            disabled={isMutating}
+            disabled={isMutating || approveMutation.isPending}
             onClick={() => navigate(`/season/${season.id}/habits`)}
           >
             Editar mis compromisos
