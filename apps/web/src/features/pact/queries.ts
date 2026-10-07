@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePactJoyApi } from "../../context/api-context.tsx";
-import type { CreateSeasonCommand } from "../../ports/pactjoy-api.ts";
+import type { CreateSeasonCommand, EditCommitmentCommand } from "../../ports/pactjoy-api.ts";
 import { habitsKey, myCircleKey, seasonKey, todayKey } from "../../shared/query-keys.ts";
 
 /** The viewer's active circle and current season. */
@@ -71,6 +71,33 @@ export function useRemoveCommitment() {
       readonly seasonId: string;
       readonly commitmentId: string;
     }) => api.removeCommitment(seasonId, commitmentId),
+    onSuccess: (data, { seasonId }) => {
+      client.setQueryData(seasonKey(seasonId), data);
+    },
+    onSettled: async (_data, _err, { seasonId }) => {
+      await Promise.all([
+        client.invalidateQueries({ queryKey: seasonKey(seasonId) }),
+        client.invalidateQueries({ queryKey: todayKey }),
+        client.invalidateQueries({ queryKey: myCircleKey }),
+      ]);
+    },
+  });
+}
+
+/** Edits a commitment (e.g. updating weight or measure). */
+export function useEditCommitment() {
+  const api = usePactJoyApi();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      seasonId,
+      commitmentId,
+      input,
+    }: {
+      readonly seasonId: string;
+      readonly commitmentId: string;
+      readonly input: EditCommitmentCommand;
+    }) => api.editCommitment(seasonId, commitmentId, input),
     onSuccess: (data, { seasonId }) => {
       client.setQueryData(seasonKey(seasonId), data);
     },
