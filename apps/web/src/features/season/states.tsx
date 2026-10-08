@@ -85,7 +85,8 @@ export function SeasonFirstDayZero({
         season={season}
         calendar={calendar}
         onNavigateToMember={onNavigateToMember}
-        footer="Todavía nadie ha registrado."
+        // Only true when nobody has a registro yet: a "no salió" also scores 0 (verify W-1).
+        footer={standings.hasEntries ? undefined : "Todavía nadie ha registrado."}
       />
 
       {isSolo && (

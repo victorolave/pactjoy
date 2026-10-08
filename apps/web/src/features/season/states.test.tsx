@@ -99,7 +99,7 @@ describe("isFirstDayZero", () => {
 
   it("returns true for solo circles on week 1, day 1 when own points are 0", () => {
     const progress = makeFirstDayZeroProgress({
-      standings: { memberCount: 1, rows: [] },
+      standings: { memberCount: 1, hasEntries: false, rows: [] },
       circle: { id: "circle-solo", name: "Victor" },
       own: {
         points: 0,
@@ -120,6 +120,7 @@ describe("isFirstDayZero", () => {
     const progress = makeFirstDayZeroProgress({
       standings: {
         memberCount: 2,
+        hasEntries: true,
         rows: [
           { memberId: "m-andrea", displayName: "Andrea", isViewer: false, rank: 1, points: 20 },
           { memberId: "m-victor", displayName: "Victor", isViewer: true, rank: null, points: 0 },
@@ -192,11 +193,27 @@ describe("SeasonFirstDayZero (Screen 23b)", () => {
     expect(screen.getByText("Todavía nadie ha registrado.")).toBeInTheDocument();
   });
 
+  it("hides 'Todavía nadie ha registrado.' when there are registros but still 0 points (verify W-1)", () => {
+    const base = makeFirstDayZeroProgress();
+    if (base.state === "notStarted") throw new Error("expected started");
+    // A "no salió" or a below-minimum registro scores 0 but is a registro.
+    const progress = { ...base, standings: { ...base.standings, hasEntries: true } };
+    render(
+      <MemoryRouter>
+        <SeasonFirstDayZero progress={progress} />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getAllByText("0 pts")).toHaveLength(2);
+    expect(screen.queryByText("Todavía nadie ha registrado.")).toBeNull();
+  });
+
   it("renders copy for 3–6 member circles", () => {
     const progress = makeFirstDayZeroProgress({
       circle: { id: "circle-3", name: "Los Tres" },
       standings: {
         memberCount: 3,
+        hasEntries: false,
         rows: [
           { memberId: "m-1", displayName: "Andrea", isViewer: false, rank: null, points: 0 },
           { memberId: "m-2", displayName: "Carlos", isViewer: false, rank: null, points: 0 },
@@ -223,6 +240,7 @@ describe("SeasonFirstDayZero (Screen 23b)", () => {
       circle: { id: "circle-solo", name: "Mi Círculo" },
       standings: {
         memberCount: 1,
+        hasEntries: false,
         rows: [],
       },
       own: {
@@ -545,6 +563,7 @@ describe("SeasonScreen (Connected Container)", () => {
       },
       standings: {
         memberCount: 2,
+        hasEntries: true,
         rows: [
           { memberId: "m-1", displayName: "Andrea", isViewer: false, rank: 1, points: 412 },
           { memberId: "m-2", displayName: "Victor", isViewer: true, rank: 2, points: 400 },

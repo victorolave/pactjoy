@@ -14,7 +14,7 @@ describe("GET /seasons/:seasonId/progress (A2)", () => {
       circle: { name: "Crew" },
       season: { id: ctx.seasonId },
       calendar: { weekIndex: 0, dayOfWeek: 1 },
-      standings: { memberCount: 2 },
+      standings: { memberCount: 2, hasEntries: false },
       own: { points: 0 },
     });
     expect(res.json.data.viewerId).toBeDefined();
@@ -24,6 +24,23 @@ describe("GET /seasons/:seasonId/progress (A2)", () => {
       timing: "current",
       facts: { counted: false, editable: true, final: false },
     });
+  });
+
+  it("hasEntries turns true with a registro even while every score is still 0 (verify W-1)", async () => {
+    const ctx = await givenTwoMemberSeason();
+    const logged = await ctx.call("POST", ctx.path, "victor", {
+      commitmentId: ctx.commitmentIds.victor,
+      value: { kind: "done" },
+      clientRequestId: "victor-day-0",
+    });
+    expect(logged.status).toBe(201);
+
+    const res = await ctx.call("GET", `/seasons/${ctx.seasonId}/progress`, "andrea");
+    expect(res.json.data.standings).toMatchObject({ hasEntries: true });
+    // A weekly-window session earns nothing before the week closes (R1).
+    expect(res.json.data.standings.rows.every((r: { points: number }) => r.points === 0)).toBe(
+      true,
+    );
   });
 
   it("returns 200 for solo circle (1 member: standings.memberCount 1, weeks[].members length 1)", async () => {

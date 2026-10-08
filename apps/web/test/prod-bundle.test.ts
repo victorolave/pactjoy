@@ -36,7 +36,13 @@ async function bundleFor(mode: "production" | "development"): Promise<string> {
     .join("\n");
 }
 
-const MARKERS = ["Todo registrado (15b)", "Día sin compromisos (15c)", "FakePactJoyApi"];
+const MARKERS = [
+  "Todo registrado (15b)",
+  "Día sin compromisos (15c)",
+  "FakePactJoyApi",
+  // The season progress fake behind it (change pwa-season-progress).
+  "FakeSeasonProgressApi",
+];
 
 describe("the dev gallery stays out of production", () => {
   it("a production build contains none of it", async () => {

@@ -119,6 +119,7 @@ const isStartedSeason = shape({
   own: shape({ ...metrics, commitments: list(detailRow) }),
   standings: shape({
     memberCount: count,
+    hasEntries: bool,
     rows: list(
       shape({
         memberId: id,

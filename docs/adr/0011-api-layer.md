@@ -171,3 +171,11 @@ Nothing here runs from CI or from the repository.
 
 - [ADR-0007](0007-explicit-ts-import-extensions.md), [ADR-0008](0008-use-case-and-port-conventions.md), [ADR-0010](0010-postgres-adapter.md)
 - SDD change `api-edge-function-auth` (design and tasks in the project's Engram memory)
+
+## Addendum: season progress reads and peer privacy (change `pwa-season-progress`)
+
+Four read-only GETs serve the season progress screens (design batch 2): `/seasons/:seasonId/progress`, `/seasons/:seasonId/members/:memberId/progress`, `/seasons/:seasonId/commitments/:commitmentId/progress` and `/seasons/:seasonId/weeks/:weekIndex/summary`. Each runs in one `uow.read` with one captured clock, scores only through the engine, and has an explicit presenter whitelist (no entry, request or user ids).
+
+**Peer privacy relaxed, per Notion (owner decision 2026-10-07).** A peer's read-only season now shows that member's points, consistency and ideal, computed over ALL their commitments, private ones included ("privacidad con justicia": a private goal never leaves the calculation). This is wider than the original score queries, which hid peer consistency and ideal. The per-commitment rule is unchanged: a peer's private commitment is exactly `{ kind: "hidden", commitmentId, weightPercent, points }`, with no habit, measure, history, evidence or private per-commitment metric, and its detail read fails as `CommitmentNotFound` before any habit is read. The web guards reject any extra field on a hidden row.
+
+Other facts this change put on the wire: weekly-window opportunities give no points before the week closes plus grace (R1), weekly figures are recomputed live, and `standings.hasEntries` says whether any ranked member has a live registro (zero points is not "nobody has logged").

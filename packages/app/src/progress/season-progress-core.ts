@@ -113,6 +113,11 @@ export function seasonProgressCore(
       idealCompletion: own.idealCompletion,
       commitments,
     },
-    standings: { memberCount: standings.eligibleParticipantCount, rows },
+    standings: {
+      memberCount: standings.eligibleParticipantCount,
+      // Zero points is not "nobody logged": a "no salió" or a below-minimum registro also scores 0.
+      hasEntries: data.entries.some((entry) => rows.some((row) => row.memberId === entry.memberId)),
+      rows,
+    },
   };
 }
