@@ -44,4 +44,20 @@ describe("Button", () => {
     const { container } = render(<Button variant="secondary">Cancelar</Button>);
     expect(container.querySelector("svg")).toBeNull();
   });
+
+  it("renders a decorative trailing icon next to the label", () => {
+    const { container } = render(<Button trailingIcon="chevron-right">Continuar</Button>);
+    expect(screen.getByRole("button", { name: "Continuar" })).toBeInTheDocument();
+    expect(container.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
+    expect(container.querySelector("svg")).toHaveClass("lucide-chevron-right");
+  });
+
+  it("uses size 18 icons for small buttons", () => {
+    const { container } = render(
+      <Button size="sm" leadingIcon="circle-check">
+        Listo
+      </Button>,
+    );
+    expect(container.querySelector("svg")).toHaveStyle({ width: "var(--icon-18)" });
+  });
 });

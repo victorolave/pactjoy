@@ -17,8 +17,17 @@
   --illustration-hero: 220px;
   /* The welcome carousel picture (design 1a): 320 high. */
   --illustration-story: 320px;
-  /* The welcome slide 1b composition (design 1b): two season cards, the pictures overhanging each. */
+  /* Season start hero (design 23b): 180 high. */
+  --illustration-caminar: 180px;
+  --illustration-180: 180px;
+  /* Source-sized icons for badge, buttons and tabs */
   --icon-xs: 12px;
+  --icon-14: 14px;
+  --icon-16: 16px;
+  --icon-18: 18px;
+  --icon-20: 20px;
+  --icon-22: 22px;
+  /* The welcome slide 1b composition (design 1b): two season cards, the pictures overhanging each. */
   --goals-card-height: 118px;
   --goals-lift: 62px;
   --goals-lift-second: 8px;
@@ -33,8 +42,14 @@
   --avatar-lg: 96px;
   /* Member rows and the waiting room (designs 7, 31a): 56 square. */
   --avatar-xl: 56px;
+  /* Member overview avatar (design 23d): 48 square. */
+  --avatar-48: 48px;
+  /* Weekly summary pair avatar (design 25b): 28 square. */
+  --avatar-28: 28px;
   /* The avatars inside the goals cards of welcome slide 1b: 22 square. */
   --avatar-xs: 22px;
+  /* Design system default progress bar track height (10px). */
+  --progress-track-height: 10px;
   /* The welcome carousel header row with the logo and Saltar (design 1a-c): 52 high. */
   --welcome-header-height: 52px;
   /* Pager dots (design 1a-c): 6 px, the current one a 20 px pill. */

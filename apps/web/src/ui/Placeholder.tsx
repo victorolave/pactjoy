@@ -1,6 +1,7 @@
 import cocinar from "../design/brand/cocinar.webp";
 import crearPacto from "../design/brand/crear-pacto.webp";
 import diaDificilCrop from "../design/brand/dia-dificil-crop.webp";
+import caminar from "../design/brand/imagery/caminar.png";
 import invitarCirculo from "../design/brand/invitar-circulo.webp";
 import metasAndrea from "../design/brand/metas-andrea.webp";
 import metasVictor from "../design/brand/metas-victor.webp";
@@ -16,6 +17,7 @@ const ILLUSTRATIONS = {
   "registro-guardado": registroGuardado,
   "sin-conexion": sinConexion,
   cocinar,
+  caminar,
   "crear-pacto": crearPacto,
   "onboarding-1": onboarding1,
   "dia-dificil-crop": diaDificilCrop,
@@ -35,9 +37,10 @@ export interface IllustrationProps {
   readonly src?: string;
   /**
    * The design's boxes, the image contained in each: `lg` 200 square (confirmation), `md` 130 high
-   * and `banner` 150 high, `hero` 220 high and `story` 320 high, all full width (empty day, offline, create circle, welcome carousel). Without it the image fills the width.
+   * and `banner` 150 high, `hero` 220 high, `story` 320 high and `caminar`/`180` 180 high, all full width
+   * (empty day, offline, create circle, welcome carousel, season start). Without it the image fills the width.
    */
-  readonly size?: "lg" | "md" | "banner" | "hero" | "story";
+  readonly size?: "lg" | "md" | "banner" | "hero" | "story" | "caminar" | "180";
 }
 
 /** Without a name or a src a neutral block is drawn and no image is requested. */
