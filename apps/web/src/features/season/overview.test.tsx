@@ -90,11 +90,30 @@ describe("SeasonOverview", () => {
     expect(screen.queryByText(/pts de diferencia/)).toBeNull();
   });
 
-  it("renders '—' for null consistency and idealCompletion", () => {
-    const progress = firstDaySeasonProgress();
-    render(<SeasonOverview progress={progress} />);
+  it("renders '—' for null consistency and idealCompletion in active 23a season", () => {
+    const progress = activeSeasonProgress();
+    const progressWithNulls: typeof progress = {
+      ...progress,
+      calendar: { ...progress.calendar, dayOfWeek: 2 },
+      own: { ...progress.own, consistency: null, idealCompletion: null },
+    };
+    render(<SeasonOverview progress={progressWithNulls} />);
 
     expect(screen.getAllByText("—")).toHaveLength(2);
+  });
+
+  it("renders 23b first-day zero state when progress is on day 1 with 0 points", () => {
+    const progress = firstDaySeasonProgress();
+    render(
+      <MemoryRouter>
+        <SeasonOverview progress={progress} />
+      </MemoryRouter>,
+    );
+
+    expect(
+      screen.getByRole("heading", { level: 2, name: "La temporada empieza hoy." }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Todavía nadie ha registrado.")).toBeInTheDocument();
   });
 
   it("redirects to / when season is not started instead of rendering blank", () => {

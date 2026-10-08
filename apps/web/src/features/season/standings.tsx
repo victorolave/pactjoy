@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { SeasonProgress } from "../../ports/wire.ts";
 import { Avatar } from "../../ui/Avatar.tsx";
 import styles from "./Standings.module.css";
@@ -13,6 +14,7 @@ export interface StandingsProps {
   readonly season: { readonly lengthWeeks: number };
   readonly calendar: { readonly weekIndex: number; readonly daysLeft: number };
   readonly onNavigateToMember?: ((memberId: string) => void) | undefined;
+  readonly footer?: ReactNode | undefined;
 }
 
 /** Gap copy thresholds per Notion Mechanics & design 23a (pairs only). */
@@ -31,7 +33,13 @@ export function formatPairGapCopy(diff: number, lengthWeeks: number, weekIndex: 
   return `${diff} pts de diferencia. Tu progreso también tiene su propio ritmo.`;
 }
 
-export function Standings({ standings, season, calendar, onNavigateToMember }: StandingsProps) {
+export function Standings({
+  standings,
+  season,
+  calendar,
+  onNavigateToMember,
+  footer,
+}: StandingsProps) {
   if (standings.memberCount <= 1) return null;
 
   const isPair = standings.memberCount === 2;
@@ -52,7 +60,7 @@ export function Standings({ standings, season, calendar, onNavigateToMember }: S
     <div className={`pj-card ${styles.card}`}>
       <div className={styles.header}>
         <span className={styles.title}>Así va la temporada</span>
-        <span className={styles.subtitle}>Puntos acumulados</span>
+        {footer === undefined && <span className={styles.subtitle}>Puntos acumulados</span>}
       </div>
 
       <ol className={styles.list}>
@@ -104,18 +112,24 @@ export function Standings({ standings, season, calendar, onNavigateToMember }: S
         })}
       </ol>
 
-      {gapText !== null && <div className={styles.gap}>{gapText}</div>}
+      {footer !== undefined ? (
+        <div className={styles.footer}>{footer}</div>
+      ) : (
+        <>
+          {gapText !== null && <div className={styles.gap}>{gapText}</div>}
 
-      {isPair && peerRow !== null && (
-        <div>
-          <button
-            type="button"
-            className={styles.peerLink}
-            onClick={() => onNavigateToMember?.(peerRow.memberId)}
-          >
-            Ver la temporada de {peerRow.displayName}
-          </button>
-        </div>
+          {isPair && peerRow !== null && (
+            <div>
+              <button
+                type="button"
+                className={styles.peerLink}
+                onClick={() => onNavigateToMember?.(peerRow.memberId)}
+              >
+                Ver la temporada de {peerRow.displayName}
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
