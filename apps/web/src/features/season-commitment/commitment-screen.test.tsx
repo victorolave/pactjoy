@@ -109,11 +109,16 @@ describe("CommitmentScreen (24a)", () => {
     const history = await screen.findByRole("list", { name: "Historial" });
     const [row] = within(history).getAllByRole("listitem");
     expect(row?.textContent).toContain("S5");
-    const cells = within(row as HTMLElement).getAllByRole("img");
+    // The cell backed by a registro is a button since C4; its name is the same legend label.
+    const cells = within(row as HTMLElement).getAllByRole("button");
     expect(cells.map((cell) => cell.getAttribute("aria-label"))).toEqual([
       "Ideal, registrado posteriormente",
     ]);
-    expect(screen.getByText("Cada celda es una de tus 5 oportunidades de la semana.")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Cada celda es una de tus 5 oportunidades de la semana. Toca una para ver su registro y su nota.",
+      ),
+    ).toBeTruthy();
     for (const legend of ["Ideal", "Mínimo", "No salió", "Registrado posteriormente", "Hoy"]) {
       expect(screen.getAllByText(legend).length).toBeGreaterThan(0);
     }
@@ -148,7 +153,7 @@ describe("CommitmentScreen (24a)", () => {
 
     const section = await screen.findByRole("region", { name: "Historial" });
     expect(
-      within(section).getByText("Cada celda es una de tus 5 oportunidades de la semana."),
+      within(section).getByText(/^Cada celda es una de tus 5 oportunidades de la semana\./),
     ).toBeTruthy();
   });
 
@@ -159,7 +164,10 @@ describe("CommitmentScreen (24a)", () => {
     for (const text of [/Recordatorio/, /Pausar/, /En desarrollo/, /Nuevo/, /foto/, /Reanudar/]) {
       expect(screen.queryByText(text)).toBeNull();
     }
-    expect(screen.queryAllByRole("button").map((button) => button.textContent)).toEqual([""]);
+    // Only the way back and the read-only history cell (C4) are controls.
+    expect(
+      screen.queryAllByRole("button").map((button) => button.getAttribute("aria-label")),
+    ).toEqual(["Volver a Temporada", "Ideal, registrado posteriormente"]);
   });
 
   it("a private commitment of mine says Privado", async () => {

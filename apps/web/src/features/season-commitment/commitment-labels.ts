@@ -49,7 +49,10 @@ export function streakRule(
   return `${unit} suma a la racha cuando ${keeps}.`;
 }
 
-/** "Cada celda es una de tus 5 oportunidades de la semana."; a weekly total is one cell a week. */
+/** Design 24a's "Toca una…", without the photo (Lote 4); owner-approved wording. */
+const TAP_HINT = "Toca una para ver su registro y su nota.";
+
+/** "Cada celda es una de tus 5 oportunidades de la semana. Toca una…"; none for a weekly total. */
 export function cellsHint(row: Row): string | null {
   const { schedule } = row.measure;
   if (schedule.period === "weeklyTotal") return null;
@@ -57,9 +60,11 @@ export function cellsHint(row: Row): string | null {
     schedule.frequency.kind === "timesPerWeek"
       ? schedule.frequency.times
       : schedule.frequency.weekdays.length;
-  return count === 1
-    ? "Cada celda es tu oportunidad de la semana."
-    : `Cada celda es una de tus ${count} oportunidades de la semana.`;
+  const cells =
+    count === 1
+      ? "Cada celda es tu oportunidad de la semana."
+      : `Cada celda es una de tus ${count} oportunidades de la semana.`;
+  return `${cells} ${TAP_HINT}`;
 }
 
 const LEGEND: Record<Cell["status"], string | null> = {
