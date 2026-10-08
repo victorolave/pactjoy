@@ -3,7 +3,8 @@ import type { MemberProgressDto } from "./progress.ts";
 
 type Detail = Extract<MemberProgressView, { scope: "own" }>["commitments"][number];
 
-function presentDetail(row: Detail): Detail {
+/** A commitment row its viewer may fully see; shared with the commitment detail presenter. */
+export function presentDetail(row: Detail): Detail {
   return {
     kind: "detail",
     commitmentId: row.commitmentId,
