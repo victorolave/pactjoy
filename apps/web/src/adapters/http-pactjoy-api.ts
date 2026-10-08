@@ -21,8 +21,21 @@ import type {
   ScoringPreview,
   UpdateHabitCommand,
 } from "../ports/pactjoy-api.ts";
-
-import type { HabitDto, SeasonDto } from "../ports/wire.ts";
+import type {
+  CommitmentProgress,
+  HabitDto,
+  MemberProgress,
+  SeasonDto,
+  SeasonProgress,
+  WeekSummary,
+} from "../ports/wire.ts";
+import { progressApiPaths } from "../shared/season-progress-routes.ts";
+import {
+  isCommitmentProgress,
+  isMemberProgress,
+  isSeasonProgress,
+  isWeekSummary,
+} from "./season-progress-guards.ts";
 
 export interface HttpPactJoyApiOptions {
   readonly baseUrl: string;
@@ -327,6 +340,50 @@ export class HttpPactJoyApi implements PactJoyApi {
 
   async leaveCircle(circleId: string): Promise<void> {
     await this.#request({ method: "POST", path: `${circlePath(circleId)}/leave` });
+  }
+
+  async getSeasonProgress(seasonId: string, signal?: AbortSignal): Promise<SeasonProgress> {
+    return this.#read(progressApiPaths.season(seasonId), isSeasonProgress, signal);
+  }
+
+  async getMemberProgress(
+    seasonId: string,
+    memberId: string,
+    signal?: AbortSignal,
+  ): Promise<MemberProgress> {
+    return this.#read(progressApiPaths.member(seasonId, memberId), isMemberProgress, signal);
+  }
+
+  async getCommitmentProgress(
+    seasonId: string,
+    commitmentId: string,
+    signal?: AbortSignal,
+  ): Promise<CommitmentProgress> {
+    return this.#read(
+      progressApiPaths.commitment(seasonId, commitmentId),
+      isCommitmentProgress,
+      signal,
+    );
+  }
+
+  async getWeekSummary(
+    seasonId: string,
+    weekIndex: number,
+    signal?: AbortSignal,
+  ): Promise<WeekSummary> {
+    return this.#read(progressApiPaths.week(seasonId, weekIndex), isWeekSummary, signal);
+  }
+
+  /** A GET whose 2xx `data` must pass `guard`; typed by the guard, so nothing is cast. */
+  async #read<T>(
+    path: string,
+    guard: (data: unknown) => data is T,
+    signal: AbortSignal | undefined,
+  ): Promise<T> {
+    const data = await this.#request({ method: "GET", path, signal, valid: guard });
+    // Already checked by #unwrap; repeated only to narrow the type.
+    if (!guard(data)) throw new ApiError("Internal", 200, null);
+    return data;
   }
 
   async #request(request: HttpRequest): Promise<unknown> {
