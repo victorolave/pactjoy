@@ -14,7 +14,7 @@ The first change (`pwa-today-entry`) covers the foundation, login, the Today scr
 
 - **Hexagonal client.** `apps/web` is a Vite + React SPA organised by feature (`auth`, `today`, `entry`, `offline`). Screens depend on ports (`PactJoyApi`, `AuthPort`, `TokenStore`, `Clock`, `IdSource`, `Connectivity`) injected through React context. Adapters (`fetch`, GoTrue REST, `localStorage`, the query persister) live in `src/adapters` and `src/main.tsx` only. Biome (`noRestrictedGlobals`, `noRestrictedImports`) and guard tests enforce it.
 - **Type-only coupling to the backend.** The only link to the monorepo is `import type` from the `@pactjoy/app` root (`TodayView` and the error kinds). It is erased at build time, so the client never bundles server code. Importing `@pactjoy/api`, `@pactjoy/db` or `@pactjoy/engine` is forbidden. The client never computes points: the server is the source of truth (CLAUDE.md, entries are the truth).
-- **Server state with TanStack Query, confined.** TanStack is allowed only in `src/composition`, `src/shell/ErrorBoundary.tsx`, `src/features/*/queries.ts` and the persister adapter. After every mutation the client invalidates `["today"]`. There is no optimistic scoring.
+- **Server state with TanStack Query, confined.** TanStack is allowed only in `src/composition`, `src/shell/ErrorBoundary.tsx`, `src/features/*/queries.ts` and the persister adapter. Mutations invalidate Today and progress; refreshed season series also invalidate Today. The shared season-local clock refreshes both at midnight and catches up on resume. There is no optimistic scoring.
 - **Auth through GoTrue REST, no SDK.** Four `fetch` calls (`/auth/v1/otp`, `/verify`, `/token?grant_type=refresh_token`, `/logout`) behind `AuthPort`, with the anon or publishable key only (never the service role key). `supabase-js` is rejected as a vendor SDK inside the client.
 - **Tokens in `localStorage`** behind `TokenStore`, with a cross-tab `storage` subscription (refresh tokens rotate). Risk: XSS can read them. Mitigations: no `dangerouslySetInnerHTML`, a CSP later. Moving to another store is a new adapter.
 - **Errors.** Adapters throw `ApiError` (TanStack's contract). One exhaustive `toUiError` table, checked at compile time with `satisfies Record<KnownCode, UiKind>`, maps every API code to a UI behaviour.
@@ -109,7 +109,7 @@ New browser capabilities follow the same rule as the first ports: a port in `src
 
 **`Serialized<T>`.** App views use domain types (`Instant`). `src/ports/wire.ts` maps `Instant` to its ISO string recursively, so the client types a response with a type-only import and never copies a wire shape by hand.
 
-**`myCircle` is not persisted offline.** Only `["today"]` is persisted. A saved `myCircle` would restore a stale `noCircle` or circle after a leave or join. `CACHE_VERSION` changes only when a persisted query changes shape or a new key becomes persisted.
+**`myCircle` is not persisted offline.** Only `["today"]` is persisted. A saved `myCircle` would restore a stale `noCircle` or circle after a leave or join. `CACHE_VERSION` changes for persisted shape, scoring semantics or newly persisted keys; v5 purges pre-T0 ended-season scores and stale weekly-series figures. Progress responses are not persisted. Weekly-summary dismissal stores only a device-local MemberId/season/week flag, surviving session clearing without storing summary data; opening consumes it, and the season-local day boundary hides it.
 
 ## Addendum: season timezone (change `pwa-season-habits-pact`, D7)
 
