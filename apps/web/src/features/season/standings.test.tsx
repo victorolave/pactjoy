@@ -208,4 +208,35 @@ describe("Standings", () => {
       expect(screen.getByText("Mismos puntos. La temporada sigue muy pareja.")).toBeInTheDocument();
     });
   });
+
+  describe("footer prop", () => {
+    it("renders custom footer and hides points subtitle, gap copy, and peer link", () => {
+      const rows = [
+        createEntry({
+          memberId: "member-andrea",
+          displayName: "Andrea",
+          isViewer: false,
+          points: 412,
+        }),
+        createEntry({
+          memberId: "member-victor",
+          displayName: "Victor",
+          isViewer: true,
+          points: 400,
+        }),
+      ];
+      render(
+        <Standings
+          standings={{ memberCount: 2, rows }}
+          season={season}
+          calendar={calendar}
+          footer="Todavía nadie ha registrado."
+        />,
+      );
+      expect(screen.getByText("Todavía nadie ha registrado.")).toBeInTheDocument();
+      expect(screen.queryByText("Puntos acumulados")).toBeNull();
+      expect(screen.queryByText(/pts de diferencia/)).toBeNull();
+      expect(screen.queryByRole("button", { name: /Ver la temporada de/ })).toBeNull();
+    });
+  });
 });

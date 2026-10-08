@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ApiError } from "../../ports/api-error.ts";
 import type { SeasonProgress } from "../../ports/wire.ts";
 import {
   isFirstDayZero,
@@ -296,6 +297,26 @@ describe("SeasonError (Screen 23c)", () => {
     expect(screen.getByRole("heading", { level: 1, name: "Temporada" })).toBeInTheDocument();
     expect(screen.getByText("No pudimos cargar la temporada.")).toBeInTheDocument();
   });
+
+  it("renders 'Temporada' when weekNumber is undefined even if circleName and lengthWeeks are provided", () => {
+    render(
+      <SeasonError
+        circleName="Andrea & Victor"
+        lengthWeeks={8}
+        weekNumber={undefined}
+        onRetry={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("heading", { level: 1, name: "Temporada" })).toBeInTheDocument();
+    expect(screen.queryByText("Semana 1 de 8")).toBeNull();
+  });
+
+  it("moves focus to the alert container on mount (S1)", () => {
+    render(<SeasonError onRetry={vi.fn()} />);
+
+    expect(screen.getByRole("alert")).toHaveFocus();
+  });
 });
 
 describe("SeasonSkeleton", () => {
@@ -424,9 +445,63 @@ describe("SeasonScreen (Connected Container)", () => {
     );
 
     expect(screen.getByText("No pudimos cargar la temporada.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Temporada" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Reintentar" }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
+
+  it.each([400, 403, 404])(
+    "redirects to / when season progress query fails with non-recoverable status %i (W2)",
+    (status) => {
+      mockUseMyCircle.mockReturnValue({
+        data: {
+          circle: { id: "c-1", name: "Andrea & Victor" },
+          season: { id: "s-1", phase: "active", lengthWeeks: 8 },
+        },
+        isError: false,
+      });
+      mockUseSeasonProgress.mockReturnValue({
+        data: undefined,
+        isError: true,
+        error: new ApiError("Error", status, "req-1"),
+      });
+
+      render(
+        <MemoryRouter initialEntries={["/season"]}>
+          <Routes>
+            <Route path="/season" element={<SeasonScreen />} />
+            <Route path="/" element={<div>Home View</div>} />
+          </Routes>
+        </MemoryRouter>,
+      );
+
+      expect(screen.getByText("Home View")).toBeInTheDocument();
+      expect(screen.queryByText("No pudimos cargar la temporada.")).not.toBeInTheDocument();
+    },
+  );
+
+  it.each([400, 403, 404])(
+    "redirects to / when myCircle query fails with non-recoverable status %i (W2)",
+    (status) => {
+      mockUseMyCircle.mockReturnValue({
+        data: undefined,
+        isError: true,
+        error: new ApiError("Error", status, "req-1"),
+      });
+
+      render(
+        <MemoryRouter initialEntries={["/season"]}>
+          <Routes>
+            <Route path="/season" element={<SeasonScreen />} />
+            <Route path="/" element={<div>Home View</div>} />
+          </Routes>
+        </MemoryRouter>,
+      );
+
+      expect(screen.getByText("Home View")).toBeInTheDocument();
+      expect(screen.queryByText("No pudimos cargar la temporada.")).not.toBeInTheDocument();
+    },
+  );
 
   it("renders SeasonFirstDayZero (23b) on day 1 with 0 points", () => {
     const progress = makeFirstDayZeroProgress();

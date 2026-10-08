@@ -1,37 +1,23 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 import { Navigate } from "react-router";
+import { ApiError } from "../../ports/api-error.ts";
 import type { SeasonProgress } from "../../ports/wire.ts";
-import { Avatar } from "../../ui/Avatar.tsx";
 import { Button } from "../../ui/Button.tsx";
 import { Icon } from "../../ui/icon/Icon.tsx";
 import { Illustration } from "../../ui/Placeholder.tsx";
 import { Skeleton } from "../../ui/Skeleton.tsx";
 import { useMyCircle } from "../circle/index.ts";
 import { useSeasonProgress } from "../season-progress-data/index.ts";
-import { SeasonCommitmentRow } from "./commitment-row.tsx";
-import { SeasonOverview } from "./overview.tsx";
+import { SeasonCommitmentsList, SeasonHeader, SeasonOverview, shortDate } from "./overview.tsx";
 import styles from "./States.module.css";
+import { Standings } from "./standings.tsx";
 
 type StartedSeason = Extract<SeasonProgress, { state: "active" | "ended" }>;
 
-const MONTHS = [
-  "ene",
-  "feb",
-  "mar",
-  "abr",
-  "may",
-  "jun",
-  "jul",
-  "ago",
-  "sep",
-  "oct",
-  "nov",
-  "dic",
-] as const;
+const NOT_VIEWABLE = new Set([400, 403, 404]);
 
-function shortDate(iso: string): string {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
-  return m ? `${Number(m[3])} ${MONTHS[Number(m[2]) - 1]}` : iso;
+function isNonRecoverableError(error: unknown): boolean {
+  return error instanceof ApiError && NOT_VIEWABLE.has(error.status);
 }
 
 /**
@@ -66,7 +52,6 @@ export function SeasonFirstDayZero({
   }
 
   const { circle, season, calendar, own, standings } = progress as StartedSeason;
-  const currentPct = Math.min(100, Math.max(0, Math.round((calendar.dayOfWeek / 7) * 100)));
   const isSolo = standings.memberCount <= 1;
   const isPair = standings.memberCount === 2;
 
@@ -78,63 +63,12 @@ export function SeasonFirstDayZero({
 
   return (
     <div className={styles.container}>
-      <header className={styles.header}>
-        <div>
-          <div className={styles.headerMeta}>
-            {circle.name} · {season.lengthWeeks} semanas
-          </div>
-          <h1 className={styles.headerTitle}>
-            Semana {calendar.weekIndex + 1} de {season.lengthWeeks}
-          </h1>
-          <div className={styles.headerSubtitle}>
-            {`${shortDate(season.actualStart)} – ${shortDate(season.lastDay)} · día 1`}
-          </div>
-        </div>
-
-        <div
-          className={styles.segmentsBar}
-          style={{ gridTemplateColumns: `repeat(${season.lengthWeeks}, 1fr)` }}
-          role="progressbar"
-          aria-label="Progreso de la temporada"
-          aria-valuenow={calendar.weekIndex + 1}
-          aria-valuemin={1}
-          aria-valuemax={season.lengthWeeks}
-          aria-valuetext={`Semana ${calendar.weekIndex + 1} de ${season.lengthWeeks}`}
-        >
-          {Array.from({ length: season.lengthWeeks }, (_, i) => {
-            const isPast = i < calendar.weekIndex;
-            const isCurrent = i === calendar.weekIndex;
-            if (isPast) {
-              return (
-                <span
-                  // biome-ignore lint/suspicious/noArrayIndexKey: static progress segments
-                  key={i}
-                  className={`${styles.segment} ${styles.segmentFilled}`}
-                />
-              );
-            }
-            if (isCurrent) {
-              return (
-                <span
-                  // biome-ignore lint/suspicious/noArrayIndexKey: static progress segments
-                  key={i}
-                  className={styles.segment}
-                  style={{
-                    background: `linear-gradient(90deg, var(--pj-ink) ${currentPct}%, var(--ink-200) ${currentPct}%)`,
-                  }}
-                />
-              );
-            }
-            return (
-              <span
-                // biome-ignore lint/suspicious/noArrayIndexKey: static progress segments
-                key={i}
-                className={styles.segment}
-              />
-            );
-          })}
-        </div>
-      </header>
+      <SeasonHeader
+        circle={circle}
+        season={season}
+        calendar={calendar}
+        subtitle={`${shortDate(season.actualStart)} – ${shortDate(season.lastDay)} · día 1`}
+      />
 
       <div className={`pj-card ${styles.heroCard}`}>
         <Illustration
@@ -146,67 +80,19 @@ export function SeasonFirstDayZero({
         <p className={styles.heroBody}>{heroCopy}</p>
       </div>
 
-      {!isSolo && (
-        <div className={`pj-card ${styles.standingsCard}`}>
-          <span className={styles.standingsLabel}>Así va la temporada</span>
-          <ol className={styles.standingsList}>
-            {standings.rows.map((row) => {
-              const content = (
-                <>
-                  <Avatar name={row.displayName} size={28} />
-                  <span className={styles.standingsName}>{row.displayName}</span>
-                  <span className={styles.standingsPoints}>{row.points} pts</span>
-                </>
-              );
+      <Standings
+        standings={standings}
+        season={season}
+        calendar={calendar}
+        onNavigateToMember={onNavigateToMember}
+        footer="Todavía nadie ha registrado."
+      />
 
-              if (!isPair && !row.isViewer && onNavigateToMember) {
-                const accessibleName = `${row.displayName}, ${row.points} pts`;
-                const hintId = `hint-season-zero-${row.memberId}`;
-                return (
-                  <li key={row.memberId}>
-                    <button
-                      type="button"
-                      className={styles.standingsRowInteractive}
-                      onClick={() => onNavigateToMember(row.memberId)}
-                      aria-label={accessibleName}
-                      aria-describedby={hintId}
-                    >
-                      {content}
-                      <span id={hintId} className={styles.visuallyHidden}>
-                        Ver la temporada de {row.displayName}
-                      </span>
-                    </button>
-                  </li>
-                );
-              }
-
-              return (
-                <li key={row.memberId} className={styles.standingsRow}>
-                  {content}
-                </li>
-              );
-            })}
-          </ol>
-          <div className={styles.standingsFooter}>Todavía nadie ha registrado.</div>
-        </div>
-      )}
-
-      {isSolo && own.commitments.length > 0 && (
-        <section className={styles.commitmentsSection} aria-label="Tus compromisos">
-          <div className={styles.commitmentsHeader}>
-            <h2 className={styles.sectionHeading}>Tus compromisos</h2>
-            <span className={styles.commitmentsSubtitle}>Puntos / posibles</span>
-          </div>
-          <div className={`pj-card ${styles.commitmentsCard}`}>
-            {own.commitments.map((row) => (
-              <SeasonCommitmentRow
-                key={row.commitmentId}
-                row={row}
-                onSelect={onNavigateToCommitment}
-              />
-            ))}
-          </div>
-        </section>
+      {isSolo && (
+        <SeasonCommitmentsList
+          commitments={own.commitments}
+          onNavigateToCommitment={onNavigateToCommitment}
+        />
       )}
     </div>
   );
@@ -221,6 +107,12 @@ export interface SeasonErrorProps {
 
 /** Screen 23c: Error de carga. */
 export function SeasonError({ circleName, lengthWeeks, weekNumber, onRetry }: SeasonErrorProps) {
+  const alertRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    alertRef.current?.focus();
+  }, []);
+
   const hasMetadata =
     circleName !== undefined && lengthWeeks !== undefined && weekNumber !== undefined;
 
@@ -241,7 +133,7 @@ export function SeasonError({ circleName, lengthWeeks, weekNumber, onRetry }: Se
         )}
       </header>
 
-      <div className={styles.errorCenter} role="alert">
+      <div className={styles.errorCenter} role="alert" tabIndex={-1} ref={alertRef}>
         <span className={styles.errorGlyph}>
           <Icon name="cloud-off" size={32} />
         </span>
@@ -295,11 +187,13 @@ function SeasonActiveScreen({
 
   if (query.data === undefined) {
     if (query.isError) {
+      if (isNonRecoverableError(query.error)) {
+        return <Navigate to="/" replace />;
+      }
       return (
         <SeasonError
           circleName={circleName}
           lengthWeeks={lengthWeeks}
-          weekNumber={1}
           onRetry={() => void query.refetch()}
         />
       );
@@ -363,10 +257,13 @@ export function SeasonScreen({
     );
   }
 
-  const { data, isError, refetch } = myCircleQuery;
+  const { data, isError, error, refetch } = myCircleQuery;
 
   if (data === undefined) {
     if (isError) {
+      if (isNonRecoverableError(error)) {
+        return <Navigate to="/" replace />;
+      }
       return <SeasonError onRetry={() => void refetch()} />;
     }
     return <SeasonSkeleton />;
