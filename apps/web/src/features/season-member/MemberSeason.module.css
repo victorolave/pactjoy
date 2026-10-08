@@ -1,0 +1,125 @@
+/* Design 23d: a 52 px back row, then the content column with 20 px between blocks. */
+.screen {
+  display: flex;
+  flex-direction: column;
+}
+
+/* The chevron sits 8 px from the screen edge, inside the shell's 20 px margin. */
+.back {
+  display: flex;
+  align-items: center;
+  height: calc(var(--control-height) + var(--space-1));
+  margin-top: calc(var(--space-4) * -1);
+  margin-inline-start: calc(var(--space-2) - var(--layout-margin-mobile));
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--space-4) + var(--space-1));
+}
+
+.identity {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--space-3) + var(--space-1) / 2);
+}
+
+.meta {
+  margin: 0;
+  font: var(--font-meta);
+  color: var(--text-secondary);
+}
+
+.name {
+  margin: calc(var(--space-1) / 2) 0 0;
+  font: var(--font-h2);
+  overflow-wrap: anywhere;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.metrics :global(.pj-card) {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--space-1) / 2);
+  padding: var(--space-3);
+}
+
+.metricLabel {
+  font: var(--font-meta);
+  color: var(--text-secondary);
+}
+
+.metricValue {
+  font: var(--weight-extrabold) var(--type-h2-size) / var(--type-h2-line) var(--font-sans);
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.groupHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.groupTitle {
+  margin: 0;
+  font: var(--font-h3);
+}
+
+.small {
+  margin: 0;
+  font: var(--font-small);
+  color: var(--text-secondary);
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: var(--space-1) var(--space-4);
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: var(--border-width) solid var(--border-subtle);
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.rowBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.rowTitle {
+  margin: 0;
+  font:
+    var(--weight-bold) var(--type-body-size) / calc(var(--type-label-line) + var(--space-1) / 2)
+    var(--font-sans);
+  overflow-wrap: anywhere;
+}
+
+.rowPoints {
+  flex: none;
+  font: var(--weight-bold) var(--type-small-size) / var(--type-small-line) var(--font-sans);
+}
