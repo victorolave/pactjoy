@@ -118,6 +118,45 @@ describe("season progress core (A1, 23a)", () => {
     expect(view.own.points).toBe(0);
   });
 
+  it("day streak: kept days extend it, a counted miss resets current but keeps best (SP-A13)", async () => {
+    const { app, given, started } = await setup();
+    const log = async (n: number, kind: "done" | "missed") => {
+      const result = await recordEntry(atInstant(app, localInstant(day(n))), given.andrea, {
+        seasonId: given.season.id,
+        commitmentId: given.andreaCommitment,
+        value: { kind },
+        clientRequestId: `andrea-${n}`,
+      });
+      expect(result.ok).toBe(true);
+    };
+    await log(0, "done");
+    await log(1, "done");
+    await log(2, "missed");
+    expect((await started(2)).own.commitments[0]?.streak).toEqual({
+      unit: "day",
+      current: 0,
+      best: 2,
+    });
+    await log(3, "done");
+    expect((await started(3)).own.commitments[0]?.streak).toEqual({
+      unit: "day",
+      current: 1,
+      best: 2,
+    });
+  });
+
+  it("equal display names keep a stable MemberId order in the all-zero standings (WS-A07)", async () => {
+    const { app, given, started } = await setup();
+    const sameName = given.circle.members.map((m) => ({ ...m, displayName: "Ana" }));
+    await app.circles.save({ ...given.circle, members: [...sameName].reverse() }, 0);
+
+    const view = await started();
+    expect(view.standings.rows.map((r) => [r.displayName, r.memberId, r.rank])).toEqual([
+      ["Ana", "member-andrea", null],
+      ["Ana", "member-victor", null],
+    ]);
+  });
+
   it("returns only notStarted for a pact with no actual start", async () => {
     const { app, given, read } = await setup();
     await app.seasons.save({ ...given.season, status: "pactOpen", actualStart: null }, 0);

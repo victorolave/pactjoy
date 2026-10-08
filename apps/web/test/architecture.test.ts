@@ -96,6 +96,16 @@ describe("the folder architecture", () => {
       /\.season :global\(\.pj-btn--sm\)\s*\{\s*min-height: var\(--touch-target\);/,
     );
   });
+  it.each([
+    ["season/Standings.module.css", "rowInteractive"],
+    ["season/Standings.module.css", "peerLink"],
+    ["season/CommitmentRow.module.css", "row"],
+  ])("%s .%s keeps a 44 px target and a visible keyboard focus", (file, selector) => {
+    const css = readFileSync(join(SRC, "features", file), "utf8");
+    const block = (rule: string) => css.match(new RegExp(`\\.${rule}\\s*\\{([^}]*)\\}`))?.[1] ?? "";
+    expect(block(selector)).toContain("min-height: var(--touch-target)");
+    expect(block(`${selector}:focus-visible`)).toMatch(/outline: var\(--focus-width\) solid/);
+  });
   it("avoids applying the shell gutter twice to the self-padded overview", () => {
     const css = readFileSync(join(SRC, "shell", "TabBar.module.css"), "utf8");
     expect(css).toContain("margin-inline: calc(var(--layout-margin-mobile) * -1)");
