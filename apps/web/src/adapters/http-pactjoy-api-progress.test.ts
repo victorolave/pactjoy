@@ -111,6 +111,24 @@ const malformed: [string, Read, unknown][] = [
     },
   ],
   [
+    "a peer's private commitment sent as a detail row",
+    (a) => a.getMemberProgress("s1", "m1"),
+    {
+      ...peer,
+      commitments: [{ ...peer.commitments[0], privacy: "private" }],
+    },
+  ],
+  [
+    "a season time zone that is not a usable IANA zone",
+    (a) => a.getSeasonProgress("s1"),
+    { ...season, season: { ...season.season, timeZone: "Mars/Olympus_Mons" } },
+  ],
+  [
+    "a week summary in an unusable time zone",
+    (a) => a.getWeekSummary("s1", 3),
+    { ...weekSummary(), season: { ...season.season, timeZone: "not a zone" } },
+  ],
+  [
     "a string rank",
     (a) => a.getSeasonProgress("s1"),
     {

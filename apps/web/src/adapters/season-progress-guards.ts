@@ -23,6 +23,16 @@ const bool: Check = (v) => typeof v === "boolean";
 const num: Check = (v) => typeof v === "number" && Number.isFinite(v);
 const count: Check = (v) => typeof v === "number" && Number.isInteger(v) && v >= 0;
 const date: Check = (v) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);
+/** An IANA zone this runtime can format, so the season clock never throws at render. */
+const zone: Check = (v) => {
+  if (typeof v !== "string" || v.length === 0) return false;
+  try {
+    new Intl.DateTimeFormat("en-CA", { timeZone: v });
+    return true;
+  } catch {
+    return false;
+  }
+};
 const decimal: Check = (v) => typeof v === "string" && /^\d{1,12}(\.\d{1,12})?$/.test(v);
 const nullable =
   (check: Check): Check =>
@@ -87,7 +97,7 @@ const hiddenRow = shape(
 
 const season = shape({
   id,
-  timeZone: id,
+  timeZone: zone,
   lengthWeeks: oneOf(4, 6, 8, 12),
   actualStart: date,
   lastDay: date,
@@ -140,7 +150,10 @@ const isStartedMember: Check = (v) =>
   shape({
     ...memberBase,
     scope: oneOf("others"),
-    commitments: list((row) => detailRow(row) || hiddenRow(row)),
+    // A peer's private commitment only ever arrives as a hidden row, never with its detail.
+    commitments: list(
+      (row) => (detailRow(row) && isRec(row) && row.privacy === "visible") || hiddenRow(row),
+    ),
   })(v);
 
 const evidence = shape(
