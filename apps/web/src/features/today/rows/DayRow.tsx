@@ -62,6 +62,7 @@ export function DayRow({
   return (
     <RowFrame
       title={row.habitName}
+      commitmentId={row.commitmentId}
       glyph={achieved ? "check" : logged ? "x" : "repeat"}
       tone={achieved ? "done" : "default"}
       statuses={statuses}

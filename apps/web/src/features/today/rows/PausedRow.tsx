@@ -7,6 +7,7 @@ export function PausedRow({ row }: { readonly row: TodayRow }) {
   return (
     <RowFrame
       title={row.habitName}
+      commitmentId={row.commitmentId}
       glyph="circle-pause"
       tone="muted"
       badges={

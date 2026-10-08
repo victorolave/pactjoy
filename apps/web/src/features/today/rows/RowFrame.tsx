@@ -1,12 +1,16 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useContext } from "react";
+import { Link } from "react-router";
 import { pointsText } from "../../../shared/format.ts";
+import { progressRoutes } from "../../../shared/season-progress-routes.ts";
 import { Card } from "../../../ui/Card.tsx";
 import { cx } from "../../../ui/cx.ts";
 import { Icon, type IconName } from "../../../ui/icon/Icon.tsx";
+import { TodayRowSeasonContext } from "./row-navigation.ts";
 import styles from "./rows.module.css";
 
 export interface RowFrameProps {
   readonly title: string;
+  readonly commitmentId?: string;
   readonly glyph: IconName;
   readonly tone?: "default" | "done" | "muted";
   /** Lines of secondary text under the title. */
@@ -25,6 +29,7 @@ export interface RowFrameProps {
 /** The card every Today row shares: glyph, title, text lines, optional control and bar. */
 export function RowFrame({
   title,
+  commitmentId,
   glyph,
   tone = "default",
   details = [],
@@ -34,6 +39,7 @@ export function RowFrame({
   action,
   below,
 }: RowFrameProps) {
+  const seasonId = useContext(TodayRowSeasonContext);
   return (
     <Card as="article" flush tone={tone === "muted" ? "sunken" : "default"}>
       <div className={styles.card}>
@@ -50,7 +56,19 @@ export function RowFrame({
           </span>
           <div className={styles.body}>
             <div className={styles.titleLine}>
-              <h3 className={styles.title}>{title}</h3>
+              <h3 className={styles.title}>
+                {seasonId !== null && commitmentId !== undefined ? (
+                  <Link
+                    className={styles.detailLink}
+                    to={progressRoutes.commitment(seasonId, commitmentId)}
+                    state={{ from: "today" }}
+                  >
+                    {title}
+                  </Link>
+                ) : (
+                  title
+                )}
+              </h3>
               {points !== null && points > 0 && (
                 <span className={styles.points}>{pointsText(points)}</span>
               )}
