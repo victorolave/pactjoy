@@ -5,6 +5,7 @@ import { SeasonCommitmentRow, type SeasonCommitmentRowData } from "./commitment-
 import styles from "./Overview.module.css";
 import { Standings } from "./standings.tsx";
 import { isFirstDayZero, SeasonFirstDayZero } from "./states.tsx";
+import { SeasonWeeklyChart } from "./weekly-chart.tsx";
 
 type StartedSeason = Extract<SeasonProgress, { state: "active" | "ended" }>;
 
@@ -196,7 +197,7 @@ export function SeasonOverview({
         onNavigateToMember={onNavigateToMember}
       />
 
-      {chartSlot}
+      {chartSlot ?? <SeasonWeeklyChart progress={progress} />}
 
       <SeasonCommitmentsList
         commitments={own.commitments}

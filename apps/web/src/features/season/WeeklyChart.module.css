@@ -1,0 +1,112 @@
+.card {
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.title {
+  font: var(--font-label);
+}
+
+.legend {
+  display: flex;
+  gap: var(--space-3);
+  font: var(--font-meta);
+  color: var(--text-secondary);
+}
+
+.legendItem {
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+}
+
+.legendSwatchViewer {
+  width: var(--space-2);
+  height: var(--space-2);
+  border-radius: calc(var(--space-1) / 2);
+  background: var(--pj-ink);
+  flex: none;
+}
+
+.legendSwatchPeer {
+  width: var(--space-2);
+  height: var(--space-2);
+  border-radius: calc(var(--space-1) / 2);
+  background: var(--ink-300);
+  flex: none;
+}
+
+.chartGrid {
+  display: grid;
+  gap: calc(var(--space-3) / 2);
+  align-items: end;
+  height: calc(var(--space-8) + var(--space-6));
+}
+
+.weekColumn {
+  display: flex;
+  gap: calc(var(--space-1) / 2);
+  align-items: flex-end;
+  height: 100%;
+}
+
+.barViewer {
+  flex: 1;
+  background: var(--pj-ink);
+  border-radius: calc(var(--pager-dot) / 2) calc(var(--pager-dot) / 2) 0 0;
+  min-height: 0;
+}
+
+.barPeer {
+  flex: 1;
+  background: var(--ink-300);
+  border-radius: calc(var(--pager-dot) / 2) calc(var(--pager-dot) / 2) 0 0;
+  min-height: 0;
+}
+
+.barCurrent {
+  opacity: 0.55;
+}
+
+.futureColumn {
+  height: 100%;
+  border-bottom: calc(var(--space-1) / 2) dotted var(--ink-200);
+}
+
+.labelsGrid {
+  display: grid;
+  gap: calc(var(--space-3) / 2);
+  font: var(--font-meta);
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.weekLabel {
+  color: var(--text-secondary);
+}
+
+.weekLabelCurrent {
+  color: var(--text-primary);
+}
+
+.footer {
+  font: var(--font-small);
+  color: var(--text-secondary);
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: var(--border-width);
+  height: var(--border-width);
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
