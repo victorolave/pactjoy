@@ -1,6 +1,7 @@
 import type { SeasonProgress } from "../../ports/wire.ts";
 import { Badge } from "../../ui/Badge.tsx";
-import { Icon, type IconName } from "../../ui/icon/Icon.tsx";
+import { Icon } from "../../ui/icon/Icon.tsx";
+import { HabitGlyph } from "../habits/index.ts";
 import styles from "./CommitmentRow.module.css";
 
 type StartedSeason = Extract<SeasonProgress, { state: "active" | "ended" }>;
@@ -11,50 +12,24 @@ export interface SeasonCommitmentRowProps {
   readonly onSelect?: ((commitmentId: string) => void) | undefined;
 }
 
-type HabitTint = "orange" | "pink" | "purple" | "coral" | "cream" | "neutral";
-
-const TINTS: Readonly<Record<string, HabitTint>> = {
-  book: "orange",
-  palette: "pink",
-  brain: "purple",
-  flower: "purple",
-  footprints: "coral",
-  dumbbell: "coral",
-  coffee: "cream",
-};
-
-const GLYPHS: Readonly<Record<string, IconName>> = {
-  book: "book-open",
-  brain: "brain",
-  coffee: "coffee",
-  dumbbell: "dumbbell",
-  flower: "flower-2",
-  footprints: "footprints",
-  palette: "palette",
-  sun: "sun",
-  calendar: "calendar-days",
-  check: "check",
-  repeat: "repeat",
-  history: "history",
-  pencil: "pencil",
-  plus: "plus",
-  users: "users",
-  handshake: "handshake",
-  user: "user-round",
-  settings: "settings",
-  completed: "circle-check",
-  moon: "moon",
-};
+function formatSubtitle(row: SeasonCommitmentRowData): string {
+  const isSpecificDays =
+    row.measure.schedule.period === "perSession" &&
+    row.measure.schedule.frequency.kind === "specificDays" &&
+    row.opportunities.counted > 0;
+  if (isSpecificDays) {
+    const daysLabel = row.opportunities.counted === 1 ? "día previsto" : "días previstos";
+    return `${row.weightPercent} % · ${row.opportunities.kept} de ${row.opportunities.counted} ${daysLabel}`;
+  }
+  if (row.consistency !== null) {
+    return `${row.weightPercent} % · consistencia ${row.consistency} %`;
+  }
+  return `${row.weightPercent} %`;
+}
 
 export function SeasonCommitmentRow({ row, onSelect }: SeasonCommitmentRowProps) {
   const isPaused = row.pause === "paused" || row.pause === "onHold";
-  const tint = isPaused ? "neutral" : (row.habit.icon && TINTS[row.habit.icon]) || "neutral";
-  const glyph = (row.habit.icon && GLYPHS[row.habit.icon]) || "flower-2";
-
-  const subtitle =
-    row.consistency !== null
-      ? `${row.weightPercent} % · consistencia ${row.consistency} %`
-      : `${row.weightPercent} %`;
+  const subtitle = formatSubtitle(row);
 
   return (
     <button
@@ -63,9 +38,7 @@ export function SeasonCommitmentRow({ row, onSelect }: SeasonCommitmentRowProps)
       onClick={() => onSelect?.(row.commitmentId)}
       aria-label={`${row.habit.name}, ${row.points} de ${row.weightPercent * 10} puntos`}
     >
-      <span className={styles.tile} data-tint={tint} aria-hidden="true">
-        <Icon name={glyph} size={20} />
-      </span>
+      <HabitGlyph icon={row.habit.icon} />
 
       <div className={styles.body}>
         <div className={styles.title}>{row.habit.name}</div>

@@ -23,42 +23,6 @@
   border-radius: var(--radius-control);
 }
 
-.tile {
-  display: flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: calc(var(--icon-lg) + var(--space-1));
-  height: calc(var(--icon-lg) + var(--space-1));
-  border-radius: calc(var(--radius-control) - var(--space-1) / 2);
-  background: var(--ink-100);
-  color: var(--text-secondary);
-}
-.tile[data-tint="orange"] {
-  background: var(--orange-100);
-  color: var(--orange-800);
-}
-.tile[data-tint="pink"] {
-  background: var(--pink-100);
-  color: var(--pink-700);
-}
-.tile[data-tint="purple"] {
-  background: var(--purple-100);
-  color: var(--purple-700);
-}
-.tile[data-tint="coral"] {
-  background: var(--coral-100);
-  color: var(--coral-700);
-}
-.tile[data-tint="cream"] {
-  background: var(--cream-200);
-  color: var(--cream-700);
-}
-.tile[data-tint="neutral"] {
-  background: var(--ink-100);
-  color: var(--text-secondary);
-}
-
 .body {
   flex: 1;
   min-width: 0;

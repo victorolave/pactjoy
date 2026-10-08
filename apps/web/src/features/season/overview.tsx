@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Navigate } from "react-router";
 import type { SeasonProgress } from "../../ports/wire.ts";
 import { SeasonCommitmentRow } from "./commitment-row.tsx";
 import styles from "./Overview.module.css";
@@ -41,7 +42,9 @@ export function SeasonOverview({
   onNavigateToMember,
   onNavigateToCommitment,
 }: SeasonOverviewProps) {
-  if (progress.state === "notStarted") return null;
+  if (progress.state === "notStarted") {
+    return <Navigate to="/" replace />;
+  }
 
   const { circle, season, calendar, own, standings } = progress as StartedSeason;
   const currentPct = Math.min(100, Math.max(0, Math.round((calendar.dayOfWeek / 7) * 100)));

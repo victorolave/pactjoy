@@ -71,6 +71,7 @@ describe("Standings", () => {
       [400, 400, 4, 8, "Mismos puntos. La temporada sigue muy pareja."],
       [460, 400, 4, 8, "60 pts de diferencia. Todavía quedan 3 semanas."],
       [460, 400, 6, 8, "60 pts de diferencia. Todavía queda 1 semana."],
+      [460, 400, 7, 8, "60 pts de diferencia."],
       [520, 400, 4, 8, "120 pts de diferencia. Tu progreso también tiene su propio ritmo."],
     ])(
       "formats gap copy correctly for points (%i, %i) and week (%i of %i)",
@@ -155,7 +156,7 @@ describe("Standings", () => {
       expect(screen.queryByText(/Ver la temporada de/)).toBeNull();
     });
 
-    it("allows clicking peer rows to navigate in 3-6 circle", () => {
+    it("allows clicking peer rows to navigate in 3-6 circle with rank, name and points in accessible name", () => {
       const onNavigateToMember = vi.fn();
       render(
         <Standings
@@ -165,9 +166,14 @@ describe("Standings", () => {
           onNavigateToMember={onNavigateToMember}
         />,
       );
-      fireEvent.click(screen.getByRole("button", { name: "Ver la temporada de Andrea" }));
+      const andreaBtn = screen.getByRole("button", { name: "1. Andrea, 412 pts" });
+      expect(andreaBtn).toHaveAccessibleDescription("Ver la temporada de Andrea");
+      fireEvent.click(andreaBtn);
       expect(onNavigateToMember).toHaveBeenCalledWith("member-andrea");
-      fireEvent.click(screen.getByRole("button", { name: "Ver la temporada de Bruno" }));
+
+      const brunoBtn = screen.getByRole("button", { name: "3. Bruno, 350 pts" });
+      expect(brunoBtn).toHaveAccessibleDescription("Ver la temporada de Bruno");
+      fireEvent.click(brunoBtn);
       expect(onNavigateToMember).toHaveBeenCalledWith("member-bruno");
     });
   });

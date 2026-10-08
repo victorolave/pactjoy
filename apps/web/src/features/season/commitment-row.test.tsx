@@ -47,6 +47,25 @@ describe("SeasonCommitmentRow", () => {
     expect(screen.getByText("105 / 250")).toBeInTheDocument();
   });
 
+  it("renders opportunities subtitle for specificDays schedule per design 23a", () => {
+    render(
+      <SeasonCommitmentRow
+        row={createRow({
+          weightPercent: 20,
+          measure: {
+            unit: "done",
+            schedule: {
+              period: "perSession",
+              frequency: { kind: "specificDays", weekdays: [1, 3, 5] },
+            },
+          },
+          opportunities: { kept: 12, counted: 13 },
+        })}
+      />,
+    );
+    expect(screen.getByText("20 % · 12 de 13 días previstos")).toBeInTheDocument();
+  });
+
   it("triggers onSelect callback when clicked", () => {
     const onSelect = vi.fn();
     render(<SeasonCommitmentRow row={createRow()} onSelect={onSelect} />);

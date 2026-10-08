@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import { MemoryRouter, Route, Routes } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 import {
   activeSeasonProgress,
@@ -94,5 +95,22 @@ describe("SeasonOverview", () => {
     render(<SeasonOverview progress={progress} />);
 
     expect(screen.getAllByText("—")).toHaveLength(2);
+  });
+
+  it("redirects to / when season is not started instead of rendering blank", () => {
+    render(
+      <MemoryRouter initialEntries={["/season"]}>
+        <Routes>
+          <Route
+            path="/season"
+            element={<SeasonOverview progress={{ state: "notStarted", seasonId: "season-1" }} />}
+          />
+          <Route path="/" element={<div data-testid="today-screen">Hoy</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId("today-screen")).toBeInTheDocument();
+    expect(screen.queryByRole("progressbar")).toBeNull();
   });
 });

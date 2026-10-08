@@ -18,10 +18,14 @@ export interface StandingsProps {
 /** Gap copy thresholds per Notion Mechanics & design 23a (pairs only). */
 export function formatPairGapCopy(diff: number, lengthWeeks: number, weekIndex: number): string {
   if (diff === 0) return "Mismos puntos. La temporada sigue muy pareja.";
-  if (diff <= 20)
+  if (diff <= 20) {
     return `${diff === 1 ? "1 pt" : `${diff} pts`} de diferencia. La temporada sigue muy pareja.`;
+  }
   if (diff <= 80) {
     const left = lengthWeeks - (weekIndex + 1);
+    if (left <= 0) {
+      return `${diff} pts de diferencia.`;
+    }
     return `${diff} pts de diferencia. Todavía ${left === 1 ? "queda 1 semana" : `quedan ${left} semanas`}.`;
   }
   return `${diff} pts de diferencia. Tu progreso también tiene su propio ritmo.`;
@@ -65,15 +69,25 @@ export function Standings({ standings, season, calendar, onNavigateToMember }: S
           );
 
           if (!isPair && !row.isViewer && onNavigateToMember) {
+            const accessibleName =
+              row.rank !== null
+                ? `${row.rank}. ${row.displayName}, ${row.points} pts`
+                : `${row.displayName}, ${row.points} pts`;
+            const hintId = `hint-season-member-${row.memberId}`;
+
             return (
               <li key={row.memberId}>
                 <button
                   type="button"
                   className={styles.rowInteractive}
                   onClick={() => onNavigateToMember(row.memberId)}
-                  aria-label={`Ver la temporada de ${row.displayName}`}
+                  aria-label={accessibleName}
+                  aria-describedby={hintId}
                 >
                   {content}
+                  <span id={hintId} className={styles.visuallyHidden}>
+                    Ver la temporada de {row.displayName}
+                  </span>
                 </button>
               </li>
             );

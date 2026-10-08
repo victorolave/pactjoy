@@ -115,3 +115,12 @@
   outline: var(--focus-width) solid var(--border-focus);
   border-radius: var(--radius-control);
 }
+
+.visuallyHidden {
+  position: absolute;
+  width: var(--border-width);
+  height: var(--border-width);
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
