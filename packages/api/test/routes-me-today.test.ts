@@ -213,6 +213,32 @@ describe("GET /me/today (TD-R1, TD-S11)", () => {
     expect(res.json.data.rows[0].opportunity.state).toBe("open");
   });
 
+  it("ended, on the last week's grace day: score and standings match the score endpoints", async () => {
+    const { call, setNow, path, seasonId, commitmentIds } = await givenTwoMemberSeason(WEEKLY);
+    // Days 21-23 (2023-12-05..07, noon in Bogota): Andrea logs the 3 sessions of the last week.
+    for (const day of [5, 6, 7]) {
+      setNow(instant(Date.UTC(2023, 11, day, 17)));
+      const logged = await call("POST", path, "andrea", {
+        commitmentId: commitmentIds.andrea,
+        value: { kind: "done" },
+        clientRequestId: `last-week-${day}`,
+      });
+      expect(logged.status).toBe(201);
+    }
+    // Day 28 (2023-12-12) is that week's grace deadline: its sessions count from today.
+    setNow(instant(Date.UTC(2023, 11, 12, 17)));
+
+    const todayRes = await call("GET", "/me/today", "andrea");
+    const score = await call("GET", `/seasons/${seasonId}/score`, "andrea");
+    const ranked = await call("GET", `/seasons/${seasonId}/standings`, "andrea");
+
+    expect(todayRes.json.data.state).toBe("ended");
+    // 3 of 12 weekly sessions: 1000 x 3/12 = 250.
+    expect(todayRes.json.data.summary.score.points).toBe(250);
+    expect(todayRes.json.data.summary.score).toEqual(score.json.data);
+    expect(todayRes.json.data.standings).toEqual(ranked.json.data);
+  });
+
   it("another member's private commitment never appears in my rows or anywhere", async () => {
     const ctx = setup();
     const circle = await ctx.call("POST", "/circles", "andrea", createCircleBody("Crew"));
