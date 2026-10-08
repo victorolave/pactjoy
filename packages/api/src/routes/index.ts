@@ -9,6 +9,7 @@ import { entryRoutes } from "./entries.ts";
 import { habitRoutes } from "./habits.ts";
 import { meRoutes } from "./me.ts";
 import { pactRoutes } from "./pact.ts";
+import { memberProgressRoutes } from "./progress-members.ts";
 import { scoreRoutes } from "./scores.ts";
 import { scoringRoutes } from "./scoring.ts";
 import { seasonRoutes } from "./seasons.ts";
@@ -26,6 +27,7 @@ const routeTable = (deps: ApiDeps): Route[] => [
   ...pactRoutes(deps),
   ...entryRoutes(deps),
   ...scoreRoutes(deps),
+  ...memberProgressRoutes(deps),
   ...scoringRoutes(),
   ...meRoutes(deps),
 ];
