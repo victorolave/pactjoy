@@ -20,6 +20,7 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "graceDeadline",
   "gt",
   "gte",
+  "historyProvenance",
   "isLimitIdealWithinTolerance",
   "isPositiveReachMinimum",
   "isReachMinimumWithinIdeal",
