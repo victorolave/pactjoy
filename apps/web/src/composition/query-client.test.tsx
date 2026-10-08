@@ -3,8 +3,9 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { ApiError } from "../ports/api-error.ts";
-import { todayKey } from "../shared/query-keys.ts";
+import { seasonProgressKey, todayKey } from "../shared/query-keys.ts";
 import { FakePactJoyApi } from "../testing/fake-pactjoy-api.ts";
+import { activeSeasonProgress } from "../testing/fixtures/season-progress.ts";
 import { activeTodayFixture } from "../testing/fixtures/today.ts";
 import { createQueryClient } from "./query-client.ts";
 
@@ -66,6 +67,37 @@ describe("createQueryClient mutation cache (AC-S3)", () => {
 
     await waitFor(() => expect(api.calls.getToday).toBe(2));
     expect(api.calls.recordEntry).toBe(1);
+  });
+});
+
+function Progress({ api }: { api: FakePactJoyApi }) {
+  const season = useQuery({
+    queryKey: seasonProgressKey("season-1"),
+    queryFn: ({ signal }) => api.getSeasonProgress("season-1", signal),
+  });
+  return <p>progress:{season.data?.state ?? "loading"}</p>;
+}
+
+describe("createQueryClient progress invalidation (AC-PG-A03)", () => {
+  it("a mutation that settles after its screen unmounted still refetches the progress reads", async () => {
+    const api = new FakePactJoyApi(activeTodayFixture());
+    api.progress.setSeasonProgress("season-1", activeSeasonProgress());
+    const client = createQueryClient();
+    const view = (withWriter: boolean) => (
+      <QueryClientProvider client={client}>
+        <Progress api={api} />
+        {withWriter ? <Probe api={api} /> : null}
+      </QueryClientProvider>
+    );
+    const { rerender } = render(view(true));
+    await screen.findByText("progress:active");
+    const release = api.hold("recordEntry");
+    await userEvent.click(screen.getByRole("button", { name: "record" }));
+
+    rerender(view(false));
+    release();
+
+    await waitFor(() => expect(api.calls.getSeasonProgress).toBe(2));
   });
 });
 

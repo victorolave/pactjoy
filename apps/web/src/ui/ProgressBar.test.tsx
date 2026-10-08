@@ -114,4 +114,22 @@ describe("ProgressBar", () => {
     expect(screen.getByText("Va bien")).toBeInTheDocument();
     expect(screen.queryByText(/mín\./)).not.toBeInTheDocument();
   });
+
+  it("supports default and ink-100 track variants for design system fidelity", () => {
+    const { rerender } = render(<ProgressBar value={105} max={250} track="default" />);
+    let bar = screen.getByRole("progressbar");
+    expect(bar).toHaveAttribute("data-track", "default");
+
+    rerender(<ProgressBar value={105} max={250} track="ink-100" />);
+    bar = screen.getByRole("progressbar");
+    expect(bar).toHaveAttribute("data-track", "ink-100");
+  });
+
+  it("falls back to label or 'Progreso' when name is omitted", () => {
+    const { rerender } = render(<ProgressBar value={105} max={250} label="Puntos" />);
+    expect(screen.getByRole("progressbar", { name: "Puntos" })).toBeInTheDocument();
+
+    rerender(<ProgressBar value={105} max={250} />);
+    expect(screen.getByRole("progressbar", { name: "Progreso" })).toBeInTheDocument();
+  });
 });

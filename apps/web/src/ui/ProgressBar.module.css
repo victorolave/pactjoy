@@ -20,6 +20,12 @@ div.track[data-track="white"] {
   background: var(--pj-white);
 }
 
+div.track[data-track="default"],
+div.track[data-track="ink-100"] {
+  height: var(--progress-track-height);
+  background: var(--ink-100);
+}
+
 .marks {
   position: relative;
   height: var(--space-4);

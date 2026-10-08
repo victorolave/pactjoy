@@ -19,7 +19,9 @@ import type {
   RecordedEntry,
   UpdateHabitCommand,
 } from "../ports/pactjoy-api.ts";
+import type { SeasonProgressApi } from "../ports/season-progress-api.ts";
 import type { SeasonDto } from "../ports/wire.ts";
+import { FakeSeasonProgressApi } from "./fake-season-progress.ts";
 import { NO_CIRCLE } from "./fixtures/circle.ts";
 
 type ExistingMethod =
@@ -34,7 +36,9 @@ type ExistingMethod =
   | "generateInvite"
   | "renameCircle"
   | "renameMyDisplayName"
-  | "leaveCircle";
+  | "leaveCircle"
+  | ProgressMethod;
+type ProgressMethod = keyof SeasonProgressApi;
 
 type Method = keyof PactJoyApi;
 type PactMethod = Exclude<Method, ExistingMethod>;
@@ -82,7 +86,13 @@ export class FakePactJoyApi implements PactJoyApi {
     renameCircle: 0,
     renameMyDisplayName: 0,
     leaveCircle: 0,
+    getSeasonProgress: 0,
+    getMemberProgress: 0,
+    getCommitmentProgress: 0,
+    getWeekSummary: 0,
   };
+  /** Script the progress reads here; the four methods below delegate to it. */
+  readonly progress = new FakeSeasonProgressApi();
   /** What the circle mutations were asked to do, in order, for assertions. */
   readonly circleCommands: { readonly method: Method; readonly args: readonly unknown[] }[] = [];
   /** Every recordEntry call, including the ones that were scripted to fail. */
@@ -296,6 +306,26 @@ export class FakePactJoyApi implements PactJoyApi {
     await this.#circleCall("leaveCircle", [circleId]);
     // Like the server: the viewer has no circle from now on.
     this.#myCircle = { circle: null, season: null };
+  }
+
+  async getSeasonProgress(seasonId: string, signal?: AbortSignal) {
+    this.#enter("getSeasonProgress");
+    return this.progress.getSeasonProgress(seasonId, signal);
+  }
+
+  async getMemberProgress(seasonId: string, memberId: string, signal?: AbortSignal) {
+    this.#enter("getMemberProgress");
+    return this.progress.getMemberProgress(seasonId, memberId, signal);
+  }
+
+  async getCommitmentProgress(seasonId: string, commitmentId: string, signal?: AbortSignal) {
+    this.#enter("getCommitmentProgress");
+    return this.progress.getCommitmentProgress(seasonId, commitmentId, signal);
+  }
+
+  async getWeekSummary(seasonId: string, weekIndex: number, signal?: AbortSignal) {
+    this.#enter("getWeekSummary");
+    return this.progress.getWeekSummary(seasonId, weekIndex, signal);
   }
 
   /** Records the call, waits on a held gate, then throws a scripted failure. */

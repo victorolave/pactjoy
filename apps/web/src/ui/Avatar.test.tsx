@@ -34,6 +34,32 @@ describe("Avatar", () => {
     render(<Avatar name="  " />);
     expect(screen.getByRole("img")).toHaveTextContent("?");
   });
+
+  it("supports size 28 and 48 as string or number", () => {
+    const { rerender } = render(<Avatar name="Andrea" size={48} />);
+    let avatar = screen.getByRole("img", { name: "Andrea" });
+    expect(avatar.className).toMatch(/size48/);
+
+    rerender(<Avatar name="Andrea" size="48" />);
+    avatar = screen.getByRole("img", { name: "Andrea" });
+    expect(avatar.className).toMatch(/size48/);
+
+    rerender(<Avatar name="Andrea" size={40} />);
+    avatar = screen.getByRole("img", { name: "Andrea" });
+    expect(avatar.className).toMatch(/size40|md/);
+
+    rerender(<Avatar name="Andrea" size="40" />);
+    avatar = screen.getByRole("img", { name: "Andrea" });
+    expect(avatar.className).toMatch(/size40|md/);
+
+    rerender(<Avatar name="Andrea" size={28} />);
+    avatar = screen.getByRole("img", { name: "Andrea" });
+    expect(avatar.className).toMatch(/size28/);
+
+    rerender(<Avatar name="Andrea" size="28" />);
+    avatar = screen.getByRole("img", { name: "Andrea" });
+    expect(avatar.className).toMatch(/size28/);
+  });
 });
 
 describe("AvatarStack", () => {
@@ -48,5 +74,12 @@ describe("AvatarStack", () => {
   it("caps the stack", () => {
     render(<AvatarStack names={["A", "B", "C", "D", "E"]} max={3} />);
     expect(screen.getAllByRole("img")).toHaveLength(3);
+  });
+
+  it("supports size 28 and 48 in the stack", () => {
+    render(<AvatarStack names={["Andrea", "Victor"]} size={28} />);
+    const avatars = screen.getAllByRole("img");
+    expect(avatars[0]?.className).toMatch(/size28/);
+    expect(avatars[1]?.className).toMatch(/size28/);
   });
 });

@@ -1,9 +1,11 @@
 import {
+  Bell,
   BookOpen,
   Brain,
   CalendarDays,
   Check,
   ChevronLeft,
+  ChevronRight,
   CircleAlert,
   CircleCheck,
   CirclePause,
@@ -11,6 +13,7 @@ import {
   Coffee,
   Copy,
   Dumbbell,
+  Eye,
   EyeOff,
   Flower2,
   Footprints,
@@ -51,6 +54,7 @@ const GLYPHS = {
   "cloud-off": CloudOff,
   check: Check,
   "chevron-left": ChevronLeft,
+  "chevron-right": ChevronRight,
   repeat: Repeat,
   "rotate-cw": RotateCw,
   history: History,
@@ -72,15 +76,33 @@ const GLYPHS = {
   brain: Brain,
   coffee: Coffee,
   dumbbell: Dumbbell,
+  eye: Eye,
   "eye-off": EyeOff,
   "flower-2": Flower2,
   footprints: Footprints,
   palette: Palette,
   moon: Moon,
+  bell: Bell,
 } as const satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof GLYPHS;
-export type IconSize = "xs" | "sm" | "md" | "lg";
+export type IconSize =
+  | "xs"
+  | "sm"
+  | "md"
+  | "lg"
+  | "14"
+  | "16"
+  | "18"
+  | "20"
+  | "22"
+  | 14
+  | 16
+  | 18
+  | 20
+  | 22
+  | 24
+  | 32;
 
 /** Mirrors the design system's `--icon-stroke` token (SVG attributes cannot read CSS variables). */
 const STROKE_WIDTH = 1.8;
@@ -88,18 +110,23 @@ const STROKE_WIDTH = 1.8;
 export interface IconProps {
   readonly name: IconName;
   readonly size?: IconSize;
+  /** Custom stroke width, e.g. 2.2 for badges. Defaults to 1.8. */
+  readonly strokeWidth?: number;
+  /** Color token override (e.g. `var(--pj-muted)`). Defaults to inherited color. */
+  readonly color?: string;
   /** Accessible name. Omit for a decorative icon (it is then hidden from assistive tech). */
   readonly label?: string;
 }
 
-export function Icon({ name, size = "md", label }: IconProps) {
+export function Icon({ name, size = "md", strokeWidth = STROKE_WIDTH, color, label }: IconProps) {
   const Glyph = GLYPHS[name];
-  const box = `var(--icon-${size})`;
+  const s = String(size);
+  const box = s === "24" ? "var(--icon-md)" : s === "32" ? "var(--icon-lg)" : `var(--icon-${s})`;
   return (
     <Glyph
       className="pj-icon"
-      strokeWidth={STROKE_WIDTH}
-      style={{ width: box, height: box }}
+      strokeWidth={strokeWidth}
+      style={{ width: box, height: box, color }}
       {...(label === undefined ? { "aria-hidden": true } : { role: "img", "aria-label": label })}
     />
   );

@@ -7,8 +7,8 @@ export interface ProgressMark {
 }
 
 export interface ProgressBarProps {
-  /** What the bar measures, for assistive tech. */
-  readonly name: string;
+  /** What the bar measures, for assistive tech. Defaults to `label` or 'Progreso'. */
+  readonly name?: string;
   readonly value: number;
   readonly max: number;
   readonly label?: string;
@@ -22,8 +22,8 @@ export interface ProgressBarProps {
    * neutral ink-400 (nothing counts yet); the gradient starts only once it is reached (design 17).
    */
   readonly minimum?: number;
-  /** The track colour: the page's sunken surface, or white inside a sunken card. */
-  readonly track?: "sunken" | "white";
+  /** The track colour: the page's sunken surface, white inside a sunken card, or default/ink-100 (10px). */
+  readonly track?: "sunken" | "white" | "default" | "ink-100";
 }
 
 const NEUTRAL_FILL = "var(--ink-400)";
@@ -52,6 +52,7 @@ export function ProgressBar({
   const belowMinimum = minimum !== undefined && value < minimum;
   const fill = tone === "gradient" && belowMinimum ? NEUTRAL_FILL : FILL[tone];
   const text = valueLabel ?? `${value} de ${max}`;
+  const accessibleName = name ?? label ?? "Progreso";
   return (
     <div className="pj-progress">
       {(label !== undefined || valueLabel !== undefined) && (
@@ -67,7 +68,7 @@ export function ProgressBar({
           role="progressbar"
           aria-valuemin={0}
           aria-valuemax={max}
-          aria-label={name}
+          aria-label={accessibleName}
           aria-valuenow={Math.max(0, Math.min(value, max))}
           aria-valuetext={text}
         >

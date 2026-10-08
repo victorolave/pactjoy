@@ -10,17 +10,28 @@ function hash(text: string): number {
   return Math.abs(value);
 }
 
+export type AvatarSize = "xs" | "sm" | "md" | "xl" | "lg" | "28" | "40" | "48" | 28 | 40 | 48;
+
 export interface AvatarProps {
   readonly name: string;
-  readonly size?: "xs" | "sm" | "md" | "xl" | "lg";
+  readonly size?: AvatarSize;
 }
 
 export function Avatar({ name, size = "md" }: AvatarProps) {
   const trimmed = name.trim();
   const tint = TINTS[hash(trimmed) % TINTS.length];
+  const sizeKey = String(size);
+  const sizeClass =
+    sizeKey === "28"
+      ? styles.size28
+      : sizeKey === "48"
+        ? styles.size48
+        : sizeKey === "40"
+          ? styles.size40
+          : (styles[sizeKey as keyof typeof styles] ?? styles.md);
   return (
     <span
-      className={cx(styles.avatar, styles[size])}
+      className={cx(styles.avatar, sizeClass)}
       role="img"
       aria-label={name}
       style={{ background: `var(--${tint}-200)` }}
@@ -32,7 +43,7 @@ export function Avatar({ name, size = "md" }: AvatarProps) {
 
 export interface AvatarStackProps {
   readonly names: readonly string[];
-  readonly size?: "sm" | "md";
+  readonly size?: AvatarSize;
   readonly max?: number;
 }
 

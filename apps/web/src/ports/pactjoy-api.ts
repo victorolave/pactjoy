@@ -11,6 +11,7 @@ import type {
   TodayView,
   UpdateHabitInput,
 } from "@pactjoy/app";
+import type { SeasonProgressApi } from "./season-progress-api.ts";
 import type { HabitDto, SeasonDto, Serialized } from "./wire.ts";
 
 export type CreateHabitCommand = Serialized<CreateHabitInput>;
@@ -75,7 +76,7 @@ export interface JoinCircleCommand {
 }
 
 /** Everything the screens know about the backend. Adapters throw `ApiError`. */
-export interface PactJoyApi {
+export interface PactJoyApi extends SeasonProgressApi {
   listHabits(signal?: AbortSignal): Promise<readonly HabitDto[]>;
   createHabit(input: CreateHabitCommand): Promise<HabitDto>;
   updateHabit(id: string, patch: UpdateHabitCommand): Promise<HabitDto>;

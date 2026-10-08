@@ -17,12 +17,20 @@ describe("Illustration (WF-R5, WF-S4)", () => {
 });
 
 describe("Illustration with an official image", () => {
-  it.each(["registro-guardado", "sin-conexion", "cocinar"] as const)(
+  it.each(["registro-guardado", "sin-conexion", "cocinar", "caminar"] as const)(
     "shows the %s illustration by name",
     (name) => {
       const { container } = render(<Illustration alt="Imagen" name={name} />);
       expect(container.querySelector("img")).toHaveAttribute("src", expect.stringContaining(name));
       expect(screen.getByRole("img", { name: "Imagen" })).toBeInTheDocument();
+    },
+  );
+
+  it.each(["caminar", "180"] as const)(
+    "offers the 180px height %s box for season start hero",
+    (size) => {
+      const { container } = render(<Illustration alt="Imagen" name="caminar" size={size} />);
+      expect(container.querySelector("img")).toHaveAttribute("data-size", size);
     },
   );
 
