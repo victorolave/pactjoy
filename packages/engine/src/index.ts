@@ -126,6 +126,9 @@ export {
   sumPoints,
 } from "./scoring/opportunity-points.ts";
 export type { Streak } from "./scoring/streak.ts";
+// The season week by week (23a chart, 25b/25c summary), from the same walk: live, exact, R1-gated.
+export type { WeekFigures } from "./scoring/weekly-series.ts";
+export { weeklySeries } from "./scoring/weekly-series.ts";
 export type { MemberId, StandingsParticipant, StandingsRow } from "./standings/standings.ts";
 export { rankStandings } from "./standings/standings.ts";
 export type {

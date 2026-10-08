@@ -39,6 +39,7 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "weekBoundGraceDeadline",
   "weekOf",
   "weekProgress",
+  "weeklySeries",
 ].sort();
 
 describe("@pactjoy/engine public API", () => {
