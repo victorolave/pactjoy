@@ -4,6 +4,7 @@ import type { SeasonProgress } from "../../ports/wire.ts";
 import { SeasonCommitmentRow } from "./commitment-row.tsx";
 import styles from "./Overview.module.css";
 import { Standings } from "./standings.tsx";
+import { isFirstDayZero, SeasonFirstDayZero } from "./states.tsx";
 
 type StartedSeason = Extract<SeasonProgress, { state: "active" | "ended" }>;
 
@@ -44,6 +45,16 @@ export function SeasonOverview({
 }: SeasonOverviewProps) {
   if (progress.state === "notStarted") {
     return <Navigate to="/" replace />;
+  }
+
+  if (isFirstDayZero(progress)) {
+    return (
+      <SeasonFirstDayZero
+        progress={progress}
+        onNavigateToMember={onNavigateToMember}
+        onNavigateToCommitment={onNavigateToCommitment}
+      />
+    );
   }
 
   const { circle, season, calendar, own, standings } = progress as StartedSeason;
