@@ -145,6 +145,12 @@ export type { RandomSource } from "./ports/random-source.ts";
 export type { Repositories } from "./ports/repositories.ts";
 export type { UnitOfWork } from "./ports/unit-of-work.ts";
 export type {
+  CommitmentProgressDeps,
+  CommitmentProgressError,
+  CommitmentProgressInput,
+} from "./progress/commitment-progress.query.ts";
+export { commitmentProgress } from "./progress/commitment-progress.query.ts";
+export type {
   MemberProgressDeps,
   MemberProgressError,
   MemberProgressInput,

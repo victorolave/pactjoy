@@ -42,6 +42,7 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "localDateOfSeasonDay",
   "memberId",
   "memberProgress",
+  "commitmentProgress",
   "myCircle",
   "previewInvite",
   "previewProgress",

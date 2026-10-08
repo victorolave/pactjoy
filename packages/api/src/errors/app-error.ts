@@ -1,6 +1,7 @@
 import type {
   AddCommitmentError,
   ApprovePactError,
+  CommitmentProgressError,
   CreateCircleError,
   CreateHabitError,
   CreateSeasonError,
@@ -53,6 +54,7 @@ export type AppError =
   | DeleteEntryError
   | MemberScoreError
   | MemberProgressError
+  | CommitmentProgressError
   | StandingsError
   | SeasonViewError;
 
