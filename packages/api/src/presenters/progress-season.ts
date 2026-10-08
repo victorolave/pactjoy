@@ -28,6 +28,7 @@ export function presentSeasonProgress(view: SeasonProgressView): SeasonProgressD
     },
     standings: {
       memberCount: view.standings.memberCount,
+      hasEntries: view.standings.hasEntries,
       rows: view.standings.rows.map((row) => ({
         memberId: row.memberId,
         displayName: row.displayName,

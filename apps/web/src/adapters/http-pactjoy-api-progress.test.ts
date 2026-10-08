@@ -86,6 +86,14 @@ const cell = detail.weeks[0]?.cells[0];
 
 const malformed: [string, Read, unknown][] = [
   [
+    "standings without the hasEntries fact",
+    (a) => a.getSeasonProgress("s1"),
+    (() => {
+      const { hasEntries: _, ...standings } = activeSeasonProgress().standings;
+      return { ...activeSeasonProgress(), standings };
+    })(),
+  ],
+  [
     "a private row with a habit name",
     (a) => a.getMemberProgress("s1", "m1"),
     {

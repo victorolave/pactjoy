@@ -118,6 +118,8 @@ export type SeasonProgressView =
       /** Leavers excluded; in display order. Solo, pair or 3–6 is decided from `memberCount`. */
       readonly standings: {
         readonly memberCount: number;
+        /** Some ranked member has a live registro (a "no salió" counts), whatever the points. */
+        readonly hasEntries: boolean;
         readonly rows: readonly StandingsEntry[];
       };
       /** Every week of the season, in order. */

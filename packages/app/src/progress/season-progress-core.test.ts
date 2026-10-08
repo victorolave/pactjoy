@@ -80,6 +80,7 @@ describe("season progress core (A1, 23a)", () => {
     });
     expect(view.standings).toEqual({
       memberCount: 2,
+      hasEntries: false,
       rows: [
         { memberId: "member-andrea", displayName: "Andrea", isViewer: true, rank: null, points: 0 },
         {
@@ -93,6 +94,28 @@ describe("season progress core (A1, 23a)", () => {
     });
     // Internal core deliberately cannot masquerade as the complete public /progress DTO.
     expect(view).not.toHaveProperty("weeks");
+  });
+
+  it("an explicit 'no salió' on day 1 is a registro: zero points, but hasEntries (verify W-1)", async () => {
+    const { app, given, started } = await setup();
+    const logged = await recordEntry(atInstant(app, localInstant(day(0))), given.victor, {
+      seasonId: given.season.id,
+      commitmentId: given.victorCommitment,
+      value: { kind: "done" },
+      clientRequestId: "victor-day-0",
+    });
+    expect(logged.ok).toBe(true);
+    const missed = await recordEntry(atInstant(app, localInstant(day(0))), given.andrea, {
+      seasonId: given.season.id,
+      commitmentId: given.andreaCommitment,
+      value: { kind: "missed" },
+      clientRequestId: "andrea-day-0",
+    });
+    expect(missed.ok).toBe(true);
+
+    const view = await started();
+    expect(view.standings.hasEntries).toBe(true);
+    expect(view.own.points).toBe(0);
   });
 
   it("returns only notStarted for a pact with no actual start", async () => {

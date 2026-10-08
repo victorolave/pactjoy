@@ -92,6 +92,7 @@ export function activeSeasonProgress({ memberCount = 2 } = {}): ActiveSeason {
     own: { points: 400, consistency: 84, idealCompletion: 78, commitments: [leerRow(), gymRow] },
     standings: {
       memberCount,
+      hasEntries: true,
       rows: ranked.map((m, i) => ({ ...m, isViewer: m.memberId === VIEWER, rank: i + 1 })),
     },
     weeks: Array.from({ length: SEASON.lengthWeeks }, (_, i) => {
@@ -118,6 +119,7 @@ export function firstDaySeasonProgress(): ActiveSeason {
     own: { points: 0, consistency: null, idealCompletion: null, commitments: [] },
     standings: {
       memberCount: 2,
+      hasEntries: false,
       rows: base.standings.rows.map((row) => ({ ...row, points: 0, rank: null })),
     },
     weeks: base.weeks.map((w) => ({
