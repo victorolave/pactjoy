@@ -39,6 +39,7 @@ const ALLOWED_FEATURE_DEPS: Readonly<Record<string, readonly string[]>> = {
   onboarding: [],
   profile: ["auth", "circle"],
   "season-progress-data": [],
+  "season-member": ["habits", "season-progress-data"],
 };
 
 const BASE_LAYERS = /^(shared|ui|ports|adapters|context|platform)\//;

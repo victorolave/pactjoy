@@ -123,3 +123,37 @@
   flex: none;
   font: var(--weight-bold) var(--type-small-size) / var(--type-small-line) var(--font-sans);
 }
+
+/* Design 23c composition, reused when this member's season fails to load. */
+.failure {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-8);
+  padding: 0 var(--space-4);
+  text-align: center;
+}
+
+.failureIcon {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--icon-lg) * 2);
+  height: calc(var(--icon-lg) * 2);
+  border-radius: 50%;
+  background: var(--ink-100);
+  color: var(--text-secondary);
+}
+
+.failureTitle {
+  margin: 0;
+  font: var(--font-h3);
+}
+
+.failureBody {
+  margin: 0;
+  font: var(--font-body);
+  color: var(--text-secondary);
+}

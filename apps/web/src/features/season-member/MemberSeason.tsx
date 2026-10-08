@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { type ReactNode, useId } from "react";
 import type { MemberProgress } from "../../ports/wire.ts";
 import { Avatar } from "../../ui/Avatar.tsx";
 import { Card } from "../../ui/Card.tsx";
@@ -34,13 +34,10 @@ export function MemberSeason({ view, onBack }: MemberSeasonProps) {
   ];
 
   return (
-    <section className={styles.screen}>
-      <div className={styles.back}>
-        <IconButton icon="chevron-left" label="Volver a Temporada" onClick={onBack} />
-      </div>
+    <MemberSeasonFrame onBack={onBack}>
       <div className={styles.content}>
         <header className={styles.identity}>
-          <Avatar name={member.displayName} size="md" />
+          <Avatar name={member.displayName} size={48} />
           <div>
             <p className={styles.meta}>
               {`Semana ${calendar.weekIndex + 1} de ${season.lengthWeeks}`}
@@ -106,6 +103,23 @@ export function MemberSeason({ view, onBack }: MemberSeasonProps) {
           <p className={styles.small}>Los objetivos privados solo muestran su peso y sus puntos.</p>
         )}
       </div>
+    </MemberSeasonFrame>
+  );
+}
+
+export interface MemberSeasonFrameProps {
+  readonly onBack: () => void;
+  readonly children: ReactNode;
+}
+
+/** The 23d frame every state shares: the way back to Temporada, then the screen's content. */
+export function MemberSeasonFrame({ onBack, children }: MemberSeasonFrameProps) {
+  return (
+    <section className={styles.screen}>
+      <div className={styles.back}>
+        <IconButton icon="chevron-left" label="Volver a Temporada" onClick={onBack} />
+      </div>
+      {children}
     </section>
   );
 }
