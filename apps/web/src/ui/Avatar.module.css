@@ -22,7 +22,8 @@
   font-size: calc(var(--icon-lg) * 0.42);
 }
 
-.md {
+.md,
+.size40 {
   width: var(--control-height-sm);
   height: var(--control-height-sm);
   font-size: calc(var(--control-height-sm) * 0.42);
@@ -38,6 +39,18 @@
   width: var(--avatar-lg);
   height: var(--avatar-lg);
   font-size: calc(var(--avatar-lg) * 0.42);
+}
+
+.size28 {
+  width: var(--avatar-28);
+  height: var(--avatar-28);
+  font-size: calc(var(--avatar-28) * 0.42);
+}
+
+.size48 {
+  width: var(--avatar-48);
+  height: var(--avatar-48);
+  font-size: calc(var(--avatar-48) * 0.42);
 }
 
 .stack {

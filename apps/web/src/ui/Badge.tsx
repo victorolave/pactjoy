@@ -13,7 +13,7 @@ export interface BadgeProps {
 export function Badge({ tone = "neutral", icon, children }: BadgeProps) {
   return (
     <span className={cx("pj-badge", `pj-badge--${tone}`)}>
-      {icon !== undefined && <Icon name={icon} size="sm" />}
+      {icon !== undefined && <Icon name={icon} size={14} strokeWidth={2.2} />}
       {children}
     </span>
   );

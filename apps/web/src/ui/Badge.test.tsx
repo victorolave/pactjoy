@@ -22,4 +22,15 @@ describe("Badge", () => {
     const { container } = render(<Badge>Neutral</Badge>);
     expect(container.querySelector("svg")).toBeNull();
   });
+
+  it("renders icon with source-fidelity 14px size token and strokeWidth 2.2", () => {
+    const { container } = render(
+      <Badge tone="pending" icon="circle-check">
+        En pausa
+      </Badge>,
+    );
+    const svg = container.querySelector("svg");
+    expect(svg).toHaveStyle({ width: "var(--icon-14)" });
+    expect(svg).toHaveAttribute("stroke-width", "2.2");
+  });
 });

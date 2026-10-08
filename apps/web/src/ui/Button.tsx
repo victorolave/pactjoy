@@ -10,6 +10,7 @@ export interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement
   /** Full width. */
   readonly block?: boolean;
   readonly leadingIcon?: IconName;
+  readonly trailingIcon?: IconName;
 }
 
 export function Button({
@@ -17,10 +18,12 @@ export function Button({
   size = "md",
   block = false,
   leadingIcon,
+  trailingIcon,
   type = "button",
   children,
   ...rest
 }: ButtonProps) {
+  const iconSize = size === "sm" ? 18 : "sm";
   return (
     <button
       type={type}
@@ -32,8 +35,9 @@ export function Button({
       )}
       {...rest}
     >
-      {leadingIcon !== undefined && <Icon name={leadingIcon} size="sm" />}
+      {leadingIcon !== undefined && <Icon name={leadingIcon} size={iconSize} />}
       {children}
+      {trailingIcon !== undefined && <Icon name={trailingIcon} size={iconSize} />}
     </button>
   );
 }
