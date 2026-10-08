@@ -9,8 +9,9 @@ export const DAYS_PER_WEEK = 7;
 /**
  * Where a season stands on a given local date. `ended` is derived from the date because no job
  * closes seasons yet. For `active` and `ended`, `day` is the raw season day and `scoringDay` the
- * one scoring reads: today while running, the last season day once over. Callers treat a
- * `closed` season as no season before asking.
+ * calendar reference day (rows, week, days left): today while running, the last season day once
+ * over. Scores read `day` even after the end (TD-R7). Callers treat a `closed` season as no
+ * season before asking.
  */
 export type SeasonPhaseName = "pactOpen" | "notStarted" | "active" | "ended";
 
@@ -38,7 +39,7 @@ export function seasonPhase(season: Season, today: LocalDate): SeasonPhase {
   const totalDays = season.lengthWeeks * DAYS_PER_WEEK;
   const lastDay = seasonDay(totalDays - 1);
   const ended = day.day >= totalDays;
-  // Scoring reads the last season day once the season is over (design: ended).
+  // The calendar stays on the last season day once the season is over (design: ended).
   return {
     phase: ended ? "ended" : "active",
     day: day.day,

@@ -105,9 +105,12 @@ export async function today(deps: TodayDeps, actor: Actor): Promise<TodayView> {
     if (!viewer) {
       throw new Error(`no active member for user ${actor.userId} in circle ${circle.id}`);
     }
+    // One captured instant for the whole read (SP-A21): the score context below reuses it, so a
+    // read that crosses midnight cannot mix two days.
+    const now = deps.clock.now();
     const base: TodayBase = {
       viewerId: viewer.id,
-      today: deps.timeZone.localDateAt(deps.clock.now(), season.timeZone),
+      today: deps.timeZone.localDateAt(now, season.timeZone),
       timeZone: season.timeZone,
       circle: circleView,
       season: {
@@ -143,14 +146,22 @@ export async function today(deps: TodayDeps, actor: Actor): Promise<TodayView> {
     }
     const { day, scoringDay, lastDay } = phase;
     const ended = phase.phase === "ended";
-    const context = scoreContextOf(deps, season, circle, actor);
+    const context = scoreContextOf(
+      { clock: { now: () => now }, timeZone: deps.timeZone },
+      season,
+      circle,
+      actor,
+    );
     if (!context.ok) {
       // Unreachable: `viewer` above is an active member, which scoreContextOf always accepts.
       throw new Error(`viewer ${viewer.id} cannot read season ${season.id}`);
     }
+    // Score and standings use the real season day, even after the season ended (TD-R7), so they
+    // match the standalone score queries; only the calendar (rows, week, days left) stays on the
+    // last day.
     const started = {
       ...context.value,
-      start: { actualStart, today: scoringDay },
+      start: { actualStart, today: day },
     };
     const data = {
       entries: await repos.entries.listBySeason(season.id),
