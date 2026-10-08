@@ -101,15 +101,37 @@ export function timesPerWeekSessions(
   weekEntries: readonly Entry[],
   deadlineFor: GraceDeadlineFor = graceDeadline,
 ): readonly SessionResult[] {
-  const sessionValues = [
-    ...groupByDay(weekEntries, (entry) => deadlineFor(weekEndOf(entry.day))).values(),
-  ].map(sumEntryValues);
-  const scored = sessionValues
-    .map((value) => toSessionResult(target, value))
-    .sort((a, b) => compare(b.progress, a.progress));
+  return timesPerWeekAssignments(target, times, weekEntries, deadlineFor).map((a) => a.session);
+}
+
+/** Internal provenance: null belongs only to a synthetic, unfilled slot. */
+export interface SessionAssignment {
+  readonly sourceDay: SeasonDay | null;
+  readonly session: SessionResult;
+}
+
+/** Same D4 best-N selection, preserving its stable tie order and original source days. */
+export function timesPerWeekAssignments(
+  target: Target,
+  times: number,
+  weekEntries: readonly Entry[],
+  deadlineFor: GraceDeadlineFor = graceDeadline,
+): readonly SessionAssignment[] {
+  const scored = [...groupByDay(weekEntries, (entry) => deadlineFor(weekEndOf(entry.day)))]
+    .map(([day, entries]) => ({
+      sourceDay: seasonDay(day),
+      session: toSessionResult(target, sumEntryValues(entries)),
+    }))
+    .sort((a, b) => compare(b.session.progress, a.session.progress));
   const best = scored.slice(0, times);
   const missing = times - best.length;
-  return [...best, ...Array.from({ length: missing > 0 ? missing : 0 }, () => EMPTY_SESSION)];
+  return [
+    ...best,
+    ...Array.from({ length: missing > 0 ? missing : 0 }, () => ({
+      sourceDay: null,
+      session: EMPTY_SESSION,
+    })),
+  ];
 }
 
 /**

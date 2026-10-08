@@ -6,10 +6,43 @@ import { graceDeadline } from "../entry/grace-period.ts";
 import { fromInt, mean, parseDecimal } from "../fraction/fraction.ts";
 import { buildDoneEntry, buildQuantityEntry } from "../test-support/builders.ts";
 import { fr } from "../test-support/fraction-literal.ts";
-import { specificDaysSessions, sumEntryValues, timesPerWeekSessions } from "./per-session.ts";
+import {
+  specificDaysSessions,
+  sumEntryValues,
+  timesPerWeekAssignments,
+  timesPerWeekSessions,
+} from "./per-session.ts";
 
 const booleanTarget: Target = { direction: "reach", minimum: fromInt(1), ideal: fromInt(1) };
 const minutesTarget: Target = { direction: "reach", minimum: fromInt(10), ideal: fromInt(30) };
+
+describe("timesPerWeekAssignments", () => {
+  it("retains the best-N source days after same-day sums; tied scores keep existing input order", () => {
+    const entries = [
+      buildQuantityEntry("read", 2, fromInt(15)),
+      buildQuantityEntry("read", 0, fromInt(30)),
+      buildQuantityEntry("read", 2, fromInt(15)),
+      buildQuantityEntry("read", 1, fromInt(10)),
+    ];
+    const assignments = timesPerWeekAssignments(minutesTarget, 2, entries);
+    expect(assignments.map((a) => a.sourceDay)).toEqual([2, 0]);
+    expect(assignments.map((a) => a.session.value)).toEqual([fromInt(30), fromInt(30)]);
+    expect(assignments.map((a) => a.session)).toEqual(
+      timesPerWeekSessions(minutesTarget, 2, entries),
+    );
+  });
+
+  it("leaves synthetic empty slots without source days and rejects entries after grace", () => {
+    const late = buildDoneEntry("gym", 2, 8);
+    const entries = [buildDoneEntry("gym", 1), late];
+    const assignments = timesPerWeekAssignments(booleanTarget, 3, entries);
+    expect(assignments.map((a) => a.sourceDay)).toEqual([1, null, null]);
+    expect(assignments.map((a) => a.session.value)).toEqual([fromInt(1), null, null]);
+    expect(
+      timesPerWeekAssignments(booleanTarget, 1, [late], () => seasonDay(8)).map((a) => a.sourceDay),
+    ).toEqual([2]);
+  });
+});
 
 describe("sumEntryValues", () => {
   it("sums two quantity entries into one value (D4)", () => {

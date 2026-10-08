@@ -42,11 +42,8 @@ import { add, div, fromInt, mul, sum } from "../fraction/fraction.ts";
 import type { SessionResult } from "../opportunity/per-session.ts";
 import { dayForWeekday } from "../opportunity/per-session.ts";
 import type { PauseRequest } from "../pause/pause.ts";
-import {
-  excludedDays,
-  pauseAwareWeekSessions,
-  rejectionExtendedDeadline,
-} from "../pause/pause-aware-week.ts";
+import type { WeekPlan } from "../pause/pause-aware-week.ts";
+import { excludedDays, planWeek, rejectionExtendedDeadline } from "../pause/pause-aware-week.ts";
 import type { CommitmentScore } from "./commitment-score.ts";
 import { scoreCommitmentSoFar } from "./commitment-score.ts";
 import type { Streak, StreakOutcome, StreakUnit } from "./streak.ts";
@@ -151,13 +148,50 @@ export function weekBoundGraceDeadline(
   return latest;
 }
 
-interface SeasonSessions {
+/** Internal seam for weekly-series/history-provenance; never exported from the package root. */
+export interface ScoringOpportunity {
+  readonly session: SessionResult;
+  /** Scheduled day for specificDays; null for week-bound opportunities. */
+  readonly day: SeasonDay | null;
+  readonly deadline: SeasonDay;
+  readonly counted: boolean;
+  readonly editable: boolean;
+  readonly final: boolean;
+}
+
+export interface ScoringWeek {
+  readonly week: number;
+  /** Original assignment/proration/exclusions, not a reconstruction from score totals. */
+  readonly plan: WeekPlan;
+  readonly opportunities: readonly ScoringOpportunity[];
+}
+
+export interface SeasonSessions {
   /** Every "scored" session across the whole season (D12's denominator) — unconditioned by R1. */
   readonly all: readonly SessionResult[];
   /** The R1-gated subset of `all` already "counted so far" as of `input.today` (D12's numerator). */
   readonly soFar: readonly SessionResult[];
   /** D11, R1- and pause-aware: `"frozen"` for every paused/on-hold or not-yet-counted opportunity, `"kept"`/`"broken"` otherwise. */
   readonly streak: Streak;
+  readonly weeks: readonly ScoringWeek[];
+}
+
+function scoringOpportunity(
+  session: SessionResult,
+  day: SeasonDay | null,
+  deadline: SeasonDay,
+  counted: boolean,
+  opensOn: number,
+  today: SeasonDay,
+): ScoringOpportunity {
+  return {
+    session,
+    day,
+    deadline,
+    counted,
+    editable: today >= opensOn && today <= deadline,
+    final: today > deadline,
+  };
 }
 
 /**
@@ -168,7 +202,7 @@ interface SeasonSessions {
  * `streak` (D11, folded from the same walk: excluded or not-yet-counted
  * opportunities freeze it, exactly like they contribute nothing to `soFar`).
  */
-function seasonSessions(commitment: Commitment, input: ScoreInput): SeasonSessions {
+export function seasonSessions(commitment: Commitment, input: ScoreInput): SeasonSessions {
   const commitmentPauses = input.pauses.filter((pause) => pause.commitmentId === commitment.id);
   const weekBound = isWeekBound(commitment);
   // Hoisted out of the week loop (fresh-review nit): doesn't depend on `week`, only on `pauses`/
@@ -177,17 +211,16 @@ function seasonSessions(commitment: Commitment, input: ScoreInput): SeasonSessio
   const all: SessionResult[] = [];
   const soFar: SessionResult[] = [];
   const streakOutcomes: StreakOutcome[] = [];
+  const weeks: ScoringWeek[] = [];
 
   for (let week = 0; week < input.season.lengthWeeks; week++) {
     const weekEntries = entriesForWeek(input.entries, commitment.id, week);
-    const result = pauseAwareWeekSessions(
-      commitment,
-      week,
-      commitmentPauses,
-      weekEntries,
-      input.today,
-      { season: input.season },
-    );
+    const plan = planWeek(commitment, week, commitmentPauses, weekEntries, input.today, {
+      season: input.season,
+    });
+    const { result } = plan;
+    const opportunities: ScoringOpportunity[] = [];
+    weeks.push({ week, plan, opportunities });
 
     if (weekBound) {
       if (result.status !== "scored") {
@@ -196,7 +229,13 @@ function seasonSessions(commitment: Commitment, input: ScoreInput): SeasonSessio
       }
       all.push(...result.sessions);
       // R1 (SHOULD-FIX): the rejection-extension-aware deadline, not the plain graceDeadline(weekEnd).
-      const counted = input.today >= weekBoundGraceDeadline(commitment, commitmentPauses, week);
+      const deadline = weekBoundGraceDeadline(commitment, commitmentPauses, week);
+      const counted = input.today >= deadline;
+      opportunities.push(
+        ...result.sessions.map((session) =>
+          scoringOpportunity(session, null, deadline, counted, week * DAYS_PER_WEEK, input.today),
+        ),
+      );
       if (counted) soFar.push(...result.sessions);
       streakOutcomes.push(counted ? weekStreakOutcome(false, result.sessions) : "frozen");
       continue;
@@ -223,13 +262,14 @@ function seasonSessions(commitment: Commitment, input: ScoreInput): SeasonSessio
       // R1: counts once it has an entry (value !== null covers "done" and explicit "missed")
       // OR once its own (possibly extended) grace deadline has passed.
       const counted = session.value !== null || input.today >= dayDeadline;
+      opportunities.push(scoringOpportunity(session, day, dayDeadline, counted, day, input.today));
       if (counted) soFar.push(session);
       streakOutcomes.push(counted ? dayStreakOutcome(false, session) : "frozen");
     }
   }
 
   const streakUnit: StreakUnit = weekBound ? "week" : "day";
-  return { all, soFar, streak: computeStreak(streakUnit, streakOutcomes) };
+  return { all, soFar, streak: computeStreak(streakUnit, streakOutcomes), weeks };
 }
 
 /**

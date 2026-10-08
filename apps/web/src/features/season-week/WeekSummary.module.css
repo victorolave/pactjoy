@@ -1,0 +1,155 @@
+/* Design 25b: a full screen without the tab bar; Cerrar in a 52 px row, then a 20 px column. */
+.page {
+  display: flex;
+  flex-direction: column;
+  height: var(--shell-height);
+  max-width: var(--app-max-width);
+  margin-inline: auto;
+  padding: var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left);
+  box-sizing: border-box;
+  background: var(--surface-page);
+}
+
+.close {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: flex-end;
+  height: calc(var(--control-height) + var(--space-1));
+  padding: 0 var(--space-2);
+}
+
+.content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: calc(var(--space-4) + var(--space-1));
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 var(--layout-margin-mobile) var(--space-5);
+}
+
+.meta {
+  margin: 0;
+  font: var(--font-meta);
+  color: var(--text-secondary);
+}
+
+.headline {
+  margin: var(--space-1) 0 0;
+  font: var(--font-h1);
+  letter-spacing: var(--type-h1-track);
+}
+
+.lead {
+  margin: calc(var(--space-1) + var(--space-1) / 2) 0 0;
+  font: var(--font-body);
+  color: var(--text-secondary);
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.metrics :global(.pj-card) {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-3);
+}
+
+.metricLabel {
+  font: var(--font-meta);
+  color: var(--text-secondary);
+}
+
+.metricValue {
+  font: var(--weight-extrabold) var(--type-h2-size) / var(--type-h2-line) var(--font-sans);
+}
+
+.rows {
+  margin: 0;
+  padding: var(--space-1) var(--space-4);
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: var(--border-width) solid var(--border-subtle);
+  font: var(--font-small);
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.circle {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--space-2) + var(--space-1) / 2);
+}
+
+.circleText {
+  flex: 1;
+  margin: 0;
+  font: var(--font-small);
+}
+
+.footer {
+  margin-top: auto;
+}
+
+/* 25a: one card under the greeting. */
+.banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.bannerBody {
+  flex: 1;
+}
+
+.bannerTitle {
+  margin: 0;
+  font: var(--font-label);
+}
+
+.small {
+  margin: 0;
+  font: var(--font-small);
+  color: var(--text-secondary);
+}
+
+/* Design 23c composition, reused when the week fails to load. */
+.failure {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-8);
+  text-align: center;
+}
+
+.failureIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--icon-lg) * 2);
+  height: calc(var(--icon-lg) * 2);
+  border-radius: 50%;
+  background: var(--ink-100);
+  color: var(--text-secondary);
+}
+
+.failureTitle {
+  margin: 0;
+  font: var(--font-h3);
+}
