@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -99,7 +99,15 @@ describe("SeasonOverview", () => {
     };
     render(<SeasonOverview progress={progressWithNulls} />);
 
-    expect(screen.getAllByText("—")).toHaveLength(2);
+    const metricsSection = screen.getByRole("region", { name: "Tu temporada" });
+    expect(within(metricsSection).getAllByText("—")).toHaveLength(2);
+  });
+
+  it("renders the paired weekly chart by default when chartSlot is omitted", () => {
+    const progress = activeSeasonProgress({ memberCount: 2 });
+    render(<SeasonOverview progress={progress} />);
+
+    expect(screen.getByRole("table", { name: "Puntos por semana" })).toBeInTheDocument();
   });
 
   it("renders 23b first-day zero state when progress is on day 1 with 0 points", () => {

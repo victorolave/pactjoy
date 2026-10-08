@@ -11,3 +11,4 @@ export {
   type SeasonScreenProps,
   SeasonSkeleton,
 } from "./states.tsx";
+export { SeasonWeeklyChart, type SeasonWeeklyChartProps } from "./weekly-chart.tsx";
