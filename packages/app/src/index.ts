@@ -168,6 +168,12 @@ export type {
   SeasonProgressInput,
 } from "./progress/season-progress.query.ts";
 export { seasonProgress } from "./progress/season-progress.query.ts";
+export type {
+  WeekSummaryDeps,
+  WeekSummaryError,
+  WeekSummaryInput,
+} from "./progress/week-summary.query.ts";
+export { weekSummary } from "./progress/week-summary.query.ts";
 export type { CommitmentScoreView, MeasureView } from "./score/commitment-projection.ts";
 export type {
   MemberScoreDeps,

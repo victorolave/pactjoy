@@ -28,3 +28,13 @@ export const forDate: Schema<LocalDate> = schema((v, path, sink) => {
     return fail(sink, path, "format");
   }
 });
+
+const NON_NEGATIVE_INT = /^(0|[1-9]\d*)$/;
+
+export const weekIndexParam: Schema<number> = schema((v, path, sink) => {
+  if (typeof v !== "string" && typeof v !== "number") return fail(sink, path, "type");
+  const str = String(v);
+  if (!NON_NEGATIVE_INT.test(str)) return fail(sink, path, "format");
+  const num = Number(str);
+  return Number.isSafeInteger(num) ? num : fail(sink, path, "range");
+});
