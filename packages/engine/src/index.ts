@@ -113,6 +113,13 @@ export {
 export type { PauseDecision, PauseEnd, PauseRequest } from "./pause/pause.ts";
 export type { PauseCheck } from "./pause/pause-cap.ts";
 export { canRequestPause } from "./pause/pause-cap.ts";
+// Commitment history (24) and detail (A3) reuse the scorer's source-day assignments.
+export type {
+  HistoryOpportunity,
+  HistoryStatus,
+  HistoryWeek,
+} from "./scoring/history-provenance.ts";
+export { historyProvenance } from "./scoring/history-provenance.ts";
 export type { CommitmentScoreEntry, MemberScore, ScoreInput } from "./scoring/member-score.ts";
 export { scoreMember, weekBoundGraceDeadline } from "./scoring/member-score.ts";
 // Progress read models reuse the scoring walk; its internal weekly plans stay private.
