@@ -1,5 +1,5 @@
 import { MutationCache, QueryClient } from "@tanstack/react-query";
-import { todayKey } from "../shared/query-keys.ts";
+import { progressKey, todayKey } from "../shared/query-keys.ts";
 import { toUiError } from "../shared/ui-error.ts";
 
 const STALE_TIME_MS = 30_000;
@@ -8,7 +8,8 @@ const MAX_QUERY_RETRIES = 2;
 /**
  * One client for the app. Queries retry only transient errors; mutations never retry (a record is
  * safe to retry only by the user, with the same clientRequestId). Every settled mutation
- * invalidates Today: the server recomputes, the client never guesses points (AC-R4).
+ * invalidates Today and the season progress reads, even after the screen that started it
+ * unmounted: the server recomputes, the client never guesses points (AC-R4, AC-PG-A03).
  */
 export function createQueryClient({
   retryQueries = true,
@@ -20,6 +21,7 @@ export function createQueryClient({
     mutationCache: new MutationCache({
       onSettled: () => {
         void client.invalidateQueries({ queryKey: todayKey });
+        void client.invalidateQueries({ queryKey: progressKey });
       },
     }),
     defaultOptions: {
