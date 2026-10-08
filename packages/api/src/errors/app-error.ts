@@ -20,6 +20,7 @@ import type {
   RemoveCommitmentError,
   RenameCircleError,
   RenameMyDisplayNameError,
+  SeasonProgressError,
   SeasonViewError,
   StandingsError,
   UpdateHabitError,
@@ -56,6 +57,7 @@ export type AppError =
   | MemberProgressError
   | CommitmentProgressError
   | StandingsError
+  | SeasonProgressError
   | SeasonViewError;
 
 export type AppErrorKind = AppError["kind"];

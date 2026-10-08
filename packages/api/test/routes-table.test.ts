@@ -27,6 +27,7 @@ const { spies, USE_CASE_NAMES } = vi.hoisted(() => ({
     "editEntry",
     "deleteEntry",
     "memberScore",
+    "seasonProgress",
     "memberProgress",
     "commitmentProgress",
     "standings",
@@ -98,6 +99,7 @@ const TABLE: Row[] = [
   ["deleteEntry", "DELETE", `/entries/${ID}`],
   ["memberScore", "GET", `/seasons/${ID}/score`],
   ["memberScore", "GET", `/seasons/${ID}/members/${ID2}/score`],
+  ["seasonProgress", "GET", `/seasons/${ID}/progress`],
   ["memberProgress", "GET", `/seasons/${ID}/members/${ID2}/progress`],
   ["commitmentProgress", "GET", `/seasons/${ID}/commitments/${ID2}/progress`],
   ["standings", "GET", `/seasons/${ID}/standings`],
@@ -106,8 +108,8 @@ const TABLE: Row[] = [
 ];
 
 describe("route table completeness (RT-S4)", () => {
-  it("has 27 routes over exactly the 26 use cases, the score one routed twice", () => {
-    expect(TABLE).toHaveLength(27);
+  it("has 28 routes over exactly the 27 use cases, the score one routed twice", () => {
+    expect(TABLE).toHaveLength(28);
     expect(new Set(TABLE.map(([name]) => name))).toEqual(new Set(USE_CASE_NAMES));
     expect(TABLE.filter(([name]) => name === "memberScore")).toHaveLength(2);
   });
@@ -159,6 +161,7 @@ describe("route to use case wiring (AC-S8)", () => {
       expect(actor).toEqual({ userId: ANDREA });
       expect(deps).toHaveProperty("uow");
       expect(deps).toHaveProperty("clock");
+      if (name === "seasonProgress") expect(args[2]).toEqual({ seasonId: ID });
       if (name === "memberProgress") expect(args[2]).toEqual({ seasonId: ID, memberId: ID2 });
       if (name === "commitmentProgress")
         expect(args[2]).toEqual({ seasonId: ID, commitmentId: ID2 });
