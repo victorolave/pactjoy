@@ -79,6 +79,18 @@ function Progress({ api }: { api: FakePactJoyApi }) {
 }
 
 describe("createQueryClient progress invalidation (AC-PG-A03)", () => {
+  it("a recomputed weekly series invalidates cached Today even with no mounted Today observer", async () => {
+    const client = createQueryClient({ retryQueries: false });
+    client.setQueryData(todayKey, activeTodayFixture());
+    await client.fetchQuery({
+      queryKey: seasonProgressKey("season-1"),
+      queryFn: async () => activeSeasonProgress(),
+    });
+    expect(client.getQueryState(todayKey)?.isInvalidated).toBe(true);
+    client.setQueryData(todayKey, activeTodayFixture());
+    await client.fetchQuery({ queryKey: ["unrelated"], queryFn: async () => 1 });
+    expect(client.getQueryState(todayKey)?.isInvalidated).toBe(false);
+  });
   it("a mutation that settles after its screen unmounted still refetches the progress reads", async () => {
     const api = new FakePactJoyApi(activeTodayFixture());
     api.progress.setSeasonProgress("season-1", activeSeasonProgress());

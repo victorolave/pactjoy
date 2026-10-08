@@ -51,6 +51,16 @@
   font: 700 var(--type-body-size) / var(--type-label-line) var(--font-sans);
 }
 
+.detailLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch-target);
+  min-width: var(--touch-target);
+  margin-block: calc((var(--type-label-line) - var(--touch-target)) / 2);
+  color: inherit;
+  text-decoration: none;
+}
+
 .titleLine {
   display: flex;
   align-items: baseline;

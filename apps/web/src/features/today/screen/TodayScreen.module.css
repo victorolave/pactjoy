@@ -4,6 +4,14 @@
   gap: var(--space-5);
 }
 
+.weeklyBanner :global(.pj-card) {
+  padding: var(--space-4);
+}
+
+.weeklyBanner :global(.pj-btn--sm) {
+  min-height: var(--touch-target);
+}
+
 .header {
   display: flex;
   flex-direction: column;

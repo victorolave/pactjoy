@@ -66,6 +66,7 @@ export function WeekRow({
   return (
     <RowFrame
       title={row.habitName}
+      commitmentId={row.commitmentId}
       glyph="repeat"
       details={[
         progress === null ? scheduleText(row.measure) : detailOf(row, progress, dates?.refDate),

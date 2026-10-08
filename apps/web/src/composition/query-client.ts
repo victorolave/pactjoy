@@ -1,4 +1,4 @@
-import { MutationCache, QueryClient } from "@tanstack/react-query";
+import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
 import { progressKey, todayKey } from "../shared/query-keys.ts";
 import { toUiError } from "../shared/ui-error.ts";
 
@@ -18,6 +18,14 @@ export function createQueryClient({
   readonly retryQueries?: boolean;
 } = {}): QueryClient {
   const client: QueryClient = new QueryClient({
+    queryCache: new QueryCache({
+      onSuccess: (_data, query) => {
+        // Weekly series can change scores after grace or a live recomputation, even off Today.
+        if (query.queryKey[0] === progressKey[0] && query.queryKey[1] === "season") {
+          void client.invalidateQueries({ queryKey: todayKey });
+        }
+      },
+    }),
     mutationCache: new MutationCache({
       onSettled: () => {
         void client.invalidateQueries({ queryKey: todayKey });

@@ -10,8 +10,8 @@ export const STORAGE_KEY = "pactjoy.today-cache";
 /** Offline reads show the last Today for at most a day. */
 export const MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const THROTTLE_MS = 1000;
-/** Bump when the saved Today's shape changes, so an old saved copy is dropped instead of misread. */
-export const CACHE_VERSION = "4";
+/** Bump for shape OR scoring semantics: v5 purges ended-clamped scores and old weekly series. */
+export const CACHE_VERSION = "5";
 
 /** The saved Today belongs to one user of one cache version: anything else is not restored. */
 export const bustFor = (userId: string | null): string => `${CACHE_VERSION}:${userId ?? "anon"}`;
@@ -37,11 +37,19 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 /**
  * A minimal shape check on top of the version buster: a running Today must carry what the screens
  * read without a guard (`points` on every row, `pointsToday` in the summary, `pendingYesterday`). The buster already drops
- * old copies; this keeps a copy that slipped past it from crashing the app. States with no rows
- * (noCircle, noSeason, pactOpen, notStarted) have nothing to check.
+ * old copies; this keeps a copy that slipped past it from crashing the app. Pre-season states
+ * also require the owned commitment list introduced by Lote 3.
  */
 export function isCurrentToday(today: unknown): boolean {
   if (!isRecord(today)) return false;
+  if (
+    !["noCircle", "noSeason", "pactOpen", "notStarted", "active", "ended"].includes(
+      String(today.state),
+    )
+  )
+    return false;
+  if (today.state === "pactOpen" || today.state === "notStarted")
+    return Array.isArray(today.myCommitments);
   if (today.state !== "active" && today.state !== "ended") return true;
   const { rows, summary } = today;
   if (!Array.isArray(rows) || !isRecord(summary) || typeof summary.pointsToday !== "number") {
