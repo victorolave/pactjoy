@@ -58,7 +58,7 @@ describe("MemberSeason (23d)", () => {
     expect(items).toEqual(["Puntos412", "Consistencia88 %", "Ideal81 %"]);
   });
 
-  it("metrics with nothing counted yet show a dash, never 0 %", () => {
+  it("metrics with nothing counted yet show an em dash (Notion), never 0 %", () => {
     render(
       <MemberSeason
         view={andrea({ points: 0, consistency: null, idealCompletion: null })}
@@ -68,7 +68,7 @@ describe("MemberSeason (23d)", () => {
     const items = within(screen.getByRole("list", { name: "Andrea" }))
       .getAllByRole("listitem")
       .map((item) => item.textContent);
-    expect(items).toEqual(["Puntos0", "Consistencia-", "Ideal-"]);
+    expect(items).toEqual(["Puntos0", "Consistencia—", "Ideal—"]);
   });
 
   it("lists her commitments read-only, with points over possible points", () => {

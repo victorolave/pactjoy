@@ -9,7 +9,8 @@ import { commitmentSubtitle, hiddenSubtitle, pointsOfPossible } from "./member-l
 
 type StartedMemberProgress = Extract<MemberProgress, { state: "active" | "ended" }>;
 
-const percentText = (value: number | null): string => (value === null ? "-" : `${value} %`);
+/** Nothing counted yet reads "—", never 0 % (Notion: Dos métricas distintas). */
+const percentText = (value: number | null): string => (value === null ? "—" : `${value} %`);
 
 export interface MemberSeasonProps {
   readonly view: StartedMemberProgress;
