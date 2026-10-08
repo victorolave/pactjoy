@@ -115,6 +115,9 @@ export type { PauseCheck } from "./pause/pause-cap.ts";
 export { canRequestPause } from "./pause/pause-cap.ts";
 export type { CommitmentScoreEntry, MemberScore, ScoreInput } from "./scoring/member-score.ts";
 export { scoreMember, weekBoundGraceDeadline } from "./scoring/member-score.ts";
+// Progress read models reuse the scoring walk; its internal weekly plans stay private.
+export type { OpportunityCounts } from "./scoring/opportunity-counts.ts";
+export { opportunityCounts } from "./scoring/opportunity-counts.ts";
 export {
   opportunityPoints,
   opportunityPointsAt,
