@@ -20,7 +20,12 @@ export function TabBar() {
   return (
     <nav className="pj-tabbar" aria-label="Principal">
       {TABS.map((tab) => (
-        <NavLink key={tab.to} to={tab.to} end className={`pj-tabbar__item ${styles.item}`}>
+        <NavLink
+          key={tab.to}
+          to={tab.to}
+          end={tab.to !== "/season"}
+          className={`pj-tabbar__item ${styles.item}`}
+        >
           <span className="pj-tabbar__pill">
             <Icon name={tab.icon} />
           </span>
