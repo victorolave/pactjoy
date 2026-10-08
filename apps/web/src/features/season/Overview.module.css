@@ -1,0 +1,97 @@
+.container {
+  padding: var(--space-2) var(--layout-margin-mobile) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  max-width: var(--app-max-width);
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.headerMeta {
+  font: var(--font-meta);
+  color: var(--text-secondary);
+}
+.headerTitle {
+  font: var(--font-h1);
+  letter-spacing: -0.015em;
+  margin: var(--space-1) 0 0;
+  color: var(--text-primary);
+}
+.headerSubtitle {
+  font: var(--font-small);
+  color: var(--text-secondary);
+}
+
+.segmentsBar {
+  display: grid;
+  gap: var(--space-1);
+}
+.segment {
+  height: var(--pager-dot);
+  border-radius: calc(var(--pager-dot) / 2);
+  background: var(--ink-200);
+}
+.segmentFilled {
+  background: var(--pj-ink);
+}
+
+.metricsSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.sectionHeading {
+  font: var(--font-h3);
+  margin: 0;
+  color: var(--text-primary);
+}
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+}
+.metricCard {
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--space-1) / 2);
+}
+.metricLabel {
+  font: var(--font-meta);
+  color: var(--text-secondary);
+}
+.metricValue {
+  font: var(--font-h2);
+  font-weight: var(--weight-extrabold);
+  color: var(--text-primary);
+}
+.metricMeta {
+  font: var(--font-meta);
+  color: var(--text-secondary);
+}
+
+.commitmentsSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.commitmentsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.commitmentsSubtitle {
+  font: var(--font-small);
+  color: var(--text-secondary);
+}
+.commitmentsCard {
+  padding: var(--space-1) var(--space-4);
+  display: flex;
+  flex-direction: column;
+}
