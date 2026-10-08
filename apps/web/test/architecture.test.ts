@@ -83,6 +83,29 @@ function violationsOf(file: string, specifiers: readonly string[]): string[] {
 }
 
 describe("the folder architecture", () => {
+  it("keeps reused compact overview actions at the shared touch-target minimum", () => {
+    const css = readFileSync(join(SRC, "shell", "TabBar.module.css"), "utf8");
+    expect(css).toMatch(
+      /\.season :global\(\.pj-btn--sm\)\s*\{\s*min-height: var\(--touch-target\);/,
+    );
+  });
+  it("avoids applying the shell gutter twice to the self-padded overview", () => {
+    const css = readFileSync(join(SRC, "shell", "TabBar.module.css"), "utf8");
+    expect(css).toContain("margin-inline: calc(var(--layout-margin-mobile) * -1)");
+    expect(css).toMatch(/\.closedWeek\s*\{\s*margin-inline: var\(--layout-margin-mobile\);/);
+  });
+  it("assembles progress screens through public roots without coupling sibling screens", () => {
+    expect(
+      violationsOf("shell/routes.tsx", [
+        "../features/season/index.ts",
+        "../features/season-member/index.ts",
+        "../features/season-commitment/index.ts",
+        "../features/season-week/index.ts",
+      ]),
+    ).toEqual([]);
+    expect(violationsOf("features/season/Foo.tsx", ["../season-week/index.ts"])).toHaveLength(1);
+    expect(violationsOf("shell/routes.tsx", ["../features/season/states.tsx"])).toHaveLength(1);
+  });
   it("allows pact and Today to consume habits only through its public index", () => {
     expect(violationsOf("features/pact/Foo.ts", ["../habits/index.ts"])).toEqual([]);
     expect(violationsOf("features/today/Foo.ts", ["../habits/index.ts"])).toEqual([]);

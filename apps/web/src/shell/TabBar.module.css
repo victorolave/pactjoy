@@ -2,3 +2,19 @@
 .item {
   text-decoration: none;
 }
+
+/* The approved closed-week entry follows, rather than interrupts, the overview. */
+.season {
+  display: flex;
+  flex-direction: column;
+  margin-top: calc(var(--space-4) * -1);
+  margin-inline: calc(var(--layout-margin-mobile) * -1);
+}
+
+.closedWeek {
+  margin-inline: var(--layout-margin-mobile);
+}
+
+.season :global(.pj-btn--sm) {
+  min-height: var(--touch-target);
+}
