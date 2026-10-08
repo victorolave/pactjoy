@@ -27,6 +27,8 @@ describe("TabBar", () => {
   it.each([
     ["/", "Hoy"],
     ["/season", "Temporada"],
+    ["/season/s/members/m", "Temporada"],
+    ["/season/s/commitments/c", "Temporada"],
     ["/circle", "Círculo"],
     ["/profile", "Perfil"],
   ])("marks only the tab of %s as the current page", (path, label) => {
