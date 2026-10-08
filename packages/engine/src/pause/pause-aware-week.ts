@@ -34,7 +34,7 @@ import type { SessionResult } from "../opportunity/per-session.ts";
 import {
   dayForWeekday,
   specificDaysSessions,
-  timesPerWeekSessions,
+  timesPerWeekAssignments,
 } from "../opportunity/per-session.ts";
 import { weeklyTotalResult } from "../opportunity/weekly-total.ts";
 import type { PauseRequest } from "./pause.ts";
@@ -149,6 +149,8 @@ function excludedStatus(
  */
 export interface WeekPlan {
   readonly result: PauseAwareWeekResult;
+  /** Aligned with scored sessions: best-N source day, specificDays makeup day, or null. */
+  readonly sourceDays: readonly (SeasonDay | null)[];
   readonly paused: ReadonlySet<SeasonDay>;
   readonly onHold: ReadonlySet<SeasonDay>;
   /** D6/D7: the `weeklyTotal` target prorated by active days; the commitment's own target otherwise. */
@@ -202,7 +204,17 @@ export function planWeek(
     result: PauseAwareWeekResult,
     effectiveTarget: Target = target,
     activeScheduledDays: readonly SeasonDay[] = [],
-  ): WeekPlan => ({ result, paused, onHold, target: effectiveTarget, activeScheduledDays });
+    sourceDays: readonly (SeasonDay | null)[] = result.status === "scored"
+      ? result.sessions.map((s) => s.filledFrom ?? null)
+      : [],
+  ): WeekPlan => ({
+    result,
+    sourceDays,
+    paused,
+    onHold,
+    target: effectiveTarget,
+    activeScheduledDays,
+  });
 
   if (commitment.schedule.period === "weeklyTotal") {
     const prorated =
@@ -225,10 +237,13 @@ export function planWeek(
     // Q16: timesPerWeek sessions close with the week, like weeklyTotal.
     const deadlineFor: GraceDeadlineFor = (end) =>
       rejectionExtendedDeadline(pauses, weekStart, end, graceDeadline(end));
-    return plan({
-      status: "scored",
-      sessions: timesPerWeekSessions(target, n, eligible, deadlineFor),
-    });
+    const assignments = timesPerWeekAssignments(target, n, eligible, deadlineFor);
+    return plan(
+      { status: "scored", sessions: assignments.map((a) => a.session) },
+      target,
+      [],
+      assignments.map((a) => a.sourceDay),
+    );
   }
 
   // frequency.kind === "specificDays"

@@ -26,6 +26,7 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "isValidWeightPercent",
   "lt",
   "lte",
+  "opportunityCounts",
   "opportunityPoints",
   "opportunityPointsAt",
   "opportunityValue",
