@@ -5,8 +5,9 @@ import {
 } from "@tanstack/react-query-persist-client";
 import { describe, expect, it } from "vitest";
 import { todayKey } from "../shared/query-keys.ts";
-import { activeTodayFixture } from "../testing/fixtures/today.ts";
+import { activeTodayFixture, pactOpenTodayFixture } from "../testing/fixtures/today.ts";
 import { MemoryStorage } from "../testing/memory-storage.ts";
+import { seedPersistedToday } from "../testing/seed-persisted-today.ts";
 import {
   bustFor,
   CACHE_VERSION,
@@ -85,6 +86,55 @@ describe("a saved Today from before the shape changed is dropped, not rendered",
 });
 
 describe("createTodayPersister (TO-R10)", () => {
+  it.each(["pactOpen", "notStarted"])("retains current %s owned commitments", async (state) => {
+    const storage = new MemoryStorage();
+    const current = {
+      ...pactOpenTodayFixture(),
+      state,
+      myCommitments: [
+        { id: "c-1", habitName: "Leer", icon: "book", weightPercent: 100, maxPoints: 1000 },
+      ],
+    };
+    const persister = await save(storage, (client) => client.setQueryData(todayKey, current));
+    const restored = new QueryClient();
+    await persistQueryClientRestore({
+      queryClient: restored,
+      ...persistOptionsFor(persister, bustFor("user-1")),
+    });
+    expect(restored.getQueryData(todayKey)).toEqual(current);
+  });
+  it("purges version 4 even with an unchanged valid shape: ended scores and weekly series changed", async () => {
+    const storage = new MemoryStorage();
+    seedPersistedToday(storage, activeTodayFixture());
+    const saved = JSON.parse(storage.getItem(STORAGE_KEY) ?? "null");
+    saved.buster = "4:user-1";
+    storage.setItem(STORAGE_KEY, JSON.stringify(saved));
+    const reloaded = new QueryClient();
+    await persistQueryClientRestore({
+      queryClient: reloaded,
+      ...persistOptionsFor(createTodayPersister(storage), bustFor("user-1")),
+    });
+    expect(reloaded.getQueryData(todayKey)).toBeUndefined();
+    expect(storage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  it("purges an unknown saved state instead of treating it as a safe rowless view", async () => {
+    const storage = new MemoryStorage();
+    const persister = await save(storage, (client) =>
+      client.setQueryData(todayKey, { state: "unrecognized" }),
+    );
+    expect(await persister.restoreClient()).toBeUndefined();
+    expect(storage.getItem(STORAGE_KEY)).toBeNull();
+  });
+  it("purges a pre-season payload without its current myCommitments array", async () => {
+    const storage = new MemoryStorage();
+    const { myCommitments: _, ...old } = pactOpenTodayFixture();
+    const persister = await save(storage, (client) =>
+      client.setQueryData(todayKey, { ...old, state: "notStarted" }),
+    );
+    expect(await persister.restoreClient()).toBeUndefined();
+    expect(storage.getItem(STORAGE_KEY)).toBeNull();
+  });
   it("restores the last Today after a reload", async () => {
     const storage = new MemoryStorage();
     await save(storage, (client) => client.setQueryData(todayKey, TODAY));
@@ -118,6 +168,10 @@ describe("createTodayPersister (TO-R10)", () => {
     await save(storage, (client) => {
       client.setQueryData(todayKey, TODAY);
       client.setQueryData(["circle", "members"], { secret: "other" });
+      client.setQueryData(["progress", "season", "season-1"], { secret: "series" });
+      client.setQueryData(["progress", "commitment", "season-1", "commitment-1"], {
+        secret: "history",
+      });
     });
     const saved = storage.getItem(STORAGE_KEY) ?? "";
     expect(saved).toContain("noCircle");
