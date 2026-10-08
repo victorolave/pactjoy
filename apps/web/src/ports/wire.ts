@@ -1,4 +1,14 @@
-import type { CommitmentRecord, Habit, Instant, MeasureView, Season } from "@pactjoy/app";
+import type {
+  CommitmentProgressView,
+  CommitmentRecord,
+  Habit,
+  Instant,
+  MeasureView,
+  MemberProgressView,
+  Season,
+  SeasonProgressView,
+  WeekSummaryView,
+} from "@pactjoy/app";
 
 /**
  * What a use-case view looks like after the API's JSON round trip: an `Instant` becomes an ISO
@@ -42,3 +52,9 @@ export type CommitmentDto =
 export type SeasonDto = Omit<Serialized<Season>, "commitments"> & {
   readonly commitments: readonly CommitmentDto[];
 };
+
+/** The season progress reads as they arrive over the wire (change pwa-season-progress). */
+export type SeasonProgress = Serialized<SeasonProgressView>;
+export type MemberProgress = Serialized<MemberProgressView>;
+export type CommitmentProgress = Serialized<CommitmentProgressView>;
+export type WeekSummary = Serialized<WeekSummaryView>;

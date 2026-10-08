@@ -1,6 +1,12 @@
 import type { CircleId, Instant, MyCircleView } from "@pactjoy/app";
 import { describe, expectTypeOf, it } from "vitest";
-import type { Serialized } from "./wire.ts";
+import type {
+  CommitmentProgress,
+  MemberProgress,
+  SeasonProgress,
+  Serialized,
+  WeekSummary,
+} from "./wire.ts";
 
 describe("Serialized", () => {
   it("turns an Instant into a string and a branded id into a plain string", () => {
@@ -27,6 +33,29 @@ describe("Serialized", () => {
     expectTypeOf<NonNullable<Wire["season"]>["week"]>().toEqualTypeOf<number | null>();
     expectTypeOf<NonNullable<Wire["season"]>["phase"]>().toEqualTypeOf<
       "pactOpen" | "notStarted" | "active" | "ended"
+    >();
+  });
+});
+
+describe("progress wire types", () => {
+  type Season = Extract<SeasonProgress, { state: "active" | "ended" }>;
+  type Peer = Extract<MemberProgress, { scope: "others" }>;
+  type Detail = Extract<CommitmentProgress, { state: "active" | "ended" }>;
+  type Cell = Detail["weeks"][number]["cells"][number];
+
+  it("carries MemberId and LocalDate as plain strings and keeps nullable metrics", () => {
+    expectTypeOf<Season["viewerId"]>().toEqualTypeOf<string>();
+    expectTypeOf<Season["calendar"]["today"]>().toEqualTypeOf<string>();
+    expectTypeOf<Season["standings"]["rows"][number]["rank"]>().toEqualTypeOf<number | null>();
+    expectTypeOf<Peer["consistency"]>().toEqualTypeOf<number | null>();
+    expectTypeOf<Cell["evidence"][number]["recordedOn"]>().toEqualTypeOf<string>();
+    expectTypeOf<WeekSummary["headline"]>().toEqualTypeOf<"best" | "difficult" | null>();
+  });
+
+  it("limits a peer's private commitment to its reference, weight and points", () => {
+    type Hidden = Extract<Peer["commitments"][number], { kind: "hidden" }>;
+    expectTypeOf<keyof Hidden>().toEqualTypeOf<
+      "kind" | "commitmentId" | "weightPercent" | "points"
     >();
   });
 });
