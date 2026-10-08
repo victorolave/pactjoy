@@ -140,6 +140,30 @@
   font: var(--weight-bold) var(--type-meta-size) / 1 var(--font-sans);
 }
 
+/* A cell with registros is a button (C4): same look, a 44 px hit area around it, visible focus. */
+button.cell {
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+}
+
+button.cell::after {
+  content: "";
+  position: absolute;
+  /* 36 px cell + 4 px above and below = the 44 px touch target. */
+  inset: calc(var(--space-1) * -1) 0;
+}
+
+/* 28 px compact cell (24b) + 8 px above and below. */
+button.cell[data-compact]::after {
+  inset: calc(var(--space-2) * -1) 0;
+}
+
+button.cell:focus-visible {
+  outline: var(--focus-width) solid var(--pj-ink);
+  outline-offset: var(--focus-offset);
+}
+
 .cell[data-compact] {
   height: calc(var(--icon-md) + var(--space-1));
 }
@@ -214,6 +238,22 @@
   width: calc(var(--space-3) + var(--space-1) / 2);
   height: calc(var(--space-3) + var(--space-1) / 2);
   border-radius: var(--space-1);
+}
+
+/* The read-only evidence sheet (C4): one block per registro. */
+.evidence {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.evidenceItem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
 }
 
 .curve {

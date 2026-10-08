@@ -1,7 +1,8 @@
-import { useId } from "react";
+import { useId, useState } from "react";
 import type { CommitmentProgress } from "../../ports/wire.ts";
 import styles from "./CommitmentScreen.module.css";
 import { cellLabel, cellsHint } from "./commitment-labels.ts";
+import { EvidenceSheet } from "./EvidenceSheet.tsx";
 
 type Started = Extract<CommitmentProgress, { state: "active" | "ended" }>;
 type Cell = Started["weeks"][number]["cells"][number];
@@ -32,6 +33,7 @@ export function HistoryGrid({ view }: { readonly view: Started }) {
   const headingId = useId();
   const columns = Math.max(1, ...view.weeks.map((week) => week.cells.length));
   const hint = cellsHint(view.commitment);
+  const [opened, setOpened] = useState<Cell | null>(null);
   return (
     <section className={styles.section} aria-labelledby={headingId}>
       <h2 id={headingId} className={styles.h2}>
@@ -51,20 +53,40 @@ export function HistoryGrid({ view }: { readonly view: Started }) {
                 const isToday = cell.date === view.calendar.today;
                 const label = cellLabel(cell, isToday);
                 const look = lookOf(cell, isToday);
-                return (
-                  <span
+                const shared = {
+                  className: styles.cell,
+                  "data-look": look,
+                  "data-compact": view.commitment.measure.unit === "done" || undefined,
+                };
+                const content = (
+                  <>
+                    {look === "today" ? "Hoy" : cell.status === "paused" ? "Pausa" : null}
+                    {cell.late && <span className={styles.lateDot} />}
+                  </>
+                );
+                // A cell backed by registros opens them read-only (C4); any other says what it is.
+                return cell.evidence.length > 0 && label !== null ? (
+                  <button
                     // Cells are the engine's opportunities in order; they never reorder.
                     // biome-ignore lint/suspicious/noArrayIndexKey: positional slots of one week
                     key={index}
-                    className={styles.cell}
-                    data-look={look}
-                    data-compact={view.commitment.measure.unit === "done" || undefined}
+                    type="button"
+                    {...shared}
+                    aria-label={label}
+                    onClick={() => setOpened(cell)}
+                  >
+                    {content}
+                  </button>
+                ) : (
+                  <span
+                    // biome-ignore lint/suspicious/noArrayIndexKey: positional slots of one week
+                    key={index}
+                    {...shared}
                     {...(label === null
                       ? { "aria-hidden": true }
                       : { role: "img", "aria-label": label })}
                   >
-                    {look === "today" ? "Hoy" : cell.status === "paused" ? "Pausa" : null}
-                    {cell.late && <span className={styles.lateDot} />}
+                    {content}
                   </span>
                 );
               })}
@@ -81,6 +103,13 @@ export function HistoryGrid({ view }: { readonly view: Started }) {
         </div>
       </div>
       {hint !== null && <p className={styles.muted}>{hint}</p>}
+      {opened !== null && (
+        <EvidenceSheet
+          cell={opened}
+          measure={view.commitment.measure}
+          onClose={() => setOpened(null)}
+        />
+      )}
     </section>
   );
 }
