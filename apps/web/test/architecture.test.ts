@@ -30,7 +30,7 @@ function filesUnder(dir: string): string[] {
 
 /** feature -> the features it may reach (always through their index.ts). */
 const ALLOWED_FEATURE_DEPS: Readonly<Record<string, readonly string[]>> = {
-  today: ["entry", "habits"],
+  today: ["entry", "habits", "season-progress-data", "season-week"],
   habits: [],
   pact: ["habits"],
   entry: [],
@@ -83,6 +83,13 @@ function violationsOf(file: string, specifiers: readonly string[]): string[] {
 }
 
 describe("the folder architecture", () => {
+  it("keeps Today's compact weekly card at design spacing with accessible actions", () => {
+    const css = readFileSync(join(SRC, "features/today/screen/TodayScreen.module.css"), "utf8");
+    expect(css).toMatch(/\.weeklyBanner :global\(\.pj-card\)\s*\{\s*padding: var\(--space-4\);/);
+    expect(css).toMatch(
+      /\.weeklyBanner :global\(\.pj-btn--sm\)\s*\{\s*min-height: var\(--touch-target\);/,
+    );
+  });
   it("keeps reused compact overview actions at the shared touch-target minimum", () => {
     const css = readFileSync(join(SRC, "shell", "TabBar.module.css"), "utf8");
     expect(css).toMatch(

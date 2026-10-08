@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useOnline } from "../../../context/connectivity-context.tsx";
 import { OfflineBanner } from "../../../platform/offline/OfflineBanner.tsx";
 import { ApiError } from "../../../ports/api-error.ts";
@@ -6,12 +7,20 @@ import { toUiError } from "../../../shared/ui-error.ts";
 import { Button } from "../../../ui/Button.tsx";
 import { Icon } from "../../../ui/icon/Icon.tsx";
 import { useToday } from "../queries.ts";
+import { TodayRowSeasonContext } from "../rows/row-navigation.ts";
 import { type TodayModel, toTodayModel } from "../today-view-model.ts";
+import { TodayClosedWeek } from "./TodayClosedWeek.tsx";
 import styles from "./TodayScreen.module.css";
 import { TodaySkeleton } from "./TodaySkeleton.tsx";
 import { NoCircle, NoSeason, NotStarted, PactOpen, RunningToday } from "./TodayStates.tsx";
 
-function TodayContent({ model }: { readonly model: TodayModel }) {
+function TodayContent({
+  model,
+  banner,
+}: {
+  readonly model: TodayModel;
+  readonly banner: ReactNode;
+}) {
   switch (model.kind) {
     case "noCircle":
       return <NoCircle />;
@@ -23,7 +32,11 @@ function TodayContent({ model }: { readonly model: TodayModel }) {
       return <NotStarted model={model} />;
     case "active":
     case "ended":
-      return <RunningToday model={model} />;
+      return (
+        <TodayRowSeasonContext.Provider value={model.seasonId}>
+          <RunningToday model={model} banner={banner} />
+        </TodayRowSeasonContext.Provider>
+      );
   }
 }
 
@@ -99,7 +112,10 @@ export function TodayScreen() {
   return (
     <div className={styles.screen}>
       {connectionLost && <OfflineBanner />}
-      <TodayContent model={toTodayModel(today.data)} />
+      <TodayContent
+        model={toTodayModel(today.data)}
+        banner={<TodayClosedWeek view={today.data} localToday={today.localToday} />}
+      />
     </div>
   );
 }
