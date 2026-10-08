@@ -1,8 +1,11 @@
 import { seasonDay } from "@pactjoy/engine";
 import { describe, expect, it, vi } from "vitest";
+import { memberId } from "../circle/circle.ts";
+import { buildCommitment, commitmentId } from "../commitment/commitment.ts";
 import { recordEntry } from "../entry/record-entry.ts";
-import { seasonId, userId } from "../shared/ids.ts";
+import { habitId, seasonId, userId } from "../shared/ids.ts";
 import { createTestApp } from "../testing/app-harness.ts";
+import { habitFixture, memberFixture } from "../testing/builders.ts";
 import {
   atInstant,
   fixtureTimeZone,
@@ -201,14 +204,17 @@ describe("weekSummary query (A2s)", () => {
     expect(after.value.points).toBeGreaterThan(0);
   });
 
-  it("pair circle (cardinality 2) returns circle line; solo and 3-6 return circle null", async () => {
+  it("pair circle (cardinality 2) returns circle in standings order; solo, 3-member, and 6-member return circle null", async () => {
     const { app, given, ask } = await setup();
     const pairResult = await ask(0);
     expect(pairResult.ok).toBe(true);
     if (!pairResult.ok) return;
-    expect(pairResult.value.circle).toHaveLength(2);
+    expect(pairResult.value.circle).toEqual([
+      { memberId: "member-andrea", displayName: "Andrea", points: 0 },
+      { memberId: "member-victor", displayName: "Victor", points: 0 },
+    ]);
 
-    // Solo circle
+    // Solo circle (1 member) -> circle is null
     const [firstMember] = given.circle.members;
     const [firstCommitment] = given.season.commitments;
     if (!firstMember || !firstCommitment) throw new Error("setup failed");
@@ -223,6 +229,95 @@ describe("weekSummary query (A2s)", () => {
     expect(soloResult.ok).toBe(true);
     if (!soloResult.ok) return;
     expect(soloResult.value.circle).toBeNull();
+
+    // 3-member circle -> circle is null
+    const members3 = Array.from({ length: 3 }, (_, i) =>
+      memberFixture({
+        id: memberId(`member-3m-${i + 1}`),
+        userId: userId(`user-3m-${i + 1}`),
+        displayName: `Miembro ${String.fromCharCode(65 + i)}`,
+      }),
+    );
+    const commitments3 = members3.map((m) =>
+      buildCommitment({
+        id: commitmentId(`commitment-3m-${m.id}`),
+        memberId: m.id,
+        habitId: habitId(`habit-3m-${m.id}`),
+        weightPercent: 100,
+        privacy: "visible",
+        measure: DAILY,
+      }),
+    );
+    await app.uow.transaction(async (repos) => {
+      await repos.circles.save({ ...given.circle, members: members3 }, given.circle.version);
+      await repos.seasons.save(
+        { ...given.season, commitments: commitments3 },
+        given.season.version,
+      );
+      for (const m of members3) {
+        await repos.habits.save(
+          habitFixture({ id: habitId(`habit-3m-${m.id}`), ownerId: m.userId, name: "Habit" }),
+          null,
+        );
+      }
+      return { ok: true, value: undefined };
+    });
+
+    const [first3] = members3;
+    if (!first3) throw new Error("setup failed");
+    const threeResult = await ask(0, { userId: first3.userId });
+    expect(threeResult.ok).toBe(true);
+    if (!threeResult.ok) return;
+    expect(threeResult.value.circle).toBeNull();
+
+    // 6-member circle (with 6 active members + 1 leaver) -> circle is null
+    const members6 = Array.from({ length: 6 }, (_, i) =>
+      memberFixture({
+        id: memberId(`member-6m-${i + 1}`),
+        userId: userId(`user-6m-${i + 1}`),
+        displayName: `Miembro ${String.fromCharCode(65 + i)}`,
+      }),
+    );
+    const leaver = memberFixture({
+      id: memberId("member-leaver"),
+      userId: userId("user-leaver"),
+      displayName: "Leaver",
+      status: "left",
+    });
+    const commitments6 = members6.map((m) =>
+      buildCommitment({
+        id: commitmentId(`commitment-6m-${m.id}`),
+        memberId: m.id,
+        habitId: habitId(`habit-6m-${m.id}`),
+        weightPercent: 100,
+        privacy: "visible",
+        measure: DAILY,
+      }),
+    );
+    await app.uow.transaction(async (repos) => {
+      await repos.circles.save(
+        { ...given.circle, members: [...members6, leaver] },
+        given.circle.version,
+      );
+      await repos.seasons.save(
+        { ...given.season, commitments: commitments6 },
+        given.season.version,
+      );
+      for (const m of members6) {
+        await repos.habits.save(
+          habitFixture({ id: habitId(`habit-6m-${m.id}`), ownerId: m.userId, name: "Habit" }),
+          null,
+        );
+      }
+      return { ok: true, value: undefined };
+    });
+
+    const [first6] = members6;
+    if (!first6) throw new Error("setup failed");
+    const sixResult = await ask(0, { userId: first6.userId });
+    expect(sixResult.ok).toBe(true);
+    if (!sixResult.ok) return;
+    expect(sixResult.value.circle).toBeNull();
   });
 
   it("rejects outsider with NotAMember", async () => {
