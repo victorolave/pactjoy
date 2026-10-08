@@ -162,6 +162,12 @@ export type {
   SeasonProgressView,
   WeekSummaryView,
 } from "./progress/progress-view.ts";
+export type {
+  SeasonProgressDeps,
+  SeasonProgressError,
+  SeasonProgressInput,
+} from "./progress/season-progress.query.ts";
+export { seasonProgress } from "./progress/season-progress.query.ts";
 export type { CommitmentScoreView, MeasureView } from "./score/commitment-projection.ts";
 export type {
   MemberScoreDeps,

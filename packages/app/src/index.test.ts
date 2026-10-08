@@ -54,6 +54,7 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "renameMyDisplayName",
   "reviewCadenceForLength",
   "seasonId",
+  "seasonProgress",
   "seasonView",
   "standings",
   "timeZoneId",
