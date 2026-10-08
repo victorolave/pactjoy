@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { HABIT_ICONS } from "../features/habits/index.ts";
 import { ApiError } from "../ports/api-error.ts";
 import { FakeSeasonProgressApi } from "./fake-season-progress.ts";
 import {
@@ -60,6 +61,20 @@ describe("FakeSeasonProgressApi", () => {
 });
 
 describe("season progress fixtures", () => {
+  it("carry stored habit icon keys from the catalog, never glyph names", () => {
+    const detail = commitmentProgress();
+    const peer = peerMemberProgress();
+    const icons = [
+      ...activeSeasonProgress().own.commitments,
+      ...peer.commitments.flatMap((row) => (row.kind === "detail" ? [row] : [])),
+      detail.commitment,
+      ...weekSummary().commitments,
+    ].map((row) => row.habit.icon);
+    const keys: readonly (string | null)[] = HABIT_ICONS.map((icon) => icon.key);
+    expect(icons.length).toBeGreaterThan(0);
+    for (const icon of icons) expect(keys).toContain(icon);
+  });
+
   it("shapes standings by circle size: solo, pair and up to six members", () => {
     for (const size of [1, 2, 3, 6] as const) {
       const view = activeSeasonProgress({ memberCount: size });

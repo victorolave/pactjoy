@@ -51,7 +51,7 @@ const week = (weekIndex: number, current = CALENDAR.weekIndex) =>
 export const leerRow = (overrides: Partial<Row> = {}): Row => ({
   kind: "detail",
   commitmentId: "commitment-leer",
-  habit: { name: "Leer", icon: "book-open" },
+  habit: { name: "Leer", icon: "book" },
   weightPercent: 25,
   privacy: "visible",
   measure: {
@@ -223,7 +223,7 @@ export function weekSummary(overrides: Partial<WeekSummary> = {}): WeekSummary {
     commitments: [
       {
         commitmentId: "commitment-leer",
-        habit: { name: "Leer", icon: "book-open" },
+        habit: { name: "Leer", icon: "book" },
         measure: leerRow().measure,
         points: 20,
         progress: {
