@@ -126,10 +126,30 @@ describe("CommitmentScreen (24a)", () => {
     expect(within(card).getByText("5 min")).toBeTruthy();
     expect(
       within(card)
-        .getAllByText(/ %$/)
+        .getAllByText(/^\d+ %$/)
         .map((cell) => cell.textContent),
     ).toEqual(["0 %", "33 %", "100 %"]);
     expect(within(card).getByText("Cada oportunidad vale hasta 6 pts.")).toBeTruthy();
+  });
+
+  it("Cómo puntúa pairs each value with its progress for assistive tech (review S2)", async () => {
+    showing(commitmentProgress());
+
+    const card = (await screen.findByText("Cómo puntúa")).parentElement as HTMLElement;
+    expect(
+      within(card)
+        .getAllByRole("listitem")
+        .map((item) => item.textContent),
+    ).toEqual(["5 min: 0 %", "10 min: 33 %", "30 min: 100 %"]);
+  });
+
+  it("the cells hint sits under the history card, inside its section (review S1)", async () => {
+    showing(commitmentProgress());
+
+    const section = await screen.findByRole("region", { name: "Historial" });
+    expect(
+      within(section).getByText("Cada celda es una de tus 5 oportunidades de la semana."),
+    ).toBeTruthy();
   });
 
   it("deferred workflows leave no trace: no stage, reminder, pause action or photo", async () => {

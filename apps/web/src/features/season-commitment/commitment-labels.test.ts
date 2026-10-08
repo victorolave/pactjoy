@@ -83,6 +83,17 @@ describe("commitment labels (design 24a, 24b)", () => {
     expect(streakRule(daily, null)).toBe("Un día suma a la racha cuando llegas al mínimo.");
   });
 
+  it("singulars for one opportunity a week (review S3)", () => {
+    const once = leerRow({
+      measure: {
+        ...leerRow().measure,
+        schedule: { period: "perSession", frequency: { kind: "timesPerWeek", times: 1 } },
+      } as Row["measure"],
+    });
+    expect(cellsHint(once)).toBe("Cada celda es tu oportunidad de la semana.");
+    expect(streakRule(once, null)).toBe("Una semana suma a la racha cuando cumples la 1 de 1.");
+  });
+
   it("the grid hint names the week's opportunities; nothing for a weekly total", () => {
     expect(cellsHint(leerRow())).toBe("Cada celda es una de tus 5 oportunidades de la semana.");
     expect(cellsHint(coffees)).toBe("Cada celda es una de tus 3 oportunidades de la semana.");

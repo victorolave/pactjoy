@@ -1,7 +1,7 @@
 import { useId } from "react";
 import type { CommitmentProgress } from "../../ports/wire.ts";
 import styles from "./CommitmentScreen.module.css";
-import { cellLabel } from "./commitment-labels.ts";
+import { cellLabel, cellsHint } from "./commitment-labels.ts";
 
 type Started = Extract<CommitmentProgress, { state: "active" | "ended" }>;
 type Cell = Started["weeks"][number]["cells"][number];
@@ -31,8 +31,9 @@ const LEGEND = [
 export function HistoryGrid({ view }: { readonly view: Started }) {
   const headingId = useId();
   const columns = Math.max(1, ...view.weeks.map((week) => week.cells.length));
+  const hint = cellsHint(view.commitment);
   return (
-    <div className={styles.section}>
+    <section className={styles.section} aria-labelledby={headingId}>
       <h2 id={headingId} className={styles.h2}>
         Historial
       </h2>
@@ -79,6 +80,7 @@ export function HistoryGrid({ view }: { readonly view: Started }) {
           ))}
         </div>
       </div>
-    </div>
+      {hint !== null && <p className={styles.muted}>{hint}</p>}
+    </section>
   );
 }

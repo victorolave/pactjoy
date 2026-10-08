@@ -36,7 +36,10 @@ export function streakRule(
   const { schedule } = row.measure;
   if (schedule.period === "perSession" && schedule.frequency.kind === "timesPerWeek") {
     const times = schedule.frequency.times;
-    const rule = `Una semana suma a la racha cuando cumples las ${times} de ${times}.`;
+    const rule =
+      times === 1
+        ? "Una semana suma a la racha cuando cumples la 1 de 1."
+        : `Una semana suma a la racha cuando cumples las ${times} de ${times}.`;
     return thisWeek === null
       ? rule
       : `${rule} Esta semana llevas ${thisWeek.sessionsDone} de ${thisWeek.sessionsTarget}.`;
@@ -54,7 +57,9 @@ export function cellsHint(row: Row): string | null {
     schedule.frequency.kind === "timesPerWeek"
       ? schedule.frequency.times
       : schedule.frequency.weekdays.length;
-  return `Cada celda es una de tus ${count} oportunidades de la semana.`;
+  return count === 1
+    ? "Cada celda es tu oportunidad de la semana."
+    : `Cada celda es una de tus ${count} oportunidades de la semana.`;
 }
 
 const LEGEND: Record<Cell["status"], string | null> = {

@@ -13,7 +13,6 @@ import { Skeleton } from "../../ui/Skeleton.tsx";
 import { useCommitmentProgress } from "../season-progress-data/index.ts";
 import styles from "./CommitmentScreen.module.css";
 import {
-  cellsHint,
   commitmentSubtitle,
   opportunitiesText,
   perOpportunityText,
@@ -107,15 +106,25 @@ function Scoring({ view }: { readonly view: Started }) {
   if (curve === null || measure.unit === "done") return null;
   const unit = unitLabel(measure);
   const worth = perOpportunityText(perOpportunityPoints);
+  const sample = (value: string) =>
+    unit ? `${formatDecimal(value)} ${unit}` : formatDecimal(value);
   return (
     <div className={`pj-card ${styles.card}`}>
       <span className={styles.label}>Cómo puntúa</span>
-      <div className={styles.curve} style={{ gridTemplateColumns: `repeat(${curve.length}, 1fr)` }}>
+      {/* Screen readers get each value paired with its progress, like the wizard's preview. */}
+      <ul className={styles.visuallyHidden}>
+        {curve.map((point) => (
+          <li key={point.value}>{`${sample(point.value)}: ${point.progressPercent} %`}</li>
+        ))}
+      </ul>
+      <div
+        className={styles.curve}
+        style={{ gridTemplateColumns: `repeat(${curve.length}, 1fr)` }}
+        aria-hidden="true"
+      >
         {curve.map((point, index) => (
           <span key={point.value} className={styles.meta}>
-            {index === 0 && unit
-              ? `${formatDecimal(point.value)} ${unit}`
-              : formatDecimal(point.value)}
+            {index === 0 ? sample(point.value) : formatDecimal(point.value)}
           </span>
         ))}
         {curve.map((point) => (
@@ -129,7 +138,6 @@ function Scoring({ view }: { readonly view: Started }) {
 
 function Commitment({ view }: { readonly view: Started }) {
   const row = view.commitment;
-  const hint = cellsHint(row);
   return (
     <>
       <div className={styles.header}>
@@ -150,7 +158,6 @@ function Commitment({ view }: { readonly view: Started }) {
       </div>
       <PointsCard view={view} />
       <HistoryGrid view={view} />
-      {hint !== null && <p className={styles.muted}>{hint}</p>}
       <Scoring view={view} />
     </>
   );
