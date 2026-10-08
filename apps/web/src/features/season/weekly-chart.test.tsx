@@ -24,12 +24,9 @@ describe("SeasonWeeklyChart", () => {
     const s5 = screen.getByText("S5");
     expect(s5.className).toContain("weekLabelCurrent");
 
-    // 3. Footer copy
-    expect(
-      screen.getByText(
-        "Esta semana, en curso: tú +20 · Andrea +21. Tu mejor semana fue la 1 (+90).",
-      ),
-    ).toBeInTheDocument();
+    // 3. Footer copy: only the best closed week; the in-progress line is omitted (#5807, verify C-1)
+    expect(screen.getByText("Tu mejor semana fue la 1 (+90).")).toBeInTheDocument();
+    expect(screen.queryByText(/Esta semana, en curso/)).toBeNull();
 
     // 4. Accessible table for screen readers
     expect(screen.getByRole("table", { name: "Puntos por semana" })).toBeInTheDocument();
@@ -92,6 +89,7 @@ describe("SeasonWeeklyChart", () => {
       weeks: base.weeks.map((w) => ({
         ...w,
         timing: w.weekIndex === 0 ? "current" : "future",
+        facts: { counted: false, editable: w.weekIndex === 0, final: false },
         members: w.members.map((m) => ({
           ...m,
           points: w.weekIndex === 0 ? 15 : null,
@@ -102,8 +100,43 @@ describe("SeasonWeeklyChart", () => {
     render(<SeasonWeeklyChart progress={week0Progress} />);
 
     expect(screen.getAllByText("Puntos por semana")).toHaveLength(2);
-    expect(screen.getByText("Esta semana, en curso: tú +15 · Andrea +15.")).toBeInTheDocument();
+    expect(screen.queryByText(/Esta semana, en curso/)).toBeNull();
     expect(screen.queryByText(/Tu mejor semana/)).toBeNull();
+  });
+
+  describe("best week needs at least two closed weeks (verify W-3)", () => {
+    /** The pair's season on week `current`: weeks before it are closed (counted) with 90 / 60 / 70. */
+    const onWeek = (current: number) => {
+      const base = activeSeasonProgress({ memberCount: 2 });
+      return {
+        ...base,
+        calendar: { ...base.calendar, weekIndex: current },
+        weeks: base.weeks.map((w) => ({
+          ...w,
+          timing: w.weekIndex < current ? "past" : w.weekIndex === current ? "current" : "future",
+          facts: { counted: w.weekIndex < current, editable: false, final: w.weekIndex < current },
+          members: w.members.map((m) => ({
+            ...m,
+            points: w.weekIndex < current ? ([60, 90, 70][w.weekIndex] ?? 50) : null,
+          })),
+        })),
+      } as typeof base;
+    };
+
+    it.each([0, 1])("%i closed weeks: no best-week claim", (closed) => {
+      render(<SeasonWeeklyChart progress={onWeek(closed)} />);
+      expect(screen.queryByText(/Tu mejor semana/)).toBeNull();
+    });
+
+    it("2 closed weeks: names the best of them", () => {
+      render(<SeasonWeeklyChart progress={onWeek(2)} />);
+      expect(screen.getByText("Tu mejor semana fue la 2 (+90).")).toBeInTheDocument();
+    });
+
+    it("3 closed weeks: still the best one, never a week not yet closed", () => {
+      render(<SeasonWeeklyChart progress={onWeek(3)} />);
+      expect(screen.getByText("Tu mejor semana fue la 2 (+90).")).toBeInTheDocument();
+    });
   });
 
   it("scales bar heights relative to highest points when points exceed 100", () => {

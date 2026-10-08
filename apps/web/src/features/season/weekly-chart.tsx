@@ -35,19 +35,12 @@ export function SeasonWeeklyChart({ progress }: SeasonWeeklyChartProps) {
 
   const isEnded = progress.state === "ended";
 
-  // Current week clause for in-progress week (omitted if season ended).
-  const currentWeek = isEnded ? undefined : weeks.find((w) => w.timing === "current");
-  const currentClause =
-    currentWeek !== undefined
-      ? `Esta semana, en curso: tú +${
-          currentWeek.members.find((m) => m.memberId === viewerId)?.points ?? 0
-        } · ${peerName} +${currentWeek.members.find((m) => m.memberId === peerId)?.points ?? 0}.`
-      : null;
-
-  // Best week clause strictly among past weeks with points > 0.
-  const pastWeeks = weeks.filter((w) => w.timing === "past" || isEnded);
+  // The design's "Esta semana, en curso…" line is omitted: no provisional points (owner #5807).
+  // "Tu mejor semana" names the best CLOSED (counted) week, and only once there are at least two
+  // to compare (verify W-3); the first max wins a tie.
+  const closedWeeks = weeks.filter((w) => w.facts.counted);
   let bestWeek: { weekNumber: number; points: number } | null = null;
-  for (const w of pastWeeks) {
+  for (const w of closedWeeks.length >= 2 ? closedWeeks : []) {
     const pts = w.members.find((m) => m.memberId === viewerId)?.points ?? 0;
     if (pts > 0) {
       if (bestWeek === null || pts > bestWeek.points) {
@@ -60,7 +53,7 @@ export function SeasonWeeklyChart({ progress }: SeasonWeeklyChartProps) {
       ? `Tu mejor semana fue la ${bestWeek.weekNumber} (+${bestWeek.points}).`
       : null;
 
-  const footerText = [currentClause, bestClause].filter(Boolean).join(" ");
+  const footerText = bestClause ?? "";
 
   return (
     <div className={`pj-card ${styles.card}`}>
