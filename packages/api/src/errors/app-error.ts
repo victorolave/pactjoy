@@ -24,6 +24,7 @@ import type {
   SeasonViewError,
   StandingsError,
   UpdateHabitError,
+  WeekSummaryError,
   WithdrawApprovalError,
 } from "@pactjoy/app";
 
@@ -58,6 +59,7 @@ export type AppError =
   | CommitmentProgressError
   | StandingsError
   | SeasonProgressError
+  | WeekSummaryError
   | SeasonViewError;
 
 export type AppErrorKind = AppError["kind"];

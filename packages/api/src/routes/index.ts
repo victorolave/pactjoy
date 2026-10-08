@@ -12,6 +12,7 @@ import { pactRoutes } from "./pact.ts";
 import { seasonProgressRoutes } from "./progress.ts";
 import { commitmentProgressRoutes } from "./progress-commitments.ts";
 import { memberProgressRoutes } from "./progress-members.ts";
+import { weekSummaryRoutes } from "./progress-summary.ts";
 import { scoreRoutes } from "./scores.ts";
 import { scoringRoutes } from "./scoring.ts";
 import { seasonRoutes } from "./seasons.ts";
@@ -32,6 +33,7 @@ const routeTable = (deps: ApiDeps): Route[] => [
   ...seasonProgressRoutes(deps),
   ...memberProgressRoutes(deps),
   ...commitmentProgressRoutes(deps),
+  ...weekSummaryRoutes(deps),
   ...scoringRoutes(),
   ...meRoutes(deps),
 ];

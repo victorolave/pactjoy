@@ -65,6 +65,7 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "userId",
   "validateCommitment",
   "visibleNote",
+  "weekSummary",
   "withdrawApproval",
 ].sort();
 

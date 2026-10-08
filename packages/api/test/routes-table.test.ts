@@ -30,6 +30,7 @@ const { spies, USE_CASE_NAMES } = vi.hoisted(() => ({
     "seasonProgress",
     "memberProgress",
     "commitmentProgress",
+    "weekSummary",
     "standings",
     "today",
     "seasonView",
@@ -102,14 +103,15 @@ const TABLE: Row[] = [
   ["seasonProgress", "GET", `/seasons/${ID}/progress`],
   ["memberProgress", "GET", `/seasons/${ID}/members/${ID2}/progress`],
   ["commitmentProgress", "GET", `/seasons/${ID}/commitments/${ID2}/progress`],
+  ["weekSummary", "GET", `/seasons/${ID}/weeks/3/summary`],
   ["standings", "GET", `/seasons/${ID}/standings`],
   ["today", "GET", "/me/today"],
   ["seasonView", "GET", `/seasons/${ID}`],
 ];
 
 describe("route table completeness (RT-S4)", () => {
-  it("has 28 routes over exactly the 27 use cases, the score one routed twice", () => {
-    expect(TABLE).toHaveLength(28);
+  it("has 29 routes over exactly the 28 use cases, the score one routed twice", () => {
+    expect(TABLE).toHaveLength(29);
     expect(new Set(TABLE.map(([name]) => name))).toEqual(new Set(USE_CASE_NAMES));
     expect(TABLE.filter(([name]) => name === "memberScore")).toHaveLength(2);
   });
@@ -165,6 +167,7 @@ describe("route to use case wiring (AC-S8)", () => {
       if (name === "memberProgress") expect(args[2]).toEqual({ seasonId: ID, memberId: ID2 });
       if (name === "commitmentProgress")
         expect(args[2]).toEqual({ seasonId: ID, commitmentId: ID2 });
+      if (name === "weekSummary") expect(args[2]).toEqual({ seasonId: ID, weekIndex: 3 });
     },
   );
 
