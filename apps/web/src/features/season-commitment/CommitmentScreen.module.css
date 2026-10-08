@@ -1,0 +1,252 @@
+/* Design 24a/24b: a 52 px back row, then the content column with 24 px between blocks. */
+.screen {
+  display: flex;
+  flex-direction: column;
+}
+
+/* The chevron sits 8 px from the screen edge, inside the shell's 20 px margin. */
+.back {
+  display: flex;
+  align-items: center;
+  height: calc(var(--control-height) + var(--space-1));
+  margin-top: calc(var(--space-4) * -1);
+  margin-inline-start: calc(var(--space-2) - var(--layout-margin-mobile));
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.header,
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.section {
+  gap: var(--space-3);
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.title {
+  margin: 0;
+  font: var(--font-h1);
+  letter-spacing: var(--type-h1-track);
+  overflow-wrap: anywhere;
+}
+
+.subtitle {
+  margin: 0;
+  font: var(--font-body);
+  color: var(--text-secondary);
+}
+
+.h2 {
+  margin: 0;
+  font: var(--font-h3);
+}
+
+/* Used with the design system's pj-card class. */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-3);
+  border-radius: var(--radius-control);
+  background: var(--surface-sunken);
+}
+
+.meta {
+  font: var(--font-meta);
+  color: var(--text-secondary);
+}
+
+.stat {
+  font: var(--weight-extrabold) var(--type-h2-size) / var(--type-h2-line) var(--font-sans);
+}
+
+.label {
+  font: var(--font-label);
+}
+
+.small,
+.muted {
+  margin: 0;
+  font: var(--font-small);
+}
+
+.muted {
+  color: var(--text-secondary);
+}
+
+.streak {
+  display: flex;
+  justify-content: space-between;
+  font: var(--font-small);
+}
+
+/* History (24a): 6 px between weeks and cells, 36 px cells (28 px for done / not done, 24b). */
+.weeks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.week {
+  display: grid;
+  gap: calc(var(--space-1) + var(--space-1) / 2);
+  align-items: center;
+}
+
+.weekLabel {
+  font: var(--font-meta);
+  color: var(--text-secondary);
+}
+
+.cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  height: calc(var(--icon-lg) + var(--space-1));
+  border-radius: var(--space-2);
+  background: var(--pj-cream-alt);
+  color: var(--pj-muted);
+  font: var(--weight-bold) var(--type-meta-size) / 1 var(--font-sans);
+}
+
+.cell[data-compact] {
+  height: calc(var(--icon-md) + var(--space-1));
+}
+
+.cell[data-look="ideal"],
+.legendSwatch[data-look="ideal"] {
+  background: var(--pj-success);
+}
+
+.cell[data-look="minimum"],
+.legendSwatch[data-look="minimum"] {
+  border: var(--border-width-control) solid var(--pj-success);
+  background: var(--surface-success);
+}
+
+.cell[data-look="missed"],
+.legendSwatch[data-look="missed"] {
+  border: var(--border-width-control) solid var(--pj-border);
+  background: transparent;
+}
+
+.cell[data-look="today"],
+.legendSwatch[data-look="today"] {
+  border: var(--border-width-control) dashed var(--pj-ink);
+  background: transparent;
+  color: var(--pj-ink);
+}
+
+.cell[data-look="paused"] {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--orange-100) 0 var(--space-1),
+    var(--orange-200) var(--space-1) var(--space-3)
+  );
+  color: var(--orange-900);
+}
+
+.lateDot,
+.legendSwatch[data-look="late"] {
+  width: calc(var(--space-1) + var(--space-1) / 2);
+  height: calc(var(--space-1) + var(--space-1) / 2);
+  border-radius: 50%;
+  background: var(--pj-ink);
+}
+
+.lateDot {
+  position: absolute;
+  top: var(--space-1);
+  right: var(--space-1);
+  box-shadow: 0 0 0 var(--border-width-control) var(--pj-white);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--space-1) + var(--space-1) / 2) calc(var(--space-3) + var(--space-1) / 2);
+  margin-top: var(--space-1);
+  padding-top: calc(var(--space-1) + var(--space-1) / 2);
+  border-top: var(--border-width) solid var(--border-subtle);
+  font: var(--font-meta);
+  color: var(--text-secondary);
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--space-1) + var(--space-1) / 2);
+}
+
+.legendSwatch {
+  box-sizing: border-box;
+  width: calc(var(--space-3) + var(--space-1) / 2);
+  height: calc(var(--space-3) + var(--space-1) / 2);
+  border-radius: var(--space-1);
+}
+
+.curve {
+  display: grid;
+  gap: var(--space-1);
+  text-align: center;
+}
+
+.curveValue {
+  font: var(--weight-bold) var(--type-small-size) / var(--type-small-line) var(--font-sans);
+}
+
+/* Design 23c composition, reused when the commitment fails to load. */
+.failure {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-8);
+  text-align: center;
+}
+
+.failureIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--icon-lg) * 2);
+  height: calc(var(--icon-lg) * 2);
+  border-radius: 50%;
+  background: var(--ink-100);
+  color: var(--text-secondary);
+}
+
+.failureTitle {
+  margin: 0;
+  font: var(--font-h3);
+}
