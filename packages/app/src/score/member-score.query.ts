@@ -29,10 +29,9 @@ export type MemberScoreError = ScoreContextError | { readonly kind: "MemberNotFo
  * A member's score as shown to a client: already rounded by the engine's
  * display boundary (D10). Who is asking decides the shape:
  *
- * - `own`: the member themself sees every member-level total.
- * - `others`: everyone else sees ONLY `points` (matching the standings);
- *   `consistency` and `idealCompletion` do not exist in this shape, so they
- *   cannot be dropped by accident or leaked by serialization.
+ * Both `own` and `others` see points, consistency and ideal completion over
+ * ALL the target's commitments (Notion / Lote 2 owner decision). This does
+ * not relax private commitment rows: those retain only weight and points.
  *
  * Either way `commitments` are already projected for the asking member.
  */
@@ -57,6 +56,8 @@ export type MemberScoreView =
       readonly memberId: MemberId;
       readonly displayName: string;
       readonly points: number;
+      readonly consistency: number | null;
+      readonly idealCompletion: number | null;
       readonly commitments: readonly CommitmentScoreView[];
     };
 
@@ -68,12 +69,9 @@ function toView(
 ): MemberScoreView {
   const { id: memberId, displayName } = member;
   const points = displayPoints(score.points);
-  if (!own) {
-    return { kind: "scored", scope: "others", memberId, displayName, points, commitments };
-  }
   return {
     kind: "scored",
-    scope: "own",
+    scope: own ? "own" : "others",
     memberId,
     displayName,
     points,

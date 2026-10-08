@@ -168,15 +168,12 @@ describe("presenters: season, score", () => {
       idealCompletion: null,
       commitments: [{ kind: "hidden", commitmentId: cid("k3"), weightPercent: 20, points: 10 }],
     };
-    const others: MemberScoreView = { ...own, scope: "others" } as never;
-    delete (others as unknown as Record<string, unknown>).consistency;
-    delete (others as unknown as Record<string, unknown>).idealCompletion;
+    const others: MemberScoreView = { ...own, scope: "others" };
     expect(JSON.parse(JSON.stringify(presentMemberScore(own)))).toMatchObject({
       consistency: null,
     });
     const othersJson = JSON.parse(JSON.stringify(presentMemberScore(others)));
-    expect(othersJson).not.toHaveProperty("consistency");
-    expect(othersJson).not.toHaveProperty("idealCompletion");
+    expect(othersJson).toMatchObject({ scope: "others", consistency: null, idealCompletion: null });
     const ranked: StandingsView = {
       kind: "ranked",
       rows: [{ memberId: memberId("m1"), displayName: "Me", rank: 1, points: 10 }],

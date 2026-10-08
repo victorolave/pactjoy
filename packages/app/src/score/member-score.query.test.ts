@@ -134,7 +134,7 @@ describe("memberScore: whose score, and when", () => {
 
     expect(own).toMatchObject({ value: { scope: "own", displayName: "Andrea" } });
     expect(others).toMatchObject({ value: { scope: "others", displayName: "Andrea" } });
-    expect(others.ok && "consistency" in others.value).toBe(false);
+    expect(others).toMatchObject({ value: { consistency: null, idealCompletion: null } });
   });
 
   it("reports notStarted while the pact is still open", async () => {

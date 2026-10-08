@@ -57,9 +57,18 @@ describe("memberScore: member-level totals", () => {
     });
   });
 
-  it("another member sees only points: consistency and idealCompletion are absent", async () => {
+  it("another member sees points, consistency and idealCompletion over all commitments", async () => {
     const { given, view, viewAsJson } = await setup();
-    const keys = ["commitments", "displayName", "kind", "memberId", "points", "scope"];
+    const keys = [
+      "commitments",
+      "consistency",
+      "displayName",
+      "idealCompletion",
+      "kind",
+      "memberId",
+      "points",
+      "scope",
+    ];
 
     const raw = await view(given.victor);
     const json = await viewAsJson(given.victor);
@@ -69,7 +78,7 @@ describe("memberScore: member-level totals", () => {
     expect(Object.keys(json).sort()).toEqual(keys);
   });
 
-  it("the whole view another member gets is points plus a hidden private commitment, nothing else", async () => {
+  it("a private commitment contributes to peer totals without exposing its details", async () => {
     const { app, given, view } = await setup();
     await app.uow.transaction(async (repos) => {
       await repos.seasons.save(
@@ -92,6 +101,8 @@ describe("memberScore: member-level totals", () => {
       memberId: ANDREA,
       displayName: "Andrea",
       points: 36,
+      consistency: 100,
+      idealCompletion: 100,
       commitments: [
         { kind: "hidden", commitmentId: given.andreaCommitment, weightPercent: 100, points: 36 },
       ],

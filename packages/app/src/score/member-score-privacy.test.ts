@@ -86,10 +86,32 @@ async function setup(minutesPrivacy: "visible" | "private", donePrivacy: "visibl
     if (!result.ok || result.value.kind !== "scored") throw new Error("expected a score");
     return result.value.commitments;
   };
-  return { given, ask, minutes, done };
+  return { app, given, ask, minutes, done };
 }
 
 describe("memberScore: commitments and the privacy projection", () => {
+  it.each(["visible", "private"] as const)(
+    "aggregates %s opportunities without renormalizing away private weight",
+    async (privacy) => {
+      const { app, given, minutes } = await setup("private", privacy);
+      const input = { seasonId: given.season.id, memberId: ANDREA };
+      const own = await memberScore(app, given.andrea, input);
+      const peer = await memberScore(app, given.victor, input);
+      expect(peer).toMatchObject({
+        value: { scope: "others", points: 21, consistency: 100, idealCompletion: null },
+      });
+      if (!own.ok || !peer.ok || own.value.kind !== "scored" || peer.value.kind !== "scored")
+        throw new Error("expected scores");
+      expect(peer.value.consistency).toBe(own.value.consistency);
+      expect(peer.value.idealCompletion).toBe(own.value.idealCompletion);
+      expect(peer.value.commitments[0]).toEqual({
+        kind: "hidden",
+        commitmentId: minutes,
+        weightPercent: 60,
+        points: 21,
+      });
+    },
+  );
   it("SQ-1: a visible commitment shows full detail to every circle member", async () => {
     const { given, ask, minutes } = await setup("visible", "visible");
 

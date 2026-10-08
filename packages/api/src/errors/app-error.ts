@@ -11,6 +11,7 @@ import type {
   GenerateInviteError,
   JoinCircleError,
   LeaveCircleError,
+  MemberProgressError,
   MemberScoreError,
   PreviewInviteError,
   PreviewProgressError,
@@ -51,6 +52,7 @@ export type AppError =
   | EditEntryError
   | DeleteEntryError
   | MemberScoreError
+  | MemberProgressError
   | StandingsError
   | SeasonViewError;
 

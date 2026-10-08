@@ -27,6 +27,7 @@ const { spies, USE_CASE_NAMES } = vi.hoisted(() => ({
     "editEntry",
     "deleteEntry",
     "memberScore",
+    "memberProgress",
     "standings",
     "today",
     "seasonView",
@@ -96,14 +97,15 @@ const TABLE: Row[] = [
   ["deleteEntry", "DELETE", `/entries/${ID}`],
   ["memberScore", "GET", `/seasons/${ID}/score`],
   ["memberScore", "GET", `/seasons/${ID}/members/${ID2}/score`],
+  ["memberProgress", "GET", `/seasons/${ID}/members/${ID2}/progress`],
   ["standings", "GET", `/seasons/${ID}/standings`],
   ["today", "GET", "/me/today"],
   ["seasonView", "GET", `/seasons/${ID}`],
 ];
 
 describe("route table completeness (RT-S4)", () => {
-  it("has 25 routes over exactly the 24 use cases, the score one routed twice", () => {
-    expect(TABLE).toHaveLength(25);
+  it("has 26 routes over exactly the 25 use cases, the score one routed twice", () => {
+    expect(TABLE).toHaveLength(26);
     expect(new Set(TABLE.map(([name]) => name))).toEqual(new Set(USE_CASE_NAMES));
     expect(TABLE.filter(([name]) => name === "memberScore")).toHaveLength(2);
   });
@@ -155,6 +157,7 @@ describe("route to use case wiring (AC-S8)", () => {
       expect(actor).toEqual({ userId: ANDREA });
       expect(deps).toHaveProperty("uow");
       expect(deps).toHaveProperty("clock");
+      if (name === "memberProgress") expect(args[2]).toEqual({ seasonId: ID, memberId: ID2 });
     },
   );
 

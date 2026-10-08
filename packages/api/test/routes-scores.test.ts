@@ -92,7 +92,7 @@ describe("GET /seasons/:seasonId/score (UE-E-S11)", () => {
     expect(named.json).toEqual(bare.json);
   });
 
-  it("another member's score: scope others with only points, never their note", async () => {
+  it("another member's score: permitted aggregates, never their note", async () => {
     const { call, seasonId, memberOf } = await givenScored();
     const res = await call(
       "GET",
@@ -102,8 +102,7 @@ describe("GET /seasons/:seasonId/score (UE-E-S11)", () => {
     expect(res.status).toBe(200);
     expect(res.json.data.scope).toBe("others");
     expect(res.json.data.memberId).toBe(memberOf("victor"));
-    expect(res.json.data).not.toHaveProperty("consistency");
-    expect(res.json.data).not.toHaveProperty("idealCompletion");
+    expect(res.json.data).toMatchObject({ points: 36, consistency: 100, idealCompletion: 100 });
     expect(JSON.stringify(res.json)).not.toContain("private words");
     for (const key of FORBIDDEN_KEYS) expect(keysDeep(res.json).has(key)).toBe(false);
   });
