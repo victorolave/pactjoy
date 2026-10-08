@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { seasonId, userId } from "../shared/ids.ts";
+import { memberId } from "../circle/circle.ts";
+import { buildCommitment, commitmentId } from "../commitment/commitment.ts";
+import { habitId, seasonId, userId } from "../shared/ids.ts";
 import { createTestApp } from "../testing/app-harness.ts";
+import { habitFixture, memberFixture } from "../testing/builders.ts";
 import {
   fixtureTimeZone,
   givenActiveSeason,
@@ -70,6 +73,84 @@ describe("seasonProgress query (A2)", () => {
       facts: { counted: false, editable: true, final: false },
     });
     expect(w0?.members).toHaveLength(2);
+  });
+
+  it("handles solo circle (1 member: standings.memberCount 1, weeks[].members length 1)", async () => {
+    const { app, given, ask } = await setup();
+    const [firstMember] = given.circle.members;
+    const [firstCommitment] = given.season.commitments;
+    if (!firstMember || !firstCommitment) throw new Error("setup failed");
+
+    await app.circles.save({ ...given.circle, members: [firstMember] }, given.circle.version);
+    await app.seasons.save(
+      { ...given.season, commitments: [firstCommitment] },
+      given.season.version,
+    );
+
+    const result = await ask();
+    expect(result.ok).toBe(true);
+    if (!result.ok || result.value.state !== "active") return;
+    expect(result.value.standings.memberCount).toBe(1);
+    expect(result.value.standings.rows).toHaveLength(1);
+    expect(result.value.weeks[0]?.members).toHaveLength(1);
+    expect(result.value.weeks[0]?.members[0]?.memberId).toBe(firstMember.id);
+  });
+
+  it("handles full circle (6 members: all 6 present, correct order, no leavers)", async () => {
+    const { app, given, ask } = await setup();
+    const activeMembers = Array.from({ length: 6 }, (_, i) =>
+      memberFixture({
+        id: memberId(`member-${i + 1}`),
+        userId: userId(`user-${i + 1}`),
+        displayName: `Miembro ${String.fromCharCode(65 + i)}`,
+      }),
+    );
+    const leaver = memberFixture({
+      id: memberId("member-leaver"),
+      userId: userId("user-leaver"),
+      displayName: "Leaver",
+      status: "left",
+    });
+    const commitments = activeMembers.map((m) =>
+      buildCommitment({
+        id: commitmentId(`commitment-${m.id}`),
+        memberId: m.id,
+        habitId: habitId(`habit-${m.id}`),
+        weightPercent: 100,
+        privacy: "visible",
+        measure: {
+          unit: "done",
+          schedule: { period: "perSession", frequency: { kind: "timesPerWeek", times: 3 } },
+        },
+      }),
+    );
+    await app.uow.transaction(async (repos) => {
+      await repos.circles.save(
+        { ...given.circle, members: [...activeMembers, leaver] },
+        given.circle.version,
+      );
+      await repos.seasons.save({ ...given.season, commitments }, given.season.version);
+      for (const m of activeMembers) {
+        await repos.habits.save(
+          habitFixture({ id: habitId(`habit-${m.id}`), ownerId: m.userId, name: "Habit" }),
+          null,
+        );
+      }
+      return { ok: true, value: undefined };
+    });
+
+    const [firstActive] = activeMembers;
+    if (!firstActive) throw new Error("setup failed");
+    const result = await ask({ userId: firstActive.userId });
+    expect(result.ok).toBe(true);
+    if (!result.ok || result.value.state !== "active") return;
+    expect(result.value.standings.memberCount).toBe(6);
+    expect(result.value.standings.rows).toHaveLength(6);
+    expect(result.value.standings.rows.some((r) => r.memberId === leaver.id)).toBe(false);
+    expect(result.value.weeks[0]?.members).toHaveLength(6);
+    expect(result.value.weeks[0]?.members.map((m) => m.memberId)).toEqual(
+      result.value.standings.rows.map((r) => r.memberId),
+    );
   });
 
   it("returns notStarted when season pact is open or start is null", async () => {

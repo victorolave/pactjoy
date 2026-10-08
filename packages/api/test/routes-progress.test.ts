@@ -1,4 +1,4 @@
-import { seasonId } from "@pactjoy/app";
+import { commitmentId, habitId, memberId, seasonId, userId } from "@pactjoy/app";
 import { describe, expect, it } from "vitest";
 import { givenActiveSeason, givenTwoMemberSeason } from "./entries-fixture.ts";
 import { UNKNOWN_CIRCLE } from "./harness.ts";
@@ -24,6 +24,74 @@ describe("GET /seasons/:seasonId/progress (A2)", () => {
       timing: "current",
       facts: { counted: false, editable: true, final: false },
     });
+  });
+
+  it("returns 200 for solo circle (1 member: standings.memberCount 1, weeks[].members length 1)", async () => {
+    const ctx = await givenActiveSeason();
+    const res = await ctx.call("GET", `/seasons/${ctx.seasonId}/progress`, "andrea");
+
+    expect(res.status).toBe(200);
+    expect(res.json.data.standings.memberCount).toBe(1);
+    expect(res.json.data.standings.rows).toHaveLength(1);
+    expect(res.json.data.weeks[0].members).toHaveLength(1);
+    expect(res.json.data.weeks[0].members[0].memberId).toBe(res.json.data.viewerId);
+  });
+
+  it("returns 200 for full circle (6 members: all 6 present, correct order, no leavers)", async () => {
+    const ctx = await givenTwoMemberSeason();
+    const season = await ctx.app.seasons.get(seasonId(ctx.seasonId));
+    if (!season) throw new Error("missing season");
+    const circle = await ctx.app.circles.get(season.circleId);
+    if (!circle) throw new Error("missing circle");
+
+    const [andreaMember, victorMember] = circle.members;
+    if (!andreaMember || !victorMember) throw new Error("setup failed");
+
+    const extraActive = [1, 2, 3, 4].map((n) => ({
+      ...andreaMember,
+      id: memberId(`aaaaaaaa-0000-4000-8000-00000000001${n}`),
+      userId: userId(`aaaaaaaa-0000-4000-8000-00000000002${n}`),
+      displayName: `Extra ${n}`,
+      status: "active" as const,
+    }));
+    const leaver = {
+      ...andreaMember,
+      id: memberId("aaaaaaaa-0000-4000-8000-000000000099"),
+      userId: userId("aaaaaaaa-0000-4000-8000-000000000099"),
+      displayName: "Leaver",
+      status: "left" as const,
+    };
+
+    const [baseCommitment] = season.commitments;
+    if (!baseCommitment) throw new Error("setup failed");
+    const extraCommitments = extraActive.map((m) => ({
+      ...baseCommitment,
+      id: commitmentId(`bbbbbbbb-0000-4000-8000-00000000001${m.displayName.slice(-1)}`),
+      memberId: m.id,
+      habitId: habitId(`cccccccc-0000-4000-8000-00000000001${m.displayName.slice(-1)}`),
+    }));
+
+    await ctx.app.circles.save(
+      { ...circle, members: [andreaMember, victorMember, ...extraActive, leaver] },
+      circle.version,
+    );
+    await ctx.app.seasons.save(
+      { ...season, commitments: [...season.commitments, ...extraCommitments] },
+      season.version,
+    );
+
+    const res = await ctx.call("GET", `/seasons/${ctx.seasonId}/progress`, "andrea");
+    expect(res.status).toBe(200);
+    expect(res.json.data.standings.memberCount).toBe(6);
+    expect(res.json.data.standings.rows).toHaveLength(6);
+    const hasLeaver = res.json.data.standings.rows.some(
+      (r: { memberId: string }) => r.memberId === leaver.id,
+    );
+    expect(hasLeaver).toBe(false);
+    expect(res.json.data.weeks[0].members).toHaveLength(6);
+    expect(res.json.data.weeks[0].members.map((m: { memberId: string }) => m.memberId)).toEqual(
+      res.json.data.standings.rows.map((r: { memberId: string }) => r.memberId),
+    );
   });
 
   it("returns notStarted when season is not started yet", async () => {

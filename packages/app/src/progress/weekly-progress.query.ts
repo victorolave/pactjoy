@@ -27,6 +27,7 @@ export interface SeasonWeeksInput {
 /**
  * Builds the season weeks array with live weekly series from the engine.
  * One snapshot governs all weeks and members; display rounding happens once.
+ * Note: facts.counted=false for the current week means the week block has not closed.
  */
 export function seasonWeeks({
   season,

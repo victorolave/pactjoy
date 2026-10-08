@@ -131,4 +131,49 @@ describe("seasonWeeks (weekly-progress)", () => {
     expect(weeks.every((w) => w.timing === "past")).toBe(true);
     expect(weeks.every((w) => w.facts.counted)).toBe(true);
   });
+
+  it("handles solo circle (1 member: weeks[].members length 1)", async () => {
+    const { given } = await setup();
+    const phase = seasonPhase(given.season, SEASON_START);
+    if (phase.phase !== "active") throw new Error("expected active phase");
+
+    const soloRows = [row("member-andrea", "Andrea", true, 1)];
+    const weeks = seasonWeeks({
+      season: given.season,
+      actualStart: SEASON_START,
+      today: seasonDay(0),
+      phase,
+      standingsRows: soloRows,
+      data: { entries: [], pauses: [] },
+    });
+
+    expect(weeks[0]?.members).toHaveLength(1);
+    expect(weeks[0]?.members[0]?.memberId).toBe("member-andrea");
+  });
+
+  it("handles full circle (6 members: all 6 present in correct order)", async () => {
+    const { given } = await setup();
+    const phase = seasonPhase(given.season, SEASON_START);
+    if (phase.phase !== "active") throw new Error("expected active phase");
+
+    const sixRows = [
+      row("member-1", "Ana", true, 1),
+      row("member-2", "Beto", false, 2),
+      row("member-3", "Carlos", false, 3),
+      row("member-4", "Diana", false, 4),
+      row("member-5", "Elena", false, 5),
+      row("member-6", "Fernando", false, 6),
+    ];
+    const weeks = seasonWeeks({
+      season: given.season,
+      actualStart: SEASON_START,
+      today: seasonDay(0),
+      phase,
+      standingsRows: sixRows,
+      data: { entries: [], pauses: [] },
+    });
+
+    expect(weeks[0]?.members).toHaveLength(6);
+    expect(weeks[0]?.members.map((m) => m.memberId)).toEqual(sixRows.map((r) => r.memberId));
+  });
 });
