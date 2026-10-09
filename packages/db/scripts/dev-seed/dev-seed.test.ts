@@ -106,10 +106,8 @@ describe("pair scenario (week 3 of 8)", () => {
     const result = await seasonProgress(app, andrea, { seasonId });
     if (!result.ok || result.value.state === "notStarted") throw new Error("expected progress");
     const meditar = result.value.own.commitments.find((c) => c.habit.name === "Meditar");
-    // Days 0-7 are kept, yet best is 7: the engine walks a week's scheduled days in weekday order
-    // (Monday first), and this season starts on a Tuesday, so week 2's unlogged Monday (day 13)
-    // breaks the streak before day 7 counts. Pre-existing engine behaviour, reported separately.
-    expect(meditar?.streak).toEqual({ unit: "day", current: 2, best: 7 });
+    // The Tuesday-start season's days 0–7 form one chronological run, before days 8–13 break it.
+    expect(meditar?.streak).toEqual({ unit: "day", current: 2, best: 8 });
     expect(result.value.own.commitments.map((c) => c.habit.name)).toEqual([
       "Leer",
       "Meditar",
