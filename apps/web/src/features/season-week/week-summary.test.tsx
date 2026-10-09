@@ -135,6 +135,141 @@ describe("WeekSummaryScreen (25b, 25c)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Reintentar" }));
     expect(await screen.findByText("Tu mejor semana hasta ahora.")).toBeTruthy();
   });
+
+  describe("screen scroll and list clipping regression (owner bug)", () => {
+    const fourCommitments: WeekSummary["commitments"] = [
+      {
+        commitmentId: "c-leer",
+        habit: { name: "Leer", icon: "book" },
+        measure: {
+          unit: "done",
+          schedule: { period: "perSession", frequency: { kind: "timesPerWeek", times: 3 } },
+        },
+        points: 0,
+        progress: {
+          value: null,
+          target: { direction: "reach", minimum: "3", ideal: "3" },
+          sessionsDone: 0,
+          sessionsTarget: 3,
+          percent: 0,
+        },
+      },
+      {
+        commitmentId: "c-meditar",
+        habit: { name: "Meditar", icon: "sparkles" },
+        measure: {
+          unit: "done",
+          schedule: {
+            period: "perSession",
+            frequency: { kind: "specificDays", weekdays: [0, 1, 2, 3, 4, 5, 6] },
+          },
+        },
+        points: 4,
+        progress: {
+          value: null,
+          target: { direction: "reach", minimum: "7", ideal: "7" },
+          sessionsDone: 1,
+          sessionsTarget: 7,
+          percent: 14,
+        },
+      },
+      {
+        commitmentId: "c-ingles",
+        habit: { name: "Inglés", icon: "globe" },
+        measure: {
+          unit: "minutes",
+          customLabel: null,
+          precision: "integer",
+          target: { direction: "reach", minimum: "120", ideal: "150" },
+          schedule: {
+            period: "weeklyTotal",
+          },
+        },
+        points: 0,
+        progress: {
+          value: "30",
+          target: { direction: "reach", minimum: "120", ideal: "150" },
+          sessionsDone: 1,
+          sessionsTarget: 1,
+          percent: 20,
+        },
+      },
+      {
+        commitmentId: "c-cafe",
+        habit: { name: "Máximo 1 café al día", icon: "coffee" },
+        measure: {
+          unit: "done",
+          schedule: {
+            period: "perSession",
+            frequency: { kind: "specificDays", weekdays: [0, 1, 2, 3, 4, 5, 6] },
+          },
+        },
+        points: 0,
+        progress: {
+          value: null,
+          target: { direction: "reach", minimum: "7", ideal: "7" },
+          sessionsDone: 0,
+          sessionsTarget: 7,
+          percent: 0,
+        },
+      },
+    ];
+
+    it.each([
+      [375, 667, "iPhone SE"],
+      [390, 844, "iPhone 12/13/14"],
+    ])(
+      "renders all habits and reachable CTA without clipping at %ix%i (%s)",
+      async (width, height) => {
+        const originalInnerWidth = window.innerWidth;
+        const originalInnerHeight = window.innerHeight;
+        window.innerWidth = width;
+        window.innerHeight = height;
+
+        try {
+          showing(
+            weekSummary({
+              viewerId: "member-andrea",
+              headline: "difficult",
+              consistency: 6,
+              idealCompletion: 3,
+              points: 4,
+              weeksLeft: 6,
+              commitments: fourCommitments,
+              circle: [
+                { memberId: "member-victor", displayName: "Victor", points: 47 },
+                { memberId: "member-andrea", displayName: "Andrea", points: 4 },
+              ],
+            }),
+          );
+
+          // Header & headline from the real iPhone screenshot
+          expect(await screen.findByText("Esta semana ha costado más.")).toBeTruthy();
+          expect(screen.getByText("Todavía tienes oportunidades: quedan 6 semanas.")).toBeTruthy();
+
+          // All 4 habits from the real iPhone screenshot are present in the DOM
+          expect(screen.getByText("Leer")).toBeTruthy();
+          expect(screen.getByText("Meditar")).toBeTruthy();
+          expect(screen.getByText("Inglés")).toBeTruthy();
+          expect(screen.getByText("Máximo 1 café al día")).toBeTruthy();
+
+          // The list card wrapping them has flush class and no max-height or height clipping
+          const card = screen.getByText("Leer").closest(".pj-card");
+          expect(card).not.toBeNull();
+          expect(card).toHaveClass("pj-card--flush");
+          expect(card?.getAttribute("style") ?? "").not.toMatch(/max-height|height:\s*\d/);
+
+          // Circle and CTA button are present and reachable
+          expect(screen.getByText("En el círculo: Victor +47 · tú +4")).toBeTruthy();
+          const cta = screen.getByRole("button", { name: "Seguir con mi día" });
+          expect(cta).toBeTruthy();
+        } finally {
+          window.innerWidth = originalInnerWidth;
+          window.innerHeight = originalInnerHeight;
+        }
+      },
+    );
+  });
 });
 
 describe("WeeklyBanner (25a)", () => {
