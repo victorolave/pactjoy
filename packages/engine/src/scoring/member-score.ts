@@ -248,10 +248,11 @@ export function seasonSessions(commitment: Commitment, input: ScoreInput): Seaso
       continue;
     }
     all.push(...result.sessions);
+    const dayOutcomes: [SeasonDay, StreakOutcome][] = [];
     let activeIndex = 0;
     for (const day of scheduledDays) {
       if (excluded.has(day)) {
-        streakOutcomes.push("frozen");
+        dayOutcomes.push([day, "frozen"]);
         continue;
       }
       const session = result.sessions[activeIndex];
@@ -264,8 +265,11 @@ export function seasonSessions(commitment: Commitment, input: ScoreInput): Seaso
       const counted = session.value !== null || input.today >= dayDeadline;
       opportunities.push(scoringOpportunity(session, day, dayDeadline, counted, day, input.today));
       if (counted) soFar.push(session);
-      streakOutcomes.push(counted ? dayStreakOutcome(false, session) : "frozen");
+      dayOutcomes.push([day, counted ? dayStreakOutcome(false, session) : "frozen"]);
     }
+    // Keep session/slot pairing in schedule order; only the D11 fold needs chronological days.
+    dayOutcomes.sort(([left], [right]) => left - right);
+    streakOutcomes.push(...dayOutcomes.map(([, outcome]) => outcome));
   }
 
   const streakUnit: StreakUnit = weekBound ? "week" : "day";
