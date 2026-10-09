@@ -2,10 +2,10 @@
 .page {
   display: flex;
   flex-direction: column;
-  height: var(--shell-height);
+  min-height: var(--shell-height);
   max-width: var(--app-max-width);
   margin-inline: auto;
-  padding: var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left);
+  padding: var(--safe-top) var(--safe-right) 0 var(--safe-left);
   box-sizing: border-box;
   background: var(--surface-page);
 }
@@ -24,9 +24,16 @@
   flex: 1;
   flex-direction: column;
   gap: calc(var(--space-4) + var(--space-1));
-  min-height: 0;
-  overflow-y: auto;
-  padding: 0 var(--layout-margin-mobile) var(--space-5);
+  padding: 0 var(--layout-margin-mobile) max(var(--space-5), var(--safe-bottom));
+}
+
+.content > * {
+  flex-shrink: 0;
+}
+
+.content > :global(.pj-card--flush) {
+  flex-shrink: 0;
+  overflow: visible;
 }
 
 .meta {
@@ -104,6 +111,7 @@
 
 .footer {
   margin-top: auto;
+  flex-shrink: 0;
 }
 
 /* 25a: one card under the greeting. */

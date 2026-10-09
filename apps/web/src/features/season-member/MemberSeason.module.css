@@ -62,10 +62,20 @@
   font: var(--weight-extrabold) var(--type-h2-size) / var(--type-h2-line) var(--font-sans);
 }
 
+.content > * {
+  flex-shrink: 0;
+}
+
 .group {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.group :global(.pj-card--flush) {
+  flex-shrink: 0;
+  overflow: visible;
 }
 
 .groupHeader {
