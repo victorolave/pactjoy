@@ -12,7 +12,8 @@
     "test": "turbo run test",
     "test:watch": "turbo run test:watch",
     "format": "biome format --write .",
-    "format:check": "biome format ."
+    "format:check": "biome format .",
+    "seed:season": "pnpm --filter @pactjoy/db seed:season"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.14",
