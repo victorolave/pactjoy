@@ -62,6 +62,29 @@
           }
         }
       }
+    },
+    {
+      "includes": ["scripts/**"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noNodejsModules": "off"
+          },
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@pactjoy/*/**", "!@pactjoy/app/testing"],
+                    "message": "The local dev seed is a composition root: package roots only (@pactjoy/app/testing for its tests)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
     }
   ]
 }
