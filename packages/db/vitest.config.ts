@@ -18,7 +18,8 @@ export default defineConfig({
         extends: true,
         test: {
           name: "unit",
-          include: ["src/**/*.test.ts", ...UNIT_ONLY_IN_TEST_DIR],
+          // The dev seed's own tests run on the in-memory app harness: no database either.
+          include: ["src/**/*.test.ts", "scripts/**/*.test.ts", ...UNIT_ONLY_IN_TEST_DIR],
         },
       },
       {
