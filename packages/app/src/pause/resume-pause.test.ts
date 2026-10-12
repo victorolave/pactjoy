@@ -1,6 +1,8 @@
 import { pauseBudget, seasonDay } from "@pactjoy/engine";
 import { describe, expect, it } from "vitest";
+import { recordEntry } from "../entry/record-entry.ts";
 import { startWeekdayOf } from "../score/score-input.ts";
+import { standings } from "../score/standings.query.ts";
 import { userId } from "../shared/ids.ts";
 import { createTestApp, type TestApp } from "../testing/app-harness.ts";
 import { atInstant, fixtureTimeZone, localInstant } from "../testing/entry-fixtures.ts";
@@ -118,6 +120,31 @@ describe("resumePause (PL-30..PL-33, Q6)", () => {
     const result = await resume(app, world.andrea, request.id, 19);
 
     expect(result).toEqual({ ok: false, error: { kind: "PauseNotActive" } });
+  });
+
+  it("PL-S22: an open pause ends at the cap, so the Commitment is paused through day 18 and scores from day 19", async () => {
+    // Cap is 14 days: an open pause from day 5 covers 5..18.
+    const { app, world } = await givenApproved();
+    const logOn = (day: number) =>
+      recordEntry(atInstant(app, localInstant(dayOf(day))), world.andrea, {
+        seasonId: world.season.id,
+        commitmentId: world.andreaCommitment,
+        forDate: dayOf(day),
+        value: { kind: "quantity", value: "30" },
+        note: null,
+        clientRequestId: `cap-${day}`,
+      });
+    const pointsAt = async (day: number) => {
+      const view = await standings(atInstant(app, localInstant(dayOf(day))), world.andrea, {
+        seasonId: world.season.id,
+      });
+      if (!view.ok || view.value.kind !== "ranked") throw new Error("standings unavailable");
+      return view.value.rows.find((row) => row.memberId === "member-andrea")?.points ?? 0;
+    };
+
+    expect(await logOn(18)).toEqual({ ok: false, error: { kind: "OpportunityPaused" } });
+    expect((await logOn(19)).ok).toBe(true);
+    expect(await pointsAt(19)).toBeGreaterThan(0);
   });
 
   it("PL-S30: resuming a pending request is PauseNotPending (it is cancelled instead)", async () => {

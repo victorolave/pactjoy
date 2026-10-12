@@ -204,4 +204,39 @@ describe("standings: when and for whom", () => {
       error: { kind: "NotAMember" },
     });
   });
+
+  it("SR-S1/SR-S2: a pending pause holds the days out of the points, a rejection brings them back", async () => {
+    const decisions = {
+      none: null,
+      pending: { kind: "pending" },
+      approved: { kind: "approved", decidedOn: seasonDay(3), resumedOn: null },
+      rejected: { kind: "rejected", decidedOn: seasonDay(3) },
+    } as const;
+    const pointsWith = async (decision: (typeof decisions)[keyof typeof decisions]) => {
+      const { app, given, ask, andreaLogs } = await setup("active", localDate("2026-10-04"));
+      await andreaLogs();
+      if (decision !== null) {
+        app.pauses.seed(given.season.id, {
+          memberId: ANDREA,
+          commitmentId: given.andreaCommitment,
+          requestedOn: seasonDay(1),
+          startDay: seasonDay(1),
+          end: { kind: "open" },
+          decision,
+        });
+      }
+      const result = await ask(given.andrea);
+      if (!result.ok || result.value.kind !== "ranked") throw new Error("standings unavailable");
+      return result.value.rows.find((row) => row.memberId === ANDREA)?.points;
+    };
+
+    const baseline = await pointsWith(decisions.none);
+
+    // Rejected: the days count normally, as if the request never existed.
+    expect(await pointsWith(decisions.rejected)).toBe(baseline);
+    // Pending (on hold) and approved (paused) both leave the held days out of the denominator.
+    const pending = await pointsWith(decisions.pending);
+    expect(pending).not.toBe(baseline);
+    expect(await pointsWith(decisions.approved)).toBe(pending);
+  });
 });

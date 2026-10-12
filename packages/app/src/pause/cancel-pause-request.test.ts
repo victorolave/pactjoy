@@ -5,6 +5,7 @@ import { createTestApp, type TestApp } from "../testing/app-harness.ts";
 import { atInstant, END_OF_DAY, fixtureTimeZone, localInstant } from "../testing/entry-fixtures.ts";
 import { dayOf } from "../testing/entry-measures.ts";
 import { afterHours, givenPauseWorld, type PauseWorld } from "../testing/pause-fixtures.ts";
+import { today } from "../today/today.query.ts";
 import { cancelPauseRequest } from "./cancel-pause-request.ts";
 import { requestPause } from "./request-pause.ts";
 import { respondToPause } from "./respond-to-pause.ts";
@@ -75,6 +76,24 @@ describe("cancelPauseRequest (PL-20..PL-22, Q2)", () => {
 
     expect(open.ok).toBe(true);
     expect(closed).toEqual({ ok: false, error: { kind: "WindowClosed" } });
+  });
+
+  it("TR-S3: after a cancel, the covered day shows up in pending-yesterday until the end of the day after the cancel", async () => {
+    const { app, world, request } = await givenRequest();
+    const todayAt = (day: number) =>
+      today(atInstant(app, localInstant(dayOf(day), 9 * 3_600_000)), world.andrea);
+    const listed = async (day: number) => {
+      const view = await todayAt(day);
+      if (view.state !== "active") throw new Error(`state ${view.state}`);
+      return view.pendingYesterday.map((item) => item.forDate);
+    };
+
+    // Pending, yesterday (day 5) is on hold: nothing to register.
+    expect(await listed(6)).toEqual([]);
+
+    await cancel(app, world.andrea, request.id, localInstant(dayOf(6), 16 * 3_600_000));
+
+    expect(await listed(6)).toEqual([dayOf(5)]);
   });
 
   it("PL-S18: a cancel at the auto-approval instant finds it approved and is refused", async () => {
