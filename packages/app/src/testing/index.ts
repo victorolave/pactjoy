@@ -18,6 +18,7 @@ export {
   habitFixture,
   memberFixture,
   pauseRequestFixture,
+  reviewFixture,
   seasonFixture,
 } from "./builders.ts";
 export { createCircleInput, joinCircleInput } from "./circle-inputs.ts";
@@ -32,6 +33,8 @@ export type { InMemoryHabitRepository } from "./in-memory-habit-repository.ts";
 export { createInMemoryHabitRepository } from "./in-memory-habit-repository.ts";
 export type { InMemoryPauseRequestRepository } from "./in-memory-pause-request-repository.ts";
 export { createInMemoryPauseRequestRepository } from "./in-memory-pause-request-repository.ts";
+export type { InMemoryReviewRepository } from "./in-memory-review-repository.ts";
+export { createInMemoryReviewRepository } from "./in-memory-review-repository.ts";
 export type { InMemorySeasonRepository } from "./in-memory-season-repository.ts";
 export { createInMemorySeasonRepository } from "./in-memory-season-repository.ts";
 export type { InMemoryUnitOfWorkOptions } from "./in-memory-unit-of-work.ts";

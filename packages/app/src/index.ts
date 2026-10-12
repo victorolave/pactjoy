@@ -235,6 +235,17 @@ export type {
   WeekSummaryInput,
 } from "./progress/week-summary.query.ts";
 export { weekSummary } from "./progress/week-summary.query.ts";
+export type { ReviewRepository } from "./review/review.repository.ts";
+export type {
+  AutomaticityResponse,
+  ReviewKind,
+  ReviewRecord,
+  ReviewReflection,
+  ReviewStatus,
+  SrbaiItems,
+  SrbaiMode,
+  SrbaiScore,
+} from "./review/review.ts";
 export type { CommitmentScoreView, MeasureView } from "./score/commitment-projection.ts";
 export type {
   MemberScoreDeps,
@@ -299,10 +310,19 @@ export type {
   EntryId,
   HabitId,
   PauseRequestId,
+  ReviewId,
   SeasonId,
   UserId,
 } from "./shared/ids.ts";
-export { circleId, entryId, habitId, pauseRequestId, seasonId, userId } from "./shared/ids.ts";
+export {
+  circleId,
+  entryId,
+  habitId,
+  pauseRequestId,
+  reviewId,
+  seasonId,
+  userId,
+} from "./shared/ids.ts";
 export type { Result } from "./shared/result.ts";
 export { err, ok } from "./shared/result.ts";
 export type { Clock } from "./time/clock.port.ts";

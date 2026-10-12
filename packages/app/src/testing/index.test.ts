@@ -10,6 +10,7 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "createInMemoryEntryRepository",
   "createInMemoryHabitRepository",
   "createInMemoryPauseRequestRepository",
+  "createInMemoryReviewRepository",
   "createInMemorySeasonRepository",
   "createInMemoryUnitOfWork",
   "createSeededRandomSource",
@@ -19,6 +20,7 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "joinCircleInput",
   "memberFixture",
   "pauseRequestFixture",
+  "reviewFixture",
   "seasonFixture",
 ].sort();
 
