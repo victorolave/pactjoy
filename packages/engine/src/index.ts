@@ -33,8 +33,15 @@
  *   app's entry window, so the two cannot drift.
  * - `rankStandings` + `StandingsParticipant`/`StandingsRow`: builds the
  *   season's Clasificación from each member's `MemberScore.points`.
- * - `displayPoints`/`displayPercent`: D10's single rounding boundary --
- *   the app must never round a `Fraction` itself.
+ * - `displayPoints`/`displayPercent`/`displayPointsDecimal`/`displayAutomaticity`: D10's single
+ *   rounding boundary -- the app must never round a `Fraction` itself.
+ * - `automaticityOf`/`comparableAutomaticity`: SRBAI scoring for the periodic review (exact mean of
+ *   the answered items; the one seam deciding whether a score improved, judged on displayed tenths).
+ * - `commitmentWeeklySeries`/`periodFigures`/`poolPeriodFigures` + `PeriodFigures`: the season week
+ *   by week per commitment and the figures of a range of weeks (review summary), from the same
+ *   walk as `weeklySeries` so a commitment's weeks add up to the member's.
+ * - `deriveHabitStage` + `HABIT_STAGE_THRESHOLDS`: the derived stage of a habit (new / developing /
+ *   integrated / graduated), pure and recomputed on every read; thresholds in one constant.
  * - `Fraction` + `frac`/`fromInt`/`parseDecimal`: needed to build every
  *   `Entry.value`, `Target` threshold and `Commitment.weightPercent`-derived
  *   value the app hands the engine; `parseDecimal` is specifically how the
@@ -102,7 +109,12 @@ export {
   isValidWeightPercent,
 } from "./commitment/commitment.ts";
 
-export { displayPercent, displayPoints, displayPointsDecimal } from "./display/display.ts";
+export {
+  displayAutomaticity,
+  displayPercent,
+  displayPoints,
+  displayPointsDecimal,
+} from "./display/display.ts";
 export type { Entry } from "./entry/entry.ts";
 export { graceDeadline } from "./entry/grace-period.ts";
 export type { Fraction } from "./fraction/fraction.ts";
@@ -124,6 +136,19 @@ export {
 } from "./pause/pause-aware-week.ts";
 export type { PauseBudget, PauseCheck } from "./pause/pause-cap.ts";
 export { canRequestPause, pauseBudget, seasonPauseCap } from "./pause/pause-cap.ts";
+// SRBAI scoring (periodic review): the exact mean and the one seam deciding "improved" (35b).
+export type { AutomaticityComparison } from "./review/automaticity.ts";
+export { automaticityOf, comparableAutomaticity } from "./review/automaticity.ts";
+// Per-commitment weekly figures and the figures of a range of weeks (review summary, 33).
+export type {
+  CommitmentWeeklySeries,
+  PeriodFigures,
+} from "./scoring/commitment-series.ts";
+export {
+  commitmentWeeklySeries,
+  periodFigures,
+  poolPeriodFigures,
+} from "./scoring/commitment-series.ts";
 // Commitment history (24) and detail (A3) reuse the scorer's source-day assignments.
 export type {
   HistoryOpportunity,
@@ -147,6 +172,14 @@ export type { Streak } from "./scoring/streak.ts";
 // The season week by week (23a chart, 25b/25c summary), from the same walk: live, exact, R1-gated.
 export type { WeekFigures } from "./scoring/weekly-series.ts";
 export { weeklySeries } from "./scoring/weekly-series.ts";
+// The derived habit stage (never stored, can regress) and its single thresholds constant.
+export type {
+  HabitStage,
+  HabitStageInput,
+  HabitStageThresholds,
+  StageCounts,
+} from "./stage/habit-stage.ts";
+export { deriveHabitStage, HABIT_STAGE_THRESHOLDS } from "./stage/habit-stage.ts";
 export type { MemberId, StandingsParticipant, StandingsRow } from "./standings/standings.ts";
 export { rankStandings } from "./standings/standings.ts";
 export type {

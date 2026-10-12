@@ -30,6 +30,7 @@ import {
 } from "../features/pact/index.ts";
 import { RedistributedBanner } from "../features/pause/index.ts";
 import { ProfileScreen, SettingsScreen } from "../features/profile/index.ts";
+import { ReviewFlowScreen, ReviewNotice } from "../features/review/index.ts";
 import { SeasonScreen, SeasonSkeleton } from "../features/season/index.ts";
 import { CommitmentScreen } from "../features/season-commitment/index.ts";
 import { MemberSeasonScreen } from "../features/season-member/index.ts";
@@ -72,6 +73,11 @@ function SeasonRoute() {
   return (
     <div className={styles.season}>
       {season && (season.phase === "active" || season.phase === "ended") && <RedistributedBanner />}
+      {season && (season.phase === "active" || season.phase === "ended") && (
+        <div className={styles.notice}>
+          <ReviewNotice />
+        </div>
+      )}
       <SeasonScreen
         onNavigateToMember={(memberId) => {
           if (season) void navigate(progressRoutes.member(season.id, memberId));
@@ -172,6 +178,7 @@ export function AppRoutes() {
           <Route path="season/:seasonId/commitments/:commitmentId/edit" element={<HabitWizard />} />
           <Route path="season/:seasonId/pact" element={<PactScreen />} />
           <Route path="profile/settings" element={<SettingsScreen />} />
+          <Route path="review/:seasonId/:periodIndex" element={<ReviewFlowScreen />} />
           <Route element={<ProgressPhaseGate />}>
             <Route path={progressRoutePatterns.week} element={<WeekSummaryScreen />} />
             <Route element={<AppShell />}>

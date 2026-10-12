@@ -55,6 +55,10 @@
   /* Pager dots (design 1a-c): 6 px, the current one a 20 px pill. */
   --pager-dot: 6px;
   --pager-dot-current: 20px;
+  /* The review's step bars (design 33 to 35): 4 high. */
+  --step-bar-height: 4px;
+  /* A big figure in a small card (design 33: the review totals). */
+  --font-stat: 800 24px / 30px var(--font-sans);
   --border-width-control: 1.5px;
   /* The empty member slot of the waiting room (design 7): a 2 px dashed ring. */
   --border-width-slot: 2px;

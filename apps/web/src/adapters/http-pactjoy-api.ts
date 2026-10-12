@@ -21,21 +21,31 @@ import type {
   RecordedEntry,
   RequestPauseCommand,
   ScoringPreview,
+  SubmitReviewCommand,
   UpdateHabitCommand,
 } from "../ports/pactjoy-api.ts";
 import type {
   CommitmentProgress,
+  CommitmentStageDto,
   HabitDto,
   MemberProgress,
   MyPauseRequests,
   PauseApprovalDto,
   PauseRequestDto,
+  ReviewDraftDto,
   SeasonDto,
   SeasonProgress,
+  SubmittedReviewDto,
   WeekSummary,
 } from "../ports/wire.ts";
 import { progressApiPaths } from "../shared/season-progress-routes.ts";
 import { isMyPauseRequests, isPauseApproval, isPauseRequest } from "./pause-guards.ts";
+import {
+  isCommitmentStage,
+  isReviewDraft,
+  isSkippedBaseline,
+  isSubmittedReview,
+} from "./review-guards.ts";
 import {
   isCommitmentProgress,
   isMemberProgress,
@@ -115,6 +125,9 @@ const isScoringPreview = (data: unknown): boolean =>
       typeof row.progressPercent === "string" &&
       /^(?:100|\d{1,2})$/.test(row.progressPercent),
   );
+
+const reviewPath = (seasonId: string, periodIndex: number): string =>
+  `${seasonPath(seasonId)}/reviews/${periodIndex}`;
 
 const pausePath = (id: string): string => `/pause-requests/${encodeURIComponent(id)}`;
 
@@ -387,6 +400,43 @@ export class HttpPactJoyApi implements PactJoyApi {
       body: commitmentId === undefined ? {} : { commitmentId },
       valid: isPauseRequest,
     })) as PauseRequestDto;
+  }
+
+  async getReview(
+    seasonId: string,
+    periodIndex: number,
+    signal?: AbortSignal,
+  ): Promise<ReviewDraftDto> {
+    return this.#read(reviewPath(seasonId, periodIndex), isReviewDraft, signal);
+  }
+
+  async submitReview(
+    seasonId: string,
+    periodIndex: number,
+    cmd: SubmitReviewCommand,
+  ): Promise<SubmittedReviewDto> {
+    return (await this.#request({
+      method: "POST",
+      path: reviewPath(seasonId, periodIndex),
+      body: cmd,
+      valid: isSubmittedReview,
+    })) as SubmittedReviewDto;
+  }
+
+  async skipBaseline(seasonId: string): Promise<void> {
+    await this.#request({
+      method: "POST",
+      path: `${reviewPath(seasonId, 0)}/skip`,
+      valid: isSkippedBaseline,
+    });
+  }
+
+  async getCommitmentStage(
+    seasonId: string,
+    commitmentId: string,
+    signal?: AbortSignal,
+  ): Promise<CommitmentStageDto> {
+    return this.#read(`${commitmentPath(seasonId, commitmentId)}/stage`, isCommitmentStage, signal);
   }
 
   async getSeasonProgress(seasonId: string, signal?: AbortSignal): Promise<SeasonProgress> {

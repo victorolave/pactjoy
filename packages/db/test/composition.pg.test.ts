@@ -44,7 +44,7 @@ describe("createPostgresUnitOfWork", () => {
   it("DC-S1: exposes transaction and read over every repository", async () => {
     expect(Object.keys(uow).sort()).toEqual(["end", "read", "transaction"]);
     const names = await uow.read(async (repos) => Object.keys(repos).sort());
-    expect(names).toEqual(["circles", "entries", "habits", "pauses", "seasons"]);
+    expect(names).toEqual(["circles", "entries", "habits", "pauses", "reviews", "seasons"]);
   });
 
   it("DC-S2: end() closes the pool, leaving no backend connection for it", async () => {

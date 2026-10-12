@@ -235,6 +235,50 @@ export type {
   WeekSummaryInput,
 } from "./progress/week-summary.query.ts";
 export { weekSummary } from "./progress/week-summary.query.ts";
+export type {
+  CommitmentStageDeps,
+  CommitmentStageError,
+  CommitmentStageInput,
+  CommitmentStageView,
+} from "./review/commitment-stage.query.ts";
+export { commitmentStage } from "./review/commitment-stage.query.ts";
+export type { ReviewImprovement } from "./review/improvements.ts";
+export type { BaselineOffer, PendingReview, ReviewOffer } from "./review/pending-review.ts";
+export type { CommitmentPeriodSummary, PeriodSummary } from "./review/period-summary.ts";
+export type { ReviewRepository } from "./review/review.repository.ts";
+export type {
+  AutomaticityResponse,
+  ReviewKind,
+  ReviewRecord,
+  ReviewReflection,
+  ReviewStatus,
+  SrbaiItems,
+  SrbaiMode,
+  SrbaiScore,
+} from "./review/review.ts";
+export type {
+  ReviewDraftCommitment,
+  ReviewDraftDeps,
+  ReviewDraftError,
+  ReviewDraftInput,
+  ReviewDraftView,
+} from "./review/review-draft.query.ts";
+export { reviewDraft } from "./review/review-draft.query.ts";
+export type { ReviewSlotStatus } from "./review/review-schedule.ts";
+export type {
+  SkipBaselineDeps,
+  SkipBaselineError,
+  SkipBaselineInput,
+} from "./review/skip-baseline.ts";
+export { skipBaseline } from "./review/skip-baseline.ts";
+export type {
+  SubmitReviewDeps,
+  SubmitReviewError,
+  SubmitReviewInput,
+  SubmitReviewResult,
+  SubmittedAnswer,
+} from "./review/submit-review.ts";
+export { submitReview } from "./review/submit-review.ts";
 export type { CommitmentScoreView, MeasureView } from "./score/commitment-projection.ts";
 export type {
   MemberScoreDeps,
@@ -299,10 +343,19 @@ export type {
   EntryId,
   HabitId,
   PauseRequestId,
+  ReviewId,
   SeasonId,
   UserId,
 } from "./shared/ids.ts";
-export { circleId, entryId, habitId, pauseRequestId, seasonId, userId } from "./shared/ids.ts";
+export {
+  circleId,
+  entryId,
+  habitId,
+  pauseRequestId,
+  reviewId,
+  seasonId,
+  userId,
+} from "./shared/ids.ts";
 export type { Result } from "./shared/result.ts";
 export { err, ok } from "./shared/result.ts";
 export type { Clock } from "./time/clock.port.ts";

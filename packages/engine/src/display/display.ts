@@ -10,6 +10,7 @@ import type { Fraction } from "../fraction/fraction.ts";
 import { fromInt, mul, roundHalfUp } from "../fraction/fraction.ts";
 
 const HUNDRED = fromInt(100);
+const TEN = fromInt(10);
 
 /**
  * Rounds an exact points `Fraction` half-up to a whole point for display.
@@ -41,4 +42,18 @@ export function displayPointsDecimal(f: Fraction): string {
   const whole = hundredths / 100n;
   const cents = (hundredths % 100n).toString().padStart(2, "0").replace(/0+$/, "");
   return cents === "" ? whole.toString() : `${whole}.${cents}`;
+}
+
+/** An automaticity score in whole tenths, half up (exact, D10). The single rounding the display and the "did it improve" judgement share (REQ-A7). */
+export function automaticityTenths(f: Fraction): bigint {
+  return roundHalfUp(mul(f, TEN));
+}
+
+/**
+ * An automaticity score (SRBAI mean, 1..7) for display: one decimal, comma as the separator,
+ * rounded half up ("4,5", "3,3", "6,0"). Same single rounding boundary as the rest (D10).
+ */
+export function displayAutomaticity(f: Fraction): string {
+  const tenths = automaticityTenths(f);
+  return `${tenths / 10n},${tenths % 10n}`;
 }

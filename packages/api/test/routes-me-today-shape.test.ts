@@ -29,6 +29,7 @@ function shape(value: unknown, path = ""): string[] {
 const keys = (value: unknown) => [...new Set(shape(value))].sort();
 
 const BASE = [
+  "baselineOffer",
   "circle",
   "circle.id",
   "circle.name",
@@ -36,12 +37,27 @@ const BASE = [
   "season.actualStart",
   "season.id",
   "season.lengthWeeks",
+  "pendingReview",
   "season.nominalStart",
   "state",
   "timeZone",
   "today",
   "viewerId",
 ];
+
+/** The baseline offer, present in the first week once the pact is closed (design 13). */
+const BASELINE = ["offeredUntil", "periodIndex", "seasonId"].map((k) => `baselineOffer.${k}`);
+/** The pending review, present once a period ended; the closing one has a `null` dueUntil. */
+const PENDING_REVIEW = [
+  "dueUntil",
+  "firstWeek",
+  "fullSrbai",
+  "kind",
+  "lastWeek",
+  "periodIndex",
+  "seasonId",
+  "summaryAvailable",
+].map((k) => `pendingReview.${k}`);
 
 const under = (prefix: string, rels: string[]) => [prefix, ...rels.map((r) => `${prefix}.${r}`)];
 const MEASURE = [
@@ -176,6 +192,7 @@ describe("GET /me/today emits exactly the documented keys (ADR-0011)", () => {
     expect(keys(res.json.data)).toEqual(
       [
         ...BASE,
+        ...BASELINE,
         "myCommitments",
         ...["id", "habitName", "icon", "weightPercent", "maxPoints"].map(
           (key) => `myCommitments[].${key}`,
@@ -189,7 +206,9 @@ describe("GET /me/today emits exactly the documented keys (ADR-0011)", () => {
     const res = await call("GET", "/me/today", "andrea");
     expect(res.json.data.rows.map((r: { kind: string }) => r.kind)).toEqual(["day", "week"]);
     const entries = ENTRY.map((k) => `rows[].entries[].${k}`);
-    expect(keys(res.json.data)).toEqual([...BASE, ...SCORED, "rows[].entries", ...entries].sort());
+    expect(keys(res.json.data)).toEqual(
+      [...BASE, ...BASELINE, ...SCORED, "rows[].entries", ...entries].sort(),
+    );
   });
 
   it("active with a pending yesterday item (design 15d)", async () => {
@@ -227,6 +246,8 @@ describe("GET /me/today emits exactly the documented keys (ADR-0011)", () => {
     setNow(instant(Date.UTC(2023, 11, 12, 17)));
     const res = await call("GET", "/me/today", "andrea");
     expect(res.json.data.state).toBe("ended");
-    expect(keys(res.json.data)).toEqual([...BASE, ...SCORED, "rows[].entries"].sort());
+    expect(keys(res.json.data)).toEqual(
+      [...BASE, ...PENDING_REVIEW, ...SCORED, "rows[].entries"].sort(),
+    );
   });
 });

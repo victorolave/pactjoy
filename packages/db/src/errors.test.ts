@@ -13,6 +13,8 @@ const CONFLICT_CONSTRAINTS = [
   "entries_pkey",
   "entries_client_request_key",
   "pause_requests_pkey",
+  "reviews_pkey",
+  "reviews_season_member_period_key",
   "circle_members_active_user_key",
 ];
 

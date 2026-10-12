@@ -1,0 +1,18 @@
+.bars {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: var(--space-1);
+  flex: 1;
+  padding-right: var(--space-4);
+}
+
+.bar {
+  height: var(--step-bar-height);
+  border-radius: calc(var(--step-bar-height) / 2);
+  background: var(--ink-200);
+}
+
+.filled {
+  background: var(--pj-ink);
+}

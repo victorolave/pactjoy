@@ -24,6 +24,10 @@ import {
   type InMemoryPauseRequestRepository,
 } from "./in-memory-pause-request-repository.ts";
 import {
+  createInMemoryReviewRepository,
+  type InMemoryReviewRepository,
+} from "./in-memory-review-repository.ts";
+import {
   createInMemorySeasonRepository,
   type InMemorySeasonRepository,
 } from "./in-memory-season-repository.ts";
@@ -49,6 +53,7 @@ export interface TestApp {
   readonly entries: InMemoryEntryRepository;
   readonly habits: InMemoryHabitRepository;
   readonly pauses: InMemoryPauseRequestRepository;
+  readonly reviews: InMemoryReviewRepository;
   readonly seasons: InMemorySeasonRepository;
 }
 
@@ -69,8 +74,9 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
   const entries = createInMemoryEntryRepository();
   const habits = createInMemoryHabitRepository();
   const pauses = createInMemoryPauseRequestRepository();
+  const reviews = createInMemoryReviewRepository();
   const seasons = createInMemorySeasonRepository();
-  const repositories: Repositories = { circles, entries, habits, pauses, seasons };
+  const repositories: Repositories = { circles, entries, habits, pauses, reviews, seasons };
 
   return {
     clock: createFixedClock(options.now ?? DEFAULT_NOW),
@@ -81,6 +87,7 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
     entries,
     habits,
     pauses,
+    reviews,
     seasons,
     uow: createInMemoryUnitOfWork({
       repositories,
@@ -95,6 +102,7 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
         const entryScope = entries.beginTransaction();
         const habitScope = habits.beginTransaction();
         const pauseScope = pauses.beginTransaction();
+        const reviewScope = reviews.beginTransaction();
         const seasonScope = seasons.beginTransaction();
         return {
           repositories: {
@@ -102,6 +110,7 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
             entries: entryScope.repository,
             habits: habitScope.repository,
             pauses: pauseScope.repository,
+            reviews: reviewScope.repository,
             seasons: seasonScope.repository,
           },
           commit(): void {
@@ -109,11 +118,13 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
             entryScope.validate();
             habitScope.validate();
             pauseScope.validate();
+            reviewScope.validate();
             seasonScope.validate();
             circleScope.apply();
             entryScope.apply();
             habitScope.apply();
             pauseScope.apply();
+            reviewScope.apply();
             seasonScope.apply();
           },
         };

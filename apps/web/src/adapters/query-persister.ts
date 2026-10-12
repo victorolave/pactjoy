@@ -10,8 +10,12 @@ export const STORAGE_KEY = "pactjoy.today-cache";
 /** Offline reads show the last Today for at most a day. */
 export const MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const THROTTLE_MS = 1000;
-/** Bump for shape OR scoring semantics: v5 purged ended-clamped scores and old weekly series; v6 adds the rows' nested `pause` and pause-aware scoring. */
-export const CACHE_VERSION = "6";
+/**
+ * Bump for shape OR scoring semantics: v5 purged ended-clamped scores and old weekly series; v6 adds
+ * the rows' nested `pause` and pause-aware scoring; v7 adds `pendingReview` and `baselineOffer` to
+ * every season state (periodic-review, ADR-0014).
+ */
+export const CACHE_VERSION = "7";
 
 /** The saved Today belongs to one user of one cache version: anything else is not restored. */
 export const bustFor = (userId: string | null): string => `${CACHE_VERSION}:${userId ?? "anon"}`;
@@ -36,7 +40,8 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 /**
  * A minimal shape check on top of the version buster: a running Today must carry what the screens
- * read without a guard (`points` and `pause` on every row, `pointsToday` in the summary, `pendingYesterday`). The buster already drops
+ * read without a guard (`points` and `pause` on every row, `pointsToday` in the summary, `pendingYesterday`, and
+ * `pendingReview` and `baselineOffer` in every season state). The buster already drops
  * old copies; this keeps a copy that slipped past it from crashing the app. Pre-season states
  * also require the owned commitment list introduced by Lote 3.
  */
@@ -48,9 +53,11 @@ export function isCurrentToday(today: unknown): boolean {
     )
   )
     return false;
+  if (today.state === "noCircle" || today.state === "noSeason") return true;
+  // Every season state carries the review offers: a copy from before them would never show the card.
+  if (!("pendingReview" in today) || !("baselineOffer" in today)) return false;
   if (today.state === "pactOpen" || today.state === "notStarted")
     return Array.isArray(today.myCommitments);
-  if (today.state !== "active" && today.state !== "ended") return true;
   const { rows, summary } = today;
   if (!Array.isArray(rows) || !isRecord(summary) || typeof summary.pointsToday !== "number") {
     return false;

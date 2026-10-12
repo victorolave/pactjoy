@@ -3,6 +3,7 @@ import type {
   ApprovePactError,
   CancelPauseRequestError,
   CommitmentProgressError,
+  CommitmentStageError,
   CreateCircleError,
   CreateHabitError,
   CreateSeasonError,
@@ -24,9 +25,12 @@ import type {
   RequestPauseError,
   RespondToPauseError,
   ResumePauseError,
+  ReviewDraftError,
   SeasonProgressError,
   SeasonViewError,
+  SkipBaselineError,
   StandingsError,
+  SubmitReviewError,
   UpdateHabitError,
   WeekSummaryError,
   WithdrawApprovalError,
@@ -68,6 +72,10 @@ export type AppError =
   | RequestPauseError
   | RespondToPauseError
   | CancelPauseRequestError
-  | ResumePauseError;
+  | ResumePauseError
+  | SubmitReviewError
+  | SkipBaselineError
+  | ReviewDraftError
+  | CommitmentStageError;
 
 export type AppErrorKind = AppError["kind"];

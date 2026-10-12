@@ -19,14 +19,18 @@ import type {
   RecordEntryCommand,
   RecordedEntry,
   RequestPauseCommand,
+  SubmitReviewCommand,
   UpdateHabitCommand,
 } from "../ports/pactjoy-api.ts";
 import type { SeasonProgressApi } from "../ports/season-progress-api.ts";
 import type {
+  CommitmentStageDto,
   MyPauseRequests,
   PauseApprovalDto,
   PauseRequestDto,
+  ReviewDraftDto,
   SeasonDto,
+  SubmittedReviewDto,
 } from "../ports/wire.ts";
 import { FakeSeasonProgressApi } from "./fake-season-progress.ts";
 import { NO_CIRCLE } from "./fixtures/circle.ts";
@@ -54,6 +58,10 @@ type ExistingMethod =
   | "respondToPause"
   | "cancelPauseRequest"
   | "resumePause"
+  | "getReview"
+  | "submitReview"
+  | "skipBaseline"
+  | "getCommitmentStage"
   | ProgressMethod;
 type ProgressMethod = keyof SeasonProgressApi;
 
@@ -108,6 +116,10 @@ export class FakePactJoyApi implements PactJoyApi {
     respondToPause: 0,
     cancelPauseRequest: 0,
     resumePause: 0,
+    getReview: 0,
+    submitReview: 0,
+    skipBaseline: 0,
+    getCommitmentStage: 0,
     getSeasonProgress: 0,
     getMemberProgress: 0,
     getCommitmentProgress: 0,
@@ -119,6 +131,8 @@ export class FakePactJoyApi implements PactJoyApi {
   readonly circleCommands: { readonly method: Method; readonly args: readonly unknown[] }[] = [];
   /** What the pause mutations were asked to do, in order, including the ones scripted to fail. */
   readonly pauseCommands: { readonly method: Method; readonly args: readonly unknown[] }[] = [];
+  /** What the review mutations were asked to do, in order, including the ones scripted to fail. */
+  readonly reviewCommands: { readonly method: Method; readonly args: readonly unknown[] }[] = [];
   /** Every recordEntry call, including the ones that were scripted to fail. */
   readonly recordAttempts: RecordEntryCommand[] = [];
   /** Every deleteEntry call, including the ones that were scripted to fail. */
@@ -137,6 +151,13 @@ export class FakePactJoyApi implements PactJoyApi {
   #today: TodayView;
   #myCircle: MyCircle = NO_CIRCLE;
   #myPauseRequests: MyPauseRequests = noPauseRequestsFixture();
+  readonly #reviews = new Map<string, ReviewDraftDto>();
+  readonly #stages = new Map<string, CommitmentStageDto>();
+  #submitResult: SubmittedReviewDto = {
+    status: "completed",
+    improvements: [],
+    nextReviewDate: null,
+  };
   #preview: InvitePreviewView = PREVIEW;
   #invite: CircleInvite = INVITE;
   readonly #failures = new Map<Method, ApiError[]>();
@@ -158,6 +179,19 @@ export class FakePactJoyApi implements PactJoyApi {
 
   setMyPauseRequests(view: MyPauseRequests): void {
     this.#myPauseRequests = view;
+  }
+
+  /** The draft `getReview` answers for one period (0 is the baseline). */
+  setReview(seasonId: string, periodIndex: number, draft: ReviewDraftDto): void {
+    this.#reviews.set(`${seasonId}:${periodIndex}`, draft);
+  }
+
+  setSubmitResult(result: SubmittedReviewDto): void {
+    this.#submitResult = result;
+  }
+
+  setStage(stage: CommitmentStageDto): void {
+    this.#stages.set(stage.commitmentId, stage);
   }
 
   setPreview(preview: InvitePreviewView): void {
@@ -383,6 +417,31 @@ export class FakePactJoyApi implements PactJoyApi {
     return pauseRequestFixture({ id: pauseRequestId, status: "approved" });
   }
 
+  async getReview(seasonId: string, periodIndex: number, _signal?: AbortSignal) {
+    this.#enter("getReview");
+    const draft = this.#reviews.get(`${seasonId}:${periodIndex}`);
+    if (draft === undefined) throw new ApiError("ReviewPeriodNotFound", 404, null);
+    return draft;
+  }
+
+  async submitReview(seasonId: string, periodIndex: number, cmd: SubmitReviewCommand) {
+    await this.#reviewCall("submitReview", [seasonId, periodIndex, cmd]);
+    this.#markReview(seasonId, periodIndex, "completed");
+    this.#clearReviewOffer();
+    return this.#submitResult;
+  }
+
+  async skipBaseline(seasonId: string): Promise<void> {
+    await this.#reviewCall("skipBaseline", [seasonId]);
+    this.#markReview(seasonId, 0, "skipped");
+    this.#clearReviewOffer();
+  }
+
+  async getCommitmentStage(_seasonId: string, commitmentId: string, _signal?: AbortSignal) {
+    this.#enter("getCommitmentStage");
+    return this.#stages.get(commitmentId) ?? { commitmentId, stage: "new" as const };
+  }
+
   async getSeasonProgress(seasonId: string, signal?: AbortSignal) {
     this.#enter("getSeasonProgress");
     return this.progress.getSeasonProgress(seasonId, signal);
@@ -417,6 +476,28 @@ export class FakePactJoyApi implements PactJoyApi {
     this.pauseCommands.push({ method, args });
     this.#enter(method);
     await gate;
+  }
+
+  /** Records the call, waits on a held gate, then throws a scripted failure. */
+  async #reviewCall(method: Method, args: readonly unknown[]): Promise<void> {
+    const gate = this.#takeGate(method);
+    this.reviewCommands.push({ method, args });
+    this.#enter(method);
+    await gate;
+  }
+
+  /** Like the server: reading a saved review afterwards says it is saved, not due. */
+  #markReview(seasonId: string, periodIndex: number, status: "completed" | "skipped"): void {
+    const key = `${seasonId}:${periodIndex}`;
+    const draft = this.#reviews.get(key);
+    if (draft !== undefined) this.#reviews.set(key, { ...draft, status });
+  }
+
+  /** Like the server: a saved or skipped review is no longer pending, so the next Today has none. */
+  #clearReviewOffer(): void {
+    if ("pendingReview" in this.#today) {
+      this.#today = { ...this.#today, pendingReview: null, baselineOffer: null };
+    }
   }
 
   #takeGate(method: Method): Promise<void> | undefined {

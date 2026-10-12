@@ -4,6 +4,7 @@ import type { BindMode, SqlExecutor } from "./client.ts";
 import { createPgEntryRepository } from "./entry/pg-entry-repository.ts";
 import { createPgHabitRepository } from "./habit/pg-habit-repository.ts";
 import { createPgPauseRequestRepository } from "./pause/pg-pause-request-repository.ts";
+import { createPgReviewRepository } from "./review/pg-review-repository.ts";
 import { createPgSeasonRepository } from "./season/pg-season-repository.ts";
 
 /** Every repository the application's `UnitOfWork` hands to a use case. */
@@ -20,5 +21,6 @@ export function bindRepositories(exec: SqlExecutor, mode: BindMode): PgRepositor
     seasons: createPgSeasonRepository(exec, mode),
     entries: createPgEntryRepository(exec),
     pauses: createPgPauseRequestRepository(exec),
+    reviews: createPgReviewRepository(exec),
   };
 }

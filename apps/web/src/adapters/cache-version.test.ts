@@ -51,7 +51,9 @@ const paths = [...new Set(complete.flatMap((view) => shape(view)))].sort();
  * If you changed the Today fixtures' shape on purpose: bump CACHE_VERSION, then update both here.
  */
 // v6: the rows gained the nested `pause` object (pause-workflow).
-const PINNED = { hash: "40863930", version: "6" };
+// v7: every season state gained `pendingReview` and `baselineOffer` (periodic-review); the matching
+// `isCurrentToday` check drops a saved copy that lacks them.
+const PINNED = { hash: "72ce4482", version: "7" };
 
 describe("saved Today cache version", () => {
   it("changes whenever the shape of Today changes", () => {

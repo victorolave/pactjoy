@@ -11,6 +11,7 @@ import { Icon } from "../../ui/icon/Icon.tsx";
 import { ProgressBar } from "../../ui/ProgressBar.tsx";
 import { Skeleton } from "../../ui/Skeleton.tsx";
 import { CommitmentPauseSection } from "../pause/index.ts";
+import { HabitStageBadge } from "../review/index.ts";
 import { useCommitmentProgress } from "../season-progress-data/index.ts";
 import styles from "./CommitmentScreen.module.css";
 import {
@@ -145,10 +146,13 @@ function Commitment({
   readonly commitmentId: string;
 }) {
   const row = view.commitment;
+  // The stage is the owner's alone: a peer's is never requested (REQ-H10).
+  const isOwner = view.memberId === view.viewerId;
   return (
     <>
       <div className={styles.header}>
         <div className={styles.badges}>
+          {isOwner && <HabitStageBadge seasonId={view.season.id} commitmentId={commitmentId} />}
           {row.privacy === "visible" ? (
             <Badge icon="eye">Visible para el círculo</Badge>
           ) : (
@@ -173,7 +177,7 @@ function Commitment({
 
 /**
  * `/season/:seasonId/commitments/:commitmentId` (design 24a, 24b): one commitment's season,
- * read-only apart from the pause entry point (Lote 4). Stage and reminder actions are not part of Lote 2. Back honours where it was
+ * read-only apart from the pause entry point (Lote 4). The owner's stage badge comes from the review feature (ADR-0014); reminder actions are not part of Lote 2. Back honours where it was
  * opened from (Today passes `{ from: "today" }`), Temporada otherwise.
  */
 export function CommitmentScreen() {

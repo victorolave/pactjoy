@@ -283,3 +283,19 @@ describe("CommitmentScreen pause entry point (design 24a, 24b)", () => {
     ).not.toBeInTheDocument();
   });
 });
+
+describe("CommitmentScreen stage badge (periodic review)", () => {
+  it("shows the owner's derived stage next to the privacy badge", async () => {
+    const app = showing(commitmentProgress());
+    await screen.findByRole("heading", { level: 1, name: "Leer" });
+    expect(await screen.findByText("🌱 Nuevo")).toBeTruthy();
+    expect(app.deps.api.calls.getCommitmentStage).toBe(1);
+  });
+
+  it("never asks for the stage of someone else's commitment, so no badge appears", async () => {
+    const app = showing({ ...commitmentProgress(), memberId: "member-andrea" });
+    await screen.findByRole("heading", { level: 1, name: "Leer" });
+    expect(screen.queryByText(/Nuevo|En desarrollo|Integrado|Graduado/)).toBeNull();
+    expect(app.deps.api.calls.getCommitmentStage).toBe(0);
+  });
+});

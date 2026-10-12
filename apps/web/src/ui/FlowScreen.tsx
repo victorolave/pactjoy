@@ -17,6 +17,8 @@ export interface FlowScreenProps {
   /** The back button's accessible name; "Volver" by default. */
   readonly backLabel?: string;
   readonly backIcon?: IconName;
+  /** Sits in the back row, after the button (the review's step bars, design 33 to 35). */
+  readonly progress?: ReactNode;
   /** Opt-in programmatic heading focus for multi-step flows. */
   readonly headingRef?: Ref<HTMLHeadingElement>;
 }
@@ -34,6 +36,7 @@ export function FlowScreen({
   onBack,
   backLabel = "Volver",
   backIcon = "chevron-left",
+  progress,
   headingRef,
 }: FlowScreenProps) {
   const body = (
@@ -41,6 +44,7 @@ export function FlowScreen({
       {onBack !== undefined && (
         <div className={styles.back}>
           <IconButton icon={backIcon} label={backLabel} onClick={onBack} />
+          {progress}
         </div>
       )}
       <div className={styles.content}>

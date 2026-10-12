@@ -4,9 +4,12 @@ import {
   habitsKey,
   memberProgressKey,
   progressKey,
+  reviewKey,
+  reviewsKey,
   scoringPreviewKey,
   seasonKey,
   seasonProgressKey,
+  stageKey,
   weekSummaryKey,
 } from "./query-keys.ts";
 
@@ -30,4 +33,17 @@ it("nests every progress read under one root, keyed by its season, member, commi
   expect(memberProgressKey("s1", "m2")).not.toEqual(memberProgressKey("s1", "m1"));
   expect(weekSummaryKey("s1", 1)).not.toEqual(weekSummaryKey("s1", 0));
   expect(seasonProgressKey("s2")).not.toEqual(seasonProgressKey("s1"));
+});
+
+it("nests every review read under one root so a saved review refreshes them all", () => {
+  expect(reviewsKey).toEqual(["review"]);
+  expect(reviewKey("s1", 2).slice(0, 1)).toEqual(reviewsKey);
+  expect(reviewKey("s1", 0)).not.toEqual(reviewKey("s1", 1));
+  expect(reviewKey("s2", 1)).not.toEqual(reviewKey("s1", 1));
+});
+
+it("keys a commitment's stage under the progress root, so progress invalidation refreshes the badge", () => {
+  expect(stageKey("s1", "c1").slice(0, 1)).toEqual(progressKey);
+  expect(stageKey("s1", "c2")).not.toEqual(stageKey("s1", "c1"));
+  expect(stageKey("s1", "c1")).not.toEqual(commitmentProgressKey("s1", "c1"));
 });

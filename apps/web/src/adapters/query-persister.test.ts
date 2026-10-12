@@ -82,6 +82,39 @@ describe("a saved Today from before the shape changed is dropped, not rendered",
     expect(reloaded.getQueryData(todayKey)).toBeUndefined();
   });
 
+  it.each([
+    ["active", () => activeTodayFixture()],
+    ["pactOpen", () => ({ ...pactOpenTodayFixture(), myCommitments: [] })],
+    [
+      "notStarted",
+      () => ({ ...pactOpenTodayFixture(), state: "notStarted" as const, myCommitments: [] }),
+    ],
+  ])(
+    "drops a %s Today saved before the periodic review (version 6: no pendingReview or baselineOffer)",
+    async (_state, make) => {
+      for (const missing of ["pendingReview", "baselineOffer"] as const) {
+        const { [missing]: _removed, ...old } = make() as Record<string, unknown>;
+        const { reloaded } = await restoreFrom(old);
+        expect(reloaded.getQueryData(todayKey), `without ${missing}`).toBeUndefined();
+      }
+    },
+  );
+
+  it("purges version 6 even with an otherwise valid shape: the review fields arrived with version 7", async () => {
+    const storage = new MemoryStorage();
+    seedPersistedToday(storage, activeTodayFixture());
+    const saved = JSON.parse(storage.getItem(STORAGE_KEY) ?? "null");
+    saved.buster = "6:user-1";
+    storage.setItem(STORAGE_KEY, JSON.stringify(saved));
+    const reloaded = new QueryClient();
+    await persistQueryClientRestore({
+      queryClient: reloaded,
+      ...persistOptionsFor(createTodayPersister(storage), bustFor("user-1")),
+    });
+    expect(reloaded.getQueryData(todayKey)).toBeUndefined();
+    expect(Number(CACHE_VERSION)).toBeGreaterThan(6);
+  });
+
   it("keeps a current Today", async () => {
     const current = activeTodayFixture();
     const { reloaded } = await restoreFrom(current);

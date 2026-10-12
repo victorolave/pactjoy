@@ -14,6 +14,7 @@ import { Card } from "../../../ui/Card.tsx";
 import { FlowScreen } from "../../../ui/FlowScreen.tsx";
 import { InlineMessage } from "../../../ui/InlineMessage.tsx";
 import { Skeleton } from "../../../ui/Skeleton.tsx";
+import { BaselineOffer } from "../../review/index.ts";
 import { commitmentCount, pactFlow, viewerMemberId } from "../pact-flow.ts";
 import { useApprovePact, useCurrentCircle, useSeason, useWithdrawApproval } from "../queries.ts";
 import styles from "./PactScreen.module.css";
@@ -148,6 +149,7 @@ export function PactScreen() {
             <AvatarStack names={circle.members.map((m) => m.displayName)} size="sm" />
             <span>{`${commitmentCount(season.commitments.length)} · ${season.lengthWeeks} semanas`}</span>
           </div>
+          <BaselineOffer />
         </div>
         <div className={styles.celebrationFooter}>
           <Button variant="inverse" block onClick={handleContinue}>

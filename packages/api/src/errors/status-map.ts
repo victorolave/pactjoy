@@ -6,7 +6,8 @@ import type { AppError, AppErrorKind } from "./app-error.ts";
  * kind AND an extra stale key a compile error.
  */
 export const APP_ERROR_STATUS = {
-  // 422 (41)
+  // 422 (43)
+  AutomaticityIncomplete: 422,
   CategoryTooLong: 422,
   CustomLabelBlank: 422,
   CustomLabelHasInvisibleCharacters: 422,
@@ -17,6 +18,7 @@ export const APP_ERROR_STATUS = {
   IdempotencyKeyReused: 422,
   IntegerRequired: 422,
   InvalidCategory: 422,
+  InvalidAutomaticity: 422,
   InvalidClientRequestId: 422,
   InvalidDisplayName: 422,
   InvalidIcon: 422,
@@ -55,7 +57,7 @@ export const APP_ERROR_STATUS = {
   NotAMember: 403,
   NotOwner: 403,
   NotPauseRequester: 403,
-  // 404 (8)
+  // 404 (9)
   CircleNotFound: 404,
   CommitmentNotFound: 404,
   EntryNotFound: 404,
@@ -63,8 +65,9 @@ export const APP_ERROR_STATUS = {
   InviteNotFound: 404,
   MemberNotFound: 404,
   PauseRequestNotFound: 404,
+  ReviewPeriodNotFound: 404,
   SeasonNotFound: 404,
-  // 409 (22)
+  // 409 (25)
   AlreadyInActiveCircle: 409,
   BeforeSeasonStart: 409,
   CircleArchived: 409,
@@ -82,6 +85,9 @@ export const APP_ERROR_STATUS = {
   PauseNotActive: 409,
   PauseNotPending: 409,
   PauseOverlaps: 409,
+  ReviewAlreadySubmitted: 409,
+  ReviewNotDue: 409,
+  ReviewNotSkippable: 409,
   SeasonInProgress: 409,
   SeasonNotActive: 409,
   SeasonNotJoinable: 409,

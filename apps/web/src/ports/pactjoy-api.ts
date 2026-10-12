@@ -13,12 +13,15 @@ import type {
 } from "@pactjoy/app";
 import type { SeasonProgressApi } from "./season-progress-api.ts";
 import type {
+  CommitmentStageDto,
   HabitDto,
   MyPauseRequests,
   PauseApprovalDto,
   PauseRequestDto,
+  ReviewDraftDto,
   SeasonDto,
   Serialized,
+  SubmittedReviewDto,
 } from "./wire.ts";
 
 export type CreateHabitCommand = Serialized<CreateHabitInput>;
@@ -99,6 +102,21 @@ export interface RequestPauseCommand {
 
 export type PauseDecision = "approve" | "reject";
 
+/**
+ * One commitment's SRBAI answers: always four slots. A full review fills all of them; item 1 only
+ * fills the first and leaves the rest `null` (the server rejects anything else, ADR-0014).
+ */
+export interface ReviewAnswer {
+  readonly commitmentId: string;
+  readonly items: readonly [number | null, number | null, number | null, number | null];
+}
+
+export interface SubmitReviewCommand {
+  /** Both fields are always sent; `null` is "nothing written". */
+  readonly reflection: { readonly helped: string | null; readonly hard: string | null };
+  readonly automaticity: readonly ReviewAnswer[];
+}
+
 /** Everything the screens know about the backend. Adapters throw `ApiError`. */
 export interface PactJoyApi extends SeasonProgressApi {
   listHabits(signal?: AbortSignal): Promise<readonly HabitDto[]>;
@@ -139,4 +157,23 @@ export interface PactJoyApi extends SeasonProgressApi {
   cancelPauseRequest(pauseRequestId: string): Promise<PauseRequestDto>;
   /** One Commitment, or every one still running when omitted ("Todos", PL-33). */
   resumePause(pauseRequestId: string, commitmentId?: string): Promise<PauseRequestDto>;
+  /**
+   * The owner's view of one review period (33, 34, 35a, 35c, 13). `periodIndex` is 0 for the
+   * baseline and 1-based after. Any slot status reads; the web decides what to show.
+   */
+  getReview(seasonId: string, periodIndex: number, signal?: AbortSignal): Promise<ReviewDraftDto>;
+  /** Saves the review once; a second submission is `ReviewAlreadySubmitted` (409). */
+  submitReview(
+    seasonId: string,
+    periodIndex: number,
+    cmd: SubmitReviewCommand,
+  ): Promise<SubmittedReviewDto>;
+  /** "Ahora no" on the baseline offer: stored, so the offer stops (only period 0 can be skipped). */
+  skipBaseline(seasonId: string): Promise<void>;
+  /** The derived stage of one of MY commitments; owner-only (a peer's is a 404). */
+  getCommitmentStage(
+    seasonId: string,
+    commitmentId: string,
+    signal?: AbortSignal,
+  ): Promise<CommitmentStageDto>;
 }

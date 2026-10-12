@@ -91,4 +91,14 @@ describe("FlowScreen", () => {
     expect(screen.getByRole("heading", { name: "Ajustes" })).toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
+
+  it("shows a progress element next to the back button when given one", () => {
+    render(
+      <FlowScreen title="Hola" onBack={() => {}} progress={<span>Barras</span>}>
+        <p>Contenido</p>
+      </FlowScreen>,
+    );
+    expect(screen.getByRole("button", { name: "Volver" })).toBeInTheDocument();
+    expect(screen.getByText("Barras")).toBeInTheDocument();
+  });
 });
