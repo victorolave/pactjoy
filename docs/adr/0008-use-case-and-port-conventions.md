@@ -199,3 +199,8 @@ that ADR-0009 will build on.
   decoupling"; hexagonal architecture section
 - `packages/app/biome.json` -- the enforced lint rules this ADR documents
   the reasoning for
+
+## Addendum: the season closure port (change `season-close-graduation`, ADR-0015)
+
+- `Repositories` gains `seasonClosures: SeasonClosureRepository { getMine, closedMemberIds, save }`, an owner-only port in the style of `ReviewRepository` (ADR-0014). Its one season-wide read, `closedMemberIds`, returns member ids only. `closure-guard.test.ts` confines it to `src/season/closure/` and pins the method list.
+- `SeasonRepository` gains `listByCircle(circleId)`: every season of the circle, of any status, newest first (the same insertion order as `findLatestByCircle`, so an update never moves a season).

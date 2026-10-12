@@ -127,3 +127,10 @@ Both URL types ran the same scratch Edge Function, with `prepare: false` and the
 
 - [ADR-0008](0008-use-case-and-port-conventions.md), [ADR-0009](0009-time-model-in-packages-app.md)
 - `supabase/migrations/`, `packages/db/test/`
+
+## Addendum: season closures and graduation (change `season-close-graduation`, ADR-0015)
+
+- Two tables, `pactjoy.season_closures` (unique `season_closures_season_member_key` on `(season_id, member_id)`) and `pactjoy.season_closure_decisions` (children, `ON DELETE CASCADE`, `commitment_id` without a foreign key because commitments live inside the season), and one column, `habits.graduated_at timestamptz` (nullable, no backfill). RLS is on with no policies and the client roles are revoked; there are no triggers and no functions.
+- `season_closures_pkey` and `season_closures_season_member_key` are in `CONFLICT_CONSTRAINTS`, so a duplicate insert maps to `ConcurrencyConflict`.
+- `SeasonRepository.listByCircle` orders by `insert_seq desc`.
+- Real-Postgres tests cover the contract, every CHECK, RLS and revoke, a concurrent double submit and the two last closers racing (`season-close-concurrency.pg.test.ts`).

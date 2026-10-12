@@ -95,3 +95,11 @@ Four forces shape the design:
 - [ADR-0004](0004-scoring-engine-resolved-calendar-days.md), [ADR-0008](0008-use-case-and-port-conventions.md), [ADR-0010](0010-postgres-adapter.md), [ADR-0011](0011-api-layer.md) (Q21), [ADR-0013](0013-pause-lifecycle-and-lazy-settlement.md)
 - Mechanics, "Revisión periódica" and "Automaticidad (SRBAI)" (Notion, private)
 - Change `periodic-review` (specification, design and tasks)
+
+## Addendum: closing review surfaced, graduation wired (change `season-close-graduation`, ADR-0015)
+
+- The closing review is now surfaced in the web ("Revisión de cierre") and its completion leads to the season closure (`/season/:id/close`). It is a precondition of submitting a closure (`ClosingReviewRequired`) and stays due from the day after the last season day; it still never lapses.
+- Its window now ends at finalization: once the season is `closed`, a submit is `SeasonNotActive` (nothing is stored for a member who was cut off before answering).
+- `graduated` is wired: `commitmentStages` passes `graduated = habit.graduatedAt !== null`, so the limitation "`graduated` is never returned" no longer holds. The stage is still derived and never stored; `graduatedAt` is the only stored input.
+- `automaticityJourney` (start: the baseline, else the earliest earlier completed review; end: the closing review) lives in the review module and is compared like for like, as `improvementsOf`.
+- Still open: the stage thresholds are uncalibrated, and concatenating weeks across seasons stays deferred.

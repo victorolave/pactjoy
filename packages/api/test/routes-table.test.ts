@@ -38,6 +38,10 @@ const { spies, USE_CASE_NAMES } = vi.hoisted(() => ({
     "submitReview",
     "skipBaseline",
     "commitmentStage",
+    "submitSeasonClosure",
+    "seasonResults",
+    "carryOver",
+    "seasonHistory",
   ] as string[],
 }));
 
@@ -123,11 +127,20 @@ const TABLE: Row[] = [
   ],
   ["skipBaseline", "POST", `/seasons/${ID}/reviews/0/skip`],
   ["commitmentStage", "GET", `/seasons/${ID}/commitments/${ID2}/stage`],
+  ["seasonResults", "GET", `/seasons/${ID}/results`],
+  [
+    "submitSeasonClosure",
+    "POST",
+    `/seasons/${ID}/closure`,
+    { decisions: [{ commitmentId: ID2, decision: "continue" }] },
+  ],
+  ["carryOver", "GET", `/seasons/${ID}/carry-over`],
+  ["seasonHistory", "GET", "/me/seasons"],
 ];
 
 describe("route table completeness (RT-S4)", () => {
-  it("has 33 routes over exactly the 32 use cases, the score one routed twice", () => {
-    expect(TABLE).toHaveLength(33);
+  it("has 37 routes over exactly the 36 use cases, the score one routed twice", () => {
+    expect(TABLE).toHaveLength(37);
     expect(new Set(TABLE.map(([name]) => name))).toEqual(new Set(USE_CASE_NAMES));
     expect(TABLE.filter(([name]) => name === "memberScore")).toHaveLength(2);
   });
@@ -187,6 +200,15 @@ describe("route to use case wiring (AC-S8)", () => {
       if (name === "reviewDraft") expect(args[2]).toEqual({ seasonId: ID, periodIndex: 1 });
       if (name === "skipBaseline") expect(args[2]).toEqual({ seasonId: ID, periodIndex: 0 });
       if (name === "commitmentStage") expect(args[2]).toEqual({ seasonId: ID, commitmentId: ID2 });
+      if (name === "seasonResults") expect(args[2]).toEqual({ seasonId: ID });
+      if (name === "carryOver") expect(args[2]).toEqual({ seasonId: ID });
+      if (name === "seasonHistory") expect(args).toHaveLength(2);
+      if (name === "submitSeasonClosure") {
+        expect(args[2]).toEqual({
+          seasonId: ID,
+          decisions: [{ commitmentId: ID2, decision: "continue" }],
+        });
+      }
     },
   );
 
