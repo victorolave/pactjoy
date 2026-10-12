@@ -67,6 +67,7 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "reviewCadenceForLength",
   "reviewDraft",
   "reviewId",
+  "seasonClosureId",
   "seasonId",
   "seasonProgress",
   "seasonView",

@@ -302,6 +302,12 @@ export type {
   PreviewProgressView,
 } from "./scoring/preview-progress.query.ts";
 export { previewProgress } from "./scoring/preview-progress.query.ts";
+export type { SeasonClosureRepository } from "./season/closure/season-closure.repository.ts";
+export type {
+  ClosureDecision,
+  CommitmentClosureDecision,
+  SeasonClosure,
+} from "./season/closure/season-closure.ts";
 export type {
   CreateSeasonDeps,
   CreateSeasonError,
@@ -344,6 +350,7 @@ export type {
   HabitId,
   PauseRequestId,
   ReviewId,
+  SeasonClosureId,
   SeasonId,
   UserId,
 } from "./shared/ids.ts";
@@ -353,6 +360,7 @@ export {
   habitId,
   pauseRequestId,
   reviewId,
+  seasonClosureId,
   seasonId,
   userId,
 } from "./shared/ids.ts";

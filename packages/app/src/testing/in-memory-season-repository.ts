@@ -32,6 +32,11 @@ export interface InMemorySeasonRepository extends SeasonRepository {
   beginTransaction(): SeasonTransactionScope;
 }
 
+/** Every season of the circle, newest created first (Map iteration is insertion order). */
+function listByCircle(store: ReadonlyMap<SeasonId, Season>, circleId: CircleId): Season[] {
+  return [...store.values()].filter((s) => s.circleId === circleId).reverse();
+}
+
 /**
  * The "latest" season for a circle is the most recently CREATED one, not
  * the most recently touched one -- `Map` preserves insertion order for new
@@ -65,6 +70,10 @@ export function createInMemorySeasonRepository(): InMemorySeasonRepository {
 
     async findLatestByCircle(circleId: CircleId): Promise<Season | null> {
       return findLatestByCircle(store, circleId);
+    },
+
+    async listByCircle(circleId: CircleId): Promise<readonly Season[]> {
+      return listByCircle(store, circleId);
     },
 
     async guardVersion(): Promise<void> {
@@ -112,6 +121,10 @@ export function createInMemorySeasonRepository(): InMemorySeasonRepository {
 
         async findLatestByCircle(circleId: CircleId): Promise<Season | null> {
           return findLatestByCircle(viewMap(), circleId);
+        },
+
+        async listByCircle(circleId: CircleId): Promise<readonly Season[]> {
+          return listByCircle(viewMap(), circleId);
         },
 
         async guardVersion(id: SeasonId, expectedVersion: number): Promise<void> {

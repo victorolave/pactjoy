@@ -9,6 +9,11 @@ import type { Season } from "./season.ts";
 export interface SeasonRepository {
   get(id: SeasonId): Promise<Season | null>;
   /**
+   * Every season of the circle, of any status, newest first (the same insertion order as
+   * `findLatestByCircle`: an update never moves a season). Empty if the circle never had one.
+   */
+  listByCircle(circleId: CircleId): Promise<readonly Season[]>;
+  /**
    * The most recently created season for a circle, of any status, or
    * `null` if the circle has never had one. Used both for CM-12 (one
    * pact-open-or-active season per circle) and the join gate (B11,

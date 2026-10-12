@@ -4,6 +4,7 @@ import { type CommitmentRecord, commitmentId } from "../commitment/commitment.ts
 import type { Habit } from "../habit/habit.ts";
 import { AUTO_APPROVE_AFTER_MS, type PauseRequestRecord } from "../pause/pause-request.ts";
 import type { ReviewRecord } from "../review/review.ts";
+import type { SeasonClosure } from "../season/closure/season-closure.ts";
 import type {
   PactApproval,
   ReviewCadenceWeeks,
@@ -17,6 +18,7 @@ import {
   pauseRequestId,
   reviewId,
   type SeasonId,
+  seasonClosureId,
   seasonId,
   type UserId,
 } from "../shared/ids.ts";
@@ -189,6 +191,21 @@ export function reviewFixture(overrides: Partial<ReviewRecord> = {}): ReviewReco
     reflection: { helped: null, hard: null },
     responses: [],
     recordedAt: DEFAULT_INSTANT,
+    version: 0,
+    ...overrides,
+  };
+}
+
+/**
+ * Builds a {@link SeasonClosure} for GIVEN-state setup: no decisions yet. Every field is overridable.
+ */
+export function seasonClosureFixture(overrides: Partial<SeasonClosure> = {}): SeasonClosure {
+  return {
+    id: seasonClosureId("closure-1"),
+    seasonId: seasonId("season-1"),
+    memberId: "member-victor" as MemberId,
+    decisions: [],
+    decidedAt: DEFAULT_INSTANT,
     version: 0,
     ...overrides,
   };
