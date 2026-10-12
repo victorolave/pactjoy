@@ -9,8 +9,14 @@ import { describe, expect, it } from "vitest";
  * `packages/app`'s surface area.
  */
 const EXPECTED_RUNTIME_EXPORTS = [
+  "HABIT_STAGE_THRESHOLDS",
+  "automaticityOf",
   "canRequestPause",
+  "commitmentWeeklySeries",
   "compare",
+  "comparableAutomaticity",
+  "deriveHabitStage",
+  "displayAutomaticity",
   "displayPercent",
   "displayPoints",
   "displayPointsDecimal",
@@ -34,6 +40,8 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "opportunityValue",
   "parseDecimal",
   "pauseBudget",
+  "periodFigures",
+  "poolPeriodFigures",
   "progressAtValue",
   "rankStandings",
   "rejectionExtendedDeadline",

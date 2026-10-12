@@ -1,6 +1,25 @@
 import { describe, expect, it } from "vitest";
 import { frac, fromInt } from "../fraction/fraction.ts";
-import { displayPercent, displayPoints, displayPointsDecimal } from "./display.ts";
+import {
+  displayAutomaticity,
+  displayPercent,
+  displayPoints,
+  displayPointsDecimal,
+} from "./display.ts";
+
+describe("displayAutomaticity (REQ-A5, SC-30)", () => {
+  it("shows one decimal with a comma, rounded half up", () => {
+    expect(displayAutomaticity(frac(9n, 2n))).toBe("4,5");
+    expect(displayAutomaticity(frac(7n, 2n))).toBe("3,5");
+    expect(displayAutomaticity(frac(10n, 3n))).toBe("3,3");
+    expect(displayAutomaticity(fromInt(6))).toBe("6,0");
+  });
+
+  it("rounds exactly at the half: 3.25 goes up, 3.24 stays", () => {
+    expect(displayAutomaticity(frac(13n, 4n))).toBe("3,3");
+    expect(displayAutomaticity(frac(81n, 25n))).toBe("3,2");
+  });
+});
 
 describe("displayPointsDecimal", () => {
   it("rounds half-up to two decimals and drops trailing zeros", () => {
