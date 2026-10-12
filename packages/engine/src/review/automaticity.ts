@@ -5,10 +5,10 @@
  *   answered (4 items for a full review, 1 for an item-1-only review). Whether ALL required items
  *   were answered is the app's validation, not this function's: it is a pure mean.
  * - `comparableAutomaticity`: the single seam deciding whether a score counts as "improved"
- *   against a reference (35b). Today it compares the values as they are, item-1 against a full
- *   mean included (REQ-A11, a known limitation recorded in ADR-0014); judged on the ROUNDED
- *   tenths so "de 3,3 a 3,3" can never be named (REQ-A7, SC-52). A later like-for-like rule
- *   changes this one function.
+ *   against a reference (35b). It compares the two values it is given; choosing LIKE FOR LIKE
+ *   scores (item 1 of both when either review is item-1-only, otherwise the four-item means) is
+ *   the caller's job (app `improvementsOf`, ADR-0014). Judged on the ROUNDED tenths so
+ *   "de 3,3 a 3,3" can never be named (REQ-A7, SC-52).
  *
  * No clock, no I/O. The 1..7 bound is the scale itself, not a tunable threshold.
  */
@@ -42,7 +42,7 @@ export interface AutomaticityComparison {
   readonly to: string;
 }
 
-/** Compares `current` with `reference` as they are (REQ-A11), judging on displayed tenths. */
+/** Compares `current` with `reference` as given, judging on displayed tenths. */
 export function comparableAutomaticity(
   current: Fraction,
   reference: Fraction,

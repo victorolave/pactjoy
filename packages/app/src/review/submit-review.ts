@@ -137,7 +137,11 @@ export async function submitReview(
       const refusal = refusalOf(slot);
       if (refusal !== null) return err(refusal);
 
-      const reflection = readReflection(input.reflection);
+      // The baseline has no reflection step: whatever came with it is dropped, not validated.
+      const reflection =
+        slot.kind === "baseline"
+          ? ok({ helped: null, hard: null })
+          : readReflection(input.reflection);
       if (!reflection.ok) return reflection;
 
       const mode: SrbaiMode = slot.srbai;
@@ -177,7 +181,7 @@ export async function submitReview(
         kind: slot.kind,
         status: "completed",
         srbai: mode,
-        reflection: slot.kind === "baseline" ? { helped: null, hard: null } : reflection.value,
+        reflection: reflection.value,
         responses,
         recordedAt: now,
         version: 0,

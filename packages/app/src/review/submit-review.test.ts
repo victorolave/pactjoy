@@ -421,6 +421,15 @@ describe("submitReview: the reflection (REQ-S8, R12)", () => {
     expect(result.ok).toBe(true);
   });
 
+  it("S4: the baseline has no reflection, so an over-long one does not reject it", async () => {
+    const world = await givenReviewWorld();
+    const result = await submit(world.at(3), world, 0, fullAnswers(world), {
+      helped: "x".repeat(281),
+      hard: "a\u0000b",
+    });
+    expect(result.ok).toBe(true);
+  });
+
   it("text that cannot be stored is InvalidNote for that field", async () => {
     const world = await givenReviewWorld();
     const result = await submit(world.at(15), world, 1, itemOne(world), {
@@ -479,6 +488,36 @@ describe("submitReview: the 35b result (REQ-A7..A9, S9)", () => {
     expect(result.ok && result.value.improvements).toEqual([
       { commitmentId: world.meditar, from: "3,0", to: "4,0" },
     ]);
+  });
+
+  it("W3: an item-1 review against a full baseline compares item 1 with item 1", async () => {
+    const world = await givenReviewWorld();
+    // Baseline mean is 2,5 but its item 1 is 4: an item-1 answer of 4 did not improve.
+    await submit(world.at(3), world, 0, fullAnswers(world, [4, 2, 2, 2], [3, 3, 3, 3]));
+    const same = await submit(world.at(16), world, 1, itemOne(world, 4, 3));
+    expect(same.ok && same.value.improvements).toEqual([]);
+  });
+
+  it("W3: an item-1 review that really went up is named from item 1 to item 1", async () => {
+    const world = await givenReviewWorld();
+    await submit(world.at(3), world, 0, fullAnswers(world, [4, 2, 2, 2], [3, 3, 3, 3]));
+    const result = await submit(world.at(16), world, 1, itemOne(world, 6, 3));
+    expect(result.ok && result.value.improvements).toEqual([
+      { commitmentId: world.meditar, from: "4,0", to: "6,0" },
+    ]);
+  });
+
+  it("W3: a full review against an item-1 reference compares item 1 with item 1", async () => {
+    const world = await givenReviewWorld();
+    await submit(world.at(16), world, 1, itemOne(world, 4, 3));
+    // Mean 5,5 would look like an improvement; item 1 stayed at 4.
+    const result = await submit(
+      world.at(30),
+      world,
+      2,
+      fullAnswers(world, [4, 6, 6, 6], [3, 3, 3, 3]),
+    );
+    expect(result.ok && result.value.improvements).toEqual([]);
   });
 
   it("a skipped baseline is no reference either", async () => {
