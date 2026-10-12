@@ -94,7 +94,14 @@ export function presentMyPauseRequests(
               commitmentId: c.commitmentId,
               before: c.before,
               after: c.after,
+              weightPoints: c.weightPoints,
+              opportunities: { before: c.opportunities.before, after: c.opportunities.after },
             })),
           },
+    resumePreviews: view.resumePreviews.map((p) => ({
+      pauseRequestId: p.pauseRequestId,
+      commitmentId: p.commitmentId,
+      weekOpportunities: p.weekOpportunities,
+    })),
   };
 }

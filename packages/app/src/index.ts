@@ -151,6 +151,7 @@ export type {
   MyPauseRequestsView,
   PauseBudgetView,
   PauseRedistribution,
+  ResumePreview,
 } from "./pause/my-pause-requests.query.ts";
 export { myPauseRequests } from "./pause/my-pause-requests.query.ts";
 export type {

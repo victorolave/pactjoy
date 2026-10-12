@@ -174,7 +174,36 @@ describe("GET /me/pause-requests", () => {
       awaitingMe: [],
       budgets: [],
       redistributed: null,
+      resumePreviews: [],
     });
+  });
+
+  it("serves the resume previews and the redistribution detail by name", async () => {
+    const { create, call, setNow, commitmentIds } = await given();
+    const created = await create();
+    await call("PUT", `/pause-requests/${created.json.data.id}/response`, "victor", {
+      decision: "approve",
+    });
+    setNow(new Date("2023-11-16T15:00:00Z").getTime() as never);
+
+    const res = await call("GET", "/me/pause-requests", "andrea");
+
+    expect(res.json.data.resumePreviews).toEqual([
+      {
+        pauseRequestId: created.json.data.id,
+        commitmentId: commitmentIds.andrea,
+        weekOpportunities: expect.any(Number),
+      },
+    ]);
+    expect(res.json.data.redistributed.commitments).toEqual([
+      {
+        commitmentId: commitmentIds.andrea,
+        before: expect.any(Number),
+        after: expect.any(Number),
+        weightPoints: expect.any(Number),
+        opportunities: { before: expect.any(Number), after: expect.any(Number) },
+      },
+    ]);
   });
 
   it("the requester sees hers with the budget; the approver sees it awaiting, with the note", async () => {

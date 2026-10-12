@@ -1,6 +1,16 @@
-import { type CommitmentId, displayPoints, pauseBudget, scoreMember } from "@pactjoy/engine";
+import {
+  type CommitmentId,
+  displayPoints,
+  pauseBudget,
+  type SeasonDay,
+  scoreMember,
+  weekOf,
+  weekProgress,
+} from "@pactjoy/engine";
+import { commitmentToEngine } from "../commitment/to-engine.ts";
+import { activeOpportunities } from "../score/active-opportunities.ts";
 import type { ScoreQueryDeps } from "../score/score-context.ts";
-import { startWeekdayOf, toScoreInput } from "../score/score-input.ts";
+import { startWeekdayOf, toEngineEntry, toScoreInput } from "../score/score-input.ts";
 import type { Actor } from "../shared/actor.ts";
 import type { PauseRequestId, SeasonId } from "../shared/ids.ts";
 import { toSeasonDay } from "../time/season-calendar.ts";
@@ -44,7 +54,21 @@ export interface PauseRedistribution {
     readonly commitmentId: CommitmentId;
     readonly before: number;
     readonly after: number;
+    /** The Commitment's share of the 1,000 points (`weightPercent` x 10). */
+    readonly weightPoints: number;
+    /** Its active opportunities across the season, without and with the request (D12's denominator). */
+    readonly opportunities: { readonly before: number; readonly after: number };
   }[];
+}
+
+/**
+ * What the current week would hold for a Commitment if its running Pause resumed today (W3). `null`
+ * when that week would not be scored.
+ */
+export interface ResumePreview {
+  readonly pauseRequestId: PauseRequestId;
+  readonly commitmentId: CommitmentId;
+  readonly weekOpportunities: number | null;
 }
 
 export interface MyPauseRequestsView {
@@ -57,6 +81,8 @@ export interface MyPauseRequestsView {
   /** One per Commitment of the viewer. */
   readonly budgets: readonly PauseBudgetView[];
   readonly redistributed: PauseRedistribution | null;
+  /** One per own Commitment whose approved Pause is running and can resume today. */
+  readonly resumePreviews: readonly ResumePreview[];
 }
 
 const EMPTY: MyPauseRequestsView = {
@@ -65,6 +91,7 @@ const EMPTY: MyPauseRequestsView = {
   awaitingMe: [],
   budgets: [],
   redistributed: null,
+  resumePreviews: [],
 };
 
 /**
@@ -127,6 +154,23 @@ export async function myPauseRequests(
         ),
       }));
 
+    const entries = await repos.entries.listBySeason(season.id);
+    const engineEntries = entries.map(toEngineEntry);
+    /** The week of `week` for one own Commitment under `pauses`, exactly as Today reads it. */
+    const weekOfCommitment = (
+      commitment: (typeof season.commitments)[number],
+      pauses: readonly MemberPauseRequest[],
+      week: number,
+    ) =>
+      weekProgress({
+        season: engineSeason,
+        commitment: commitmentToEngine(commitment),
+        week,
+        entries: engineEntries.filter((entry) => entry.commitmentId === commitment.id),
+        pauses: pauses.filter((pause) => pause.commitmentId === commitment.id),
+        today,
+      });
+
     const latest = latestApproved(own);
     const redistributed = latest
       ? await redistribution({
@@ -138,16 +182,61 @@ export async function myPauseRequests(
                 season,
                 actualStart,
                 memberId: viewer.id,
-                entries: await repos.entries.listBySeason(season.id),
+                entries,
                 pauses,
                 today,
               }),
             ),
+          weightPercentOf: (id) => season.commitments.find((c) => c.id === id)?.weightPercent,
+          opportunitiesOf: (id, pauses) => {
+            const commitment = season.commitments.find((c) => c.id === id);
+            if (!commitment) throw new Error(`season has no commitment ${id}`);
+            return activeOpportunities(season.lengthWeeks, (week) =>
+              weekOfCommitment(commitment, pauses, week),
+            );
+          },
         })
       : null;
 
-    return { seasonId: season.id, mine, awaitingMe, budgets, redistributed };
+    const resumePreviews = own.flatMap((request) =>
+      resumableItems(request, today).map((item): ResumePreview => {
+        const commitment = season.commitments.find((c) => c.id === item.commitmentId);
+        if (!commitment) throw new Error(`season has no commitment ${item.commitmentId}`);
+        // Exactly what `resumePause` would write: this item resumed today, the rest as they are.
+        const resumed = own.flatMap(({ record, decision }) =>
+          toEnginePauses(
+            record.id === request.record.id
+              ? {
+                  ...record,
+                  commitments: record.commitments.map((c) =>
+                    c.commitmentId === item.commitmentId ? { ...c, resumedOn: today } : c,
+                  ),
+                }
+              : record,
+            decision,
+          ),
+        );
+        const week = weekOfCommitment(commitment, resumed, weekOf(today));
+        return {
+          pauseRequestId: request.record.id,
+          commitmentId: item.commitmentId,
+          weekOpportunities: week.status === "scored" ? week.sessionsTarget : null,
+        };
+      }),
+    );
+
+    return { seasonId: season.id, mine, awaitingMe, budgets, redistributed, resumePreviews };
   });
+}
+
+/** Items of an approved request that are running now: started, not resumed, not past a fixed end. */
+function resumableItems(
+  { record, decision }: EffectivePauseRequest,
+  today: SeasonDay,
+): PauseRequestRecord["commitments"] {
+  if (decision.status !== "approved" || record.startDay > today) return [];
+  if (record.end.kind === "fixed" && record.end.lastDay < today) return [];
+  return record.commitments.filter((item) => item.resumedOn === null);
 }
 
 /** The viewer's most recently approved request (ties go to the later one). */
@@ -172,8 +261,10 @@ async function redistribution(args: {
   readonly score: (
     pauses: readonly MemberPauseRequest[],
   ) => Promise<ReturnType<typeof scoreMember>>;
+  readonly weightPercentOf: (id: CommitmentId) => number | undefined;
+  readonly opportunitiesOf: (id: CommitmentId, pauses: readonly MemberPauseRequest[]) => number;
 }): Promise<PauseRedistribution> {
-  const { latest, effective, score } = args;
+  const { latest, effective, score, weightPercentOf, opportunitiesOf } = args;
   const every = effective.flatMap(({ record, decision }) => toEnginePauses(record, decision));
   const without = effective
     .filter(({ record }) => record.id !== latest.record.id)
@@ -187,10 +278,19 @@ async function redistribution(args: {
   return {
     pauseRequestId: latest.record.id,
     total: { before: displayPoints(before.points), after: displayPoints(after.points) },
-    commitments: latest.record.commitments.map(({ commitmentId }) => ({
-      commitmentId,
-      before: pointsOf(before, commitmentId),
-      after: pointsOf(after, commitmentId),
-    })),
+    commitments: latest.record.commitments.map(({ commitmentId }) => {
+      const weightPercent = weightPercentOf(commitmentId);
+      if (weightPercent === undefined) throw new Error(`season has no commitment ${commitmentId}`);
+      return {
+        commitmentId,
+        before: pointsOf(before, commitmentId),
+        after: pointsOf(after, commitmentId),
+        weightPoints: weightPercent * 10,
+        opportunities: {
+          before: opportunitiesOf(commitmentId, without),
+          after: opportunitiesOf(commitmentId, every),
+        },
+      };
+    }),
   };
 }
