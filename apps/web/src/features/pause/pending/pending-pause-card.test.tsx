@@ -38,9 +38,24 @@ describe("the requester's pending view (screen 27, PS-6, PS-7)", () => {
   it("explains what happens meanwhile, and after a rejection", () => {
     renderCard();
     expect(
+      screen.getByText("Mientras tanto, esos días quedan en espera: no suman ni restan."),
+    ).toBeInTheDocument();
+  });
+
+  it("PS-6: states what approval and rejection mean, with the start date", () => {
+    renderCard();
+    expect(screen.getByText("Si se aprueba, se pausan desde hoy.")).toBeInTheDocument();
+    expect(
       screen.getByText(
-        "Mientras tanto, esos días quedan en espera: no suman ni restan. Si alguien la rechaza, vuelven a contar con normalidad.",
+        "Si la rechazan, cuentan con normalidad y podrás registrarlas hasta el final del día siguiente al rechazo.",
       ),
+    ).toBeInTheDocument();
+  });
+
+  it("PS-6: names the start date when the pause starts later", () => {
+    renderCard(pauseRequestFixture({ ...R1, startDate: "2026-10-20" }));
+    expect(
+      screen.getByText("Si se aprueba, se pausan desde el 20 de octubre."),
     ).toBeInTheDocument();
   });
 

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useOnline } from "../../../context/connectivity-context.tsx";
 import type { PauseRequestDto } from "../../../ports/wire.ts";
+import { dayMonth } from "../../../shared/format.ts";
 import { Badge } from "../../../ui/Badge.tsx";
 import { Button } from "../../../ui/Button.tsx";
 import { Card } from "../../../ui/Card.tsx";
@@ -54,8 +55,14 @@ export function PendingPauseCard({
             {`Se aprobará automáticamente el ${autoApproveText(request.autoApproveAt, timeZone)}.`}
           </p>
           <p className={styles.small}>
-            Mientras tanto, esos días quedan en espera: no suman ni restan. Si alguien la rechaza,
-            vuelven a contar con normalidad.
+            Mientras tanto, esos días quedan en espera: no suman ni restan.
+          </p>
+          <p className={styles.small}>
+            {`Si se aprueba, se pausan desde ${request.startDate === today ? "hoy" : `el ${dayMonth(request.startDate)}`}.`}
+          </p>
+          <p className={styles.small}>
+            Si la rechazan, cuentan con normalidad y podrás registrarlas hasta el final del día
+            siguiente al rechazo.
           </p>
           {request.approvers.length > 0 && (
             <ul className={styles.approvers}>

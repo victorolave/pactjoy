@@ -46,7 +46,7 @@ const SINGLE = view("Gym".split(","), { before: 397, after: 400 }, [{ before: 90
 describe("the 'points redistributed' notice (screen 30b, PS-14, PS-15)", () => {
   it("says what changed for one Commitment, with the viewer's total", async () => {
     await open(SINGLE);
-    expect(await screen.findByText("Tus puntos se redistribuyeron")).toBeInTheDocument();
+    expect(await screen.findByText("Los puntos se recalcularon")).toBeInTheDocument();
     expect(
       screen.getByText(
         "Al pausar Gym, sus puntos pasaron de 90 a 93. Tu total subió de 397 a 400.",
@@ -82,35 +82,35 @@ describe("the 'points redistributed' notice (screen 30b, PS-14, PS-15)", () => {
   it("shows once per request on this device: it stays while open, then not on the next open (PS-S3)", async () => {
     const storage = new MemoryStorage();
     const first = await open(SINGLE, storage);
-    expect(await screen.findByText("Tus puntos se redistribuyeron")).toBeInTheDocument();
+    expect(await screen.findByText("Los puntos se recalcularon")).toBeInTheDocument();
     expect(first.deps.device.get("pause-redistributed-seen:pause-1")).toBe("1");
     // Another read while the screen is still open does not take it away.
     await first.deps.queryClient.refetchQueries({ queryKey: ["pauseRequests"] });
-    expect(screen.getByText("Tus puntos se redistribuyeron")).toBeInTheDocument();
+    expect(screen.getByText("Los puntos se recalcularon")).toBeInTheDocument();
     first.unmount();
 
     const second = await open(SINGLE, storage);
     await waitFor(() => expect(second.deps.api.calls.getMyPauseRequests).toBeGreaterThan(0));
-    expect(screen.queryByText("Tus puntos se redistribuyeron")).not.toBeInTheDocument();
+    expect(screen.queryByText("Los puntos se recalcularon")).not.toBeInTheDocument();
   });
 
   it("shows again when the flag is cleared, and on another device", async () => {
     const storage = new MemoryStorage();
     const first = await open(SINGLE, storage);
-    await screen.findByText("Tus puntos se redistribuyeron");
+    await screen.findByText("Los puntos se recalcularon");
     first.deps.device.remove("pause-redistributed-seen:pause-1");
     first.unmount();
     const cleared = await open(SINGLE, storage);
-    expect(await screen.findByText("Tus puntos se redistribuyeron")).toBeInTheDocument();
+    expect(await screen.findByText("Los puntos se recalcularon")).toBeInTheDocument();
     cleared.unmount();
     await open(SINGLE, new MemoryStorage());
-    expect(await screen.findByText("Tus puntos se redistribuyeron")).toBeInTheDocument();
+    expect(await screen.findByText("Los puntos se recalcularon")).toBeInTheDocument();
   });
 
   it("is per request: a later approved request shows its own notice", async () => {
     const storage = new MemoryStorage();
     const first = await open(SINGLE, storage);
-    await screen.findByText("Tus puntos se redistribuyeron");
+    await screen.findByText("Los puntos se recalcularon");
     first.unmount();
     await open(
       view(["Leer"], { before: 400, after: 405 }, [{ before: 50, after: 55 }], "pause-2"),
@@ -122,21 +122,21 @@ describe("the 'points redistributed' notice (screen 30b, PS-14, PS-15)", () => {
   it("goes away when dismissed", async () => {
     await open(SINGLE);
     await userEvent.click(await screen.findByRole("button", { name: "Entendido" }));
-    expect(screen.queryByText("Tus puntos se redistribuyeron")).not.toBeInTheDocument();
+    expect(screen.queryByText("Los puntos se recalcularon")).not.toBeInTheDocument();
   });
 
   it("shows nothing when the pause changed no points, and does not use up the flag", async () => {
     const unchanged = view(["Gym"], { before: 400, after: 400 }, [{ before: 90, after: 90 }]);
     const { deps } = await open(unchanged);
     await waitFor(() => expect(deps.api.calls.getMyPauseRequests).toBeGreaterThan(0));
-    expect(screen.queryByText("Tus puntos se redistribuyeron")).not.toBeInTheDocument();
+    expect(screen.queryByText("Los puntos se recalcularon")).not.toBeInTheDocument();
     expect(deps.device.get("pause-redistributed-seen:pause-1")).toBeNull();
   });
 
   it("shows nothing without an approved request (pending, rejected or cancelled never redistribute)", async () => {
     const { deps } = await open(myPauseRequestsFixture({ mine: [request(["Gym"])] }));
     await waitFor(() => expect(deps.api.calls.getMyPauseRequests).toBeGreaterThan(0));
-    expect(screen.queryByText("Tus puntos se redistribuyeron")).not.toBeInTheDocument();
+    expect(screen.queryByText("Los puntos se recalcularon")).not.toBeInTheDocument();
   });
 
   it("falls back to generic wording if the request is not in the list", async () => {

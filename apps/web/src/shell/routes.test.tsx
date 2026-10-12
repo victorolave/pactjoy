@@ -114,7 +114,7 @@ describe("Temporada and the points-redistributed notice (screen 30b)", () => {
       }),
     );
     await app.deps.queryClient.refetchQueries({ queryKey: ["pauseRequests"] });
-    expect(await screen.findByText("Tus puntos se redistribuyeron")).toBeInTheDocument();
+    expect(await screen.findByText("Los puntos se recalcularon")).toBeInTheDocument();
     expect(await screen.findByRole("heading", { name: "Tu temporada" })).toBeInTheDocument();
     expect(app.deps.device.get("pause-redistributed-seen:pause-1")).toBe("1");
   });
@@ -122,7 +122,7 @@ describe("Temporada and the points-redistributed notice (screen 30b)", () => {
   it("shows no notice when nothing was redistributed", async () => {
     progressApp("/season", activeSeasonProgress({ memberCount: 2 }));
     await screen.findByRole("heading", { name: "Tu temporada" });
-    expect(screen.queryByText("Tus puntos se redistribuyeron")).not.toBeInTheDocument();
+    expect(screen.queryByText("Los puntos se recalcularon")).not.toBeInTheDocument();
   });
 });
 

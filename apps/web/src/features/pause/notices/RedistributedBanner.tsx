@@ -16,7 +16,7 @@ function totalText(before: number, after: number): string {
 }
 
 /**
- * Screen 30b: "Tus puntos se redistribuyeron", shown ONCE per approved request on this device
+ * Screen 30b: "Los puntos se recalcularon", shown ONCE per approved request on this device
  * (PS-14, PS-15). The server recomputes the comparison on every read, so "once" is the device flag
  * `pause-redistributed-seen:<requestId>`: it is written when the notice is first shown, and the
  * notice stays up while the screen is open. Clearing the flag, or another device, shows it again.
@@ -56,7 +56,7 @@ export function RedistributedBanner() {
   return (
     <InlineMessage
       tone="info"
-      title="Tus puntos se redistribuyeron"
+      title="Los puntos se recalcularon"
       action={
         <Button size="sm" variant="secondary" onClick={() => setShown(null)}>
           Entendido
