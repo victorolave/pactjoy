@@ -7,7 +7,7 @@ import { Skeleton } from "../../../ui/Skeleton.tsx";
 import { StepBars } from "../../../ui/StepBars.tsx";
 import type { StepChrome } from "../chrome.ts";
 import { ReviewDoneStep } from "../done/ReviewDoneStep.tsx";
-import { useReview, useSubmitReview } from "../queries.ts";
+import { useResultsOpenOn, useReview, useSubmitReview } from "../queries.ts";
 import { ReflectionStep } from "../reflection/ReflectionStep.tsx";
 import { loadFailure, type ReviewFailure, reviewFailure } from "../review-messages.ts";
 import { FullSrbaiStep } from "../srbai/FullSrbaiStep.tsx";
@@ -66,10 +66,14 @@ function ReviewFlow({ seasonId, periodIndex, draft }: FlowProps) {
   }>({ helped: null, hard: null });
   const [blocked, setBlocked] = useState<ReviewFailure | null>(null);
 
+  const resultsOpenOn = useResultsOpenOn();
   const leave = () => void navigate(TODAY, { replace: true });
-  // The closing review hands over to the results of the season (screen 36).
+  // The closing review hands over to the results of the season (screen 36), unless they are not
+  // open yet (the grace day): then it goes back to the day and says when they open.
   const finish =
-    draft.kind === "closing" ? () => void navigate(closeRoute(seasonId), { replace: true }) : leave;
+    draft.kind === "closing" && resultsOpenOn === null
+      ? () => void navigate(closeRoute(seasonId), { replace: true })
+      : leave;
   const names = new Map(draft.commitments.map((c) => [c.commitmentId, c.habitName]));
 
   if (blocked !== null) {
@@ -81,6 +85,7 @@ function ReviewFlow({ seasonId, periodIndex, draft }: FlowProps) {
         result={result}
         names={names}
         closing={draft.kind === "closing"}
+        resultsOpenOn={resultsOpenOn}
         onFinish={finish}
       />
     );
@@ -226,6 +231,7 @@ interface GateProps {
 function ReviewGate({ seasonId, periodIndex, onLeave }: GateProps) {
   const navigate = useNavigate();
   const query = useReview(seasonId, periodIndex);
+  const resultsOpenOn = useResultsOpenOn();
   if (query.isPending) return <Loading onClose={onLeave} />;
   if (query.isError) {
     const failure = loadFailure(query.error);
@@ -257,8 +263,9 @@ function ReviewGate({ seasonId, periodIndex, onLeave }: GateProps) {
         result={null}
         names={new Map()}
         closing={draft.kind === "closing"}
+        resultsOpenOn={resultsOpenOn}
         onFinish={
-          draft.kind === "closing"
+          draft.kind === "closing" && resultsOpenOn === null
             ? () => void navigate(closeRoute(seasonId), { replace: true })
             : onLeave
         }

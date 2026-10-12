@@ -15,6 +15,8 @@ import {
   LEER,
   submittedFixture,
 } from "../../../testing/fixtures/review.ts";
+import { seasonCloseFixture } from "../../../testing/fixtures/season-close.ts";
+import { activeTodayFixture } from "../../../testing/fixtures/today.ts";
 import { renderApp } from "../../../testing/render.tsx";
 
 const open = (draft: ReviewDraftDto, period = 2, options = {}) =>
@@ -187,16 +189,19 @@ describe("the review route", () => {
     await waitFor(() => expect(app.location()).toBe("/"));
   });
 
-  it("marks Today stale after saving, so the card goes away", async () => {
+  it("refreshes Today after saving, so the card goes away", async () => {
     const app = open(interimItemOneFixture());
     app.deps.queryClient.setQueryData(todayKey, await app.deps.api.getToday());
+    const before = app.deps.api.calls.getToday;
     await screen.findByRole("heading", { name: "Así fueron tus dos últimas semanas" });
     await click("Continuar");
     await click("Saltar");
     for (const phrase of [0, 1, 2, 3]) await answer(phrase, 5);
     await click("Terminar revisión");
     await screen.findByRole("heading", { name: "Revisión guardada." });
-    expect(app.deps.queryClient.getQueryState(todayKey)?.isInvalidated).toBe(true);
+    // The flow watches Today (the grace day decides where the closing review leads), so the
+    // invalidation refetches it at once instead of leaving it stale.
+    await waitFor(() => expect(app.deps.api.calls.getToday).toBeGreaterThan(before));
   });
 });
 
@@ -239,6 +244,45 @@ describe("the review route, when it cannot be answered", () => {
     expect(await screen.findByRole("heading", { name: "Revisión guardada." })).toBeInTheDocument();
     await click("Ver mis resultados");
     await waitFor(() => expect(app.location()).toBe("/season/season-1/close"));
+  });
+
+  describe("on the grace day, when the results are not open yet", () => {
+    const graceDay = () => ({
+      today: {
+        ...activeTodayFixture(),
+        state: "ended",
+        seasonClose: seasonCloseFixture("resultsSoon"),
+      } as unknown as ReturnType<typeof activeTodayFixture>,
+    });
+
+    it("says when the results open and goes back to Today instead of the results", async () => {
+      const app = open(closingFixture(), 4, graceDay());
+      await screen.findByRole("heading", { name: "Así fueron tus dos últimas semanas" });
+      await click("Continuar");
+      await click("Saltar");
+      for (const next of ["Siguiente: Inglés", "Siguiente: Dibujar", "Siguiente: Gym"]) {
+        await answerAllItems(5);
+        await click(next);
+      }
+      await answerAllItems(5);
+      await click("Terminar revisión");
+      await screen.findByRole("heading", { name: "Revisión guardada." });
+      expect(
+        screen.getByText("Tus resultados estarán listos el miércoles 21 de octubre."),
+      ).toBeVisible();
+      expect(screen.queryByRole("button", { name: "Ver mis resultados" })).not.toBeInTheDocument();
+      await click("Seguir con mi día");
+      await waitFor(() => expect(app.location()).toBe("/"));
+    });
+
+    it("does the same for an already saved closing review", async () => {
+      const app = open(closingFixture({ status: "completed" }), 4, graceDay());
+      expect(
+        await screen.findByText("Tus resultados estarán listos el miércoles 21 de octubre."),
+      ).toBeVisible();
+      await click("Seguir con mi día");
+      await waitFor(() => expect(app.location()).toBe("/"));
+    });
   });
 
   it("leaves a closing review through X for Today and saves nothing", async () => {
