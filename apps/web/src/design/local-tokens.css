@@ -55,6 +55,14 @@
   /* Pager dots (design 1a-c): 6 px, the current one a 20 px pill. */
   --pager-dot: 6px;
   --pager-dot-current: 20px;
+  /* The Together ribbon on top of the season results (design 36): 6 high, drawn once in the celebrate motion. */
+  --ribbon-height: 6px;
+  /* The automaticity bar of the results (design 36): the track is 8 high. */
+  --meter-height: 8px;
+  /* The graduation emoji (design 38b) is 56. */
+  --emoji-hero: 56px;
+  /* The static dots of the graduation screen (design 38b). */
+  --confetti-dot: 12px;
   /* The review's step bars (design 33 to 35): 4 high. */
   --step-bar-height: 4px;
   /* A big figure in a small card (design 33: the review totals). */

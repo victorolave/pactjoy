@@ -32,6 +32,7 @@ import { RedistributedBanner } from "../features/pause/index.ts";
 import { ProfileScreen, SettingsScreen } from "../features/profile/index.ts";
 import { ReviewFlowScreen, ReviewNotice } from "../features/review/index.ts";
 import { SeasonScreen, SeasonSkeleton } from "../features/season/index.ts";
+import { SeasonCloseFlowScreen, SeasonResultsScreen } from "../features/season-close/index.ts";
 import { CommitmentScreen } from "../features/season-commitment/index.ts";
 import { MemberSeasonScreen } from "../features/season-member/index.ts";
 import { useSeasonProgress, useWeekSummary } from "../features/season-progress-data/index.ts";
@@ -179,6 +180,8 @@ export function AppRoutes() {
           <Route path="season/:seasonId/pact" element={<PactScreen />} />
           <Route path="profile/settings" element={<SettingsScreen />} />
           <Route path="review/:seasonId/:periodIndex" element={<ReviewFlowScreen />} />
+          <Route path="season/:seasonId/close" element={<SeasonCloseFlowScreen />} />
+          <Route path="season/:seasonId/results" element={<SeasonResultsScreen />} />
           <Route element={<ProgressPhaseGate />}>
             <Route path={progressRoutePatterns.week} element={<WeekSummaryScreen />} />
             <Route element={<AppShell />}>

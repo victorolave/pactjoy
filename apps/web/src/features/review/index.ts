@@ -9,4 +9,4 @@ export { BaselineOffer } from "./entry/BaselineOffer.tsx";
 export { ReviewNotice } from "./entry/ReviewNotice.tsx";
 export { ReviewTodayCard } from "./entry/ReviewTodayCard.tsx";
 export { ReviewFlowScreen } from "./flow/ReviewFlowScreen.tsx";
-export { HabitStageBadge } from "./stage/HabitStageBadge.tsx";
+export { HabitStageBadge, HabitStageTag } from "./stage/HabitStageBadge.tsx";

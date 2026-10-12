@@ -1,6 +1,15 @@
-import { useQuery } from "@tanstack/react-query";
+import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePactJoyApi } from "../../context/api-context.tsx";
-import { todayKey } from "../../shared/query-keys.ts";
+import type { SubmitClosureCommand } from "../../ports/pactjoy-api.ts";
+import {
+  habitsKey,
+  myCircleKey,
+  progressKey,
+  seasonCloseKey,
+  seasonResultsKey,
+  seasonsKey,
+  todayKey,
+} from "../../shared/query-keys.ts";
 
 /** What Today says about the end of the season, through the query Today itself uses (no second request). */
 export function useSeasonCloseOffer() {
@@ -8,5 +17,75 @@ export function useSeasonCloseOffer() {
   const query = useQuery({ queryKey: todayKey, queryFn: ({ signal }) => api.getToday(signal) });
   const today = query.data;
   if (today === undefined || !("seasonClose" in today)) return null;
-  return { seasonId: today.season.id, close: today.seasonClose };
+  return {
+    seasonId: today.season.id,
+    close: today.seasonClose,
+    pendingReview: today.pendingReview,
+  };
+}
+
+/**
+ * The owner's final figures. Read live (recomputed from Entries) and read once per visit: it is
+ * dropped when the route closes, and a refetch never replaces the decisions the member is making.
+ */
+export function useSeasonResults(seasonId: string) {
+  const api = usePactJoyApi();
+  return useQuery({
+    queryKey: seasonResultsKey(seasonId),
+    queryFn: ({ signal }) => api.getSeasonResults(seasonId, signal),
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+}
+
+/**
+ * After the closure is saved: Today, the circle, the habits (a graduated one leaves the list), the
+ * season reads and the progress reads are refreshed, and the history and carry-over are marked
+ * stale. The results are marked stale WITHOUT refetching, so the open flow keeps what the member
+ * is seeing. Awaited, so the next screen never shows the old state.
+ */
+export async function invalidateCloseState(client: QueryClient): Promise<void> {
+  await Promise.all([
+    client.invalidateQueries({ queryKey: todayKey }),
+    client.invalidateQueries({ queryKey: myCircleKey }),
+    client.invalidateQueries({ queryKey: habitsKey }),
+    client.invalidateQueries({ queryKey: seasonsKey }),
+    client.invalidateQueries({ queryKey: progressKey }),
+    client.invalidateQueries({ queryKey: seasonCloseKey, refetchType: "none" }),
+  ]);
+}
+
+export function useSubmitClosure(seasonId: string) {
+  const api = usePactJoyApi();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (cmd: SubmitClosureCommand) => api.submitSeasonClosure(seasonId, cmd),
+    onSettled: () => invalidateCloseState(client),
+  });
+}
+
+/**
+ * Whether the circle may open its next season (37b): the season closed, or a week went by since its
+ * last day. Read through the circle query the Circle tab uses; `false` until it answers.
+ */
+export function useCanOpenNextSeason(seasonClosedNow: boolean): boolean {
+  const api = usePactJoyApi();
+  const query = useQuery({
+    queryKey: myCircleKey,
+    queryFn: ({ signal }) => api.getMyCircle(signal),
+  });
+  if (seasonClosedNow) return true;
+  const data = query.data;
+  if (data === undefined) return false;
+  return data.season === null || data.season.nextSeasonOpen;
+}
+
+/** Reads the results again, for a closure another device (or a lost race) already saved. */
+export function useRefetchResults(seasonId: string): () => Promise<void> {
+  const client = useQueryClient();
+  return async () => {
+    await client.refetchQueries({ queryKey: seasonResultsKey(seasonId) });
+  };
 }

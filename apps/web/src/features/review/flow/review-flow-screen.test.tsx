@@ -231,15 +231,14 @@ describe("the review route, when it cannot be answered", () => {
     await screen.findByRole("heading", { name: "Revisión guardada." });
     expect(app.deps.api.reviewCommands[0]?.args.slice(0, 2)).toEqual(["season-1", 4]);
     await click("Ver mis resultados");
-    // The close route itself arrives with the flow of screens 36 to 38b.
-    await waitFor(() => expect(app.location()).not.toMatch(/^\/review/));
+    await waitFor(() => expect(app.location()).toBe("/season/season-1/close"));
   });
 
   it("shows an already saved closing review as saved, with the way to the results", async () => {
     const app = open(closingFixture({ status: "completed" }), 4);
     expect(await screen.findByRole("heading", { name: "Revisión guardada." })).toBeInTheDocument();
     await click("Ver mis resultados");
-    await waitFor(() => expect(app.location()).not.toMatch(/^\/review/));
+    await waitFor(() => expect(app.location()).toBe("/season/season-1/close"));
   });
 
   it("leaves a closing review through X for Today and saves nothing", async () => {

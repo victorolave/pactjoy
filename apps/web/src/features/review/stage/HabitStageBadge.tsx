@@ -9,6 +9,12 @@ const STAGES: Readonly<Record<HabitStageDto, { label: string; tone: BadgeTone }>
   graduated: { label: "🎓 Graduado", tone: "info" },
 };
 
+/** The stage as a badge, for screens that already know it (the season results, 37). */
+export function HabitStageTag({ stage }: { readonly stage: HabitStageDto }) {
+  const { label, tone } = STAGES[stage];
+  return <Badge tone={tone}>{label}</Badge>;
+}
+
 export interface HabitStageBadgeProps {
   readonly seasonId: string;
   readonly commitmentId: string;
@@ -22,6 +28,5 @@ export interface HabitStageBadgeProps {
 export function HabitStageBadge({ seasonId, commitmentId }: HabitStageBadgeProps) {
   const stage = useCommitmentStage(seasonId, commitmentId, true);
   if (stage.data === undefined) return null;
-  const { label, tone } = STAGES[stage.data.stage];
-  return <Badge tone={tone}>{label}</Badge>;
+  return <HabitStageTag stage={stage.data.stage} />;
 }
