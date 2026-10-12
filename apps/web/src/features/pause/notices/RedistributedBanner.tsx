@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { useDeviceStore } from "../../../context/device-store-context.tsx";
 import { Button } from "../../../ui/Button.tsx";
 import { InlineMessage } from "../../../ui/InlineMessage.tsx";
-import { commitmentList } from "../pause-format.ts";
-import { useMyPauseRequests } from "../queries.ts";
+import { commitmentList, peersUnchangedText, perOpportunityText } from "../pause-format.ts";
+import { useCircleForPause, useMyPauseRequests } from "../queries.ts";
 
 interface Shown {
   readonly key: string;
@@ -20,17 +20,20 @@ function totalText(before: number, after: number): string {
  * (PS-14, PS-15). The server recomputes the comparison on every read, so "once" is the device flag
  * `pause-redistributed-seen:<requestId>`: it is written when the notice is first shown, and the
  * notice stays up while the screen is open. Clearing the flag, or another device, shows it again.
- * The wording for "Todos" is generic (owner default, #5903): it lists the Commitments.
+ * The wording for "Todos" is generic (owner default, #5903): it lists the Commitments. A single
+ * Commitment says what each remaining opportunity is worth now, and the notice ends with whose points
+ * did not change. The peers come from the circle read, so the text waits for it: an error just omits them.
  */
 export function RedistributedBanner() {
   const device = useDeviceStore();
   const { data } = useMyPauseRequests();
+  const circle = useCircleForPause();
   const [shown, setShown] = useState<Shown | null>(null);
   const decided = useRef<string | null>(null);
   const redistributed = data?.redistributed ?? null;
 
   useEffect(() => {
-    if (data === undefined || redistributed === null) return;
+    if (data === undefined || redistributed === null || circle.isPending) return;
     if (decided.current === redistributed.pauseRequestId) return;
     decided.current = redistributed.pauseRequestId;
 
@@ -44,13 +47,19 @@ export function RedistributedBanner() {
     const names = request?.commitments.map((c) => c.habitName) ?? [];
     const only = redistributed.commitments.length === 1 ? redistributed.commitments[0] : undefined;
     const { before, after } = redistributed.total;
-    const text =
+    const lead =
       only !== undefined && names.length === 1
-        ? `Al pausar ${names[0]}, sus puntos pasaron de ${only.before} a ${only.after}. ${totalText(before, after)}`
-        : `Tu pausa cubre ${names.length === 0 ? "tus compromisos" : commitmentList(names)}: sus puntos se redistribuyeron entre las oportunidades que siguen activas. ${totalText(before, after)}`;
+        ? only.opportunities.after > 0
+          ? perOpportunityText(names[0] ?? "", only.weightPoints, only.opportunities.after)
+          : `Al pausar ${names[0]}, sus puntos pasaron de ${only.before} a ${only.after}.`
+        : `Tu pausa cubre ${names.length === 0 ? "tus compromisos" : commitmentList(names)}: sus puntos se redistribuyeron entre las oportunidades que siguen activas.`;
+    const peers = peersUnchangedText(
+      (circle.data?.circle?.members ?? []).filter((m) => !m.isYou).map((m) => m.displayName),
+    );
+    const text = [lead, totalText(before, after), peers].filter(Boolean).join(" ");
     device.set(key, "1");
     setShown({ key, text });
-  }, [data, redistributed, device]);
+  }, [data, redistributed, device, circle.isPending, circle.data]);
 
   if (shown === null) return null;
   return (

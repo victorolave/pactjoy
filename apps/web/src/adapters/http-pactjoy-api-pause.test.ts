@@ -121,6 +121,55 @@ describe("HttpPactJoyApi pause methods (ADR-0011 Q20)", () => {
     await expect(api.getMyPauseRequests()).resolves.toEqual(view);
   });
 
+  describe("the resume previews and the redistribution detail (W3, W4)", () => {
+    const detailed = () =>
+      myPauseRequestsFixture({
+        resumePreviews: [
+          { pauseRequestId: "pause-1", commitmentId: "c-1", weekOpportunities: 3 },
+          { pauseRequestId: "pause-1", commitmentId: "c-2", weekOpportunities: null },
+        ],
+        redistributed: {
+          pauseRequestId: "pause-1",
+          total: { before: 397, after: 400 },
+          commitments: [
+            {
+              commitmentId: "c-1",
+              before: 90,
+              after: 93,
+              weightPoints: 300,
+              opportunities: { before: 26, after: 24 },
+            },
+          ],
+        },
+      });
+    const rejected = async (data: unknown) => {
+      const { api } = harness(json(200, { data }));
+      await expect(api.getMyPauseRequests()).rejects.toMatchObject({ code: "Internal" });
+    };
+
+    it("accepts the new fields", async () => {
+      const view = detailed();
+      const { api } = harness(json(200, { data: view }));
+      await expect(api.getMyPauseRequests()).resolves.toEqual(view);
+    });
+
+    it("rejects a missing resumePreviews, a negative count and a missing opportunities", async () => {
+      const { resumePreviews: _omitted, ...withoutPreviews } = detailed();
+      await rejected(withoutPreviews);
+      await rejected({
+        ...detailed(),
+        resumePreviews: [{ pauseRequestId: "p", commitmentId: "c", weekOpportunities: -1 }],
+      });
+      const view = detailed();
+      const [first] = view.redistributed?.commitments ?? [];
+      const { opportunities: _gone, ...bare } = first as NonNullable<typeof first>;
+      await rejected({
+        ...view,
+        redistributed: { ...view.redistributed, commitments: [bare] },
+      });
+    });
+  });
+
   it("surfaces the cap error with its Commitments as details", async () => {
     const details = {
       commitments: [{ commitmentId: "c-1", reason: "capExhausted", remainingDays: 0 }],

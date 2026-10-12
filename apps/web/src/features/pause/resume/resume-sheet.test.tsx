@@ -2,6 +2,7 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { ApiError } from "../../../ports/api-error.ts";
+import { myPauseRequestsFixture } from "../../../testing/fixtures/pause.ts";
 import { renderInProviders } from "../../../testing/render.tsx";
 import { ResumeSheet, type ResumeSheetProps } from "./ResumeSheet.tsx";
 
@@ -30,6 +31,55 @@ describe("resuming a pause (screen 29, PS-11, PS-12)", () => {
         "Vuelve a contar desde hoy y esta semana se prorratea por los días que estuvo activo. No necesitas aprobación.",
       ),
     ).toBeInTheDocument();
+  });
+
+  describe("the week's opportunities after resuming (W3)", () => {
+    const COUNT_TEXT = (n: string) =>
+      `Vuelve a contar desde hoy. Esta semana tendrás ${n}. La semana se prorratea por los días que estuvo activo.`;
+    const withPreview = async (
+      weekOpportunities: number | null,
+      props: Partial<ResumeSheetProps> = {},
+    ) => {
+      const view = render(props);
+      view.deps.api.setMyPauseRequests(
+        myPauseRequestsFixture({
+          resumePreviews: [
+            { pauseRequestId: "pause-1", commitmentId: "c-1", weekOpportunities },
+            { pauseRequestId: "pause-2", commitmentId: "c-1", weekOpportunities: 9 },
+          ],
+        }),
+      );
+      await view.deps.queryClient.refetchQueries({ queryKey: ["pauseRequests"] });
+      return view;
+    };
+
+    it("says how many opportunities the week holds, in the plural", async () => {
+      await withPreview(3);
+      expect(await screen.findByText(COUNT_TEXT("3 oportunidades"))).toBeInTheDocument();
+    });
+
+    it("uses the singular for one", async () => {
+      await withPreview(1);
+      expect(await screen.findByText(COUNT_TEXT("1 oportunidad"))).toBeInTheDocument();
+    });
+
+    it("shows no count for Todos, even when a preview exists", async () => {
+      await withPreview(3, { commitmentId: undefined });
+      await waitFor(() => expect(screen.queryByText(/oportunidad/)).not.toBeInTheDocument());
+      expect(screen.getByText(/esta semana se prorratea/)).toBeInTheDocument();
+    });
+
+    it("keeps the current text for a null preview", async () => {
+      await withPreview(null);
+      expect(screen.getByText(/esta semana se prorratea/)).toBeInTheDocument();
+      expect(screen.queryByText(/oportunidad/)).not.toBeInTheDocument();
+    });
+
+    it("keeps the cancel text and no count for a pause that has not started", async () => {
+      await withPreview(3, { startsLater: true });
+      expect(screen.getByText(/Todavía no empezó/)).toBeInTheDocument();
+      expect(screen.queryByText(/oportunidad/)).not.toBeInTheDocument();
+    });
   });
 
   it("'Seguir en pausa' closes without resuming", async () => {

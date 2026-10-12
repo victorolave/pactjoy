@@ -3,8 +3,9 @@ import { useOnline } from "../../../context/connectivity-context.tsx";
 import { Button } from "../../../ui/Button.tsx";
 import { InlineMessage } from "../../../ui/InlineMessage.tsx";
 import { Sheet } from "../../../ui/Sheet.tsx";
+import { weekOpportunitiesText } from "../pause-format.ts";
 import { pauseFailure } from "../pause-messages.ts";
-import { useResumePause } from "../queries.ts";
+import { useMyPauseRequests, useResumePause } from "../queries.ts";
 
 export interface ResumeSheetProps {
   readonly open: boolean;
@@ -34,6 +35,15 @@ export function ResumeSheet({
   const online = useOnline();
   const resume = useResumePause();
   const [failure, setFailure] = useState<string | null>(null);
+  const { data } = useMyPauseRequests();
+  // Only one Commitment of a pause that already started has a count: "Todos" and the cancel of a
+  // future pause show none, and neither does a week that would not be scored (null) or data not yet read.
+  const weekOpportunities =
+    commitmentId === undefined || startsLater
+      ? null
+      : (data?.resumePreviews.find(
+          (p) => p.pauseRequestId === pauseRequestId && p.commitmentId === commitmentId,
+        )?.weekOpportunities ?? null);
 
   const confirm = async () => {
     if (resume.isPending) return;
@@ -69,7 +79,9 @@ export function ResumeSheet({
       <p>
         {startsLater
           ? "Todavía no empezó: se cancela y recuperas esos días de pausa. No necesitas aprobación."
-          : "Vuelve a contar desde hoy y esta semana se prorratea por los días que estuvo activo. No necesitas aprobación."}
+          : weekOpportunities !== null
+            ? `Vuelve a contar desde hoy. ${weekOpportunitiesText(weekOpportunities)} La semana se prorratea por los días que estuvo activo.`
+            : "Vuelve a contar desde hoy y esta semana se prorratea por los días que estuvo activo. No necesitas aprobación."}
       </p>
       {failure !== null && <InlineMessage tone="error" title={failure} />}
     </Sheet>

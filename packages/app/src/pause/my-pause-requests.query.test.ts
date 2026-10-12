@@ -1,15 +1,18 @@
 import { describe, expect, it } from "vitest";
+import type { Measure } from "../commitment/commitment.ts";
 import { recordEntry } from "../entry/record-entry.ts";
 import { standings } from "../score/standings.query.ts";
 import { userId } from "../shared/ids.ts";
 import { createTestApp, type TestApp } from "../testing/app-harness.ts";
 import { atInstant, fixtureTimeZone, localInstant } from "../testing/entry-fixtures.ts";
-import { dayOf } from "../testing/entry-measures.ts";
+import { dayOf, PER_DAY_REACH, TIMES_PER_WEEK, WEEKLY_TOTAL } from "../testing/entry-measures.ts";
 import { afterHours, givenPauseWorld, type PauseWorld } from "../testing/pause-fixtures.ts";
 import { instant } from "../time/instant.ts";
+import { today } from "../today/today.query.ts";
 import { myPauseRequests } from "./my-pause-requests.query.ts";
 import { requestPause } from "./request-pause.ts";
 import { respondToPause } from "./respond-to-pause.ts";
+import { resumePause } from "./resume-pause.ts";
 
 const T0 = localInstant(dayOf(5));
 const DEADLINE = afterHours(T0, 48);
@@ -42,6 +45,7 @@ describe("myPauseRequests (PA-2, PA-8)", () => {
       awaitingMe: [],
       budgets: [],
       redistributed: null,
+      resumePreviews: [],
     });
   });
 
@@ -183,7 +187,41 @@ describe("myPauseRequests: points redistributed (D11, TR-5)", () => {
     // Paused days leave the denominator, so the same effort is worth more.
     expect(r.total.after).toBeGreaterThan(r.total.before);
     expect(r.commitments).toEqual([
-      { commitmentId: world.andreaCommitment, before: r.total.before, after: r.total.after },
+      {
+        commitmentId: world.andreaCommitment,
+        before: r.total.before,
+        after: r.total.after,
+        weightPoints: 1000,
+        opportunities: { before: 28, after: 18 },
+      },
+    ]);
+  });
+
+  it("weightPoints is the weight times ten, next to the opportunities each way", async () => {
+    const app = createTestApp({ now: T0, timeZone: fixtureTimeZone });
+    const world = await givenPauseWorld(app, { withReading: true });
+    const created = await requestPause(app, world.andrea, {
+      seasonId: world.season.id,
+      scope: { kind: "commitment", commitmentId: world.andreaCommitment },
+      reason: "health",
+      note: null,
+      startDate: dayOf(5),
+      endDate: dayOf(7),
+    });
+    if (!created.ok) throw new Error("fixture failed");
+    await respondToPause(atInstant(app, afterHours(T0, 1)), world.victor, {
+      pauseRequestId: created.value.id,
+      decision: "approve",
+    });
+
+    const view = await read(app, world.andrea, localInstant(dayOf(6)));
+
+    expect(view.redistributed?.commitments).toEqual([
+      expect.objectContaining({
+        commitmentId: world.andreaCommitment,
+        weightPoints: 500,
+        opportunities: { before: 28, after: 25 },
+      }),
     ]);
   });
 
@@ -210,5 +248,101 @@ describe("scoring reads use the effective decision without a job (SR-S3)", () =>
 
     // Held then paused: the days leave the average either way, so the ranking is unchanged.
     expect(atDeadline).toEqual(justBefore);
+  });
+});
+
+describe("myPauseRequests: resume previews (W3)", () => {
+  /** Andrea's pause starts on day 5, approved by Victor; her Commitment uses `measure`. */
+  async function givenRunning(measure: Measure, options: { start?: number; end?: number } = {}) {
+    const app = createTestApp({ now: T0, timeZone: fixtureTimeZone });
+    const world = await givenPauseWorld(app, { withSofia: false });
+    await app.uow.transaction(async ({ seasons }) => {
+      await seasons.save(
+        {
+          ...world.season,
+          commitments: world.season.commitments.map((c) =>
+            c.id === world.andreaCommitment ? { ...c, measure } : c,
+          ),
+          version: world.season.version + 1,
+        },
+        world.season.version,
+      );
+      return { ok: true, value: undefined };
+    });
+    const created = await requestPause(app, world.andrea, {
+      seasonId: world.season.id,
+      scope: { kind: "commitment", commitmentId: world.andreaCommitment },
+      reason: "health",
+      note: null,
+      startDate: dayOf(options.start ?? 5),
+      endDate: options.end === undefined ? null : dayOf(options.end),
+    });
+    if (!created.ok) throw new Error("fixture failed");
+    const approved = await respondToPause(atInstant(app, afterHours(T0, 1)), world.victor, {
+      pauseRequestId: created.value.id,
+      decision: "approve",
+    });
+    if (!approved.ok) throw new Error("approval failed");
+    return { app, world, request: approved.value };
+  }
+
+  /** Day 9 sits in week 2 (days 7..13); resuming then leaves days 9..13 active. */
+  const NINTH = localInstant(dayOf(9), 8 * 3_600_000);
+
+  it("timesPerWeek: the preview is the target Today shows right after a real resume", async () => {
+    const { app, world, request } = await givenRunning(TIMES_PER_WEEK);
+
+    const preview = (await read(app, world.andrea, NINTH)).resumePreviews;
+    const resumed = await resumePause(atInstant(app, NINTH), world.andrea, {
+      pauseRequestId: request.id,
+      commitmentId: world.andreaCommitment,
+    });
+    if (!resumed.ok) throw new Error("resume failed");
+    const view = await today(atInstant(app, NINTH), world.andrea);
+    const row = view.state === "active" ? view.rows[0] : undefined;
+
+    expect(preview).toEqual([
+      { pauseRequestId: request.id, commitmentId: world.andreaCommitment, weekOpportunities: 2 },
+    ]);
+    expect(row?.kind === "week" ? row.progress?.sessionsTarget : undefined).toBe(2);
+  });
+
+  it("specificDays: counts the scheduled days left in the week", async () => {
+    const { app, world } = await givenRunning(PER_DAY_REACH);
+
+    const { resumePreviews } = await read(app, world.andrea, NINTH);
+
+    expect(resumePreviews.map((p) => p.weekOpportunities)).toEqual([5]);
+  });
+
+  it("weeklyTotal: the week is one opportunity", async () => {
+    const { app, world } = await givenRunning(WEEKLY_TOTAL);
+
+    const { resumePreviews } = await read(app, world.andrea, NINTH);
+
+    expect(resumePreviews.map((p) => p.weekOpportunities)).toEqual([1]);
+  });
+
+  it("a pause that has not started gets no entry", async () => {
+    const { app, world } = await givenRunning(PER_DAY_REACH, { start: 12 });
+
+    expect((await read(app, world.andrea, NINTH)).resumePreviews).toEqual([]);
+  });
+
+  it("an ended pause and an already resumed one get no entry", async () => {
+    const ended = await givenRunning(PER_DAY_REACH, { end: 7 });
+    expect((await read(ended.app, ended.world.andrea, NINTH)).resumePreviews).toEqual([]);
+
+    const running = await givenRunning(PER_DAY_REACH);
+    await resumePause(atInstant(running.app, NINTH), running.world.andrea, {
+      pauseRequestId: running.request.id,
+    });
+    expect((await read(running.app, running.world.andrea, NINTH)).resumePreviews).toEqual([]);
+  });
+
+  it("a pending request gets no entry", async () => {
+    const { app, world } = await givenRequest();
+
+    expect((await read(app, world.andrea, localInstant(dayOf(6)))).resumePreviews).toEqual([]);
   });
 });

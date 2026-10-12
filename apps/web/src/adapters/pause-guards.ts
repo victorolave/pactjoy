@@ -85,7 +85,20 @@ const points = shape({ before: count, after: count });
 const redistribution = shape({
   pauseRequestId: id,
   total: points,
-  commitments: list(shape({ commitmentId: id, before: count, after: count })),
+  commitments: list(
+    shape({
+      commitmentId: id,
+      before: count,
+      after: count,
+      weightPoints: count,
+      opportunities: points,
+    }),
+  ),
+});
+const resumePreview = shape({
+  pauseRequestId: id,
+  commitmentId: id,
+  weekOpportunities: nullable(count),
 });
 
 export const isMyPauseRequests = (data: unknown): data is MyPauseRequests =>
@@ -95,4 +108,5 @@ export const isMyPauseRequests = (data: unknown): data is MyPauseRequests =>
     awaitingMe: list(isPauseApproval),
     budgets: list(budget),
     redistributed: nullable(redistribution),
+    resumePreviews: list(resumePreview),
   })(data);

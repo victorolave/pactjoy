@@ -19,6 +19,7 @@ import { checkEntryWindow, entryWindowDeadline } from "../entry/entry-window.ts"
 import type { Habit } from "../habit/habit.ts";
 import type { EffectivePauseRequest } from "../pause/effective-pauses.ts";
 import type { MemberPauseRequest } from "../pause/pause-request.repository.ts";
+import { activeOpportunities } from "../score/active-opportunities.ts";
 import {
   type MeasureView,
   projectMeasure,
@@ -171,16 +172,6 @@ export function perOpportunityViews(
     perOpportunity: displayPointsDecimal(value),
     perOpportunityExact: { numerator: value.num.toString(), denominator: value.den.toString() },
   };
-}
-
-/** Every active opportunity of the commitment across the season, pause-aware: D12's denominator. */
-export function activeOpportunities(weeks: number, weekAt: (week: number) => WeekProgress): number {
-  let total = 0;
-  for (let week = 0; week < weeks; week++) {
-    const progress = weekAt(week);
-    if (progress.status === "scored") total += progress.sessionsTarget;
-  }
-  return total;
 }
 
 export function limitPercentsOf(

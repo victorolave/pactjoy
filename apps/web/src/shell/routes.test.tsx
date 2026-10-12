@@ -109,7 +109,15 @@ describe("Temporada and the points-redistributed notice (screen 30b)", () => {
         redistributed: {
           pauseRequestId: "pause-1",
           total: { before: 397, after: 400 },
-          commitments: [{ commitmentId: "c-1", before: 90, after: 93 }],
+          commitments: [
+            {
+              commitmentId: "c-1",
+              before: 90,
+              after: 93,
+              weightPoints: 300,
+              opportunities: { before: 26, after: 24 },
+            },
+          ],
         },
       }),
     );

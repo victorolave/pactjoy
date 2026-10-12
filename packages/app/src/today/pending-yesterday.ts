@@ -2,12 +2,12 @@ import type { CommitmentId, SeasonDay } from "@pactjoy/engine";
 import { weekOf, weekProgress } from "@pactjoy/engine";
 import { commitmentToEngine } from "../commitment/to-engine.ts";
 import { checkEntryWindow, entryWindowDeadline } from "../entry/entry-window.ts";
+import { activeOpportunities } from "../score/active-opportunities.ts";
 import type { MeasureView } from "../score/commitment-projection.ts";
 import { projectMeasure } from "../score/commitment-projection.ts";
 import { startWeekdayOf, toEngineEntry } from "../score/score-input.ts";
 import type { LocalDate } from "../time/local-date.ts";
 import {
-  activeOpportunities,
   dateOfDay,
   limitPercentsOf,
   perOpportunityViews,
