@@ -4,6 +4,7 @@ import type { Actor } from "../shared/actor.ts";
 import type { SeasonId } from "../shared/ids.ts";
 import { ok, type Result } from "../shared/result.ts";
 import {
+  loadPausesFor,
   loadScoreContext,
   type ScoreContextError,
   type ScoreData,
@@ -103,7 +104,7 @@ export async function standings(
       return ok({ kind: "notStarted" });
     }
     const entries = await repos.entries.listBySeason(season.id);
-    const pauses = await repos.pauses.listBySeason(season.id);
+    const pauses = await loadPausesFor(deps, repos, context.value);
     return ok(standingsView({ ...context.value, start }, { entries, pauses }));
   });
 }

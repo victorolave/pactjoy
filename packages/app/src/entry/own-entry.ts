@@ -1,7 +1,8 @@
-import type { MemberId } from "@pactjoy/engine";
+import type { MemberId, PauseRequest, SeasonDay } from "@pactjoy/engine";
 import type { Circle } from "../circle/circle.ts";
 import { findActiveMember } from "../circle/circle.ts";
 import type { CommitmentRecord } from "../commitment/commitment.ts";
+import { loadEffectivePauses } from "../pause/effective-pauses.ts";
 import type { Repositories } from "../ports/repositories.ts";
 import type { Season } from "../season/season.ts";
 import type { Actor } from "../shared/actor.ts";
@@ -11,11 +12,7 @@ import type { Clock } from "../time/clock.port.ts";
 import { toSeasonDay } from "../time/season-calendar.ts";
 import type { TimeZone } from "../time/time-zone.port.ts";
 import type { EntryRecord } from "./entry.ts";
-import {
-  checkEntryWindow,
-  type EntryWindowError,
-  PAUSE_GRACE_EXTENSION_DAYS,
-} from "./entry-window.ts";
+import { checkEntryWindow, type EntryWindowError } from "./entry-window.ts";
 
 export type OwnEntryError =
   | { readonly kind: "EntryNotFound" }
@@ -35,6 +32,10 @@ export interface OwnEntryContext {
   readonly commitment: CommitmentRecord;
   /** The actor's own member id, resolved in the same transaction (== `entry.memberId`). */
   readonly memberId: MemberId;
+  /** The Commitment's effective pauses at this write's clock. */
+  readonly pauses: readonly PauseRequest[];
+  /** The season day of the write. */
+  readonly today: SeasonDay;
 }
 
 /**
@@ -79,18 +80,24 @@ export async function loadMutableEntry(
     return err({ kind: "SeasonNotActive" });
   }
 
-  const todayDate = deps.timeZone.localDateAt(deps.clock.now(), season.timeZone);
+  const now = deps.clock.now();
+  const todayDate = deps.timeZone.localDateAt(now, season.timeZone);
   const today = toSeasonDay(todayDate, season.actualStart);
   if (today.kind === "beforeStart") {
     return err({ kind: "BeforeSeasonStart" });
   }
+  // The Commitment's pauses at this write's clock, read in the same transaction (EW-2).
+  const pauses = (
+    await loadEffectivePauses(repos, { season, circle, now, timeZone: deps.timeZone })
+  ).filter((pause) => pause.commitmentId === commitment.id);
   const closed = checkEntryWindow({
     schedule: commitment.measure.schedule,
     day: entry.day,
     today: today.day,
     lengthWeeks: season.lengthWeeks,
-    // B7: the real extension source arrives with change A2 (app-pause-workflow).
-    pauseGraceExtensionDays: PAUSE_GRACE_EXTENSION_DAYS,
+    pauses,
   });
-  return closed ? err(closed) : ok({ entry, season, circle, commitment, memberId: member.id });
+  return closed
+    ? err(closed)
+    : ok({ entry, season, circle, commitment, memberId: member.id, pauses, today: today.day });
 }

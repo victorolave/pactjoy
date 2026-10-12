@@ -64,6 +64,7 @@ const ROW_KEYS = [
   "commitmentId",
   "habitName",
   "kind",
+  "pause",
   "privacy",
   "scheduledToday",
   ...under("measure", MEASURE),

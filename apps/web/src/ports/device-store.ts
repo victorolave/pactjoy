@@ -1,7 +1,8 @@
 /**
  * The only keys the device store holds (a closed union, so a typo is a compile error).
  *
- * Device-scoped, they survive sign out: `welcomeSeen`, `installStep`, `notificationStep`.
+ * Device-scoped, they survive sign out: `welcomeSeen`, `installStep`, `notificationStep`, and the
+ * per-request notices (`pact-closed-seen:*`, `pause-redistributed-seen:*`, shown once per device).
  * Session-scoped, personal, cleared when the session ends: `nameDraft`.
  */
 export type DeviceKey =
@@ -10,6 +11,7 @@ export type DeviceKey =
   | "notificationStep"
   | "nameDraft"
   | `pact-closed-seen:${string}`
+  | `pause-redistributed-seen:${string}`
   | `weekly-summary-seen:${string}`;
 
 /** Small flags and drafts kept on this device only. Storage failures never throw. */

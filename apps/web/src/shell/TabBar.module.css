@@ -15,6 +15,15 @@
   margin-inline: var(--layout-margin-mobile);
 }
 
+/* A one-time notice above the overview; empty (nothing to say) it takes no room. */
+.notice {
+  margin: var(--space-4) var(--layout-margin-mobile) 0;
+}
+
+.notice:empty {
+  display: none;
+}
+
 .season :global(.pj-btn--sm) {
   min-height: var(--touch-target);
 }

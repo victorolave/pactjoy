@@ -139,7 +139,67 @@ export type {
   WithdrawApprovalInput,
 } from "./pact/withdraw-approval.ts";
 export { withdrawApproval } from "./pact/withdraw-approval.ts";
-export type { MemberPauseRequest, PauseRequestReader } from "./pause/pause-request.repository.ts";
+export type {
+  CancelPauseRequestDeps,
+  CancelPauseRequestError,
+  CancelPauseRequestInput,
+} from "./pause/cancel-pause-request.ts";
+export { cancelPauseRequest } from "./pause/cancel-pause-request.ts";
+export type {
+  AwaitingPauseRequest,
+  MyPauseRequestsDeps,
+  MyPauseRequestsView,
+  PauseBudgetView,
+  PauseRedistribution,
+} from "./pause/my-pause-requests.query.ts";
+export { myPauseRequests } from "./pause/my-pause-requests.query.ts";
+export type {
+  MemberPauseRequest,
+  PauseRequestRepository,
+} from "./pause/pause-request.repository.ts";
+export type {
+  PauseReason,
+  PauseRequestCommitment,
+  PauseRequestRecord,
+  PauseResponse,
+  PauseResponseChoice,
+  PauseStatus,
+} from "./pause/pause-request.ts";
+export { AUTO_APPROVE_AFTER_MS, PAUSE_REASONS } from "./pause/pause-request.ts";
+export type {
+  PauseApprovalView,
+  PauseCommitmentApprovalView,
+  PauseCommitmentOwnView,
+  PauseRequestView,
+  PauseViewDeps,
+} from "./pause/pause-view.ts";
+export { pauseApprovalViews, pauseRequestViews } from "./pause/pause-view.ts";
+export type {
+  PauseCapFailure,
+  PauseScope,
+  RequestPauseDeps,
+  RequestPauseError,
+  RequestPauseInput,
+} from "./pause/request-pause.ts";
+export { requestPause } from "./pause/request-pause.ts";
+export type {
+  RespondToPauseDeps,
+  RespondToPauseError,
+  RespondToPauseInput,
+} from "./pause/respond-to-pause.ts";
+export { respondToPause } from "./pause/respond-to-pause.ts";
+export type {
+  ResumePauseDeps,
+  ResumePauseError,
+  ResumePauseInput,
+} from "./pause/resume-pause.ts";
+export { resumePause } from "./pause/resume-pause.ts";
+export type {
+  SettleDuePausesDeps,
+  SettleDuePausesInput,
+  SettleDuePausesResult,
+} from "./pause/settle-due-pauses.ts";
+export { settleDuePauses } from "./pause/settle-due-pauses.ts";
 export type { IdGenerator } from "./ports/id-generator.ts";
 export type { RandomSource } from "./ports/random-source.ts";
 export type { Repositories } from "./ports/repositories.ts";
@@ -233,8 +293,15 @@ export { seasonView } from "./season/season-view.query.ts";
 export type { Actor } from "./shared/actor.ts";
 export { toDecimalString } from "./shared/decimal.ts";
 export { ConcurrencyConflict, InviteCodeGenerationFailed } from "./shared/errors.ts";
-export type { CircleId, EntryId, HabitId, SeasonId, UserId } from "./shared/ids.ts";
-export { circleId, entryId, habitId, seasonId, userId } from "./shared/ids.ts";
+export type {
+  CircleId,
+  EntryId,
+  HabitId,
+  PauseRequestId,
+  SeasonId,
+  UserId,
+} from "./shared/ids.ts";
+export { circleId, entryId, habitId, pauseRequestId, seasonId, userId } from "./shared/ids.ts";
 export type { Result } from "./shared/result.ts";
 export { err, ok } from "./shared/result.ts";
 export type { Clock } from "./time/clock.port.ts";
@@ -257,6 +324,7 @@ export type {
   TodayView,
 } from "./today/today.query.ts";
 export { today } from "./today/today.query.ts";
+export type { TodayPause } from "./today/today-pause.ts";
 export type {
   OpportunityState,
   TodayEntry,

@@ -3,7 +3,7 @@ import { createPgCircleRepository } from "./circle/pg-circle-repository.ts";
 import type { BindMode, SqlExecutor } from "./client.ts";
 import { createPgEntryRepository } from "./entry/pg-entry-repository.ts";
 import { createPgHabitRepository } from "./habit/pg-habit-repository.ts";
-import { createNoPauseRequestReader } from "./pause/no-pause-request-reader.ts";
+import { createPgPauseRequestRepository } from "./pause/pg-pause-request-repository.ts";
 import { createPgSeasonRepository } from "./season/pg-season-repository.ts";
 
 /** Every repository the application's `UnitOfWork` hands to a use case. */
@@ -19,7 +19,6 @@ export function bindRepositories(exec: SqlExecutor, mode: BindMode): PgRepositor
     circles: createPgCircleRepository(exec, mode),
     seasons: createPgSeasonRepository(exec, mode),
     entries: createPgEntryRepository(exec),
-    // TODO(A2): replace with the table-backed reader.
-    pauses: createNoPauseRequestReader(),
+    pauses: createPgPauseRequestRepository(exec),
   };
 }

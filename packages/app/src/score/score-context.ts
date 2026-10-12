@@ -1,6 +1,7 @@
 import type { MemberId, SeasonDay } from "@pactjoy/engine";
 import type { Circle, Member } from "../circle/circle.ts";
 import type { EntryRecord } from "../entry/entry.ts";
+import { loadEffectivePauses } from "../pause/effective-pauses.ts";
 import type { MemberPauseRequest } from "../pause/pause-request.repository.ts";
 import type { Repositories } from "../ports/repositories.ts";
 import type { Season } from "../season/season.ts";
@@ -8,6 +9,7 @@ import type { Actor } from "../shared/actor.ts";
 import type { SeasonId } from "../shared/ids.ts";
 import { err, ok, type Result } from "../shared/result.ts";
 import type { Clock } from "../time/clock.port.ts";
+import type { Instant } from "../time/instant.ts";
 import type { LocalDate } from "../time/local-date.ts";
 import { toSeasonDay } from "../time/season-calendar.ts";
 import type { TimeZone } from "../time/time-zone.port.ts";
@@ -35,6 +37,8 @@ export interface ScoreContext {
   readonly circle: Circle;
   readonly viewer: Member;
   readonly start: { readonly actualStart: LocalDate; readonly today: SeasonDay } | null;
+  /** The ONE instant this read observed: "today" and every pause decision derive from it. */
+  readonly now: Instant;
 }
 
 /** A season participant is anyone who held at least one commitment in it, whether or not they still belong to the circle. */
@@ -81,19 +85,35 @@ export function scoreContextOf(
   if (!circle || !viewer) {
     return err({ kind: "NotAMember" });
   }
+  const now = deps.clock.now();
   if (season.actualStart === null) {
-    return ok({ season, circle, viewer, start: null });
+    return ok({ season, circle, viewer, start: null, now });
   }
-  const today = toSeasonDay(
-    deps.timeZone.localDateAt(deps.clock.now(), season.timeZone),
-    season.actualStart,
-  );
+  const today = toSeasonDay(deps.timeZone.localDateAt(now, season.timeZone), season.actualStart);
   return ok({
     season,
     circle,
     viewer,
+    now,
     start:
       today.kind === "beforeStart" ? null : { actualStart: season.actualStart, today: today.day },
+  });
+}
+
+/**
+ * The pauses a score read must use: the effective ones at the query's clock
+ * (the choke point, ADR-0013), never the persisted rows.
+ */
+export function loadPausesFor(
+  deps: Pick<ScoreQueryDeps, "timeZone">,
+  repos: Repositories,
+  context: Pick<ScoreContext, "season" | "circle" | "now">,
+): Promise<readonly MemberPauseRequest[]> {
+  return loadEffectivePauses(repos, {
+    season: context.season,
+    circle: context.circle,
+    now: context.now,
+    timeZone: deps.timeZone,
   });
 }
 

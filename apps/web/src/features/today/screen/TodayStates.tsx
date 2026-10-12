@@ -7,6 +7,7 @@ import { InlineMessage } from "../../../ui/InlineMessage.tsx";
 import { Icon } from "../../../ui/icon/Icon.tsx";
 import { Illustration } from "../../../ui/Placeholder.tsx";
 import { EntrySheetHost } from "../../entry/index.ts";
+import { EndsTomorrowBanner, PauseTodayAction } from "../../pause/index.ts";
 import { PendingYesterday } from "../pending-yesterday/PendingYesterday.tsx";
 import { RowWithControls } from "../rows/RowWithControls.tsx";
 import { SeasonCard } from "../season/SeasonCard.tsx";
@@ -210,6 +211,7 @@ export function RunningToday({
   return (
     <TodayDateContext.Provider value={{ today: model.today, refDate: model.refDate }}>
       <RunningHeader model={model} />
+      {showDayState && <EndsTomorrowBanner rows={model.sheetRows} />}
       {banner}
       {model.kind === "ended" && (
         <InlineMessage tone="info" title="Temporada terminada">
@@ -246,6 +248,7 @@ export function RunningToday({
           ))}
         </Section>
       )}
+      {showDayState && <PauseTodayAction />}
       <SeasonCard model={model.season} />
       {model.standings !== null && (
         <StandingsPair model={model.standings} viewerName={model.greetingName} />

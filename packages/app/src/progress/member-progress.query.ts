@@ -1,6 +1,11 @@
 import { type MemberId, opportunityCounts, weekProgress } from "@pactjoy/engine";
 import { type MemberScoreError, memberScoreView } from "../score/member-score.query.ts";
-import { isParticipant, loadScoreContext, type ScoreQueryDeps } from "../score/score-context.ts";
+import {
+  isParticipant,
+  loadPausesFor,
+  loadScoreContext,
+  type ScoreQueryDeps,
+} from "../score/score-context.ts";
 import { toScoreInput } from "../score/score-input.ts";
 import type { Actor } from "../shared/actor.ts";
 import type { SeasonId } from "../shared/ids.ts";
@@ -42,7 +47,7 @@ export async function memberProgress(
     }
     const data = {
       entries: await repos.entries.listBySeason(season.id),
-      pauses: await repos.pauses.listBySeason(season.id),
+      pauses: await loadPausesFor(deps, repos, context.value),
     };
     const score = memberScoreView({ ...context.value, start }, data, target);
     if (score.kind !== "scored") throw new Error("expected started member score");

@@ -12,7 +12,14 @@ import type {
   UpdateHabitInput,
 } from "@pactjoy/app";
 import type { SeasonProgressApi } from "./season-progress-api.ts";
-import type { HabitDto, SeasonDto, Serialized } from "./wire.ts";
+import type {
+  HabitDto,
+  MyPauseRequests,
+  PauseApprovalDto,
+  PauseRequestDto,
+  SeasonDto,
+  Serialized,
+} from "./wire.ts";
 
 export type CreateHabitCommand = Serialized<CreateHabitInput>;
 export type UpdateHabitCommand = Omit<Serialized<UpdateHabitInput>, "habitId">;
@@ -75,6 +82,23 @@ export interface JoinCircleCommand {
   readonly displayName: string;
 }
 
+/** Why a member asks for a Pause. The closed list is the app's; the Spanish labels live in the UI. */
+export type PauseReasonCode = PauseRequestDto["reason"];
+
+export interface RequestPauseCommand {
+  readonly scope:
+    | { readonly kind: "all" }
+    | { readonly kind: "commitment"; readonly commitmentId: string };
+  readonly reason: PauseReasonCode;
+  readonly note: string | null;
+  /** The first paused day; never in the past. */
+  readonly startDate: string;
+  /** The last paused day, or `null` for an open pause ("until I resume"). */
+  readonly endDate: string | null;
+}
+
+export type PauseDecision = "approve" | "reject";
+
 /** Everything the screens know about the backend. Adapters throw `ApiError`. */
 export interface PactJoyApi extends SeasonProgressApi {
   listHabits(signal?: AbortSignal): Promise<readonly HabitDto[]>;
@@ -106,4 +130,13 @@ export interface PactJoyApi extends SeasonProgressApi {
   renameCircle(circleId: string, name: string): Promise<void>;
   renameMyDisplayName(circleId: string, displayName: string): Promise<void>;
   leaveCircle(circleId: string): Promise<void>;
+  requestPause(seasonId: string, cmd: RequestPauseCommand): Promise<PauseRequestDto>;
+  /** My requests, the ones awaiting my answer, my budgets and the 30b comparison (PA-2). */
+  getMyPauseRequests(signal?: AbortSignal): Promise<MyPauseRequests>;
+  /** "Set my answer": idempotent while pending, `PauseAlreadyDecided` after (D2). */
+  respondToPause(pauseRequestId: string, decision: PauseDecision): Promise<PauseApprovalDto>;
+  /** Withdraws a pending request (Q2). */
+  cancelPauseRequest(pauseRequestId: string): Promise<PauseRequestDto>;
+  /** One Commitment, or every one still running when omitted ("Todos", PL-33). */
+  resumePause(pauseRequestId: string, commitmentId?: string): Promise<PauseRequestDto>;
 }

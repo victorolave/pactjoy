@@ -2,7 +2,6 @@ import type { Fraction, MemberId } from "@pactjoy/engine";
 import {
   displayPercent,
   displayPoints,
-  graceDeadline,
   historyProvenance,
   opportunityCounts,
   opportunityPointsAt,
@@ -14,6 +13,7 @@ import {
 import { commitmentToEngine } from "../commitment/to-engine.ts";
 import { projectMeasure, projectTarget } from "../score/commitment-projection.ts";
 import {
+  loadPausesFor,
   loadScoreContext,
   type ScoreContextError,
   type ScoreData,
@@ -30,6 +30,7 @@ import { localDateOfSeasonDay } from "../time/season-calendar.ts";
 import { DAYS_PER_WEEK, seasonPhase, weekOf } from "../today/season-phase.ts";
 import type { TodayWeekProgress } from "../today/today-rows.ts";
 import type { WeekFacts, WeekRange, WeekSummaryView } from "./progress-view.ts";
+import { weekDeadline } from "./week-deadline.ts";
 
 export type WeekSummaryDeps = ScoreQueryDeps;
 export type WeekSummaryError = ScoreContextError;
@@ -67,7 +68,7 @@ export async function weekSummary(
 
     const data: ScoreData = {
       entries: await repos.entries.listBySeason(season.id),
-      pauses: await repos.pauses.listBySeason(season.id),
+      pauses: await loadPausesFor(deps, repos, context.value),
     };
 
     const habits = await repos.habits.getMany(
@@ -76,7 +77,13 @@ export async function weekSummary(
 
     const firstDay = seasonDay(weekIndex * DAYS_PER_WEEK);
     const lastDay = seasonDay(weekIndex * DAYS_PER_WEEK + DAYS_PER_WEEK - 1);
-    const deadline = graceDeadline(lastDay);
+    const deadline = weekDeadline({
+      season,
+      actualStart: start.actualStart,
+      weekIndex,
+      pauses: data.pauses,
+      memberId: viewer.id,
+    });
 
     const currentWeekIndex = weekOf(phase.scoringDay) - 1;
     const isEnded = phase.phase === "ended";

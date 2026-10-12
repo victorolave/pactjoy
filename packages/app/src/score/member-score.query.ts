@@ -7,6 +7,7 @@ import { err, ok, type Result } from "../shared/result.ts";
 import { type CommitmentScoreView, projectCommitment } from "./commitment-projection.ts";
 import {
   isParticipant,
+  loadPausesFor,
   loadScoreContext,
   type ScoreContextError,
   type ScoreData,
@@ -140,7 +141,7 @@ export async function memberScore(
       return ok({ kind: "notStarted" });
     }
     const entries = await repos.entries.listBySeason(season.id);
-    const pauses = await repos.pauses.listBySeason(season.id);
+    const pauses = await loadPausesFor(deps, repos, context.value);
     return ok(memberScoreView({ ...context.value, start }, { entries, pauses }, target));
   });
 }

@@ -131,7 +131,7 @@ describe("pendingYesterday (design 15d)", () => {
 
   it("leaves it out when yesterday was paused or on hold", async () => {
     const paused = await setup(PER_DAY_REACH, 3);
-    paused.app.pauses.add(
+    paused.app.pauses.seed(
       paused.given.season.id,
       pause(paused.given.andreaCommitment, 2, 2, {
         kind: "approved",
@@ -141,7 +141,7 @@ describe("pendingYesterday (design 15d)", () => {
     );
     expect(pending(await today(paused.app, paused.given.andrea))).toEqual([]);
     const held = await setup(PER_DAY_REACH, 3);
-    held.app.pauses.add(
+    held.app.pauses.seed(
       held.given.season.id,
       pause(held.given.andreaCommitment, 2, 2, { kind: "pending" }),
     );

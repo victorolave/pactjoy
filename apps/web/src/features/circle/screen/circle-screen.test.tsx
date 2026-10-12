@@ -8,6 +8,7 @@ import {
   pairCircleFixture,
   soloCircleFixture,
 } from "../../../testing/fixtures/circle.ts";
+import { myPauseRequestsFixture, pauseApprovalFixture } from "../../../testing/fixtures/pause.ts";
 import { renderApp } from "../../../testing/render.tsx";
 
 const ACTIVE = {
@@ -322,5 +323,56 @@ describe("Circle tab, loading and failing", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Reintentar" }));
     expect(await screen.findByRole("heading", { name: "Andrea & Victor" })).toBeInTheDocument();
     expect(deps.api.calls.getMyCircle).toBe(2);
+  });
+});
+
+describe("Circle tab, pause requests (screen 28)", () => {
+  const withRequest = () =>
+    myPauseRequestsFixture({
+      awaitingMe: [
+        pauseApprovalFixture({
+          requester: { memberId: "member-andrea", displayName: "Andrea" },
+          commitments: [{ kind: "hidden", commitmentId: "commitment-9" }],
+        }),
+      ],
+    });
+
+  it("lists a request awaiting the viewer, with a private Commitment unnamed, and no activity feed", async () => {
+    const view = renderApp({ path: "/circle", myCircle: pairCircleFixture(ACTIVE) });
+    view.deps.api.setMyPauseRequests(withRequest());
+    expect(await screen.findByText("Andrea pidió pausar un objetivo privado")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Pausas por aprobar" })).toBeInTheDocument();
+    expect(screen.queryByText(/Actividad del círculo/)).not.toBeInTheDocument();
+  });
+
+  it("answers from the card", async () => {
+    const view = renderApp({ path: "/circle", myCircle: pairCircleFixture(ACTIVE) });
+    view.deps.api.setMyPauseRequests(withRequest());
+    await userEvent.click(await screen.findByRole("button", { name: "Aprobar" }));
+    await waitFor(() =>
+      expect(view.deps.api.pauseCommands).toEqual([
+        { method: "respondToPause", args: ["pause-9", "approve"] },
+      ]),
+    );
+    expect(await screen.findByText("Aprobaste")).toBeInTheDocument();
+  });
+
+  it("shows nothing about pauses to someone alone in the circle (nobody to ask)", async () => {
+    const view = renderApp({ path: "/circle", myCircle: soloCircleFixture() });
+    view.deps.api.setMyPauseRequests(withRequest());
+    await screen.findByRole("heading", { name: "Andrea & Victor" });
+    expect(screen.queryByText("Pausas por aprobar")).not.toBeInTheDocument();
+  });
+
+  it("offers to pause a Commitment while the season runs, and opens the request sheet", async () => {
+    renderApp({ path: "/circle", myCircle: pairCircleFixture(ACTIVE) });
+    await userEvent.click(await screen.findByRole("button", { name: "Pausar un compromiso" }));
+    expect(await screen.findByRole("dialog", { name: "Pausar un compromiso" })).toBeInTheDocument();
+  });
+
+  it("does not offer it before the season runs", async () => {
+    renderApp({ path: "/circle", myCircle: pairCircleFixture({ ...ACTIVE, phase: "pactOpen" }) });
+    await screen.findByText("Andrea");
+    expect(screen.queryByRole("button", { name: "Pausar un compromiso" })).not.toBeInTheDocument();
   });
 });

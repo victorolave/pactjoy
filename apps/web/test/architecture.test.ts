@@ -30,19 +30,21 @@ function filesUnder(dir: string): string[] {
 
 /** feature -> the features it may reach (always through their index.ts). */
 const ALLOWED_FEATURE_DEPS: Readonly<Record<string, readonly string[]>> = {
-  today: ["entry", "habits", "season-progress-data", "season-week"],
+  today: ["entry", "habits", "pause", "season-progress-data", "season-week"],
   habits: [],
   pact: ["habits"],
   entry: [],
   auth: [],
-  circle: ["onboarding"],
+  circle: ["onboarding", "pause"],
   onboarding: [],
   profile: ["auth", "circle"],
   "season-progress-data": [],
   "season-member": ["habits", "season-progress-data"],
   season: ["circle", "habits", "season-progress-data"],
   "season-week": ["season-progress-data"],
-  "season-commitment": ["season-progress-data"],
+  "season-commitment": ["season-progress-data", "pause"],
+  // Reads Today and the circle through the API port and their shared query keys, never their features.
+  pause: [],
 };
 
 const BASE_LAYERS = /^(shared|ui|ports|adapters|context|platform)\//;
@@ -128,6 +130,15 @@ describe("the folder architecture", () => {
     expect(violationsOf("features/today/Foo.ts", ["../habits/index.ts"])).toEqual([]);
     expect(violationsOf("features/habits/Foo.ts", ["../pact/index.ts"])).toHaveLength(1);
   });
+  it("lets the Circle tab and a Commitment reach pause only through its index, and pause reach no feature", () => {
+    expect(violationsOf("features/circle/Foo.tsx", ["../pause/index.ts"])).toEqual([]);
+    expect(violationsOf("features/season-commitment/Foo.tsx", ["../pause/index.ts"])).toEqual([]);
+    expect(violationsOf("features/circle/Foo.tsx", ["../pause/queries.ts"])).toHaveLength(1);
+    expect(violationsOf("features/pause/Foo.tsx", ["../circle/index.ts"])).toHaveLength(1);
+    expect(violationsOf("features/pause/Foo.tsx", ["../today/index.ts"])).toHaveLength(1);
+    expect(violationsOf("features/entry/Foo.tsx", ["../pause/index.ts"])).toHaveLength(1);
+  });
+
   it("keeps every import inside the dependency rules", () => {
     const found = filesUnder(SRC).flatMap((path) => {
       const file = relative(SRC, path).split(sep).join("/");

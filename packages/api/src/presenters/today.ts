@@ -4,6 +4,7 @@ import type {
   TodayBase,
   TodayEntry,
   TodayOpportunity,
+  TodayPause,
   TodayPoints,
   TodayRow,
   TodayView,
@@ -86,6 +87,19 @@ function presentPending(item: PendingYesterdayItem): PendingYesterdayItem {
   };
 }
 
+function presentPause(pause: TodayPause | null): TodayPause | null {
+  if (pause === null) return null;
+  return {
+    pauseRequestId: pause.pauseRequestId,
+    status: pause.status,
+    reason: pause.reason,
+    endDate: pause.endDate,
+    endsTomorrow: pause.endsTomorrow,
+    canResume: pause.canResume,
+    canCancel: pause.canCancel,
+  };
+}
+
 function presentRow(row: TodayRow): TodayRow {
   const common = {
     commitmentId: row.commitmentId,
@@ -95,6 +109,7 @@ function presentRow(row: TodayRow): TodayRow {
     opportunity: presentOpportunity(row.opportunity),
     points: presentPoints(row.points),
     entries: row.entries.map(presentTodayEntry),
+    pause: presentPause(row.pause),
   };
   return row.kind === "day"
     ? { kind: "day", ...common, scheduledToday: row.scheduledToday }

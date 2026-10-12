@@ -73,6 +73,15 @@ describe("a saved Today from before the shape changed is dropped, not rendered",
     expect(reloaded.getQueryData(todayKey)).toBeUndefined();
   });
 
+  it("drops a Today whose rows lack the nested `pause` (version 5 saved copies, PS-16)", async () => {
+    const view = activeTodayFixture();
+    const { reloaded } = await restoreFrom({
+      ...view,
+      rows: view.rows.map(({ pause: _pause, ...row }) => row),
+    });
+    expect(reloaded.getQueryData(todayKey)).toBeUndefined();
+  });
+
   it("keeps a current Today", async () => {
     const current = activeTodayFixture();
     const { reloaded } = await restoreFrom(current);
@@ -116,6 +125,23 @@ describe("createTodayPersister (TO-R10)", () => {
     });
     expect(reloaded.getQueryData(todayKey)).toBeUndefined();
     expect(storage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  it("purges every earlier cache version, so a Today saved before the nested `pause` is never restored (PS-16)", async () => {
+    for (let version = 1; version < Number(CACHE_VERSION); version += 1) {
+      const storage = new MemoryStorage();
+      seedPersistedToday(storage, activeTodayFixture());
+      const saved = JSON.parse(storage.getItem(STORAGE_KEY) ?? "null");
+      saved.buster = `${version}:user-1`;
+      storage.setItem(STORAGE_KEY, JSON.stringify(saved));
+      const reloaded = new QueryClient();
+      await persistQueryClientRestore({
+        queryClient: reloaded,
+        ...persistOptionsFor(createTodayPersister(storage), bustFor("user-1")),
+      });
+      expect(reloaded.getQueryData(todayKey), `version ${version}`).toBeUndefined();
+      expect(storage.getItem(STORAGE_KEY)).toBeNull();
+    }
   });
 
   it("purges an unknown saved state instead of treating it as a safe rowless view", async () => {

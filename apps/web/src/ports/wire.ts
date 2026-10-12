@@ -5,6 +5,10 @@ import type {
   Instant,
   MeasureView,
   MemberProgressView,
+  PauseApprovalView,
+  PauseBudgetView,
+  PauseRedistribution,
+  PauseRequestView,
   Season,
   SeasonProgressView,
   WeekSummaryView,
@@ -58,3 +62,23 @@ export type SeasonProgress = Serialized<SeasonProgressView>;
 export type MemberProgress = Serialized<MemberProgressView>;
 export type CommitmentProgress = Serialized<CommitmentProgressView>;
 export type WeekSummary = Serialized<WeekSummaryView>;
+
+/**
+ * The pause reads as they arrive over the wire (change pause-workflow, ADR-0013). The requester's
+ * projection and the approver's differ: a private Commitment reaches an approver as exactly
+ * `{kind: "hidden", commitmentId}` (Q15).
+ */
+export type PauseRequestDto = Serialized<PauseRequestView>;
+export type PauseApprovalDto = Serialized<PauseApprovalView>;
+export type PauseBudgetDto = Serialized<PauseBudgetView>;
+export type PauseRedistributionDto = Serialized<PauseRedistribution>;
+export type PauseApprovalCommitmentDto = PauseApprovalDto["commitments"][number];
+
+/** `GET /me/pause-requests`: total, so no season gives empty lists. */
+export interface MyPauseRequests {
+  readonly seasonId: string | null;
+  readonly mine: readonly PauseRequestDto[];
+  readonly awaitingMe: readonly PauseApprovalDto[];
+  readonly budgets: readonly PauseBudgetDto[];
+  readonly redistributed: PauseRedistributionDto | null;
+}

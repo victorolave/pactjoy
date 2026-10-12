@@ -1,6 +1,7 @@
 import type { CommitmentId, MemberId } from "@pactjoy/engine";
 import { findActiveMember } from "../circle/circle.ts";
 import type { Measure } from "../commitment/commitment.ts";
+import { loadEffectivePauses } from "../pause/effective-pauses.ts";
 import type { IdGenerator } from "../ports/id-generator.ts";
 import type { Repositories } from "../ports/repositories.ts";
 import type { UnitOfWork } from "../ports/unit-of-work.ts";
@@ -23,11 +24,8 @@ import {
   type StoredEntry,
 } from "./entry.ts";
 import { type EntryValueError, validateEntryValue } from "./entry-value.ts";
-import {
-  checkEntryWindow,
-  type EntryWindowError,
-  PAUSE_GRACE_EXTENSION_DAYS,
-} from "./entry-window.ts";
+import { checkEntryWindow, type EntryWindowError } from "./entry-window.ts";
+import { isOnHold, isPaused } from "./on-hold.ts";
 
 export interface RecordEntryDeps {
   readonly uow: UnitOfWork<Repositories>;
@@ -56,6 +54,8 @@ export type RecordEntryError =
   | { readonly kind: "NoteTooLong" }
   | { readonly kind: "InvalidNote" }
   | { readonly kind: "IdempotencyKeyReused" }
+  | { readonly kind: "OpportunityOnHold" }
+  | { readonly kind: "OpportunityPaused" }
   | { readonly kind: "EntryDeleted" }
   | { readonly kind: "InvalidClientRequestId"; readonly reason: "empty" | "tooLong" | "malformed" }
   | EntryWindowError
@@ -183,16 +183,37 @@ export async function recordEntry(
         return err({ kind: "BeforeSeasonStart" });
       }
 
+      // The Commitment's pauses as they are at THIS write's clock, read in the same
+      // transaction as the Entry (EW-2). No pause lock: a stale read can only produce
+      // a false WindowClosed, never accept past a deadline (ADR-0013, D8).
+      const pauses = (
+        await loadEffectivePauses(repos, { season, circle, now, timeZone: deps.timeZone })
+      ).filter((pause) => pause.commitmentId === commitment.id);
       const closed = checkEntryWindow({
         schedule: commitment.measure.schedule,
         day: day.day,
         today: today.day,
         lengthWeeks: season.lengthWeeks,
-        // B7: the real extension source arrives with change A2 (app-pause-workflow).
-        pauseGraceExtensionDays: PAUSE_GRACE_EXTENSION_DAYS,
+        pauses,
       });
       if (closed) {
         return err(closed);
+      }
+      // EW-4: a day covered by a still-pending request is on hold until it is decided.
+      const holdInput = {
+        season,
+        actualStart: season.actualStart,
+        commitment,
+        day: day.day,
+        today: today.day,
+        pauses,
+      };
+      if (isOnHold(holdInput)) {
+        return err({ kind: "OpportunityOnHold" });
+      }
+      // An approved Pause refuses the Entry too (owner decision), until it is resumed.
+      if (isPaused(holdInput)) {
+        return err({ kind: "OpportunityPaused" });
       }
 
       const value = validateEntryValue(commitment.measure, input.value);

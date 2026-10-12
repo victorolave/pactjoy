@@ -11,6 +11,7 @@ import {
 import type { Measure } from "../commitment/commitment.ts";
 import { memberScoreView } from "../score/member-score.query.ts";
 import {
+  loadPausesFor,
   loadScoreContext,
   type ScoreContextError,
   type ScoreQueryDeps,
@@ -90,7 +91,7 @@ export async function commitmentProgress(
     }
     const data = {
       entries: await repos.entries.listBySeason(season.id),
-      pauses: await repos.pauses.listBySeason(season.id),
+      pauses: await loadPausesFor(deps, repos, context.value),
     };
     const score = memberScoreView({ ...context.value, start }, data, owner);
     const row =

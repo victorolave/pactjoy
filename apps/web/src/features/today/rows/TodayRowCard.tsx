@@ -1,5 +1,6 @@
 import type { TodayRow } from "@pactjoy/app";
 import type { ReactNode } from "react";
+import { RowPauseActions } from "../../pause/index.ts";
 import { DayRow } from "./DayRow.tsx";
 import { PausedRow } from "./PausedRow.tsx";
 import { WeekRow } from "./WeekRow.tsx";
@@ -19,7 +20,30 @@ export function TodayRowCard({ row, action, below, optimisticDone = false }: Tod
   if (state === "paused" || state === "onHold") return <PausedRow row={row} />;
   const writable =
     (state === "open" || state === "logged") && !(row.kind === "day" && !row.scheduledToday);
-  const controls = writable ? { action, below } : {};
+  // A pause still ahead leaves the row as it is, and the member may still back out of it (PS-12).
+  const ahead =
+    row.pause === null ? null : (
+      <RowPauseActions
+        pause={row.pause}
+        commitmentId={row.commitmentId}
+        habitName={row.habitName}
+      />
+    );
+  const underneath =
+    ahead === null ? (
+      writable ? (
+        below
+      ) : undefined
+    ) : (
+      <>
+        {writable ? below : null}
+        {ahead}
+      </>
+    );
+  const controls = {
+    ...(writable ? { action } : {}),
+    ...(underneath === undefined ? {} : { below: underneath }),
+  };
   return row.kind === "day" ? (
     <DayRow row={row} optimisticDone={optimisticDone} {...controls} />
   ) : (

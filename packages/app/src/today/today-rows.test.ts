@@ -97,6 +97,7 @@ describe("today rows: day rows (TD-R4, TD-R6)", () => {
           limitPercents: null,
         },
         entries: [],
+        pause: null,
       },
     ]);
   });
@@ -258,7 +259,7 @@ describe("today rows: opportunity state precedence (TD-R6)", () => {
 
   it("TD-S8: an approved pause covering today is paused with no grace", async () => {
     const { app, given } = await setup(PER_DAY_REACH, 3);
-    app.pauses.add(
+    app.pauses.seed(
       given.season.id,
       pause(given.andreaCommitment, 3, 5, {
         kind: "approved",
@@ -273,7 +274,7 @@ describe("today rows: opportunity state precedence (TD-R6)", () => {
 
   it("TD-S8: a pending request covering today is onHold", async () => {
     const { app, given } = await setup(PER_DAY_REACH, 3);
-    app.pauses.add(given.season.id, pause(given.andreaCommitment, 3, 5, { kind: "pending" }));
+    app.pauses.seed(given.season.id, pause(given.andreaCommitment, 3, 5, { kind: "pending" }));
     expect(rowsOf(await today(app, given.andrea))[0]).toMatchObject({
       opportunity: { state: "onHold", graceUntil: null },
     });
@@ -281,7 +282,7 @@ describe("today rows: opportunity state precedence (TD-R6)", () => {
 
   it("a fully paused week row is paused and carries no progress", async () => {
     const { app, given } = await setup(TIMES_PER_WEEK, 3);
-    app.pauses.add(
+    app.pauses.seed(
       given.season.id,
       pause(given.andreaCommitment, 0, 6, {
         kind: "approved",
@@ -298,7 +299,7 @@ describe("today rows: opportunity state precedence (TD-R6)", () => {
 
   it("a pending request over the whole week makes the week row onHold", async () => {
     const { app, given } = await setup(TIMES_PER_WEEK, 3);
-    app.pauses.add(given.season.id, pause(given.andreaCommitment, 0, 6, { kind: "pending" }));
+    app.pauses.seed(given.season.id, pause(given.andreaCommitment, 0, 6, { kind: "pending" }));
     expect(rowsOf(await today(app, given.andrea))[0]).toMatchObject({
       kind: "week",
       opportunity: { state: "onHold", graceUntil: null },
@@ -308,7 +309,7 @@ describe("today rows: opportunity state precedence (TD-R6)", () => {
   it("paused outranks closed and logged", async () => {
     const { app, given } = await setup(PER_DAY_REACH, 27);
     await record(app, given, 27, "30");
-    app.pauses.add(
+    app.pauses.seed(
       given.season.id,
       pause(given.andreaCommitment, 27, 27, {
         kind: "approved",
@@ -322,7 +323,7 @@ describe("today rows: opportunity state precedence (TD-R6)", () => {
 
   it("a partial pause of a week row keeps it scored, paused only on the paused day", async () => {
     const { app, given } = await setup(TIMES_PER_WEEK, 3);
-    app.pauses.add(
+    app.pauses.seed(
       given.season.id,
       pause(given.andreaCommitment, 3, 4, {
         kind: "approved",

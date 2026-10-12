@@ -1,11 +1,7 @@
 import type { CommitmentId, SeasonDay } from "@pactjoy/engine";
 import { weekOf, weekProgress } from "@pactjoy/engine";
 import { commitmentToEngine } from "../commitment/to-engine.ts";
-import {
-  checkEntryWindow,
-  entryWindowDeadline,
-  PAUSE_GRACE_EXTENSION_DAYS,
-} from "../entry/entry-window.ts";
+import { checkEntryWindow, entryWindowDeadline } from "../entry/entry-window.ts";
 import type { MeasureView } from "../score/commitment-projection.ts";
 import { projectMeasure } from "../score/commitment-projection.ts";
 import { startWeekdayOf, toEngineEntry } from "../score/score-input.ts";
@@ -64,13 +60,14 @@ export function pendingYesterday(input: TodayRowsInput): readonly PendingYesterd
     const { schedule } = commitment.measure;
     if (schedule.period !== "perSession" || schedule.frequency.kind !== "specificDays") return [];
     if (!schedule.frequency.weekdays.includes(weekday)) return [];
+    const pauses = input.pauses.filter((pause) => pause.commitmentId === commitment.id);
     if (
       checkEntryWindow({
         schedule,
         day: yesterday,
         today,
         lengthWeeks: season.lengthWeeks,
-        pauseGraceExtensionDays: PAUSE_GRACE_EXTENSION_DAYS,
+        pauses,
       }) !== null
     ) {
       return [];
@@ -81,7 +78,6 @@ export function pendingYesterday(input: TodayRowsInput): readonly PendingYesterd
     }
     const engineCommitment = commitmentToEngine(commitment);
     const entries = engineEntries.filter((entry) => entry.commitmentId === commitment.id);
-    const pauses = input.pauses.filter((pause) => pause.commitmentId === commitment.id);
     const weekAt = (week: number) =>
       weekProgress({
         season: engineSeason,
@@ -112,10 +108,7 @@ export function pendingYesterday(input: TodayRowsInput): readonly PendingYesterd
         privacy: commitment.privacy,
         measure: projectMeasure(commitment.measure),
         forDate: dateOfDay(actualStart, yesterday),
-        graceUntil: dateOfDay(
-          actualStart,
-          entryWindowDeadline(schedule, yesterday, PAUSE_GRACE_EXTENSION_DAYS),
-        ),
+        graceUntil: dateOfDay(actualStart, entryWindowDeadline(schedule, yesterday, pauses)),
         points: {
           ...perOpportunityViews(engineCommitment, opportunities),
           earned: null,

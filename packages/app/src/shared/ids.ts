@@ -10,6 +10,7 @@ export type CircleId = string & { readonly __brand: "CircleId" };
 export type SeasonId = string & { readonly __brand: "SeasonId" };
 export type HabitId = string & { readonly __brand: "HabitId" };
 export type EntryId = string & { readonly __brand: "EntryId" };
+export type PauseRequestId = string & { readonly __brand: "PauseRequestId" };
 
 function brand<Brand extends string>(
   kind: Brand,
@@ -44,4 +45,9 @@ export function habitId(value: string): HabitId {
 /** @throws {RangeError} if `value` is empty. */
 export function entryId(value: string): EntryId {
   return brand("EntryId", value) as EntryId;
+}
+
+/** @throws {RangeError} if `value` is empty. */
+export function pauseRequestId(value: string): PauseRequestId {
+  return brand("PauseRequestId", value) as PauseRequestId;
 }

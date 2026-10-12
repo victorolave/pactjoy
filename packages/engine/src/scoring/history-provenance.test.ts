@@ -335,3 +335,25 @@ describe("historyProvenance", () => {
     },
   );
 });
+
+describe("historyProvenance — specificDays rejection grace", () => {
+  it("an Entry for day 10 recorded on decidedOn + 1 appears in the cell, consistent with scoring", () => {
+    const thursdays = buildDoneCommitment("thu", 100, { kind: "specificDays", weekdays: [3] });
+    const input = snapshot({
+      season: { lengthWeeks: 4, startWeekday: 0 },
+      commitments: [thursdays],
+      entries: [buildDoneEntry("thu", 10, 13)],
+      pauses: [
+        buildPauseRequest(
+          "thu",
+          10,
+          { kind: "fixed", lastDay: seasonDay(10) },
+          { kind: "rejected", decidedOn: seasonDay(12) },
+        ),
+      ],
+      today: seasonDay(14),
+    });
+    const weeks = historyProvenance(thursdays, input);
+    expect(weeks[1]?.cells[0]).toMatchObject({ day: 10, entryIndices: [0], status: "ideal" });
+  });
+});

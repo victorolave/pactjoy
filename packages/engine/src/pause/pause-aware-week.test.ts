@@ -4,6 +4,7 @@ import { seasonDay } from "../calendar/season-calendar.ts";
 import { graceDeadline, isOnTime } from "../entry/grace-period.ts";
 import { fromInt } from "../fraction/fraction.ts";
 import {
+  buildDoneCommitment,
   buildDoneEntry,
   buildPauseRequest,
   buildQuantityCommitment,
@@ -11,7 +12,7 @@ import {
   buildWeeklyTotalCommitment,
 } from "../test-support/builders.ts";
 import { fr } from "../test-support/fraction-literal.ts";
-import { pauseAwareWeekSessions } from "./pause-aware-week.ts";
+import { entryGraceDeadline, pauseAwareWeekSessions } from "./pause-aware-week.ts";
 
 const inglesTarget = { direction: "reach" as const, minimum: fromInt(60), ideal: fromInt(150) };
 
@@ -530,5 +531,103 @@ describe("pauseAwareWeekSessions — P-C (engine-authored, decision round 3): a 
       season: defaultSeason,
     });
     expect(result.status).toBe("onHold"); // mixed cause -> its result can still change once the pending part decides
+  });
+});
+
+describe("pauseAwareWeekSessions — specificDays: a rejection extends grace for its day-bound opportunity", () => {
+  // Weekday 3 of week 1 is day 10 (startWeekday 0). Request on day 10, rejected on day 12.
+  const thursdays = buildDoneCommitment("daily", 100, { kind: "specificDays", weekdays: [3] });
+  const rejected = [
+    buildPauseRequest(
+      "daily",
+      10,
+      { kind: "fixed", lastDay: seasonDay(10) },
+      { kind: "rejected", decidedOn: seasonDay(12) },
+    ),
+  ];
+
+  it("an Entry for day 10 recorded on decidedOn + 1 (day 13) counts", () => {
+    const entries = [buildDoneEntry("daily", 10, 13)];
+    const result = pauseAwareWeekSessions(thursdays, 1, rejected, entries, seasonDay(14), {
+      season: defaultSeason,
+    });
+    expect(result.status).toBe("scored");
+    if (result.status !== "scored") throw new Error("unreachable");
+    expect(result.sessions.map((s) => s.progress)).toEqual([fr("1")]);
+  });
+
+  it("triangulation: recorded on decidedOn + 2 (day 14) is past the extended deadline and does not count", () => {
+    const entries = [buildDoneEntry("daily", 10, 14)];
+    const result = pauseAwareWeekSessions(thursdays, 1, rejected, entries, seasonDay(15), {
+      season: defaultSeason,
+    });
+    if (result.status !== "scored") throw new Error("unreachable");
+    expect(result.sessions.map((s) => s.progress)).toEqual([fr("0")]);
+  });
+
+  it("triangulation: without a rejection the same late Entry (day 13) does not count", () => {
+    const entries = [buildDoneEntry("daily", 10, 13)];
+    const result = pauseAwareWeekSessions(thursdays, 1, [], entries, seasonDay(14), {
+      season: defaultSeason,
+    });
+    if (result.status !== "scored") throw new Error("unreachable");
+    expect(result.sessions.map((s) => s.progress)).toEqual([fr("0")]);
+  });
+});
+
+describe("entryGraceDeadline — the one grace deadline shared by scoring and the app's entry window", () => {
+  const specific = {
+    period: "perSession",
+    frequency: { kind: "specificDays", weekdays: [3] },
+  } as const;
+  const times = { period: "perSession", frequency: { kind: "timesPerWeek", times: 3 } } as const;
+  const total = { period: "weeklyTotal" } as const;
+  const rejectedAt = (startDay: number, decidedOn: number) => [
+    buildPauseRequest(
+      "x",
+      startDay,
+      { kind: "fixed", lastDay: seasonDay(startDay) },
+      { kind: "rejected", decidedOn: seasonDay(decidedOn) },
+    ),
+  ];
+  const approved = [
+    buildPauseRequest(
+      "x",
+      10,
+      { kind: "fixed", lastDay: seasonDay(10) },
+      { kind: "approved", decidedOn: seasonDay(12), resumedOn: null },
+    ),
+  ];
+
+  it("no pause: the normal deadline for each kind (day+1 for specificDays, week end+1 for week-bound)", () => {
+    expect(entryGraceDeadline(specific, seasonDay(10), [])).toBe(11);
+    expect(entryGraceDeadline(times, seasonDay(10), [])).toBe(14); // week 1 = days 7..13
+    expect(entryGraceDeadline(total, seasonDay(8), [])).toBe(14);
+  });
+
+  it("approved: never extends", () => {
+    expect(entryGraceDeadline(specific, seasonDay(10), approved)).toBe(11);
+    expect(entryGraceDeadline(times, seasonDay(10), approved)).toBe(14);
+    expect(entryGraceDeadline(total, seasonDay(10), approved)).toBe(14);
+  });
+
+  it("rejected: specificDays extends to decidedOn + 1 only for days from startDay through decidedOn", () => {
+    const pauses = rejectedAt(10, 12);
+    expect(entryGraceDeadline(specific, seasonDay(9), pauses)).toBe(10);
+    expect(entryGraceDeadline(specific, seasonDay(10), pauses)).toBe(13);
+    expect(entryGraceDeadline(specific, seasonDay(12), pauses)).toBe(13);
+    expect(entryGraceDeadline(specific, seasonDay(13), pauses)).toBe(14);
+  });
+
+  it("rejected: timesPerWeek and weeklyTotal extend the whole week's deadline", () => {
+    const pauses = rejectedAt(10, 15);
+    expect(entryGraceDeadline(times, seasonDay(8), pauses)).toBe(16);
+    expect(entryGraceDeadline(total, seasonDay(13), pauses)).toBe(16);
+  });
+
+  it("rejected: a decision whose span does not touch the week leaves it unchanged", () => {
+    const pauses = rejectedAt(2, 3);
+    expect(entryGraceDeadline(times, seasonDay(10), pauses)).toBe(14);
+    expect(entryGraceDeadline(total, seasonDay(10), pauses)).toBe(14);
   });
 });

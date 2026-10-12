@@ -2,7 +2,6 @@ import type { MemberId, SeasonDay } from "@pactjoy/engine";
 import {
   displayPercent,
   displayPoints,
-  graceDeadline,
   seasonDay,
   type WeekFigures,
   weeklySeries,
@@ -14,6 +13,7 @@ import type { LocalDate } from "../time/local-date.ts";
 import { localDateOfSeasonDay } from "../time/season-calendar.ts";
 import { DAYS_PER_WEEK, type SeasonPhase, weekOf } from "../today/season-phase.ts";
 import type { SeasonWeek, StandingsEntry, WeekFacts } from "./progress-view.ts";
+import { weekDeadline } from "./week-deadline.ts";
 
 export interface SeasonWeeksInput {
   readonly season: Season;
@@ -56,7 +56,14 @@ export function seasonWeeks({
   return Array.from({ length: season.lengthWeeks }, (_, weekIndex) => {
     const firstDay = seasonDay(weekIndex * DAYS_PER_WEEK);
     const lastDay = seasonDay(weekIndex * DAYS_PER_WEEK + DAYS_PER_WEEK - 1);
-    const deadline = graceDeadline(lastDay);
+    // Circle-wide on purpose: one `facts` per week is shared by every standings row,
+    // so the week stays open while any member's window is still open.
+    const deadline = weekDeadline({
+      season,
+      actualStart,
+      weekIndex,
+      pauses: data.pauses,
+    });
 
     const timing = isEnded
       ? "past"

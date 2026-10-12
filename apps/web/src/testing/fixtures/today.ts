@@ -82,6 +82,29 @@ export const dayRowFixture = (overrides: Partial<DayRow> = {}): DayRow => ({
   opportunity: { state: "open", graceUntil: localDate("2026-10-03") },
   points: pointsFixture({ perOpportunity: "8", earned: null, limitPercents: null }),
   entries: [],
+  pause: null,
+  ...overrides,
+});
+
+/** The pause a Today row belongs to; an approved one that is running, unless overridden. */
+export type RowPause = NonNullable<DayRow["pause"]>;
+type PauseOverrides = Omit<Partial<RowPause>, "pauseRequestId" | "endDate"> & {
+  readonly pauseRequestId?: string;
+  readonly endDate?: string | null;
+};
+
+export const todayPauseFixture = ({
+  pauseRequestId = "pause-1",
+  endDate = null,
+  ...overrides
+}: PauseOverrides = {}): RowPause => ({
+  pauseRequestId: pauseRequestId as RowPause["pauseRequestId"],
+  status: "approved",
+  reason: "travel",
+  endDate: endDate === null ? null : localDate(endDate),
+  endsTomorrow: false,
+  canResume: true,
+  canCancel: false,
   ...overrides,
 });
 
@@ -129,6 +152,7 @@ export const weekRowFixture = (overrides: Partial<WeekRow> = {}): WeekRow => ({
   opportunity: { state: "open", graceUntil: localDate("2026-10-05") },
   points: pointsFixture({ perOpportunity: "83.33", earned: null, limitPercents: null }),
   entries: [],
+  pause: null,
   progress: {
     value: "40",
     target: { direction: "reach", minimum: "10", ideal: "30" },

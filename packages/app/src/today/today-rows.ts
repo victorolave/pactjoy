@@ -15,12 +15,9 @@ import {
 import type { CommitmentRecord } from "../commitment/commitment.ts";
 import { commitmentToEngine } from "../commitment/to-engine.ts";
 import type { EntryRecord } from "../entry/entry.ts";
-import {
-  checkEntryWindow,
-  entryWindowDeadline,
-  PAUSE_GRACE_EXTENSION_DAYS,
-} from "../entry/entry-window.ts";
+import { checkEntryWindow, entryWindowDeadline } from "../entry/entry-window.ts";
 import type { Habit } from "../habit/habit.ts";
+import type { EffectivePauseRequest } from "../pause/effective-pauses.ts";
 import type { MemberPauseRequest } from "../pause/pause-request.repository.ts";
 import {
   type MeasureView,
@@ -33,6 +30,7 @@ import type { Season } from "../season/season.ts";
 import { toDecimalString } from "../shared/decimal.ts";
 import type { EntryId, HabitId } from "../shared/ids.ts";
 import { epochDay, type LocalDate, localDateOfEpochDay } from "../time/local-date.ts";
+import { type TodayPause, todayPauseOf } from "./today-pause.ts";
 
 /**
  * Where one opportunity stands for the viewer (TD-R6). Precedence:
@@ -107,6 +105,8 @@ interface TodayRowBase {
   readonly opportunity: TodayOpportunity;
   readonly points: TodayPoints;
   readonly entries: readonly TodayEntry[];
+  /** The pending or approved pause this Commitment belongs to; `null` when none (additive, PA-9). */
+  readonly pause: TodayPause | null;
 }
 
 /** One row per commitment OF THE VIEWER; other members' commitments never appear. */
@@ -122,6 +122,8 @@ export interface TodayRowsInput {
   readonly habits: readonly Habit[];
   readonly entries: readonly EntryRecord[];
   readonly pauses: readonly MemberPauseRequest[];
+  /** The viewer's own requests with their effective decision (ids, reasons and statuses for `pause`). */
+  readonly pauseRequests: readonly EffectivePauseRequest[];
   /** The real current season day (may be past the last day once the season ended). */
   readonly today: SeasonDay;
   /** The day the rows describe: today, or the last season day once ended. */
@@ -250,12 +252,13 @@ export function todayRows(input: TodayRowsInput): TodayRowsResult {
     }
     const { schedule } = commitment.measure;
     const mine = input.entries.filter((entry) => entry.commitmentId === commitment.id);
+    const ownPauses = input.pauses.filter((pause) => pause.commitmentId === commitment.id);
     const progress = weekProgress({
       season: engineSeason,
       commitment: commitmentToEngine(commitment),
       week,
       entries: engineEntries.filter((entry) => entry.commitmentId === commitment.id),
-      pauses: input.pauses.filter((pause) => pause.commitmentId === commitment.id),
+      pauses: ownPauses,
       today: refDay,
     });
     const closed =
@@ -264,7 +267,7 @@ export function todayRows(input: TodayRowsInput): TodayRowsResult {
         day: refDay,
         today,
         lengthWeeks: season.lengthWeeks,
-        pauseGraceExtensionDays: PAUSE_GRACE_EXTENSION_DAYS,
+        pauses: ownPauses,
       }) !== null;
     const state = stateOf(
       progress,
@@ -280,7 +283,7 @@ export function todayRows(input: TodayRowsInput): TodayRowsResult {
         commitment: engineCommitment,
         week: weekIndex,
         entries: engineEntries.filter((entry) => entry.commitmentId === commitment.id),
-        pauses: input.pauses.filter((pause) => pause.commitmentId === commitment.id),
+        pauses: ownPauses,
         today: refDay,
       }),
     );
@@ -322,11 +325,15 @@ export function todayRows(input: TodayRowsInput): TodayRowsResult {
         state,
         graceUntil: held
           ? null
-          : dateOfDay(
-              actualStart,
-              entryWindowDeadline(schedule, refDay, PAUSE_GRACE_EXTENSION_DAYS),
-            ),
+          : dateOfDay(actualStart, entryWindowDeadline(schedule, refDay, ownPauses)),
       },
+      pause: todayPauseOf(commitment.id, {
+        season: engineSeason,
+        today,
+        requests: input.pauseRequests,
+        history: ownPauses,
+        dateOf: (day) => dateOfDay(actualStart, day),
+      }),
       entries: mine
         .filter(
           (entry) =>
@@ -335,7 +342,7 @@ export function todayRows(input: TodayRowsInput): TodayRowsResult {
               day: entry.day,
               today,
               lengthWeeks: season.lengthWeeks,
-              pauseGraceExtensionDays: PAUSE_GRACE_EXTENSION_DAYS,
+              pauses: ownPauses,
             }) === null,
         )
         .map((entry) => entryView(entry, actualStart)),

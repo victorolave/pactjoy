@@ -1,7 +1,8 @@
-import type { MemberId } from "@pactjoy/engine";
+import { type MemberId, seasonDay } from "@pactjoy/engine";
 import type { Circle, Invite, Member } from "../circle/circle.ts";
-import type { CommitmentRecord } from "../commitment/commitment.ts";
+import { type CommitmentRecord, commitmentId } from "../commitment/commitment.ts";
 import type { Habit } from "../habit/habit.ts";
+import { AUTO_APPROVE_AFTER_MS, type PauseRequestRecord } from "../pause/pause-request.ts";
 import type {
   PactApproval,
   ReviewCadenceWeeks,
@@ -9,7 +10,14 @@ import type {
   SeasonLengthWeeks,
   SeasonStatus,
 } from "../season/season.ts";
-import type { CircleId, HabitId, SeasonId, UserId } from "../shared/ids.ts";
+import {
+  type CircleId,
+  type HabitId,
+  pauseRequestId,
+  type SeasonId,
+  seasonId,
+  type UserId,
+} from "../shared/ids.ts";
 import { type Instant, instant } from "../time/instant.ts";
 import type { LocalDate } from "../time/local-date.ts";
 import { localDate } from "../time/local-date.ts";
@@ -128,5 +136,35 @@ export function seasonFixture(options: SeasonFixtureOptions): Season {
     pactRevision: options.pactRevision ?? 0,
     createdAt: options.createdAt ?? DEFAULT_INSTANT,
     version: options.version ?? 0,
+  };
+}
+
+/**
+ * Builds a pending {@link PauseRequestRecord} for GIVEN-state setup: one
+ * Commitment, open end, no responses, `autoApproveAt` exactly 48 h after
+ * `requestedAt`. Every field is overridable.
+ */
+export function pauseRequestFixture(
+  overrides: Partial<PauseRequestRecord> = {},
+): PauseRequestRecord {
+  const requestedAt = overrides.requestedAt ?? DEFAULT_INSTANT;
+  return {
+    id: pauseRequestId("pause-1"),
+    seasonId: seasonId("season-1"),
+    memberId: "member-victor" as MemberId,
+    reason: "health",
+    note: null,
+    requestedAt,
+    requestedOn: seasonDay(0),
+    startDay: seasonDay(0),
+    end: { kind: "open" },
+    autoApproveAt: instant(requestedAt + AUTO_APPROVE_AFTER_MS),
+    status: "pending",
+    decidedAt: null,
+    decidedOn: null,
+    commitments: [{ commitmentId: commitmentId("commitment-1"), resumedOn: null, resumedAt: null }],
+    responses: [],
+    version: 0,
+    ...overrides,
   };
 }

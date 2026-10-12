@@ -14,15 +14,27 @@ import type {
   JoinCircleCommand,
   MyCircle,
   PactJoyApi,
+  PauseDecision,
   PreviewScoringCommand,
   RecordEntryCommand,
   RecordedEntry,
+  RequestPauseCommand,
   UpdateHabitCommand,
 } from "../ports/pactjoy-api.ts";
 import type { SeasonProgressApi } from "../ports/season-progress-api.ts";
-import type { SeasonDto } from "../ports/wire.ts";
+import type {
+  MyPauseRequests,
+  PauseApprovalDto,
+  PauseRequestDto,
+  SeasonDto,
+} from "../ports/wire.ts";
 import { FakeSeasonProgressApi } from "./fake-season-progress.ts";
 import { NO_CIRCLE } from "./fixtures/circle.ts";
+import {
+  noPauseRequestsFixture,
+  pauseApprovalFixture,
+  pauseRequestFixture,
+} from "./fixtures/pause.ts";
 
 type ExistingMethod =
   | "getToday"
@@ -37,6 +49,11 @@ type ExistingMethod =
   | "renameCircle"
   | "renameMyDisplayName"
   | "leaveCircle"
+  | "requestPause"
+  | "getMyPauseRequests"
+  | "respondToPause"
+  | "cancelPauseRequest"
+  | "resumePause"
   | ProgressMethod;
 type ProgressMethod = keyof SeasonProgressApi;
 
@@ -86,6 +103,11 @@ export class FakePactJoyApi implements PactJoyApi {
     renameCircle: 0,
     renameMyDisplayName: 0,
     leaveCircle: 0,
+    requestPause: 0,
+    getMyPauseRequests: 0,
+    respondToPause: 0,
+    cancelPauseRequest: 0,
+    resumePause: 0,
     getSeasonProgress: 0,
     getMemberProgress: 0,
     getCommitmentProgress: 0,
@@ -95,6 +117,8 @@ export class FakePactJoyApi implements PactJoyApi {
   readonly progress = new FakeSeasonProgressApi();
   /** What the circle mutations were asked to do, in order, for assertions. */
   readonly circleCommands: { readonly method: Method; readonly args: readonly unknown[] }[] = [];
+  /** What the pause mutations were asked to do, in order, including the ones scripted to fail. */
+  readonly pauseCommands: { readonly method: Method; readonly args: readonly unknown[] }[] = [];
   /** Every recordEntry call, including the ones that were scripted to fail. */
   readonly recordAttempts: RecordEntryCommand[] = [];
   /** Every deleteEntry call, including the ones that were scripted to fail. */
@@ -112,6 +136,7 @@ export class FakePactJoyApi implements PactJoyApi {
 
   #today: TodayView;
   #myCircle: MyCircle = NO_CIRCLE;
+  #myPauseRequests: MyPauseRequests = noPauseRequestsFixture();
   #preview: InvitePreviewView = PREVIEW;
   #invite: CircleInvite = INVITE;
   readonly #failures = new Map<Method, ApiError[]>();
@@ -129,6 +154,10 @@ export class FakePactJoyApi implements PactJoyApi {
 
   setMyCircle(myCircle: MyCircle): void {
     this.#myCircle = myCircle;
+  }
+
+  setMyPauseRequests(view: MyPauseRequests): void {
+    this.#myPauseRequests = view;
   }
 
   setPreview(preview: InvitePreviewView): void {
@@ -308,6 +337,52 @@ export class FakePactJoyApi implements PactJoyApi {
     this.#myCircle = { circle: null, season: null };
   }
 
+  async requestPause(seasonId: string, cmd: RequestPauseCommand): Promise<PauseRequestDto> {
+    await this.#pauseCall("requestPause", [seasonId, cmd]);
+    return pauseRequestFixture({
+      endDate: cmd.endDate,
+      startDate: cmd.startDate,
+      reason: cmd.reason,
+    });
+  }
+
+  async getMyPauseRequests(_signal?: AbortSignal): Promise<MyPauseRequests> {
+    this.#enter("getMyPauseRequests");
+    return this.#myPauseRequests;
+  }
+
+  async respondToPause(pauseRequestId: string, decision: PauseDecision): Promise<PauseApprovalDto> {
+    await this.#pauseCall("respondToPause", [pauseRequestId, decision]);
+    // Like the server: the answer stands, so the next read of the pending request shows it.
+    this.#myPauseRequests = {
+      ...this.#myPauseRequests,
+      awaitingMe: this.#myPauseRequests.awaitingMe.map((item) =>
+        item.id === pauseRequestId ? { ...item, myResponse: decision } : item,
+      ),
+    };
+    return pauseApprovalFixture({ id: pauseRequestId, myResponse: decision });
+  }
+
+  async cancelPauseRequest(pauseRequestId: string): Promise<PauseRequestDto> {
+    await this.#pauseCall("cancelPauseRequest", [pauseRequestId]);
+    // Like the server: a cancelled request stays in my list, no longer pending.
+    this.#myPauseRequests = {
+      ...this.#myPauseRequests,
+      mine: this.#myPauseRequests.mine.map((item) =>
+        item.id === pauseRequestId ? { ...item, status: "cancelled" } : item,
+      ),
+    };
+    return pauseRequestFixture({ id: pauseRequestId, status: "cancelled" });
+  }
+
+  async resumePause(pauseRequestId: string, commitmentId?: string): Promise<PauseRequestDto> {
+    await this.#pauseCall(
+      "resumePause",
+      commitmentId === undefined ? [pauseRequestId] : [pauseRequestId, commitmentId],
+    );
+    return pauseRequestFixture({ id: pauseRequestId, status: "approved" });
+  }
+
   async getSeasonProgress(seasonId: string, signal?: AbortSignal) {
     this.#enter("getSeasonProgress");
     return this.progress.getSeasonProgress(seasonId, signal);
@@ -332,6 +407,14 @@ export class FakePactJoyApi implements PactJoyApi {
   async #circleCall(method: Method, args: readonly unknown[]): Promise<void> {
     const gate = this.#takeGate(method);
     this.circleCommands.push({ method, args });
+    this.#enter(method);
+    await gate;
+  }
+
+  /** Records the call, waits on a held gate, then throws a scripted failure. */
+  async #pauseCall(method: Method, args: readonly unknown[]): Promise<void> {
+    const gate = this.#takeGate(method);
+    this.pauseCommands.push({ method, args });
     this.#enter(method);
     await gate;
   }

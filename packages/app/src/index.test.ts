@@ -6,6 +6,8 @@ import { describe, expect, it } from "vitest";
  * runtime and can't appear here.
  */
 const EXPECTED_RUNTIME_EXPORTS = [
+  "AUTO_APPROVE_AFTER_MS",
+  "PAUSE_REASONS",
   "addCommitment",
   "approvePact",
   "buildCommitment",
@@ -29,6 +31,15 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "err",
   "generateInvite",
   "habitId",
+  "pauseRequestId",
+  "requestPause",
+  "respondToPause",
+  "cancelPauseRequest",
+  "resumePause",
+  "settleDuePauses",
+  "myPauseRequests",
+  "pauseRequestViews",
+  "pauseApprovalViews",
   "instant",
   "isInviteCodeFormat",
   "inviteCode",

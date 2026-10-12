@@ -176,4 +176,32 @@ describe("seasonWeeks (weekly-progress)", () => {
     expect(weeks[0]?.members).toHaveLength(6);
     expect(weeks[0]?.members.map((m) => m.memberId)).toEqual(sixRows.map((r) => r.memberId));
   });
+
+  it("EW-3: a rejection extends the week's deadline, so the week is neither final nor locked until it passes", async () => {
+    const { given, rows } = await setup();
+    // Rejected on day 7 for a pause that covered day 6: the extended deadline is day 8.
+    const rejected = {
+      memberId: memberId("member-andrea"),
+      commitmentId: given.andreaCommitment,
+      requestedOn: seasonDay(5),
+      startDay: seasonDay(6),
+      end: { kind: "open" },
+      decision: { kind: "rejected", decidedOn: seasonDay(7) },
+    } as const;
+    const build = (today: number) => {
+      const phase = seasonPhase(given.season, localDateOfSeasonDay(seasonDay(today), SEASON_START));
+      if (phase.phase !== "active") throw new Error("expected active phase");
+      return seasonWeeks({
+        season: given.season,
+        actualStart: SEASON_START,
+        today: seasonDay(today),
+        phase,
+        standingsRows: rows,
+        data: { entries: [], pauses: [rejected] },
+      })[0];
+    };
+
+    expect(build(8)?.facts).toMatchObject({ counted: true, editable: true, final: false });
+    expect(build(9)?.facts).toMatchObject({ counted: true, editable: false, final: true });
+  });
 });
