@@ -121,6 +121,16 @@ describe("myPauseRequests (PA-2, PA-8)", () => {
     ]);
   });
 
+  it("budgets count the whole planned span of a fixed-end request, started or not", async () => {
+    const { app, world } = await givenRequest({ end: 12 });
+
+    const view = await read(app, world.andrea, localInstant(dayOf(5)));
+
+    expect(view.budgets).toEqual([
+      { commitmentId: world.andreaCommitment, cap: 14, usedDays: 8, remainingDays: 6 },
+    ]);
+  });
+
   it("a rejected request frees its days in the budget", async () => {
     const { app, world, request } = await givenRequest({ sofia: false });
     await respondToPause(atInstant(app, afterHours(T0, 1)), world.victor, {

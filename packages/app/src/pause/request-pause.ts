@@ -35,6 +35,7 @@ import {
   type PauseRequestRecord,
 } from "./pause-request.ts";
 import { withDecision } from "./pause-write.ts";
+import { plannedBudgetHistory } from "./planned-budget.ts";
 import { settleSeasonPauses } from "./settle.ts";
 
 export interface RequestPauseDeps {
@@ -175,6 +176,9 @@ export async function requestPause(
       };
       const historyOf = (commitmentId: CommitmentId) =>
         history.filter((p) => p.memberId === member.id && p.commitmentId === commitmentId);
+      // The cap counts every PLANNED day, including a future fixed span.
+      const plannedOf = (commitmentId: CommitmentId) =>
+        plannedBudgetHistory(historyOf(commitmentId));
 
       const overlapping = scoped.filter((id) =>
         overlapsExisting(
@@ -191,7 +195,7 @@ export async function requestPause(
       for (const id of scoped) {
         const check = canRequestPause(
           engineSeason,
-          historyOf(id),
+          plannedOf(id),
           { startDay: start.day, end },
           today,
         );
@@ -199,7 +203,7 @@ export async function requestPause(
           failures.push({
             commitmentId: id,
             reason: check.reason === "capExhausted" ? "capExhausted" : "exceedsRemainingCap",
-            remainingDays: pauseBudget(engineSeason, historyOf(id), today).remainingDays,
+            remainingDays: pauseBudget(engineSeason, plannedOf(id), today).remainingDays,
           });
         }
       }

@@ -12,6 +12,7 @@ import {
 import type { MemberPauseRequest } from "./pause-request.repository.ts";
 import type { PauseRequestRecord, PauseResponseChoice } from "./pause-request.ts";
 import { withDecision } from "./pause-write.ts";
+import { plannedBudgetHistory } from "./planned-budget.ts";
 import { toEnginePauses } from "./to-engine.ts";
 
 export type MyPauseRequestsDeps = ScoreQueryDeps;
@@ -121,7 +122,7 @@ export async function myPauseRequests(
         commitmentId: c.id,
         ...pauseBudget(
           engineSeason,
-          ownPauses.filter((p) => p.commitmentId === c.id),
+          plannedBudgetHistory(ownPauses.filter((p) => p.commitmentId === c.id)),
           today,
         ),
       }));

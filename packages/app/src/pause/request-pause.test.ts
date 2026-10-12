@@ -382,6 +382,54 @@ describe("requestPause: the cap (PL-23..PL-27, Q11)", () => {
     expect(fits.ok && fits.value.commitments).toHaveLength(2);
   });
 
+  it("counts the whole planned span of a future fixed-end request toward the cap", async () => {
+    const { app, world } = await setup({ withSofia: true }, 5);
+
+    // Cap is 14 days. A future week (6..12) is pending and plans 7 days.
+    const first = await requestPause(
+      app,
+      world.andrea,
+      input(world, 5, { startDate: dayOf(6), endDate: dayOf(12) }),
+    );
+    expect(first.ok).toBe(true);
+
+    // A second, non-overlapping future request of 8 days would reach 15.
+    const second = await requestPause(
+      app,
+      world.andrea,
+      input(world, 5, { startDate: dayOf(14), endDate: dayOf(21) }),
+    );
+    expect(second).toEqual({
+      ok: false,
+      error: {
+        kind: "PauseCapExceeded",
+        commitments: [
+          { commitmentId: world.andreaCommitment, reason: "exceedsRemainingCap", remainingDays: 7 },
+        ],
+      },
+    });
+
+    // Seven days exactly still fit, and the budget is then fully planned.
+    const fits = await requestPause(
+      app,
+      world.andrea,
+      input(world, 5, { startDate: dayOf(14), endDate: dayOf(20) }),
+    );
+    expect(fits.ok).toBe(true);
+  });
+
+  it("a rejected future request frees its planned days again", async () => {
+    const { app, world } = await setup({ withSofia: true }, 5);
+    seedAndrea(app, world, { start: 6, end: 12, decision: "rejected" });
+
+    const result = await requestPause(
+      app,
+      world.andrea,
+      input(world, 5, { startDate: dayOf(14), endDate: dayOf(27) }),
+    );
+    expect(result.ok).toBe(true);
+  });
+
   it("PL-S23: with nothing left an open request fails with remainingDays 0", async () => {
     const { app, world } = await setup({ withSofia: true }, 14);
     seedAndrea(app, world, { start: 0, end: 13, decision: "approved" });
