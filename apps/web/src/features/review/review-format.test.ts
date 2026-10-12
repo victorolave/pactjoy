@@ -59,6 +59,22 @@ describe("the figures", () => {
     ).toBe("2 de 2 semanas · ideal 72 %");
   });
 
+  it("W1: one counted week is singular", () => {
+    expect(
+      commitmentFigures({
+        commitmentId: "c",
+        habitName: "Leer",
+        icon: null,
+        scheduleKind: "weeklyTotal",
+        kept: 1,
+        counted: 1,
+        consistencyPercent: 100,
+        idealPercent: null,
+        points: 50,
+      }),
+    ).toBe("1 de 1 semana");
+  });
+
   it("shows only 'sin datos' when nothing counted in the period (fully paused)", () => {
     expect(
       commitmentFigures({
@@ -112,7 +128,7 @@ describe("doneText (35b)", () => {
         names,
       ),
     ).toBe(
-      "Leer y Dibujar se sienten más automáticos que al empezar (de 3,5 a 4,5 y de 3 a 4). La próxima revisión es el martes 6 de octubre.",
+      "Leer y Dibujar se sienten más automáticos que antes (de 3,5 a 4,5 y de 3 a 4). La próxima revisión es el martes 6 de octubre.",
     );
   });
 
@@ -122,7 +138,7 @@ describe("doneText (35b)", () => {
         { improvements: [{ commitmentId: "l", from: "3,5", to: "4,5" }], nextReviewDate: null },
         names,
       ),
-    ).toBe("Leer se siente más automático que al empezar (de 3,5 a 4,5).");
+    ).toBe("Leer se siente más automático que antes (de 3,5 a 4,5).");
     expect(
       doneText(
         {
@@ -136,7 +152,7 @@ describe("doneText (35b)", () => {
         names,
       ),
     ).toBe(
-      "Leer, Inglés y Dibujar se sienten más automáticos que al empezar (de 3 a 4, de 2 a 3 y de 5 a 6). La próxima revisión es el martes 20 de octubre.",
+      "Leer, Inglés y Dibujar se sienten más automáticos que antes (de 3 a 4, de 2 a 3 y de 5 a 6). La próxima revisión es el martes 20 de octubre.",
     );
   });
 

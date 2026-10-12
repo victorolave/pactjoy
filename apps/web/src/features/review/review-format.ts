@@ -37,7 +37,8 @@ export const pointsLabel = (points: number): string => (points > 0 ? `+${points}
 /** "9 de 10 · ideal 80 %" (33); a weekly commitment counts weeks: "2 de 2 semanas · ideal 72 %". */
 export function commitmentFigures(row: SummaryRow): string {
   if (row.counted === 0) return "Sin oportunidades en el periodo";
-  const unit = row.scheduleKind === "weeklyTotal" ? " semanas" : "";
+  const weeks = row.counted === 1 ? " semana" : " semanas";
+  const unit = row.scheduleKind === "weeklyTotal" ? weeks : "";
   const kept = `${row.kept} de ${row.counted}${unit}`;
   return row.idealPercent === null ? kept : `${kept} · ideal ${row.idealPercent} %`;
 }
@@ -68,7 +69,7 @@ export function doneText(input: DoneInput, names: ReadonlyMap<string, string>): 
     const verb =
       improvements.length === 1 ? "se siente más automático" : "se sienten más automáticos";
     const pairs = list(improvements.map((i) => `de ${i.from} a ${i.to}`));
-    parts.push(`${who} ${verb} que al empezar (${pairs}).`);
+    parts.push(`${who} ${verb} que antes (${pairs}).`);
   }
   if (input.nextReviewDate !== null) {
     parts.push(`La próxima revisión es el ${longDate(input.nextReviewDate, false)}.`);

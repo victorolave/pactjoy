@@ -39,18 +39,16 @@ describe("ItemOneStep (35c)", () => {
     expect(screen.getByText("1 · nada de acuerdo — 7 · totalmente")).toBeInTheDocument();
     const groups = screen.getAllByRole("group");
     expect(groups).toHaveLength(4);
-    expect(groups[0]).toHaveAccessibleName("Leer es algo que hago automáticamente.");
-    expect(groups[1]).toHaveAccessibleName("Inglés es algo que hago automáticamente.");
+    expect(groups[0]).toHaveAccessibleName("«Leer»: lo hago automáticamente.");
+    expect(groups[1]).toHaveAccessibleName("«Inglés»: lo hago automáticamente.");
   });
 
   it("tags a paused commitment but still asks about it", () => {
     render(<ItemOneStep {...base} />);
     expect(screen.getAllByRole("group")[3]).toHaveAccessibleName(
-      "Gym es algo que hago automáticamente. (en pausa)",
+      "«Gym»: lo hago automáticamente. (en pausa)",
     );
-    expect(
-      screen.getByText("Gym es algo que hago automáticamente. (en pausa)"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("«Gym»: lo hago automáticamente. (en pausa)")).toBeInTheDocument();
   });
 
   it("reports the commitment and score and marks the chosen one", async () => {

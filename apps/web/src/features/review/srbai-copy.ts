@@ -1,8 +1,8 @@
 /**
  * The SRBAI wording in one module (REQ-A10, design 13, 35a and 35c). The Spanish translation is
- * NOT validated yet (Notion note, ADR-0014): change it here and nowhere else. The design writes
- * each phrase with a natural verb ("Estudiar inglés", "Ir al gym"); the wire carries only the
- * habit's name, so the phrase names the habit as the member wrote it.
+ * NOT validated yet (Notion note, ADR-0014): change it here and nowhere else. The wire carries
+ * only the habit's name, which can be a noun or an infinitive, so every phrase quotes it in
+ * guillemets and continues with a neutral "lo" (owner decision, periodic-review verify W5).
  */
 
 /** Items per commitment in a full SRBAI. */
@@ -11,10 +11,10 @@ export const SRBAI_ITEMS = 4;
 export type SrbaiItem = 0 | 1 | 2 | 3;
 
 const PHRASES: readonly ((habit: string) => string)[] = [
-  (habit) => `${habit} es algo que hago automáticamente.`,
-  (habit) => `${habit} es algo que hago sin tener que recordarlo conscientemente.`,
-  (habit) => `${habit} es algo que hago sin pensar.`,
-  (habit) => `${habit} es algo que empiezo a hacer antes de darme cuenta.`,
+  (habit) => `«${habit}»: lo hago automáticamente.`,
+  (habit) => `«${habit}»: lo hago sin tener que recordarlo conscientemente.`,
+  (habit) => `«${habit}»: lo hago sin pensar.`,
+  (habit) => `«${habit}»: empiezo a hacerlo antes de darme cuenta.`,
 ];
 
 export function srbaiPhrase(habit: string, item: SrbaiItem): string {

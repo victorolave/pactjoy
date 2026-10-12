@@ -97,7 +97,7 @@ describe("the review scenarios (periodic-review)", () => {
 
   it("reviewBaselineOffer shows the optional baseline before the season starts", async () => {
     at("/dev/today/reviewBaselineOffer");
-    expect(await screen.findByText("Antes de empezar")).toBeInTheDocument();
+    expect(await screen.findByText("Tu punto de partida")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Responder" })).toBeInTheDocument();
   });
 

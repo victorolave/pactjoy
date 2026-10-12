@@ -28,7 +28,7 @@ describe("ReviewDoneStep (35b)", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Leer y Dibujar se sienten más automáticos que al empezar (de 3,5 a 4,5 y de 3 a 4). La próxima revisión es el martes 6 de octubre.",
+        "Leer y Dibujar se sienten más automáticos que antes (de 3,5 a 4,5 y de 3 a 4). La próxima revisión es el martes 6 de octubre.",
       ),
     ).toBeInTheDocument();
   });

@@ -11,15 +11,15 @@ describe("SRBAI copy (design 13, 35a, 35c)", () => {
   it("has the four phrases of the design, each naming the habit", () => {
     expect(SRBAI_ITEMS).toBe(4);
     expect([0, 1, 2, 3].map((item) => srbaiPhrase("Leer", item as 0 | 1 | 2 | 3))).toEqual([
-      "Leer es algo que hago automáticamente.",
-      "Leer es algo que hago sin tener que recordarlo conscientemente.",
-      "Leer es algo que hago sin pensar.",
-      "Leer es algo que empiezo a hacer antes de darme cuenta.",
+      "«Leer»: lo hago automáticamente.",
+      "«Leer»: lo hago sin tener que recordarlo conscientemente.",
+      "«Leer»: lo hago sin pensar.",
+      "«Leer»: empiezo a hacerlo antes de darme cuenta.",
     ]);
   });
 
   it("uses the habit as given, so another habit gets its own phrases", () => {
-    expect(srbaiPhrase("Dibujar", 2)).toBe("Dibujar es algo que hago sin pensar.");
+    expect(srbaiPhrase("Dibujar", 2)).toBe("«Dibujar»: lo hago sin pensar.");
   });
 
   it("scales 1 to 7 with the two end labels and says the answers are private", () => {

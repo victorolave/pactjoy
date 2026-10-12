@@ -76,7 +76,7 @@ describe("the review route", () => {
     await click("Continuar");
     await click("Continuar");
     expect(
-      await screen.findByText("Gym es algo que hago automáticamente. (en pausa)"),
+      await screen.findByText("«Gym»: lo hago automáticamente. (en pausa)"),
     ).toBeInTheDocument();
   });
 
@@ -180,7 +180,7 @@ describe("the review route", () => {
     await click("Terminar revisión");
     expect(
       await screen.findByText(
-        "Leer se siente más automático que al empezar (de 3,5 a 4,5). La próxima revisión es el martes 20 de octubre.",
+        "Leer se siente más automático que antes (de 3,5 a 4,5). La próxima revisión es el martes 20 de octubre.",
       ),
     ).toBeInTheDocument();
     await click("Seguir con mi día");

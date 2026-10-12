@@ -70,7 +70,7 @@ describe("ReviewTodayCard", () => {
 
   it("offers the baseline instead, with Responder and Ahora no", async () => {
     render(<ReviewTodayCard />, withReview({ baselineOffer: baselineOfferFixture() }));
-    expect(await screen.findByText("Antes de empezar")).toBeInTheDocument();
+    expect(await screen.findByText("Tu punto de partida")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Responder" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Ahora no" })).toBeInTheDocument();
   });
@@ -95,7 +95,7 @@ describe("BaselineOffer", () => {
       withReview({ baselineOffer: baselineOfferFixture() }),
     );
     await userEvent.click(await screen.findByRole("button", { name: "Ahora no" }));
-    await waitFor(() => expect(screen.queryByText("Antes de empezar")).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText("Tu punto de partida")).not.toBeInTheDocument());
     expect(deps.api.reviewCommands).toEqual([{ method: "skipBaseline", args: ["season-1"] }]);
   });
 
@@ -109,7 +109,7 @@ describe("BaselineOffer", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "No pudimos guardarlo. Revisa tu conexión.",
     );
-    expect(screen.getByText("Antes de empezar")).toBeInTheDocument();
+    expect(screen.getByText("Tu punto de partida")).toBeInTheDocument();
   });
 
   it("cannot be skipped offline", async () => {
@@ -122,7 +122,7 @@ describe("BaselineOffer", () => {
   it("renders nothing without an offer", async () => {
     const { deps } = render(<BaselineOffer />);
     await waitFor(() => expect(deps.api.calls.getToday).toBe(1));
-    expect(screen.queryByText("Antes de empezar")).not.toBeInTheDocument();
+    expect(screen.queryByText("Tu punto de partida")).not.toBeInTheDocument();
   });
 });
 

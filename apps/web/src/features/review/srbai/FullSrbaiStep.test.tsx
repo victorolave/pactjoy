@@ -35,8 +35,8 @@ describe("FullSrbaiStep (35a, 13)", () => {
     expect(screen.getByText("Solo tú verás estas respuestas.")).toBeInTheDocument();
     const groups = screen.getAllByRole("group");
     expect(groups).toHaveLength(4);
-    expect(groups[0]).toHaveAccessibleName("Leer es algo que hago automáticamente.");
-    expect(groups[2]).toHaveAccessibleName("Leer es algo que hago sin pensar.");
+    expect(groups[0]).toHaveAccessibleName("«Leer»: lo hago automáticamente.");
+    expect(groups[2]).toHaveAccessibleName("«Leer»: lo hago sin pensar.");
     for (const group of groups) {
       expect(
         within(group)

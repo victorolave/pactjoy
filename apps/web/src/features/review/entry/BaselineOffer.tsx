@@ -20,7 +20,7 @@ export function BaselineOffer() {
   return (
     <Card>
       <div className={styles.offer}>
-        <h2 className={styles.offerTitle}>Antes de empezar</h2>
+        <h2 className={styles.offerTitle}>Tu punto de partida</h2>
         <p className={styles.small}>
           Cuéntanos cuánto se siente automático cada hábito hoy. Solo tú verás tus respuestas.
         </p>

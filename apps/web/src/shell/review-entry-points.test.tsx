@@ -51,7 +51,7 @@ describe("the review on Today", () => {
 
   it("offers the baseline before the season starts", async () => {
     renderApp({ today: notStarted({ baselineOffer: baselineOfferFixture() }) });
-    expect(await screen.findByText("Antes de empezar")).toBeInTheDocument();
+    expect(await screen.findByText("Tu punto de partida")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Ahora no" })).toBeInTheDocument();
   });
 
@@ -59,13 +59,13 @@ describe("the review on Today", () => {
     renderApp({ today: activeTodayFixture() });
     await screen.findByRole("heading", { name: /Hola/ });
     expect(screen.queryByText(/Revisión de/)).not.toBeInTheDocument();
-    expect(screen.queryByText("Antes de empezar")).not.toBeInTheDocument();
+    expect(screen.queryByText("Tu punto de partida")).not.toBeInTheDocument();
   });
 
   it("drops the card once the review is skipped", async () => {
     renderApp({ today: notStarted({ baselineOffer: baselineOfferFixture() }) });
     await userEvent.click(await screen.findByRole("button", { name: "Ahora no" }));
-    await waitFor(() => expect(screen.queryByText("Antes de empezar")).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText("Tu punto de partida")).not.toBeInTheDocument());
   });
 });
 
@@ -132,7 +132,7 @@ describe("the baseline offer on the closed pact (14a)", () => {
     });
     app.deps.api.setPactResponse("getSeason", closedSeason());
     expect(await screen.findByRole("heading", { name: "Pacto cerrado" })).toBeInTheDocument();
-    const offer = (await screen.findByText("Antes de empezar")).closest("div") as HTMLElement;
+    const offer = (await screen.findByText("Tu punto de partida")).closest("div") as HTMLElement;
     expect(
       within(offer.parentElement as HTMLElement).getByRole("button", { name: "Responder" }),
     ).toBeInTheDocument();
@@ -149,6 +149,6 @@ describe("the baseline offer on the closed pact (14a)", () => {
     });
     app.deps.api.setPactResponse("getSeason", closedSeason());
     await screen.findByRole("heading", { name: "Pacto cerrado" });
-    expect(screen.queryByText("Antes de empezar")).not.toBeInTheDocument();
+    expect(screen.queryByText("Tu punto de partida")).not.toBeInTheDocument();
   });
 });
