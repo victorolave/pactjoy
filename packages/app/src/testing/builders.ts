@@ -3,6 +3,7 @@ import type { Circle, Invite, Member } from "../circle/circle.ts";
 import { type CommitmentRecord, commitmentId } from "../commitment/commitment.ts";
 import type { Habit } from "../habit/habit.ts";
 import { AUTO_APPROVE_AFTER_MS, type PauseRequestRecord } from "../pause/pause-request.ts";
+import type { ReviewRecord } from "../review/review.ts";
 import type {
   PactApproval,
   ReviewCadenceWeeks,
@@ -14,6 +15,7 @@ import {
   type CircleId,
   type HabitId,
   pauseRequestId,
+  reviewId,
   type SeasonId,
   seasonId,
   type UserId,
@@ -164,6 +166,27 @@ export function pauseRequestFixture(
     decidedOn: null,
     commitments: [{ commitmentId: commitmentId("commitment-1"), resumedOn: null, resumedAt: null }],
     responses: [],
+    version: 0,
+    ...overrides,
+  };
+}
+
+/**
+ * Builds a completed item-1 interim {@link ReviewRecord} for GIVEN-state setup: period 1, no
+ * reflection, no responses. Every field is overridable.
+ */
+export function reviewFixture(overrides: Partial<ReviewRecord> = {}): ReviewRecord {
+  return {
+    id: reviewId("review-1"),
+    seasonId: seasonId("season-1"),
+    memberId: "member-victor" as MemberId,
+    periodIndex: 1,
+    kind: "interim",
+    status: "completed",
+    srbai: "item1",
+    reflection: { helped: null, hard: null },
+    responses: [],
+    recordedAt: DEFAULT_INSTANT,
     version: 0,
     ...overrides,
   };

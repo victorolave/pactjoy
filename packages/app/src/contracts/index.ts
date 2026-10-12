@@ -15,5 +15,7 @@ export {
 } from "./guard-version.contract.ts";
 export { describeHabitRepositoryContract } from "./habit.contract.ts";
 export { describePauseRequestRepositoryContract } from "./pause.contract.ts";
+export type { ReviewContractSubject } from "./review.contract.ts";
+export { describeReviewRepositoryContract } from "./review.contract.ts";
 export { describeSeasonRepositoryContract } from "./season.contract.ts";
 export { describeUnitOfWorkContract } from "./unit-of-work.contract.ts";
