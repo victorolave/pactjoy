@@ -83,6 +83,7 @@ describe("peer reads never carry a review, an automaticity answer, a reflection 
       `${s}/standings`,
       "/me/circle",
       "/me/pause-requests",
+      "/habits",
     ];
 
     for (const path of peerReads) {
