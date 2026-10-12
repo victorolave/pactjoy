@@ -237,6 +237,7 @@ export type {
 export { weekSummary } from "./progress/week-summary.query.ts";
 export type {
   CommitmentStageDeps,
+  CommitmentStageError,
   CommitmentStageInput,
   CommitmentStageView,
 } from "./review/commitment-stage.query.ts";
@@ -258,6 +259,7 @@ export type {
 export type {
   ReviewDraftCommitment,
   ReviewDraftDeps,
+  ReviewDraftError,
   ReviewDraftInput,
   ReviewDraftView,
 } from "./review/review-draft.query.ts";
@@ -265,11 +267,13 @@ export { reviewDraft } from "./review/review-draft.query.ts";
 export type { ReviewSlotStatus } from "./review/review-schedule.ts";
 export type {
   SkipBaselineDeps,
+  SkipBaselineError,
   SkipBaselineInput,
 } from "./review/skip-baseline.ts";
 export { skipBaseline } from "./review/skip-baseline.ts";
 export type {
   SubmitReviewDeps,
+  SubmitReviewError,
   SubmitReviewInput,
   SubmitReviewResult,
   SubmittedAnswer,

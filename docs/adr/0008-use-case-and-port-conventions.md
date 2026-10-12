@@ -50,6 +50,9 @@ that ADR-0009 will build on.
   `ConcurrencyConflict` on a stale write (D5). `PauseRequest` was a
   read-only port in this change; since change `pause-workflow` it is a
   written aggregate with its own `version` (ADR-0013).
+  `ReviewRepository` (change `periodic-review`, ADR-0014) is an
+  owner-only port: `listMine(seasonId, memberId)` and `save`, with no
+  season-wide read, so a peer read cannot be written against it.
 - **Actor**: `{ readonly userId: UserId }` (`shared/actor.ts`) -- every use
   case receives an already-authenticated `Actor`; authentication itself is
   an adapter concern outside this package.
