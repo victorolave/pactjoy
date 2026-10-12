@@ -106,10 +106,4 @@ describe("package boundary", () => {
     expect(adapter).not.toMatch(/node:|\bDeno\b|Math\.random/);
     expect(adapter).toMatch(/crypto\.getRandomValues/);
   });
-
-  it("DC-S14: the transitional pause repository is marked as such, with its replacement work unit", () => {
-    const stub = readFileSync(join(DB_ROOT, "src/pause/empty-pause-request-repository.ts"), "utf8");
-    expect(stub).toMatch(/TRANSITIONAL/);
-    expect(stub).toMatch(/work unit S4/);
-  });
 });

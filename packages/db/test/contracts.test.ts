@@ -3,6 +3,7 @@ import {
   describeCircleRepositoryContract,
   describeEntryRepositoryContract,
   describeHabitRepositoryContract,
+  describePauseRequestRepositoryContract,
   describeSeasonGuardContract,
   describeSeasonRepositoryContract,
   describeUnitOfWorkContract,
@@ -33,5 +34,6 @@ describeCircleGuardContract("postgres", postgres);
 describeSeasonGuardContract("postgres", postgres);
 describeEntryRepositoryContract("postgres", postgres);
 describeHabitRepositoryContract("postgres", postgres);
+describePauseRequestRepositoryContract("postgres", postgres);
 describeSeasonRepositoryContract("postgres", postgres);
 describeUnitOfWorkContract("postgres", postgres);

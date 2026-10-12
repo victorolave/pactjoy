@@ -18,6 +18,7 @@ const CONFLICT_CONSTRAINTS: ReadonlySet<string> = new Set([
   "seasons_pkey",
   "entries_pkey",
   "entries_client_request_key",
+  "pause_requests_pkey",
   "circle_members_active_user_key",
 ]);
 
