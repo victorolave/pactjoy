@@ -186,6 +186,25 @@ describe("Circle tab with people (31a-lite)", () => {
     expect(screen.queryByRole("button", { name: "Preparar la temporada" })).not.toBeInTheDocument();
   });
 
+  it("opens the next season from an ended season once the circle may move on", async () => {
+    const { location } = renderApp({
+      path: "/circle",
+      myCircle: pairCircleFixture({ ...ACTIVE, phase: "ended", nextSeasonOpen: true }),
+    });
+    await userEvent.click(await screen.findByRole("button", { name: "Preparar la temporada" }));
+    expect(location()).toBe("/season/new");
+    expect(screen.queryByRole("button", { name: "Ver el pacto" })).not.toBeInTheDocument();
+  });
+
+  it("keeps the pact link on an ended season the circle cannot leave yet", async () => {
+    renderApp({
+      path: "/circle",
+      myCircle: pairCircleFixture({ ...ACTIVE, phase: "ended", nextSeasonOpen: false }),
+    });
+    expect(await screen.findByRole("button", { name: "Ver el pacto" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Preparar la temporada" })).not.toBeInTheDocument();
+  });
+
   it("keeps the running season view without a preparation or pact action (design 31a)", async () => {
     renderApp({ path: "/circle", myCircle: pairCircleFixture(ACTIVE) });
     expect(await screen.findByText("Pacto activo")).toBeVisible();

@@ -19,17 +19,22 @@ import type {
   RecordEntryCommand,
   RecordedEntry,
   RequestPauseCommand,
+  SubmitClosureCommand,
   SubmitReviewCommand,
   UpdateHabitCommand,
 } from "../ports/pactjoy-api.ts";
 import type { SeasonProgressApi } from "../ports/season-progress-api.ts";
 import type {
+  CarryOverDto,
   CommitmentStageDto,
   MyPauseRequests,
   PauseApprovalDto,
   PauseRequestDto,
   ReviewDraftDto,
   SeasonDto,
+  SeasonHistoryDto,
+  SeasonResultsDto,
+  SubmittedClosureDto,
   SubmittedReviewDto,
 } from "../ports/wire.ts";
 import { FakeSeasonProgressApi } from "./fake-season-progress.ts";
@@ -39,6 +44,7 @@ import {
   pauseApprovalFixture,
   pauseRequestFixture,
 } from "./fixtures/pause.ts";
+import { carryOverFixture, seasonHistoryFixture } from "./fixtures/season-close.ts";
 
 type ExistingMethod =
   | "getToday"
@@ -62,6 +68,10 @@ type ExistingMethod =
   | "submitReview"
   | "skipBaseline"
   | "getCommitmentStage"
+  | "getSeasonResults"
+  | "submitSeasonClosure"
+  | "getCarryOver"
+  | "getSeasonHistory"
   | ProgressMethod;
 type ProgressMethod = keyof SeasonProgressApi;
 
@@ -120,6 +130,10 @@ export class FakePactJoyApi implements PactJoyApi {
     submitReview: 0,
     skipBaseline: 0,
     getCommitmentStage: 0,
+    getSeasonResults: 0,
+    submitSeasonClosure: 0,
+    getCarryOver: 0,
+    getSeasonHistory: 0,
     getSeasonProgress: 0,
     getMemberProgress: 0,
     getCommitmentProgress: 0,
@@ -133,6 +147,9 @@ export class FakePactJoyApi implements PactJoyApi {
   readonly pauseCommands: { readonly method: Method; readonly args: readonly unknown[] }[] = [];
   /** What the review mutations were asked to do, in order, including the ones scripted to fail. */
   readonly reviewCommands: { readonly method: Method; readonly args: readonly unknown[] }[] = [];
+  /** What the season closure was asked to do, in order, including the calls scripted to fail. */
+  readonly closureCommands: { readonly seasonId: string; readonly cmd: SubmitClosureCommand }[] =
+    [];
   /** Every recordEntry call, including the ones that were scripted to fail. */
   readonly recordAttempts: RecordEntryCommand[] = [];
   /** Every deleteEntry call, including the ones that were scripted to fail. */
@@ -153,6 +170,10 @@ export class FakePactJoyApi implements PactJoyApi {
   #myPauseRequests: MyPauseRequests = noPauseRequestsFixture();
   readonly #reviews = new Map<string, ReviewDraftDto>();
   readonly #stages = new Map<string, CommitmentStageDto>();
+  readonly #seasonResults = new Map<string, SeasonResultsDto>();
+  readonly #carryOvers = new Map<string, CarryOverDto>();
+  #seasonHistory: SeasonHistoryDto = seasonHistoryFixture();
+  #closureResult: SubmittedClosureDto | null = null;
   #submitResult: SubmittedReviewDto = {
     status: "completed",
     improvements: [],
@@ -188,6 +209,24 @@ export class FakePactJoyApi implements PactJoyApi {
 
   setSubmitResult(result: SubmittedReviewDto): void {
     this.#submitResult = result;
+  }
+
+  /** The results `getSeasonResults` answers for a season. */
+  setSeasonResults(results: SeasonResultsDto): void {
+    this.#seasonResults.set(results.seasonId, results);
+  }
+
+  setCarryOver(seasonId: string, view: CarryOverDto): void {
+    this.#carryOvers.set(seasonId, view);
+  }
+
+  setSeasonHistory(view: SeasonHistoryDto): void {
+    this.#seasonHistory = view;
+  }
+
+  /** What `submitSeasonClosure` answers; by default it echoes the decisions it was given. */
+  setClosureResult(result: SubmittedClosureDto): void {
+    this.#closureResult = result;
   }
 
   setStage(stage: CommitmentStageDto): void {
@@ -440,6 +479,45 @@ export class FakePactJoyApi implements PactJoyApi {
   async getCommitmentStage(_seasonId: string, commitmentId: string, _signal?: AbortSignal) {
     this.#enter("getCommitmentStage");
     return this.#stages.get(commitmentId) ?? { commitmentId, stage: "new" as const };
+  }
+
+  async getSeasonResults(seasonId: string, _signal?: AbortSignal) {
+    this.#enter("getSeasonResults");
+    const results = this.#seasonResults.get(seasonId);
+    if (results === undefined) throw new ApiError("SeasonNotFound", 404, null);
+    return results;
+  }
+
+  async submitSeasonClosure(seasonId: string, cmd: SubmitClosureCommand) {
+    const gate = this.#takeGate("submitSeasonClosure");
+    this.closureCommands.push({ seasonId, cmd });
+    this.#enter("submitSeasonClosure");
+    await gate;
+    const result: SubmittedClosureDto = this.#closureResult ?? {
+      decidedAt: "2026-10-21T15:00:00.000Z",
+      decisions: cmd.decisions,
+      graduatedHabitIds: [],
+      seasonClosed: false,
+    };
+    // Like the server: a closure is insert-once, so reading the results again shows it stored.
+    const results = this.#seasonResults.get(seasonId);
+    if (results !== undefined) {
+      this.#seasonResults.set(seasonId, {
+        ...results,
+        closure: { decidedAt: result.decidedAt, decisions: result.decisions },
+      });
+    }
+    return result;
+  }
+
+  async getCarryOver(seasonId: string, _signal?: AbortSignal) {
+    this.#enter("getCarryOver");
+    return this.#carryOvers.get(seasonId) ?? carryOverFixture();
+  }
+
+  async getSeasonHistory(_signal?: AbortSignal) {
+    this.#enter("getSeasonHistory");
+    return this.#seasonHistory;
   }
 
   async getSeasonProgress(seasonId: string, signal?: AbortSignal) {

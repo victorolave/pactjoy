@@ -62,4 +62,12 @@ describe("ReviewDoneStep (35b)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Seguir con mi día" }));
     expect(onFinish).toHaveBeenCalledTimes(1);
   });
+
+  it("leads to the results after the closing review", async () => {
+    const onFinish = vi.fn();
+    render(<ReviewDoneStep result={null} names={names} closing onFinish={onFinish} />);
+    expect(screen.queryByRole("button", { name: "Seguir con mi día" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Ver mis resultados" }));
+    expect(onFinish).toHaveBeenCalledOnce();
+  });
 });

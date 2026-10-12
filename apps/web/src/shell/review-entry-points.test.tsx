@@ -9,6 +9,7 @@ import {
   interimItemOneFixture,
   pendingReviewFixture,
 } from "../testing/fixtures/review.ts";
+import { seasonCloseFixture } from "../testing/fixtures/season-close.ts";
 import { activeSeasonProgress } from "../testing/fixtures/season-progress.ts";
 import { activeTodayFixture, pactOpenTodayFixture } from "../testing/fixtures/today.ts";
 import { renderApp } from "../testing/render.tsx";
@@ -40,13 +41,32 @@ describe("the review on Today", () => {
     ).toBeInTheDocument();
   });
 
-  it("hides the closing review: it has no screen yet", async () => {
+  it("offers the closing review once, with no season-close card next to it", async () => {
     const app = renderApp({
-      today: review({ pendingReview: pendingReviewFixture({ kind: "closing", dueUntil: null }) }),
+      today: review({
+        state: "ended",
+        pendingReview: pendingReviewFixture({ kind: "closing", periodIndex: 4, dueUntil: null }),
+        seasonClose: seasonCloseFixture("closingReview"),
+      }),
     });
-    await screen.findByRole("heading", { name: /Hola/ });
-    await waitFor(() => expect(app.deps.api.calls.getToday).toBeGreaterThan(0));
-    expect(screen.queryByText(/Revisión de/)).not.toBeInTheDocument();
+    expect(await screen.findByText("Revisión de cierre")).toBeInTheDocument();
+    expect(screen.getAllByText("Revisión de cierre")).toHaveLength(1);
+    expect(screen.queryByText("Cerramos esta temporada.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Tus resultados llegan pronto.")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Hacer la revisión" }));
+    expect(app.location()).toBe("/review/season-1/4");
+  });
+
+  it("shows the season-close card, not the review card, once the closing review is done", async () => {
+    renderApp({
+      today: review({
+        state: "ended",
+        pendingReview: null,
+        seasonClose: seasonCloseFixture("decide"),
+      }),
+    });
+    expect(await screen.findByText("Cerramos esta temporada.")).toBeInTheDocument();
+    expect(screen.queryByText("Revisión de cierre")).not.toBeInTheDocument();
   });
 
   it("offers the baseline before the season starts", async () => {

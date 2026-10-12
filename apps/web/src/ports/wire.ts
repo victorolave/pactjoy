@@ -1,4 +1,6 @@
 import type {
+  CarryOverView,
+  ClosureDecision,
   CommitmentProgressView,
   CommitmentRecord,
   Habit,
@@ -13,7 +15,9 @@ import type {
   ReviewDraftView,
   ReviewImprovement,
   Season,
+  SeasonHistoryView,
   SeasonProgressView,
+  SeasonResultsView,
   WeekSummaryView,
 } from "@pactjoy/app";
 
@@ -111,3 +115,27 @@ export interface CommitmentStageDto {
   readonly commitmentId: string;
   readonly stage: HabitStageDto;
 }
+
+/**
+ * The season close as it arrives over the wire (change season-close-graduation, ADR-0015). Every
+ * view is the OWNER's: no member id appears in them, and no route carries one.
+ */
+export type SeasonResultsDto = Serialized<SeasonResultsView>;
+export type SeasonResultsCommitmentDto = SeasonResultsDto["commitments"][number];
+/** Leave it as it is, adjust it, leave it out of the next season ("Pausar", NOT a Pause) or graduate it. */
+export type ClosureDecisionDto = ClosureDecision;
+export interface ClosureDecisionEntryDto {
+  readonly commitmentId: string;
+  readonly decision: ClosureDecisionDto;
+}
+/** `POST /seasons/:id/closure` (201): the stored decisions, the habits graduated now and whether the season closed. */
+export interface SubmittedClosureDto {
+  readonly decidedAt: string;
+  readonly decisions: readonly ClosureDecisionEntryDto[];
+  readonly graduatedHabitIds: readonly string[];
+  readonly seasonClosed: boolean;
+}
+export type CarryOverDto = Serialized<CarryOverView>;
+export type CarryOverItemDto = CarryOverDto["items"][number];
+export type SeasonHistoryDto = Serialized<SeasonHistoryView>;
+export type SeasonHistoryItemDto = SeasonHistoryDto["seasons"][number];

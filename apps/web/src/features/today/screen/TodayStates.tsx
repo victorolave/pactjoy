@@ -9,6 +9,7 @@ import { Illustration } from "../../../ui/Placeholder.tsx";
 import { EntrySheetHost } from "../../entry/index.ts";
 import { EndsTomorrowBanner, PauseTodayAction } from "../../pause/index.ts";
 import { ReviewTodayCard } from "../../review/index.ts";
+import { SeasonCloseTodayCard } from "../../season-close/index.ts";
 import { PendingYesterday } from "../pending-yesterday/PendingYesterday.tsx";
 import { RowWithControls } from "../rows/RowWithControls.tsx";
 import { SeasonCard } from "../season/SeasonCard.tsx";
@@ -216,6 +217,7 @@ export function RunningToday({
       {showDayState && <EndsTomorrowBanner rows={model.sheetRows} />}
       {banner}
       <ReviewTodayCard />
+      <SeasonCloseTodayCard />
       {model.kind === "ended" && (
         <InlineMessage tone="info" title="Temporada terminada">
           Los registros abiertos solo se pueden ajustar mientras dure su plazo.

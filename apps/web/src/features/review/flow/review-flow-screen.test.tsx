@@ -217,9 +217,37 @@ describe("the review route, when it cannot be answered", () => {
     expect(screen.queryByRole("button", { name: "Continuar" })).not.toBeInTheDocument();
   });
 
-  it("sends the closing review back to Today: it has no screen in this change", async () => {
-    const app = open(closingFixture());
+  it("walks the closing review like any other and sends the member on to the results", async () => {
+    const app = open(closingFixture(), 4);
+    await screen.findByRole("heading", { name: "Así fueron tus dos últimas semanas" });
+    await click("Continuar");
+    await click("Saltar");
+    for (const next of ["Siguiente: Inglés", "Siguiente: Dibujar", "Siguiente: Gym"]) {
+      await answerAllItems(5);
+      await click(next);
+    }
+    await answerAllItems(5);
+    await click("Terminar revisión");
+    await screen.findByRole("heading", { name: "Revisión guardada." });
+    expect(app.deps.api.reviewCommands[0]?.args.slice(0, 2)).toEqual(["season-1", 4]);
+    await click("Ver mis resultados");
+    // The close route itself arrives with the flow of screens 36 to 38b.
+    await waitFor(() => expect(app.location()).not.toMatch(/^\/review/));
+  });
+
+  it("shows an already saved closing review as saved, with the way to the results", async () => {
+    const app = open(closingFixture({ status: "completed" }), 4);
+    expect(await screen.findByRole("heading", { name: "Revisión guardada." })).toBeInTheDocument();
+    await click("Ver mis resultados");
+    await waitFor(() => expect(app.location()).not.toMatch(/^\/review/));
+  });
+
+  it("leaves a closing review through X for Today and saves nothing", async () => {
+    const app = open(closingFixture(), 4);
+    await screen.findByRole("heading", { name: "Así fueron tus dos últimas semanas" });
+    await click("Cerrar");
     await waitFor(() => expect(app.location()).toBe("/"));
+    expect(app.deps.api.reviewCommands).toEqual([]);
   });
 
   it("says a period that does not exist is not found", async () => {

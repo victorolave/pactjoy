@@ -52,14 +52,27 @@ describe("ReviewTodayCard", () => {
     expect(await screen.findByText("Revisión de la semana 4")).toBeInTheDocument();
   });
 
-  it("shows nothing for the closing review: it has no screen yet", async () => {
-    const { deps } = render(
-      <ReviewTodayCard />,
-      withReview({ pendingReview: pendingReviewFixture({ kind: "closing", dueUntil: null }) }),
+  it('offers the closing review as "Revisión de cierre", with no deadline', async () => {
+    render(
+      <>
+        <ReviewTodayCard />
+        <LocationProbe />
+      </>,
+      withReview({
+        pendingReview: pendingReviewFixture({
+          kind: "closing",
+          periodIndex: 4,
+          firstWeek: 7,
+          lastWeek: 8,
+          dueUntil: null,
+        }),
+      }),
     );
-    await waitFor(() => expect(deps.api.calls.getToday).toBe(1));
-    expect(screen.queryByText(/Revisión de/)).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Hacer la revisión" })).not.toBeInTheDocument();
+    expect(await screen.findByText("Revisión de cierre")).toBeInTheDocument();
+    expect(screen.getByText("Solo para ti, unos 60 segundos.")).toBeInTheDocument();
+    expect(screen.queryByText(/^Hasta el/)).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Hacer la revisión" }));
+    expect(screen.getByTestId("where")).toHaveTextContent("/review/season-1/4");
   });
 
   it("shows nothing when there is nothing to answer", async () => {

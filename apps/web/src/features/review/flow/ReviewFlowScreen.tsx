@@ -25,6 +25,8 @@ import {
 } from "./review-flow.ts";
 
 const TODAY = "/";
+/** Where the closing review leads: the full-screen close of the season. */
+const closeRoute = (seasonId: string): string => `/season/${encodeURIComponent(seasonId)}/close`;
 
 /** `/review/:seasonId/:periodIndex`: a whole number, 0 for the baseline. Anything else is no review. */
 const parsePeriod = (raw: string | undefined): number | null =>
@@ -65,13 +67,23 @@ function ReviewFlow({ seasonId, periodIndex, draft }: FlowProps) {
   const [blocked, setBlocked] = useState<ReviewFailure | null>(null);
 
   const leave = () => void navigate(TODAY, { replace: true });
+  // The closing review hands over to the results of the season (screen 36).
+  const finish =
+    draft.kind === "closing" ? () => void navigate(closeRoute(seasonId), { replace: true }) : leave;
   const names = new Map(draft.commitments.map((c) => [c.commitmentId, c.habitName]));
 
   if (blocked !== null) {
     return <ReviewUnavailable message={blocked.message} onLeave={leave} />;
   }
   if (state.step === "done") {
-    return <ReviewDoneStep result={result} names={names} onFinish={leave} />;
+    return (
+      <ReviewDoneStep
+        result={result}
+        names={names}
+        closing={draft.kind === "closing"}
+        onFinish={finish}
+      />
+    );
   }
 
   const first = isFirstScreen(state);
@@ -191,7 +203,7 @@ function Loading({ onClose }: { readonly onClose: () => void }) {
 /**
  * The full-screen review (33 to 35c, and 13 for the baseline), outside the tab bar. It decides
  * only whether the period can be answered; the steps and the draft belong to {@link ReviewFlow}.
- * The closing review has no screen in this change: it goes back to Today.
+ * The closing review walks the same steps and then leads to the season results.
  */
 export function ReviewFlowScreen() {
   const { seasonId, periodIndex: rawPeriod } = useParams<{
@@ -212,6 +224,7 @@ interface GateProps {
 }
 
 function ReviewGate({ seasonId, periodIndex, onLeave }: GateProps) {
+  const navigate = useNavigate();
   const query = useReview(seasonId, periodIndex);
   if (query.isPending) return <Loading onClose={onLeave} />;
   if (query.isError) {
@@ -225,7 +238,6 @@ function ReviewGate({ seasonId, periodIndex, onLeave }: GateProps) {
     );
   }
   const draft = query.data;
-  if (draft.kind === "closing") return <Navigate to={TODAY} replace />;
   if (draft.status === "upcoming") {
     return (
       <ReviewUnavailable message="Esta revisión todavía no está disponible." onLeave={onLeave} />
@@ -240,7 +252,18 @@ function ReviewGate({ seasonId, periodIndex, onLeave }: GateProps) {
     );
   }
   if (draft.status === "completed" || draft.status === "skipped") {
-    return <ReviewDoneStep result={null} names={new Map()} onFinish={onLeave} />;
+    return (
+      <ReviewDoneStep
+        result={null}
+        names={new Map()}
+        closing={draft.kind === "closing"}
+        onFinish={
+          draft.kind === "closing"
+            ? () => void navigate(closeRoute(seasonId), { replace: true })
+            : onLeave
+        }
+      />
+    );
   }
   if (draft.commitments.length === 0) {
     return <ReviewUnavailable message="No encontramos esta revisión." onLeave={onLeave} />;
