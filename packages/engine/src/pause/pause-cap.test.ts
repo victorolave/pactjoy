@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Season } from "../calendar/season-calendar.ts";
 import { seasonDay } from "../calendar/season-calendar.ts";
 import { buildPauseRequest } from "../test-support/builders.ts";
-import { canRequestPause, seasonPauseCap } from "./pause-cap.ts";
+import { canRequestPause, pauseBudget, seasonPauseCap } from "./pause-cap.ts";
 
 const eightWeekSeason: Season = { lengthWeeks: 8, startWeekday: 0 }; // 56 days, cap = 28
 
@@ -119,5 +119,78 @@ describe("canRequestPause (D9)", () => {
       seasonDay(0),
     );
     expect(result).toEqual({ allowed: true, remainingDays: 28 });
+  });
+});
+
+describe("pauseBudget (D9/D10)", () => {
+  const approvedWeek = buildPauseRequest(
+    "leer",
+    0,
+    { kind: "fixed", lastDay: seasonDay(6) },
+    { kind: "approved", decidedOn: seasonDay(0), resumedOn: null },
+  );
+
+  it("a fresh commitment has the whole cap remaining", () => {
+    expect(pauseBudget(eightWeekSeason, [], seasonDay(0))).toEqual({
+      cap: 28,
+      usedDays: 0,
+      remainingDays: 28,
+    });
+  });
+
+  it("approved days count against the cap", () => {
+    expect(pauseBudget(eightWeekSeason, [approvedWeek], seasonDay(10))).toEqual({
+      cap: 28,
+      usedDays: 7,
+      remainingDays: 21,
+    });
+  });
+
+  it("pending days count exactly like approved ones (R4b)", () => {
+    const pending = buildPauseRequest(
+      "leer",
+      10,
+      { kind: "fixed", lastDay: seasonDay(15) },
+      { kind: "pending" },
+    );
+    expect(pauseBudget(eightWeekSeason, [approvedWeek, pending], seasonDay(20))).toEqual({
+      cap: 28,
+      usedDays: 13,
+      remainingDays: 15,
+    });
+  });
+
+  it("rejected requests free their days", () => {
+    const rejected = buildPauseRequest(
+      "leer",
+      10,
+      { kind: "fixed", lastDay: seasonDay(15) },
+      { kind: "rejected", decidedOn: seasonDay(11) },
+    );
+    expect(pauseBudget(eightWeekSeason, [approvedWeek, rejected], seasonDay(12))).toEqual({
+      cap: 28,
+      usedDays: 7,
+      remainingDays: 21,
+    });
+  });
+
+  it("an open approved pause counts through today", () => {
+    const open = buildPauseRequest(
+      "leer",
+      10,
+      { kind: "open" },
+      { kind: "approved", decidedOn: seasonDay(10), resumedOn: null },
+    );
+    expect(pauseBudget(eightWeekSeason, [open], seasonDay(14)).usedDays).toBe(5);
+  });
+
+  it("remainingDays never goes below zero", () => {
+    const huge = buildPauseRequest(
+      "leer",
+      0,
+      { kind: "fixed", lastDay: seasonDay(40) },
+      { kind: "approved", decidedOn: seasonDay(0), resumedOn: null },
+    );
+    expect(pauseBudget(eightWeekSeason, [huge], seasonDay(41)).remainingDays).toBe(0);
   });
 });

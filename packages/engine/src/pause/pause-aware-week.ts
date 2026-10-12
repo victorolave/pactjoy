@@ -24,8 +24,8 @@
  */
 
 import type { Season, SeasonDay } from "../calendar/season-calendar.ts";
-import { seasonDay } from "../calendar/season-calendar.ts";
-import type { Commitment, Target } from "../commitment/commitment.ts";
+import { seasonDay, weekOf } from "../calendar/season-calendar.ts";
+import type { Commitment, Schedule, Target } from "../commitment/commitment.ts";
 import { targetOf } from "../commitment/commitment.ts";
 import type { Entry } from "../entry/entry.ts";
 import type { GraceDeadlineFor } from "../entry/grace-period.ts";
@@ -120,6 +120,29 @@ export function rejectionExtendedDeadline(
     if (candidate > extended) extended = candidate;
   }
   return extended;
+}
+
+/**
+ * The ONE Entry-acceptance deadline for the opportunity `day` belongs to:
+ * the normal grace deadline, or the end of `decidedOn + 1` when a
+ * rejected/cancelled request covers it ({@link rejectionExtendedDeadline}).
+ * The range is the day itself for `specificDays`, and the whole week for
+ * the week-bound kinds (`timesPerWeek`, `weeklyTotal`), whose deadline is
+ * shared by every Entry in the week. `planWeek`, `historyProvenance` and
+ * the app's entry window all call this, so acceptance and scoring cannot
+ * drift apart. An approved request never extends anything.
+ */
+export function entryGraceDeadline(
+  schedule: Schedule,
+  day: SeasonDay,
+  pauses: readonly PauseRequest[],
+): SeasonDay {
+  if (schedule.period === "perSession" && schedule.frequency.kind === "specificDays") {
+    return rejectionExtendedDeadline(pauses, day, day, graceDeadline(day));
+  }
+  const weekStart = weekOf(day) * DAYS_PER_WEEK;
+  const weekEnd = seasonDay(weekStart + (DAYS_PER_WEEK - 1));
+  return rejectionExtendedDeadline(pauses, weekStart, weekEnd, graceDeadline(weekEnd));
 }
 
 /**
@@ -223,7 +246,7 @@ export function planWeek(
         : prorateLimitTarget(target, activeDays);
     if (prorated === null) return plan(excludedStatus(paused, onHold, weekDays));
     const deadlineFor: GraceDeadlineFor = (end) =>
-      rejectionExtendedDeadline(pauses, weekStart, end, graceDeadline(end));
+      entryGraceDeadline(commitment.schedule, end, pauses);
     return plan(
       { status: "scored", sessions: [weeklyTotalResult(prorated, week, eligible, deadlineFor)] },
       prorated,
@@ -236,7 +259,7 @@ export function planWeek(
     if (n === null) return plan(excludedStatus(paused, onHold, weekDays));
     // Q16: timesPerWeek sessions close with the week, like weeklyTotal.
     const deadlineFor: GraceDeadlineFor = (end) =>
-      rejectionExtendedDeadline(pauses, weekStart, end, graceDeadline(end));
+      entryGraceDeadline(commitment.schedule, end, pauses);
     const assignments = timesPerWeekAssignments(target, n, eligible, deadlineFor);
     return plan(
       { status: "scored", sessions: assignments.map((a) => a.session) },
@@ -258,7 +281,14 @@ export function planWeek(
   return plan(
     {
       status: "scored",
-      sessions: specificDaysSessions(target, options.season, week, activeWeekdays, eligible),
+      sessions: specificDaysSessions(
+        target,
+        options.season,
+        week,
+        activeWeekdays,
+        eligible,
+        (end) => entryGraceDeadline(commitment.schedule, end, pauses),
+      ),
     },
     target,
     scheduledDays.filter((day) => !excluded(day)),

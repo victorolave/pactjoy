@@ -24,6 +24,13 @@
  *   yet include.
  * - `canRequestPause` + `PauseCheck`: D9's pure pause-request cap check,
  *   called before the app records a new pause request.
+ * - `pauseBudget` + `PauseBudget`/`seasonPauseCap`: a commitment's cap,
+ *   used and remaining pause days, for the app's budget read model and the
+ *   per-Commitment cap check of a request.
+ * - `entryGraceDeadline`/`rejectionExtendedDeadline`: the single
+ *   Entry-acceptance deadline (normal grace, or extended to the end of
+ *   `decidedOn + 1` after a rejection/cancel) shared by scoring and the
+ *   app's entry window, so the two cannot drift.
  * - `rankStandings` + `StandingsParticipant`/`StandingsRow`: builds the
  *   season's Clasificación from each member's `MemberScore.points`.
  * - `displayPoints`/`displayPercent`: D10's single rounding boundary --
@@ -111,8 +118,12 @@ export {
   parseDecimal,
 } from "./fraction/fraction.ts";
 export type { PauseDecision, PauseEnd, PauseRequest } from "./pause/pause.ts";
-export type { PauseCheck } from "./pause/pause-cap.ts";
-export { canRequestPause } from "./pause/pause-cap.ts";
+export {
+  entryGraceDeadline,
+  rejectionExtendedDeadline,
+} from "./pause/pause-aware-week.ts";
+export type { PauseBudget, PauseCheck } from "./pause/pause-cap.ts";
+export { canRequestPause, pauseBudget, seasonPauseCap } from "./pause/pause-cap.ts";
 // Commitment history (24) and detail (A3) reuse the scorer's source-day assignments.
 export type {
   HistoryOpportunity,

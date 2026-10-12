@@ -1,9 +1,9 @@
 /** Opportunity history from the scoring walk, never a second assignment algorithm. */
 import { type SeasonDay, seasonDay } from "../calendar/season-calendar.ts";
 import type { Commitment } from "../commitment/commitment.ts";
-import { graceDeadline, isOnTime } from "../entry/grace-period.ts";
+import { isOnTime } from "../entry/grace-period.ts";
 import { eq, type Fraction, fromInt } from "../fraction/fraction.ts";
-import { rejectionExtendedDeadline } from "../pause/pause-aware-week.ts";
+import { entryGraceDeadline } from "../pause/pause-aware-week.ts";
 import type { WeekExclusions } from "../week/week-progress.ts";
 import { type ScoreInput, type ScoringOpportunity, seasonSessions } from "./member-score.ts";
 
@@ -87,16 +87,15 @@ export function historyProvenance(
     if (plan.result.status !== "scored")
       return { week, status: plan.result.status, excluded, cells: [], extraEntryIndices: [] };
 
-    // Match the dispatchers' acceptance filter, using their deadline helpers, not R1's
-    // counting deadline: specificDays uses each SOURCE day's grace before D5 makeup.
-    const weeklyDeadline = rejectionExtendedDeadline(pauses, start, end, graceDeadline(end));
+    // Match the dispatchers' acceptance filter with the SAME shared deadline they use
+    // (`entryGraceDeadline`): specificDays uses each SOURCE day's grace before D5 makeup.
     const eligible = input.entries.flatMap((entry, index) =>
       entry.commitmentId === commitment.id &&
       entry.day >= start &&
       entry.day <= end &&
       !plan.paused.has(entry.day) &&
       !plan.onHold.has(entry.day) &&
-      isOnTime(entry, kind === "day" ? graceDeadline(entry.day) : weeklyDeadline)
+      isOnTime(entry, entryGraceDeadline(commitment.schedule, entry.day, pauses))
         ? [index]
         : [],
     );

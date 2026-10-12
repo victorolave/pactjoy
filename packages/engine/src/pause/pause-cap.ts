@@ -57,6 +57,30 @@ function totalDaysUsed(history: readonly PauseRequest[], today: SeasonDay): numb
   return new Set<SeasonDay>([...approved, ...pending]).size;
 }
 
+/** A commitment's pause allowance as of `today`: the season cap, the days already counted against it, and what is left. */
+export interface PauseBudget {
+  readonly cap: number;
+  readonly usedDays: number;
+  readonly remainingDays: number;
+}
+
+/**
+ * D9/D10: the commitment's pause budget, from its own decided-or-pending
+ * `history`. Pending days count like approved ones (R4b), an open pause
+ * counts through `today`, and rejected/cancelled requests free their days.
+ * `remainingDays` is clamped at 0. The single source for `canRequestPause`
+ * and for the app's budget read model.
+ */
+export function pauseBudget(
+  season: Season,
+  history: readonly PauseRequest[],
+  today: SeasonDay,
+): PauseBudget {
+  const cap = seasonPauseCap(season);
+  const usedDays = totalDaysUsed(history, today);
+  return { cap, usedDays, remainingDays: usedDays >= cap ? 0 : cap - usedDays };
+}
+
 export type PauseCheck =
   | { readonly allowed: true; readonly remainingDays: number }
   | {
@@ -77,9 +101,7 @@ export function canRequestPause(
 ): PauseCheck {
   if (request.startDay < today) return { allowed: false, reason: "retroactive" };
 
-  const cap = seasonPauseCap(season);
-  const used = totalDaysUsed(history, today);
-  const remaining = cap - used;
+  const { remainingDays: remaining } = pauseBudget(season, history, today);
   if (remaining <= 0) return { allowed: false, reason: "capExhausted" };
 
   if (request.end.kind === "fixed") {
