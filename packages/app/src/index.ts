@@ -235,6 +235,15 @@ export type {
   WeekSummaryInput,
 } from "./progress/week-summary.query.ts";
 export { weekSummary } from "./progress/week-summary.query.ts";
+export type {
+  CommitmentStageDeps,
+  CommitmentStageInput,
+  CommitmentStageView,
+} from "./review/commitment-stage.query.ts";
+export { commitmentStage } from "./review/commitment-stage.query.ts";
+export type { ReviewImprovement } from "./review/improvements.ts";
+export type { BaselineOffer, PendingReview, ReviewOffer } from "./review/pending-review.ts";
+export type { CommitmentPeriodSummary, PeriodSummary } from "./review/period-summary.ts";
 export type { ReviewRepository } from "./review/review.repository.ts";
 export type {
   AutomaticityResponse,
@@ -246,6 +255,26 @@ export type {
   SrbaiMode,
   SrbaiScore,
 } from "./review/review.ts";
+export type {
+  ReviewDraftCommitment,
+  ReviewDraftDeps,
+  ReviewDraftInput,
+  ReviewDraftView,
+} from "./review/review-draft.query.ts";
+export { reviewDraft } from "./review/review-draft.query.ts";
+export type { ReviewSlotStatus } from "./review/review-schedule.ts";
+export type {
+  SkipBaselineDeps,
+  SkipBaselineInput,
+} from "./review/skip-baseline.ts";
+export { skipBaseline } from "./review/skip-baseline.ts";
+export type {
+  SubmitReviewDeps,
+  SubmitReviewInput,
+  SubmitReviewResult,
+  SubmittedAnswer,
+} from "./review/submit-review.ts";
+export { submitReview } from "./review/submit-review.ts";
 export type { CommitmentScoreView, MeasureView } from "./score/commitment-projection.ts";
 export type {
   MemberScoreDeps,

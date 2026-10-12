@@ -41,8 +41,13 @@ export const pointsFixture = (
         },
 });
 
-const base = (): Pick<Season, "viewerId" | "today" | "timeZone" | "circle" | "season"> => ({
+const base = (): Pick<
+  Season,
+  "viewerId" | "today" | "timeZone" | "circle" | "season" | "pendingReview" | "baselineOffer"
+> => ({
   viewerId: VIEWER,
+  pendingReview: null,
+  baselineOffer: null,
   today: TODAY,
   timeZone: "America/Bogota" as Season["timeZone"],
   circle: { id: "circle-1" as Season["circle"]["id"], name: "Los de siempre" },

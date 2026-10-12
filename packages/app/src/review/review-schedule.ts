@@ -196,3 +196,13 @@ export function nextReviewDate(
   if (next === undefined || next.dueFromDay === null) return null;
   return localDateOfSeasonDay(seasonDay(next.dueFromDay - 1), seasonStart);
 }
+
+/**
+ * The last calendar day the review can still be answered, or `null` when it never lapses (the
+ * closing review). The baseline is open through the end of day 7.
+ */
+export function dueUntilOf(period: ReviewPeriod, seasonStart: LocalDate): LocalDate | null {
+  return period.dueToDay === null
+    ? null
+    : localDateOfSeasonDay(seasonDay(period.dueToDay - 1), seasonStart);
+}

@@ -1,6 +1,11 @@
 import type { MemberId } from "@pactjoy/engine";
 import { loadEffectiveRequests } from "../pause/effective-pauses.ts";
 import { toEnginePauses } from "../pause/to-engine.ts";
+import {
+  type BaselineOffer,
+  type PendingReview,
+  pendingReviewOf,
+} from "../review/pending-review.ts";
 import type { MemberScoreView } from "../score/member-score.query.ts";
 import { memberScoreView } from "../score/member-score.query.ts";
 import { type ScoreQueryDeps, scoreContextOf } from "../score/score-context.ts";
@@ -38,6 +43,13 @@ export interface TodayBase {
   readonly timeZone: TimeZoneId;
   readonly circle: TodayCircle;
   readonly season: TodaySeason;
+  /**
+   * The periodic review waiting for the viewer, or `null`: none due, the pact still open, or the
+   * viewer has no commitment. The closing review appears here once due (REQ-T4).
+   */
+  readonly pendingReview: PendingReview | null;
+  /** The optional first SRBAI, offered from the pact close through season day 7. Never set together with `pendingReview`. */
+  readonly baselineOffer: BaselineOffer | null;
 }
 
 /** Season progress for the viewer; only `active` and `ended` have one. */
@@ -110,9 +122,15 @@ export async function today(deps: TodayDeps, actor: Actor): Promise<TodayView> {
     // One captured instant for the whole read (SP-A21): the score context below reuses it, so a
     // read that crosses midnight cannot mix two days.
     const now = deps.clock.now();
+    const localToday = deps.timeZone.localDateAt(now, season.timeZone);
+    const reviews = await pendingReviewOf(repos, {
+      season,
+      memberId: viewer.id,
+      today: localToday,
+    });
     const base: TodayBase = {
       viewerId: viewer.id,
-      today: deps.timeZone.localDateAt(now, season.timeZone),
+      today: localToday,
       timeZone: season.timeZone,
       circle: circleView,
       season: {
@@ -121,6 +139,7 @@ export async function today(deps: TodayDeps, actor: Actor): Promise<TodayView> {
         nominalStart: season.nominalStart,
         actualStart: season.actualStart,
       },
+      ...reviews,
     };
     const phase = seasonPhase(season, base.today);
     if (phase.phase === "pactOpen" || phase.phase === "notStarted") {

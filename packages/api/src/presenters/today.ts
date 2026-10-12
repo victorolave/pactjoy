@@ -26,6 +26,27 @@ function presentBase(view: TodayBase): TodayBase {
       nominalStart: view.season.nominalStart,
       actualStart: view.season.actualStart,
     },
+    pendingReview:
+      view.pendingReview === null
+        ? null
+        : {
+            seasonId: view.pendingReview.seasonId,
+            periodIndex: view.pendingReview.periodIndex,
+            kind: view.pendingReview.kind,
+            fullSrbai: view.pendingReview.fullSrbai,
+            firstWeek: view.pendingReview.firstWeek,
+            lastWeek: view.pendingReview.lastWeek,
+            dueUntil: view.pendingReview.dueUntil,
+            summaryAvailable: view.pendingReview.summaryAvailable,
+          },
+    baselineOffer:
+      view.baselineOffer === null
+        ? null
+        : {
+            seasonId: view.baselineOffer.seasonId,
+            periodIndex: view.baselineOffer.periodIndex,
+            offeredUntil: view.baselineOffer.offeredUntil,
+          },
   };
 }
 
