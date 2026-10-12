@@ -1,7 +1,10 @@
+import { useState } from "react";
 import type { MyCircle } from "../../../ports/pactjoy-api.ts";
 import { Avatar } from "../../../ui/Avatar.tsx";
 import { Badge } from "../../../ui/Badge.tsx";
+import { Button } from "../../../ui/Button.tsx";
 import { Card } from "../../../ui/Card.tsx";
+import { PauseApprovalList, RequestPauseSheet } from "../../pause/index.ts";
 import styles from "./CircleScreen.module.css";
 import { SeasonAction } from "./SeasonAction.tsx";
 import { seasonStatus } from "./season-status.ts";
@@ -10,7 +13,8 @@ type Circle = NonNullable<MyCircle["circle"]>;
 
 /**
  * The circle with people in it (design 31a-lite): who is in, the season and pact state, and the way
- * to invite. No habit summaries, feed, reactions or nudges (Q7): those are A3.
+ * to invite, and, while the season runs, the pause requests waiting for an answer and the way to
+ * ask for one (screens 26 and 28). No habit summaries, feed, reactions or nudges (Q7): those are A3.
  */
 export function MembersView({
   circle,
@@ -20,8 +24,11 @@ export function MembersView({
   readonly season: MyCircle["season"];
 }) {
   const status = season === null ? null : seasonStatus(season, circle.members.length);
+  const running = season?.phase === "active";
+  const [pausing, setPausing] = useState(false);
   return (
     <>
+      {running && <PauseApprovalList />}
       <Card>
         <ul className={styles.members}>
           {circle.members.map((member) => (
@@ -44,7 +51,16 @@ export function MembersView({
           {status.detail !== null && <span className={styles.small}>{status.detail}</span>}
         </div>
       )}
-      {season?.phase !== "active" && <SeasonAction season={season} />}
+      {running ? (
+        <>
+          <Button variant="ghost" onClick={() => setPausing(true)}>
+            Pausar un compromiso
+          </Button>
+          <RequestPauseSheet open={pausing} onClose={() => setPausing(false)} />
+        </>
+      ) : (
+        <SeasonAction season={season} />
+      )}
     </>
   );
 }

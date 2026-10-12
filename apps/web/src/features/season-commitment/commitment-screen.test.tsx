@@ -8,7 +8,9 @@ import { ApiError } from "../../ports/api-error.ts";
 import type { CommitmentProgress } from "../../ports/wire.ts";
 import { progressRoutePatterns, progressRoutes } from "../../shared/season-progress-routes.ts";
 import type { FakePactJoyApi } from "../../testing/fake-pactjoy-api.ts";
+import { myPauseRequestsFixture, pauseBudgetFixture } from "../../testing/fixtures/pause.ts";
 import { commitmentProgress, leerRow } from "../../testing/fixtures/season-progress.ts";
+import { activeTodayFixture, weekRowFixture } from "../../testing/fixtures/today.ts";
 import { renderInProviders } from "../../testing/render.tsx";
 import { CommitmentScreen } from "./CommitmentScreen.tsx";
 
@@ -239,5 +241,45 @@ describe("CommitmentScreen navigation and states", () => {
     );
     await userEvent.click(screen.getByRole("button", { name: "Reintentar" }));
     expect(await screen.findByRole("heading", { level: 1, name: "Leer" })).toBeTruthy();
+  });
+});
+
+describe("CommitmentScreen pause entry point (design 24a, 24b)", () => {
+  const withOwnBudget = (api: FakePactJoyApi) => {
+    api.progress.setCommitmentProgress(SEASON, LEER, commitmentProgress());
+    api.setToday(
+      activeTodayFixture({
+        rows: [weekRowFixture({ commitmentId: LEER as never, habitName: "Leer" })],
+      }),
+    );
+    api.setMyPauseRequests(
+      myPauseRequestsFixture({
+        budgets: [pauseBudgetFixture({ commitmentId: LEER, remainingDays: 9 })],
+      }),
+    );
+  };
+
+  it("offers 'Pausar este compromiso' with the days left on the viewer's own Commitment", async () => {
+    open(withOwnBudget);
+    expect(await screen.findByRole("button", { name: "Pausar este compromiso" })).toBeEnabled();
+    expect(screen.getByText("Te quedan 9 días de pausa")).toBeInTheDocument();
+  });
+
+  it("opens the request sheet with this Commitment selected", async () => {
+    open(withOwnBudget);
+    await userEvent.click(await screen.findByRole("button", { name: "Pausar este compromiso" }));
+    expect(await screen.findByRole("dialog", { name: "Pausar un compromiso" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Leer" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
+  it("offers nothing on a Commitment that has no pause budget (someone else's)", async () => {
+    showing(commitmentProgress());
+    await screen.findByRole("heading", { level: 1, name: "Leer" });
+    expect(
+      screen.queryByRole("button", { name: "Pausar este compromiso" }),
+    ).not.toBeInTheDocument();
   });
 });

@@ -1,6 +1,8 @@
 export const todayKey = ["today"] as const;
 export const habitsKey = ["habits"] as const;
-export const seasonKey = (id: string) => ["season", id] as const;
+/** Every season read shares this root, so one invalidation refreshes them all. */
+export const seasonsKey = ["season"] as const;
+export const seasonKey = (id: string) => [...seasonsKey, id] as const;
 export const scoringPreviewKey = (hash: string) => ["scoringPreview", hash] as const;
 /** The viewer's circle for the Circle tab. Not persisted offline: a stale copy would show a circle the user left. */
 export const myCircleKey = ["myCircle"] as const;
@@ -19,3 +21,9 @@ export const commitmentProgressKey = (seasonId: string, commitmentId: string) =>
   [...progressKey, "commitment", seasonId, commitmentId] as const;
 export const weekSummaryKey = (seasonId: string, weekIndex: number) =>
   [...progressKey, "week", seasonId, weekIndex] as const;
+/**
+ * The viewer's pause requests, the ones awaiting their answer, their budgets and the 30b comparison
+ * (`GET /me/pause-requests`). Not persisted offline: a stale copy would show a decided request as
+ * pending.
+ */
+export const pauseRequestsKey = ["pauseRequests"] as const;

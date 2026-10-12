@@ -10,6 +10,7 @@ import { IconButton } from "../../ui/IconButton.tsx";
 import { Icon } from "../../ui/icon/Icon.tsx";
 import { ProgressBar } from "../../ui/ProgressBar.tsx";
 import { Skeleton } from "../../ui/Skeleton.tsx";
+import { CommitmentPauseSection } from "../pause/index.ts";
 import { useCommitmentProgress } from "../season-progress-data/index.ts";
 import styles from "./CommitmentScreen.module.css";
 import {
@@ -136,7 +137,13 @@ function Scoring({ view }: { readonly view: Started }) {
   );
 }
 
-function Commitment({ view }: { readonly view: Started }) {
+function Commitment({
+  view,
+  commitmentId,
+}: {
+  readonly view: Started;
+  readonly commitmentId: string;
+}) {
   const row = view.commitment;
   return (
     <>
@@ -156,6 +163,7 @@ function Commitment({ view }: { readonly view: Started }) {
         <h1 className={styles.title}>{row.habit.name}</h1>
         <p className={styles.subtitle}>{commitmentSubtitle(row)}</p>
       </div>
+      <CommitmentPauseSection commitmentId={commitmentId} />
       <PointsCard view={view} />
       <HistoryGrid view={view} />
       <Scoring view={view} />
@@ -165,7 +173,7 @@ function Commitment({ view }: { readonly view: Started }) {
 
 /**
  * `/season/:seasonId/commitments/:commitmentId` (design 24a, 24b): one commitment's season,
- * read-only. Stage, reminder and pause actions are not part of Lote 2. Back honours where it was
+ * read-only apart from the pause entry point (Lote 4). Stage and reminder actions are not part of Lote 2. Back honours where it was
  * opened from (Today passes `{ from: "today" }`), Temporada otherwise.
  */
 export function CommitmentScreen() {
@@ -212,7 +220,7 @@ export function CommitmentScreen() {
   }
   return (
     <Frame back={back}>
-      <Commitment view={query.data} />
+      <Commitment view={query.data} commitmentId={commitmentId} />
     </Frame>
   );
 }

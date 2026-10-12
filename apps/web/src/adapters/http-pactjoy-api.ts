@@ -15,9 +15,11 @@ import type {
   JoinCircleCommand,
   MyCircle,
   PactJoyApi,
+  PauseDecision,
   PreviewScoringCommand,
   RecordEntryCommand,
   RecordedEntry,
+  RequestPauseCommand,
   ScoringPreview,
   UpdateHabitCommand,
 } from "../ports/pactjoy-api.ts";
@@ -25,11 +27,15 @@ import type {
   CommitmentProgress,
   HabitDto,
   MemberProgress,
+  MyPauseRequests,
+  PauseApprovalDto,
+  PauseRequestDto,
   SeasonDto,
   SeasonProgress,
   WeekSummary,
 } from "../ports/wire.ts";
 import { progressApiPaths } from "../shared/season-progress-routes.ts";
+import { isMyPauseRequests, isPauseApproval, isPauseRequest } from "./pause-guards.ts";
 import {
   isCommitmentProgress,
   isMemberProgress,
@@ -109,6 +115,8 @@ const isScoringPreview = (data: unknown): boolean =>
       typeof row.progressPercent === "string" &&
       /^(?:100|\d{1,2})$/.test(row.progressPercent),
   );
+
+const pausePath = (id: string): string => `/pause-requests/${encodeURIComponent(id)}`;
 
 const circlePath = (circleId: string): string => `/circles/${encodeURIComponent(circleId)}`;
 
@@ -340,6 +348,45 @@ export class HttpPactJoyApi implements PactJoyApi {
 
   async leaveCircle(circleId: string): Promise<void> {
     await this.#request({ method: "POST", path: `${circlePath(circleId)}/leave` });
+  }
+
+  async requestPause(seasonId: string, cmd: RequestPauseCommand): Promise<PauseRequestDto> {
+    return (await this.#request({
+      method: "POST",
+      path: `${seasonPath(seasonId)}/pause-requests`,
+      body: cmd,
+      valid: isPauseRequest,
+    })) as PauseRequestDto;
+  }
+
+  async getMyPauseRequests(signal?: AbortSignal): Promise<MyPauseRequests> {
+    return this.#read("/me/pause-requests", isMyPauseRequests, signal);
+  }
+
+  async respondToPause(pauseRequestId: string, decision: PauseDecision): Promise<PauseApprovalDto> {
+    return (await this.#request({
+      method: "PUT",
+      path: `${pausePath(pauseRequestId)}/response`,
+      body: { decision },
+      valid: isPauseApproval,
+    })) as PauseApprovalDto;
+  }
+
+  async cancelPauseRequest(pauseRequestId: string): Promise<PauseRequestDto> {
+    return (await this.#request({
+      method: "DELETE",
+      path: pausePath(pauseRequestId),
+      valid: isPauseRequest,
+    })) as PauseRequestDto;
+  }
+
+  async resumePause(pauseRequestId: string, commitmentId?: string): Promise<PauseRequestDto> {
+    return (await this.#request({
+      method: "POST",
+      path: `${pausePath(pauseRequestId)}/resume`,
+      body: commitmentId === undefined ? {} : { commitmentId },
+      valid: isPauseRequest,
+    })) as PauseRequestDto;
   }
 
   async getSeasonProgress(seasonId: string, signal?: AbortSignal): Promise<SeasonProgress> {
