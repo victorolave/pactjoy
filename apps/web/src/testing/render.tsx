@@ -11,6 +11,7 @@ import { createSessionEvents, SessionManager } from "../features/auth/index.ts";
 import type { ApiError } from "../ports/api-error.ts";
 import type { NotificationPermissionState } from "../ports/notification-permission.ts";
 import type { MyCircle } from "../ports/pactjoy-api.ts";
+import type { ReviewDraftDto } from "../ports/wire.ts";
 import { AppRoutes } from "../shell/routes.tsx";
 import { FakeAppInstall } from "./fake-app-install.ts";
 import { FakeAuth, fakeSession } from "./fake-auth.ts";
@@ -64,6 +65,14 @@ export interface RenderAppOptions {
   readonly nameDraft?: string;
   /** `getToday` rejects with these, one per call, before it answers `today`. */
   readonly todayFailures?: readonly ApiError[];
+  /** `getReview` rejects with these, one per call, before it answers a draft. */
+  readonly reviewFailures?: readonly ApiError[];
+  /** The review drafts `getReview` answers, by season and period (0 is the baseline). */
+  readonly reviews?: readonly {
+    readonly seasonId: string;
+    readonly periodIndex: number;
+    readonly draft: ReviewDraftDto;
+  }[];
 }
 
 const DEFAULT_NOW_MS = Date.parse("2026-10-03T12:00:00.000Z");
@@ -112,6 +121,8 @@ function createFakeDeps({
   canShare = true,
   myCircleFailures = [],
   todayFailures = [],
+  reviews = [],
+  reviewFailures = [],
   online = true,
   storage = new MemoryStorage(),
 }: RenderAppOptions = {}): RenderedApp["deps"] {
@@ -127,6 +138,9 @@ function createFakeDeps({
   if (installDone) device.set("installStep", "1");
   if (notificationStepDone) device.set("notificationStep", "1");
   for (const failure of todayFailures) api.failNext("getToday", failure);
+  for (const failure of reviewFailures) api.failNext("getReview", failure);
+  for (const { seasonId, periodIndex, draft } of reviews)
+    api.setReview(seasonId, periodIndex, draft);
   return {
     auth,
     api,

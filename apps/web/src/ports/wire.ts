@@ -10,6 +10,8 @@ import type {
   PauseRedistribution,
   PauseRequestView,
   ResumePreview,
+  ReviewDraftView,
+  ReviewImprovement,
   Season,
   SeasonProgressView,
   WeekSummaryView,
@@ -84,4 +86,28 @@ export interface MyPauseRequests {
   readonly budgets: readonly PauseBudgetDto[];
   readonly redistributed: PauseRedistributionDto | null;
   readonly resumePreviews: readonly ResumePreviewDto[];
+}
+
+/**
+ * The periodic review as it arrives over the wire (change periodic-review, ADR-0014). Every view
+ * is the OWNER's: no member id appears in them, and no peer-facing read carries any of it.
+ */
+export type ReviewDraftDto = Serialized<ReviewDraftView>;
+export type ReviewImprovementDto = Serialized<ReviewImprovement>;
+/** `POST /seasons/:id/reviews/:k` (201): only what 35b needs; the stored answers are never echoed. */
+export interface SubmittedReviewDto {
+  readonly status: "completed";
+  readonly improvements: readonly ReviewImprovementDto[];
+  /** `null` after the closing review. */
+  readonly nextReviewDate: string | null;
+}
+/** `POST /seasons/:id/reviews/0/skip`. */
+export interface SkippedBaselineDto {
+  readonly status: "skipped";
+}
+/** The derived maturity of one of MY commitments. */
+export type HabitStageDto = "new" | "developing" | "integrated" | "graduated";
+export interface CommitmentStageDto {
+  readonly commitmentId: string;
+  readonly stage: HabitStageDto;
 }

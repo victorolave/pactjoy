@@ -30,6 +30,7 @@ import {
 } from "../features/pact/index.ts";
 import { RedistributedBanner } from "../features/pause/index.ts";
 import { ProfileScreen, SettingsScreen } from "../features/profile/index.ts";
+import { ReviewFlowScreen } from "../features/review/index.ts";
 import { SeasonScreen, SeasonSkeleton } from "../features/season/index.ts";
 import { CommitmentScreen } from "../features/season-commitment/index.ts";
 import { MemberSeasonScreen } from "../features/season-member/index.ts";
@@ -172,6 +173,7 @@ export function AppRoutes() {
           <Route path="season/:seasonId/commitments/:commitmentId/edit" element={<HabitWizard />} />
           <Route path="season/:seasonId/pact" element={<PactScreen />} />
           <Route path="profile/settings" element={<SettingsScreen />} />
+          <Route path="review/:seasonId/:periodIndex" element={<ReviewFlowScreen />} />
           <Route element={<ProgressPhaseGate />}>
             <Route path={progressRoutePatterns.week} element={<WeekSummaryScreen />} />
             <Route element={<AppShell />}>

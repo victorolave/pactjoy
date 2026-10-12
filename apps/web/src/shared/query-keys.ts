@@ -27,3 +27,13 @@ export const weekSummaryKey = (seasonId: string, weekIndex: number) =>
  * pending.
  */
 export const pauseRequestsKey = ["pauseRequests"] as const;
+/**
+ * Every periodic review read (ADR-0014) shares this root. Owner-only and never persisted offline:
+ * a stale copy would offer a review that was already saved.
+ */
+export const reviewsKey = ["review"] as const;
+export const reviewKey = (seasonId: string, periodIndex: number) =>
+  [...reviewsKey, seasonId, periodIndex] as const;
+/** The owner's derived stage of one commitment; under the progress root so a settled mutation refreshes it. */
+export const stageKey = (seasonId: string, commitmentId: string) =>
+  [...progressKey, "stage", seasonId, commitmentId] as const;
