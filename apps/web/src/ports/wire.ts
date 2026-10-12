@@ -9,6 +9,7 @@ import type {
   PauseBudgetView,
   PauseRedistribution,
   PauseRequestView,
+  ResumePreview,
   Season,
   SeasonProgressView,
   WeekSummaryView,
@@ -72,6 +73,7 @@ export type PauseRequestDto = Serialized<PauseRequestView>;
 export type PauseApprovalDto = Serialized<PauseApprovalView>;
 export type PauseBudgetDto = Serialized<PauseBudgetView>;
 export type PauseRedistributionDto = Serialized<PauseRedistribution>;
+export type ResumePreviewDto = Serialized<ResumePreview>;
 export type PauseApprovalCommitmentDto = PauseApprovalDto["commitments"][number];
 
 /** `GET /me/pause-requests`: total, so no season gives empty lists. */
@@ -81,4 +83,5 @@ export interface MyPauseRequests {
   readonly awaitingMe: readonly PauseApprovalDto[];
   readonly budgets: readonly PauseBudgetDto[];
   readonly redistributed: PauseRedistributionDto | null;
+  readonly resumePreviews: readonly ResumePreviewDto[];
 }

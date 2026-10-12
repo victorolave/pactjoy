@@ -66,3 +66,24 @@ export function commitmentList(names: readonly string[]): string {
   if (names.length <= 1) return names.join("");
   return `${names.slice(0, -1).join(", ")} y ${names[names.length - 1]}`;
 }
+
+/** "Esta semana tendrás 3 oportunidades." (screen 29): what the week holds if the pause resumes today. */
+export function weekOpportunitiesText(count: number): string {
+  return `Esta semana tendrás ${count} ${count === 1 ? "oportunidad" : "oportunidades"}.`;
+}
+
+/**
+ * Screen 30b, one Commitment: what each remaining opportunity is worth now. The two integers are
+ * shown as the server sent them, never reduced ("300 ÷ 24", not "25 ÷ 2").
+ */
+export function perOpportunityText(habit: string, weightPoints: number, after: number): string {
+  return `La pausa de ${habit} repartió el valor de sus oportunidades entre las que quedan: cada una vale ahora ${weightPoints} ÷ ${after}.`;
+}
+
+/** Screen 30b: whose points the pause left alone; `null` when the viewer is the only active member. */
+export function peersUnchangedText(names: readonly string[]): string | null {
+  if (names.length === 0) return null;
+  if (names.length === 1) return `El de ${names[0]} no cambia.`;
+  if (names.length <= 3) return `Los de ${commitmentList(names)} no cambian.`;
+  return "El de los demás no cambia.";
+}

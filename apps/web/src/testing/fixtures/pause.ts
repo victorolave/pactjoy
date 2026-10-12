@@ -54,6 +54,7 @@ export const noPauseRequestsFixture = (): MyPauseRequests => ({
   awaitingMe: [],
   budgets: [],
   redistributed: null,
+  resumePreviews: [],
 });
 
 export const myPauseRequestsFixture = (
@@ -67,5 +68,6 @@ export const myPauseRequestsFixture = (
     pauseBudgetFixture({ commitmentId: "commitment-2" }),
   ],
   redistributed: null,
+  resumePreviews: [],
   ...overrides,
 });

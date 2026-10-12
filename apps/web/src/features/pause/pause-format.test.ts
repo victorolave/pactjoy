@@ -3,9 +3,12 @@ import {
   autoApproveText,
   commitmentList,
   PAUSE_REASON_OPTIONS,
+  peersUnchangedText,
   periodText,
+  perOpportunityText,
   reasonLabel,
   remainingApprovalText,
+  weekOpportunitiesText,
 } from "./pause-format.ts";
 
 describe("pause copy helpers", () => {
@@ -61,5 +64,27 @@ describe("pause copy helpers", () => {
     expect(commitmentList(["Meditar"])).toBe("Meditar");
     expect(commitmentList(["Meditar", "Leer"])).toBe("Meditar y Leer");
     expect(commitmentList(["Meditar", "Leer", "Correr"])).toBe("Meditar, Leer y Correr");
+  });
+
+  it("counts the week's opportunities, in the singular for one", () => {
+    expect(weekOpportunitiesText(3)).toBe("Esta semana tendrás 3 oportunidades.");
+    expect(weekOpportunitiesText(1)).toBe("Esta semana tendrás 1 oportunidad.");
+  });
+
+  it("shows what each opportunity is worth as weight points over opportunities, unreduced", () => {
+    expect(perOpportunityText("Gym", 300, 24)).toBe(
+      "La pausa de Gym repartió el valor de sus oportunidades entre las que quedan: cada una vale ahora 300 ÷ 24.",
+    );
+  });
+
+  it("says whose points did not change, by how many peers there are", () => {
+    expect(peersUnchangedText([])).toBeNull();
+    expect(peersUnchangedText(["Andrea"])).toBe("El de Andrea no cambia.");
+    expect(peersUnchangedText(["Ana", "Beto"])).toBe("Los de Ana y Beto no cambian.");
+    expect(peersUnchangedText(["Ana", "Beto", "Carla"])).toBe(
+      "Los de Ana, Beto y Carla no cambian.",
+    );
+    expect(peersUnchangedText(["Ana", "Beto", "Carla", "Dani"])).toBe("El de los demás no cambia.");
+    expect(peersUnchangedText(["A", "B", "C", "D", "E"])).toBe("El de los demás no cambia.");
   });
 });
