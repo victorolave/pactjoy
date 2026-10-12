@@ -23,6 +23,10 @@ const renderRow = (...rows: TodayRow[]) => renderApp({ today: activeTodayFixture
 const tapDone = async (habit = "Meditar") =>
   userEvent.click(await screen.findByRole("button", { name: `Registrar ${habit}` }));
 
+/** The row controls: every button except Today's own "Pausar un compromiso" action. */
+const rowControls = () =>
+  screen.getAllByRole("button").filter((b) => b.textContent !== "Pausar un compromiso");
+
 describe("one tap done (EN-R1)", () => {
   it("records a done entry once and offers to undo it (EN-S1)", async () => {
     const { deps } = renderRow(openDone());
@@ -165,7 +169,7 @@ describe("Hoy no salió (EN-R2)", () => {
     renderRow(weekRowFixture());
     await screen.findByRole("heading", { name: "Leer" });
     expect(screen.queryByRole("button", { name: /Hoy no salió/ })).not.toBeInTheDocument();
-    expect(screen.getAllByRole("button")).toHaveLength(1);
+    expect(rowControls()).toHaveLength(1);
   });
 
   it("explains a 422 MissedNotAllowed inline in the row", async () => {
@@ -215,7 +219,7 @@ describe("rows that cannot be written", () => {
     );
     await screen.findByRole("heading", { name: "Logged" });
     // The logged row is pressed (a second tap undoes it) and can be edited; nothing else has a control.
-    expect(screen.getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual([
+    expect(rowControls().map((b) => b.getAttribute("aria-label"))).toEqual([
       "Registrar Logged",
       "Editar registro de Logged",
     ]);

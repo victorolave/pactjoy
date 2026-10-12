@@ -28,6 +28,7 @@ import {
   PactScreen,
   WeightsScreen,
 } from "../features/pact/index.ts";
+import { RedistributedBanner } from "../features/pause/index.ts";
 import { ProfileScreen, SettingsScreen } from "../features/profile/index.ts";
 import { SeasonScreen, SeasonSkeleton } from "../features/season/index.ts";
 import { CommitmentScreen } from "../features/season-commitment/index.ts";
@@ -70,6 +71,7 @@ function SeasonRoute() {
   const season = data?.season;
   return (
     <div className={styles.season}>
+      {season && (season.phase === "active" || season.phase === "ended") && <RedistributedBanner />}
       <SeasonScreen
         onNavigateToMember={(memberId) => {
           if (season) void navigate(progressRoutes.member(season.id, memberId));

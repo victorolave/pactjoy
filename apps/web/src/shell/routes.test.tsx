@@ -6,6 +6,7 @@ import { ApiError } from "../ports/api-error.ts";
 import type { MyCircle } from "../ports/pactjoy-api.ts";
 import type { SeasonDto } from "../ports/wire.ts";
 import { NO_CIRCLE, pairCircleFixture } from "../testing/fixtures/circle.ts";
+import { myPauseRequestsFixture, pauseRequestFixture } from "../testing/fixtures/pause.ts";
 import {
   activeSeasonProgress,
   commitmentProgress,
@@ -92,6 +93,38 @@ function progressApp(
   app.deps.api.progress.setWeekSummary("season-1", 3, weekSummary());
   return app;
 }
+
+describe("Temporada and the points-redistributed notice (screen 30b)", () => {
+  it("tells the member their points were redistributed, once", async () => {
+    const app = progressApp("/season", activeSeasonProgress({ memberCount: 2 }));
+    app.deps.api.setMyPauseRequests(
+      myPauseRequestsFixture({
+        mine: [
+          pauseRequestFixture({
+            id: "pause-1",
+            status: "approved",
+            commitments: [{ commitmentId: "c-1", habitName: "Leer", icon: null, resumedOn: null }],
+          }),
+        ],
+        redistributed: {
+          pauseRequestId: "pause-1",
+          total: { before: 397, after: 400 },
+          commitments: [{ commitmentId: "c-1", before: 90, after: 93 }],
+        },
+      }),
+    );
+    await app.deps.queryClient.refetchQueries({ queryKey: ["pauseRequests"] });
+    expect(await screen.findByText("Tus puntos se redistribuyeron")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Tu temporada" })).toBeInTheDocument();
+    expect(app.deps.device.get("pause-redistributed-seen:pause-1")).toBe("1");
+  });
+
+  it("shows no notice when nothing was redistributed", async () => {
+    progressApp("/season", activeSeasonProgress({ memberCount: 2 }));
+    await screen.findByRole("heading", { name: "Tu temporada" });
+    expect(screen.queryByText("Tus puntos se redistribuyeron")).not.toBeInTheDocument();
+  });
+});
 
 describe("Lote 2 route integration (A4)", () => {
   it.each([1, 2, 3, 6])(

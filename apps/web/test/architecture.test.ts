@@ -30,7 +30,7 @@ function filesUnder(dir: string): string[] {
 
 /** feature -> the features it may reach (always through their index.ts). */
 const ALLOWED_FEATURE_DEPS: Readonly<Record<string, readonly string[]>> = {
-  today: ["entry", "habits", "season-progress-data", "season-week"],
+  today: ["entry", "habits", "pause", "season-progress-data", "season-week"],
   habits: [],
   pact: ["habits"],
   entry: [],

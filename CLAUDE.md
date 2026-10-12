@@ -4,7 +4,7 @@
 
 **PactJoy**: a social habits app. Personal (hobby) project; if it works it could become a product, but that decision is not being made yet.
 
-Status (2026-10-08): MVP specification and design are complete; stack chosen (2026-09-24). Phase 1 done: `packages/engine` implements the full scoring engine and passes all 96 worked-example rows. Phase 2 (backend) done in code: `packages/app` use cases (`app-foundation`), Postgres adapter (ADR-0010) and the API (`packages/api` + the `api` Edge Function, ADR-0011), plus follow-ups (pact integrity, per-circle display names, viewer read models). Phase 3 in progress: `apps/web` PWA with Today and Entry (design batches 0–1, change `pwa-today-entry`, ADR-0012), onboarding, circle and profile (design batch 5, change `pwa-onboarding-circle-profile`), season, habits and pact (design batch 3, change `pwa-season-habits-pact`), and read-only season progress (design batch 2, change `pwa-season-progress`). Runs against local Supabase; hosted setup is pending (see Next steps). Verified tests: engine 444, app 997, api 607, db 336 (real local Postgres), web 1780; total 4164 passing.
+Status (2026-10-12): MVP specification and design are complete; stack chosen (2026-09-24). Phase 1 done: `packages/engine` implements the full scoring engine and passes all 96 worked-example rows. Phase 2 (backend) done in code: `packages/app` use cases (`app-foundation`), Postgres adapter (ADR-0010) and the API (`packages/api` + the `api` Edge Function, ADR-0011), plus follow-ups (pact integrity, per-circle display names, viewer read models). Phase 3 in progress: `apps/web` PWA with Today and Entry (design batches 0–1, change `pwa-today-entry`, ADR-0012), onboarding, circle and profile (design batch 5, change `pwa-onboarding-circle-profile`), season, habits and pact (design batch 3, change `pwa-season-habits-pact`), read-only season progress (design batch 2, change `pwa-season-progress`), and the pause workflow (A2 plus the screens of design batch 4, change `pause-workflow`, ADR-0013). Runs against local Supabase; hosted setup is pending (see Next steps). Verified tests: engine 472, app 1158, api 630, db 364 (real local Postgres), web 1990; total 4614 passing.
 
 The author works in Spanish: reply in Spanish. Code, commits and repository docs are in English.
 
@@ -101,7 +101,7 @@ In practice:
 
 - `packages/engine`: pure domain (scoring, pause, proration, streaks). No dependencies. Exact fractions with BigInt, never `float`. Injected clock.
 - `packages/app`: use cases; they depend on ports (repositories, clock, notifier, file storage).
-- `packages/db`: Postgres adapter.
+- `packages/db`: Postgres adapter (including the three tables of the pause request aggregate, ADR-0013).
 - `packages/api`: HTTP layer as framework-free handlers, router and presenters over the use cases (ADR-0011).
 - `supabase/functions`: thin Deno shell (a single `api` function) that validates the JWT and delegates to `packages/api`.
 - `apps/web`: the PWA (Vite + React, ADR-0012); talks to its own `api` interface and never writes to tables directly. Screens depend on ports (`PactJoyApi`, `AuthPort`); fetch, GoTrue, storage and TanStack Query live in `src/adapters`. The vendored design-system CSS (`src/design/vendor/`) and brand assets (`src/design/brand/`) are not covered by the AGPL (`TRADEMARKS.md`).
@@ -132,9 +132,10 @@ Full detail in the Mechanics page in Notion.
 5. ~~PWA, Today and Entry (design batches 0–1)~~: done (change `pwa-today-entry`, PRs #141–#200; ADR-0012).
    - ~~Onboarding, circle and profile (design batch 5)~~: done (change `pwa-onboarding-circle-profile`, PRs #237–#257). Pending: real-device checks on iOS and Android (install step, notification permission, single login in the installed app) and rate limiting on `POST /circles/join/preview` before real users (ADR-0011 Q17 checklist).
    - ~~Season, habits and pact (design batch 3)~~: done (change `pwa-season-habits-pact`, PRs #259–#266 merged).
-   - ~~Read-only season progress (design batch 2)~~: done (change `pwa-season-progress`, PRs #270–#290 plus the verification close-out; ADR-0011 addendum records the peer-privacy relaxation). Pending: real-iPhone checks of screens 23–25. Next: batch 4 (pause flows, reviews/SRBAI and photo evidence).
+   - ~~Read-only season progress (design batch 2)~~: done (change `pwa-season-progress`, PRs #270–#290 plus the verification close-out; ADR-0011 addendum records the peer-privacy relaxation). Pending: real-iPhone checks of screens 23–25.
+   - ~~Pause workflow (A2 plus design batch 4, screens 26–30b)~~: done in code (change `pause-workflow`, ADR-0013: request, respond, cancel and resume with lazy settlement, the grace deadline derived from the Pause history, and the pause screens in Today, Commitment, Circle and Season). Pending: the manual smoke against local Supabase and real-iPhone checks of screens 26–30b. Next: the rest of batch 4, reviews/SRBAI first and then photo evidence, each as its own change.
 6. Later, in order:
-   - A2: pause workflow; it must wire `pauseGraceExtensionDays`, currently hard-coded to 0 in the entry use cases. D: scheduled jobs (they trigger use cases).
+   - D: scheduled jobs (they trigger use cases; `settleDuePauses` is ready for pg_cron to trigger it).
    - A3: social.
    - E: account deletion.
 

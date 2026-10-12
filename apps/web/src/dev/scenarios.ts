@@ -1,4 +1,10 @@
 import type { TodayView } from "@pactjoy/app";
+import type { MyPauseRequests } from "../ports/wire.ts";
+import {
+  myPauseRequestsFixture,
+  pauseBudgetFixture,
+  pauseRequestFixture,
+} from "../testing/fixtures/pause.ts";
 import {
   activeTodayFixture,
   type DayRow,
@@ -24,6 +30,8 @@ export interface Scenario {
   readonly mode: ScenarioMode;
   /** What `GET /me/today` answers, built fresh each time. */
   today(): TodayView;
+  /** What `GET /me/pause-requests` answers, for the scenarios that show a pause. Empty when absent. */
+  pauseRequests?(): MyPauseRequests;
 }
 
 type Active = Extract<TodayView, { state: "active" | "ended" }>;
@@ -167,6 +175,50 @@ const mixed = (): TodayView =>
       }),
       ingles(),
     ],
+  });
+
+type RowPause = NonNullable<DayRow["pause"]>;
+
+const pauseOf = (overrides: Partial<RowPause> = {}): RowPause => ({
+  pauseRequestId: id("pause-dev"),
+  status: "approved",
+  reason: "travel",
+  endDate: null,
+  endsTomorrow: false,
+  canResume: true,
+  canCancel: false,
+  ...overrides,
+});
+
+/** Gym, paused or on hold by a pause request (the request itself is in `pauseRequestsFor`). */
+const pausedGym = (state: "paused" | "onHold", pause: RowPause): DayRow =>
+  meditar({
+    commitmentId: id("c-gym"),
+    habitName: "Gym",
+    opportunity: { state, graceUntil: null },
+    pause,
+  });
+
+const pauseToday = (gym: DayRow): TodayView =>
+  activeTodayFixture({ rows: [meditar(), gym, leer()] });
+
+const pauseRequestsFor = (
+  status: "pending" | "approved",
+  endDate: string | null,
+): MyPauseRequests =>
+  myPauseRequestsFixture({
+    mine: [
+      pauseRequestFixture({
+        id: "pause-dev",
+        status,
+        reason: "travel",
+        startDate: "2026-10-02",
+        endDate,
+        autoApproveAt: "2026-10-04T14:12:00.000Z",
+        commitments: [{ commitmentId: "c-gym", habitName: "Gym", icon: null, resumedOn: null }],
+      }),
+    ],
+    budgets: [pauseBudgetFixture({ commitmentId: "c-gym", remainingDays: 12 })],
   });
 
 const pending = (row: DayRow): PendingItem => ({
@@ -425,6 +477,34 @@ export const SCENARIOS: readonly Scenario[] = [
     description: "Un domingo sin compromisos, con Estirar del sábado todavía abierto.",
     mode: "data",
     today: pendingYesterdayNothingToday,
+  },
+  {
+    id: "pausePending",
+    title: "Pausa en espera (27, 29)",
+    description: "Gym espera la respuesta del círculo: Ver solicitud y Cancelar solicitud.",
+    mode: "data",
+    today: () =>
+      pauseToday(
+        pausedGym("onHold", pauseOf({ status: "pending", canResume: false, canCancel: true })),
+      ),
+    pauseRequests: () => pauseRequestsFor("pending", null),
+  },
+  {
+    id: "pauseApproved",
+    title: "Pausa aprobada (29)",
+    description: "Gym está en pausa por un viaje y se puede reanudar.",
+    mode: "data",
+    today: () => pauseToday(pausedGym("paused", pauseOf())),
+    pauseRequests: () => pauseRequestsFor("approved", null),
+  },
+  {
+    id: "pauseEndsTomorrow",
+    title: "Tu pausa termina mañana (30a)",
+    description: "El aviso del día antes: Reanudar o Pedir más días.",
+    mode: "data",
+    today: () =>
+      pauseToday(pausedGym("paused", pauseOf({ endDate: date("2026-10-03"), endsTomorrow: true }))),
+    pauseRequests: () => pauseRequestsFor("approved", "2026-10-03"),
   },
   {
     id: "loading",

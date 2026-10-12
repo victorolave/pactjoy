@@ -30,6 +30,13 @@ describe("entryFailure", () => {
     });
   });
 
+  it("tells the member a pending pause request holds the day, and does not offer a retry", () => {
+    expect(failure("OpportunityOnHold")).toEqual({
+      message: "Este compromiso está en espera: tu solicitud de pausa aún no tiene respuesta.",
+      retryable: false,
+    });
+  });
+
   it("explains a vanished entry and a conflict", () => {
     expect(failure("EntryDeleted").message).toBe("Ese registro ya no existe.");
     expect(failure("EntryNotFound").message).toBe("Ese registro ya no existe.");

@@ -6,5 +6,10 @@
  */
 export { PauseApprovalList } from "./approval/PauseApprovalList.tsx";
 export { CommitmentPauseSection } from "./commitment/CommitmentPauseSection.tsx";
+export { EndsTomorrowBanner } from "./notices/EndsTomorrowBanner.tsx";
+export { RedistributedBanner } from "./notices/RedistributedBanner.tsx";
+export { PauseTodayAction } from "./PauseTodayAction.tsx";
+export { reasonLabel } from "./pause-format.ts";
 export { PendingPauseCard } from "./pending/PendingPauseCard.tsx";
 export { RequestPauseSheet } from "./request/RequestPauseSheet.tsx";
+export { RowPauseActions } from "./row/RowPauseActions.tsx";

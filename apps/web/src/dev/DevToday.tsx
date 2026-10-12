@@ -28,6 +28,7 @@ function dependenciesFor(scenario: Scenario): AppDependencies {
   const auth = new FakeAuth();
   const store = new MemoryTokenStore(fakeSession());
   const api = new FakePactJoyApi(scenario.today());
+  if (scenario.pauseRequests !== undefined) api.setMyPauseRequests(scenario.pauseRequests());
   if (scenario.mode === "loading") api.getToday = () => new Promise(() => {});
   if (scenario.mode === "error") {
     for (let attempt = 0; attempt < 50; attempt += 1) {

@@ -16,7 +16,8 @@ const EXPECTED: Readonly<Record<string, UiKind>> = {
   BeforeSeasonStart: "closedWindow",
   FutureDay: "closedWindow",
   OutsideSeason: "closedWindow",
-  OpportunityOnHold: "closedWindow",
+  // A pending pause request holds the day until the circle answers
+  OpportunityOnHold: "onHold",
   // An approved Pause covers the day: resume it to record
   OpportunityPaused: "paused",
   // The entry is gone
@@ -58,7 +59,14 @@ describe("toUiError", () => {
 
   it("flags which kinds invalidate Today (AC-R4)", () => {
     const invalidates = (code: string) => toUiError(new ApiError(code, 409, null)).invalidateToday;
-    for (const code of ["WindowClosed", "EntryDeleted", "ConcurrencyConflict", "NotAMember"]) {
+    for (const code of [
+      "WindowClosed",
+      "OpportunityOnHold",
+      "OpportunityPaused",
+      "EntryDeleted",
+      "ConcurrencyConflict",
+      "NotAMember",
+    ]) {
       expect(invalidates(code)).toBe(true);
     }
     for (const code of ["NetworkError", "InvalidQuantity", "NoteTooLong", "InvalidRequest"]) {

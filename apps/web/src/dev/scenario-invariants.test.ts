@@ -118,4 +118,32 @@ describe("scenarios only describe what the server can produce", () => {
       }
     },
   );
+
+  it.each(views)(
+    "%s: a row's pause agrees with its state, as the server derives it",
+    (_id, view) => {
+      for (const row of running(view)?.rows ?? []) {
+        const { pause } = row;
+        if (pause === null) continue;
+        // Pending holds the day and can only be cancelled; approved can only be resumed.
+        expect(pause.canResume).toBe(pause.status === "approved");
+        expect(pause.canCancel).toBe(pause.status === "pending");
+        if (pause.endsTomorrow) expect(pause.status).toBe("approved");
+        if (row.opportunity.state === "onHold") expect(pause.status).toBe("pending");
+        if (row.opportunity.state === "paused") expect(pause.status).toBe("approved");
+      }
+    },
+  );
+
+  it("the pause scenarios carry a request for each pause they show", () => {
+    for (const id of ["pausePending", "pauseApproved", "pauseEndsTomorrow"]) {
+      const scenario = SCENARIOS.find((s) => s.id === id);
+      const ids = (running(scenario?.today() as TodayView)?.rows ?? []).flatMap((row) =>
+        row.pause === null ? [] : [row.pause.pauseRequestId],
+      );
+      expect(ids.length).toBeGreaterThan(0);
+      const listed = scenario?.pauseRequests?.().mine.map((request) => request.id) ?? [];
+      for (const requestId of ids) expect(listed).toContain(requestId);
+    }
+  });
 });

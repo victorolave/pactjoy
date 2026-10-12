@@ -36,7 +36,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 /**
  * A minimal shape check on top of the version buster: a running Today must carry what the screens
- * read without a guard (`points` on every row, `pointsToday` in the summary, `pendingYesterday`). The buster already drops
+ * read without a guard (`points` and `pause` on every row, `pointsToday` in the summary, `pendingYesterday`). The buster already drops
  * old copies; this keeps a copy that slipped past it from crashing the app. Pre-season states
  * also require the owned commitment list introduced by Lote 3.
  */
@@ -58,7 +58,12 @@ export function isCurrentToday(today: unknown): boolean {
   return (
     Array.isArray(today.pendingYesterday) &&
     rows.every(
-      (row) => isRecord(row) && isRecord(row.points) && "perOpportunityExact" in row.points,
+      (row) =>
+        isRecord(row) &&
+        isRecord(row.points) &&
+        "perOpportunityExact" in row.points &&
+        // A row from before the pause workflow has no `pause` and would crash the pause actions.
+        "pause" in row,
     )
   );
 }

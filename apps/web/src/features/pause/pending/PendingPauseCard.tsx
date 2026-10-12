@@ -4,11 +4,8 @@ import type { PauseRequestDto } from "../../../ports/wire.ts";
 import { Badge } from "../../../ui/Badge.tsx";
 import { Button } from "../../../ui/Button.tsx";
 import { Card } from "../../../ui/Card.tsx";
-import { InlineMessage } from "../../../ui/InlineMessage.tsx";
-import { Sheet } from "../../../ui/Sheet.tsx";
 import { autoApproveText, commitmentList, periodText, reasonLabel } from "../pause-format.ts";
-import { pauseFailure } from "../pause-messages.ts";
-import { useCancelPauseRequest } from "../queries.ts";
+import { CancelPauseSheet } from "./CancelPauseSheet.tsx";
 import styles from "./PendingPauseCard.module.css";
 
 const capitalized = (text: string) => `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
@@ -38,21 +35,8 @@ export function PendingPauseCard({
   readonly today: string;
 }) {
   const online = useOnline();
-  const cancel = useCancelPauseRequest();
   const [confirming, setConfirming] = useState(false);
-  const [failure, setFailure] = useState<string | null>(null);
   const names = commitmentList(request.commitments.map((c) => c.habitName));
-
-  const confirm = async () => {
-    if (cancel.isPending) return;
-    setFailure(null);
-    try {
-      await cancel.mutateAsync(request.id);
-      setConfirming(false);
-    } catch (error) {
-      setFailure(pauseFailure(error).message);
-    }
-  };
 
   return (
     <>
@@ -87,33 +71,11 @@ export function PendingPauseCard({
           </Button>
         </div>
       </Card>
-      <Sheet
+      <CancelPauseSheet
+        pauseRequestId={request.id}
         open={confirming}
-        placement="center"
-        title="¿Cancelar la solicitud?"
-        onClose={cancel.isPending ? () => {} : () => setConfirming(false)}
-        actions={
-          <>
-            <Button block disabled={cancel.isPending || !online} onClick={confirm}>
-              Sí, cancelar
-            </Button>
-            <Button
-              variant="ghost"
-              block
-              disabled={cancel.isPending}
-              onClick={() => setConfirming(false)}
-            >
-              Mantener solicitud
-            </Button>
-          </>
-        }
-      >
-        <p>
-          Esos días vuelven a contar y tendrás hasta el final de mañana para registrar lo que quedó
-          en espera.
-        </p>
-        {failure !== null && <InlineMessage tone="error" title={failure} />}
-      </Sheet>
+        onClose={() => setConfirming(false)}
+      />
     </>
   );
 }

@@ -1,14 +1,18 @@
 import type { TodayRow } from "@pactjoy/app";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
+import { myPauseRequestsFixture, pauseRequestFixture } from "../../../testing/fixtures/pause.ts";
 import {
   type DayRow,
   dayRowFixture,
   entryFixture,
+  todayPauseFixture,
   type WeekRow,
   weekRowFixture,
 } from "../../../testing/fixtures/today.ts";
+import { renderInProviders } from "../../../testing/render.tsx";
 import { TodayRowCard } from "./TodayRowCard.tsx";
 
 const show = (row: TodayRow, action?: ReactNode, below?: ReactNode) =>
@@ -177,5 +181,38 @@ describe("week row (TO-R4)", () => {
     show(weekRowFixture({ progress: null }));
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
     expect(screen.getByText("3 veces por semana")).toBeInTheDocument();
+  });
+});
+
+describe("a pause that has not started yet (PS-12)", () => {
+  const ahead = (overrides: Parameters<typeof todayPauseFixture>[0] = {}) =>
+    dayRowFixture({ pause: todayPauseFixture(overrides) });
+
+  it("keeps the open row writable and offers to cancel the approved pause ahead", async () => {
+    const { deps } = renderInProviders(<TodayRowCard row={ahead()} action={control} />);
+    deps.api.setMyPauseRequests(
+      myPauseRequestsFixture({
+        mine: [pauseRequestFixture({ status: "approved", startDate: "2026-10-05" })],
+      }),
+    );
+    await deps.queryClient.refetchQueries({ queryKey: ["pauseRequests"] });
+    expect(screen.getByRole("button", { name: "Registrar" })).toBeInTheDocument();
+    await userEvent.click(await screen.findByRole("button", { name: "Cancelar pausa" }));
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: "Cancelar pausa" }),
+    );
+    await waitFor(() => expect(deps.api.calls.resumePause).toBe(1));
+  });
+
+  it("offers to cancel a pending request ahead", async () => {
+    renderInProviders(
+      <TodayRowCard row={ahead({ status: "pending", canResume: false, canCancel: true })} />,
+    );
+    expect(await screen.findByRole("button", { name: "Cancelar solicitud" })).toBeInTheDocument();
+  });
+
+  it("shows no pause control on a row without a pause", () => {
+    show(dayRowFixture(), control);
+    expect(screen.queryByRole("button", { name: /pausa|solicitud/i })).not.toBeInTheDocument();
   });
 });
