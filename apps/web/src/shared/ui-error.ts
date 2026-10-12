@@ -46,6 +46,8 @@ export const UI_KIND_BY_CODE = {
   BeforeSeasonStart: "closedWindow",
   FutureDay: "closedWindow",
   OutsideSeason: "closedWindow",
+  // A pending pause request put the day on hold (EW-4): Today refreshes and shows it "en espera".
+  OpportunityOnHold: "closedWindow",
   EntryDeleted: "entryGone",
   EntryNotFound: "entryGone",
   ConcurrencyConflict: "conflict",

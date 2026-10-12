@@ -1,4 +1,5 @@
 import type { MemberId } from "@pactjoy/engine";
+import { loadEffectivePauses } from "../pause/effective-pauses.ts";
 import type { MemberScoreView } from "../score/member-score.query.ts";
 import { memberScoreView } from "../score/member-score.query.ts";
 import { type ScoreQueryDeps, scoreContextOf } from "../score/score-context.ts";
@@ -165,7 +166,12 @@ export async function today(deps: TodayDeps, actor: Actor): Promise<TodayView> {
     };
     const data = {
       entries: await repos.entries.listBySeason(season.id),
-      pauses: await repos.pauses.listBySeason(season.id),
+      pauses: await loadEffectivePauses(repos, {
+        season,
+        circle,
+        now,
+        timeZone: deps.timeZone,
+      }),
     };
     const mine = season.commitments.filter((commitment) => commitment.memberId === viewer.id);
     const habits = await repos.habits.getMany(mine.map((commitment) => commitment.habitId));

@@ -6,6 +6,7 @@ import {
   describeSeasonGuardContract,
 } from "./guard-version.contract.ts";
 import { describeHabitRepositoryContract } from "./habit.contract.ts";
+import { describePauseRequestRepositoryContract } from "./pause.contract.ts";
 import { describeSeasonRepositoryContract } from "./season.contract.ts";
 import { describeUnitOfWorkContract } from "./unit-of-work.contract.ts";
 
@@ -17,4 +18,5 @@ describeSeasonGuardContract("in-memory", inMemory);
 describeEntryRepositoryContract("in-memory", inMemory);
 describeHabitRepositoryContract("in-memory", inMemory);
 describeSeasonRepositoryContract("in-memory", inMemory);
+describePauseRequestRepositoryContract("in-memory", inMemory);
 describeUnitOfWorkContract("in-memory", inMemory);

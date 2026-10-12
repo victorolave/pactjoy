@@ -98,7 +98,7 @@ describe("memberScore: pauses through the read-only port (SQ-8)", () => {
   it("excludes the opportunities of an approved pause from the denominator", async () => {
     const { app, given, ask } = await setup();
     await record(app, given);
-    app.pauses.add(given.season.id, approvedPause(ANDREA, given.andreaCommitment));
+    app.pauses.seed(given.season.id, approvedPause(ANDREA, given.andreaCommitment));
 
     // 28 days minus 14 paused = 14 active opportunities: 1000 / 14 = 71.43.
     expect(await ask(given.andrea)).toMatchObject({ ok: true, value: { points: 71 } });
@@ -108,7 +108,7 @@ describe("memberScore: pauses through the read-only port (SQ-8)", () => {
     const { app, given, ask } = await setup();
     await record(app, given);
     // Victor's pause record points at Andrea's commitment: only the owner filter keeps it out.
-    app.pauses.add(given.season.id, approvedPause(VICTOR, given.andreaCommitment));
+    app.pauses.seed(given.season.id, approvedPause(VICTOR, given.andreaCommitment));
 
     expect(await ask(given.andrea)).toMatchObject({ ok: true, value: { points: 36 } });
   });

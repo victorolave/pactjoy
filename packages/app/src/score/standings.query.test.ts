@@ -112,7 +112,7 @@ describe("standings: ranking by points, recomputed on every call", () => {
   it("applies pauses read through the port", async () => {
     const { app, given, ask, andreaLogs } = await setup();
     await andreaLogs();
-    app.pauses.add(given.season.id, {
+    app.pauses.seed(given.season.id, {
       memberId: ANDREA,
       commitmentId: given.andreaCommitment,
       requestedOn: seasonDay(0),

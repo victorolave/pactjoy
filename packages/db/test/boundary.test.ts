@@ -107,9 +107,9 @@ describe("package boundary", () => {
     expect(adapter).toMatch(/crypto\.getRandomValues/);
   });
 
-  it("DC-S14: the pause stub is marked temporary with the A2 replacement note", () => {
-    const stub = readFileSync(join(DB_ROOT, "src/pause/no-pause-request-reader.ts"), "utf8");
-    expect(stub).toMatch(/TODO\(A2\)/);
-    expect(stub).toMatch(/TEMPORARY/);
+  it("DC-S14: the transitional pause repository is marked as such, with its replacement work unit", () => {
+    const stub = readFileSync(join(DB_ROOT, "src/pause/empty-pause-request-repository.ts"), "utf8");
+    expect(stub).toMatch(/TRANSITIONAL/);
+    expect(stub).toMatch(/work unit S4/);
   });
 });

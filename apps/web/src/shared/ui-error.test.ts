@@ -16,6 +16,7 @@ const EXPECTED: Readonly<Record<string, UiKind>> = {
   BeforeSeasonStart: "closedWindow",
   FutureDay: "closedWindow",
   OutsideSeason: "closedWindow",
+  OpportunityOnHold: "closedWindow",
   // The entry is gone
   EntryDeleted: "entryGone",
   EntryNotFound: "entryGone",

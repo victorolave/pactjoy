@@ -2,7 +2,6 @@ import { displayPointsDecimal, fromInt, opportunityValue } from "@pactjoy/engine
 import { describe, expect, it } from "vitest";
 import { commitmentId } from "../commitment/commitment.ts";
 import { commitmentToEngine } from "../commitment/to-engine.ts";
-import { PAUSE_GRACE_EXTENSION_DAYS } from "../entry/entry-window.ts";
 import { PER_DAY_REACH } from "../testing/entry-measures.ts";
 import { perOpportunityViews } from "./today-rows.ts";
 
@@ -40,11 +39,5 @@ describe("perOpportunityExact is the engine's value, exactly (parity over a grid
       perOpportunityExact: null,
     });
     expect(fromInt(0)).toBeDefined();
-  });
-});
-
-describe("the pause grace extension", () => {
-  it("is zero until the pause workflow (A2) wires it, and is defined once, in entry-window.ts", () => {
-    expect(PAUSE_GRACE_EXTENSION_DAYS).toBe(0);
   });
 });

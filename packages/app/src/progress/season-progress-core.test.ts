@@ -4,7 +4,7 @@ import { createIntlTimeZone } from "../adapters/intl-time-zone.ts";
 import { memberId } from "../circle/circle.ts";
 import { buildCommitment, commitmentId } from "../commitment/commitment.ts";
 import { recordEntry } from "../entry/record-entry.ts";
-import { loadScoreContext } from "../score/score-context.ts";
+import { loadPausesFor, loadScoreContext } from "../score/score-context.ts";
 import type { Actor } from "../shared/actor.ts";
 import { habitId, userId } from "../shared/ids.ts";
 import { ok } from "../shared/result.ts";
@@ -43,7 +43,7 @@ async function setup() {
       if (!context.ok) return context;
       const { season, viewer, start } = context.value;
       const entries = start ? await repos.entries.listBySeason(season.id) : [];
-      const pauses = start ? await repos.pauses.listBySeason(season.id) : [];
+      const pauses = start ? await loadPausesFor(deps, repos, context.value) : [];
       const habits = start
         ? await repos.habits.getMany(
             season.commitments.filter((c) => c.memberId === viewer.id).map((c) => c.habitId),
@@ -342,7 +342,7 @@ describe("season progress core (A1, 23a)", () => {
     "projects real %s pause facts from the engine",
     async (kind) => {
       const { app, given, started } = await setup();
-      app.pauses.add(given.season.id, {
+      app.pauses.seed(given.season.id, {
         memberId: memberId("member-andrea"),
         commitmentId: given.andreaCommitment,
         requestedOn: seasonDay(0),

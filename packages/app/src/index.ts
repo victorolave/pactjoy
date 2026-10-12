@@ -139,7 +139,19 @@ export type {
   WithdrawApprovalInput,
 } from "./pact/withdraw-approval.ts";
 export { withdrawApproval } from "./pact/withdraw-approval.ts";
-export type { MemberPauseRequest, PauseRequestReader } from "./pause/pause-request.repository.ts";
+export type {
+  MemberPauseRequest,
+  PauseRequestRepository,
+} from "./pause/pause-request.repository.ts";
+export type {
+  PauseReason,
+  PauseRequestCommitment,
+  PauseRequestRecord,
+  PauseResponse,
+  PauseResponseChoice,
+  PauseStatus,
+} from "./pause/pause-request.ts";
+export { AUTO_APPROVE_AFTER_MS, PAUSE_REASONS } from "./pause/pause-request.ts";
 export type { IdGenerator } from "./ports/id-generator.ts";
 export type { RandomSource } from "./ports/random-source.ts";
 export type { Repositories } from "./ports/repositories.ts";
@@ -233,8 +245,15 @@ export { seasonView } from "./season/season-view.query.ts";
 export type { Actor } from "./shared/actor.ts";
 export { toDecimalString } from "./shared/decimal.ts";
 export { ConcurrencyConflict, InviteCodeGenerationFailed } from "./shared/errors.ts";
-export type { CircleId, EntryId, HabitId, SeasonId, UserId } from "./shared/ids.ts";
-export { circleId, entryId, habitId, seasonId, userId } from "./shared/ids.ts";
+export type {
+  CircleId,
+  EntryId,
+  HabitId,
+  PauseRequestId,
+  SeasonId,
+  UserId,
+} from "./shared/ids.ts";
+export { circleId, entryId, habitId, pauseRequestId, seasonId, userId } from "./shared/ids.ts";
 export type { Result } from "./shared/result.ts";
 export { err, ok } from "./shared/result.ts";
 export type { Clock } from "./time/clock.port.ts";

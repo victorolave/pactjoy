@@ -20,9 +20,9 @@ import {
   type InMemoryHabitRepository,
 } from "./in-memory-habit-repository.ts";
 import {
-  createInMemoryPauseRequestReader,
-  type InMemoryPauseRequestReader,
-} from "./in-memory-pause-request-reader.ts";
+  createInMemoryPauseRequestRepository,
+  type InMemoryPauseRequestRepository,
+} from "./in-memory-pause-request-repository.ts";
 import {
   createInMemorySeasonRepository,
   type InMemorySeasonRepository,
@@ -48,7 +48,7 @@ export interface TestApp {
   readonly circles: InMemoryCircleRepository;
   readonly entries: InMemoryEntryRepository;
   readonly habits: InMemoryHabitRepository;
-  readonly pauses: InMemoryPauseRequestReader;
+  readonly pauses: InMemoryPauseRequestRepository;
   readonly seasons: InMemorySeasonRepository;
 }
 
@@ -68,7 +68,7 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
   const circles = createInMemoryCircleRepository();
   const entries = createInMemoryEntryRepository();
   const habits = createInMemoryHabitRepository();
-  const pauses = createInMemoryPauseRequestReader();
+  const pauses = createInMemoryPauseRequestRepository();
   const seasons = createInMemorySeasonRepository();
   const repositories: Repositories = { circles, entries, habits, pauses, seasons };
 
@@ -94,23 +94,26 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
         const circleScope = circles.beginTransaction();
         const entryScope = entries.beginTransaction();
         const habitScope = habits.beginTransaction();
+        const pauseScope = pauses.beginTransaction();
         const seasonScope = seasons.beginTransaction();
         return {
           repositories: {
             circles: circleScope.repository,
             entries: entryScope.repository,
             habits: habitScope.repository,
-            pauses,
+            pauses: pauseScope.repository,
             seasons: seasonScope.repository,
           },
           commit(): void {
             circleScope.validate();
             entryScope.validate();
             habitScope.validate();
+            pauseScope.validate();
             seasonScope.validate();
             circleScope.apply();
             entryScope.apply();
             habitScope.apply();
+            pauseScope.apply();
             seasonScope.apply();
           },
         };

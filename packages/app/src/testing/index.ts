@@ -13,7 +13,13 @@ export type {
   MemberFixtureOptions,
   SeasonFixtureOptions,
 } from "./builders.ts";
-export { circleFixture, habitFixture, memberFixture, seasonFixture } from "./builders.ts";
+export {
+  circleFixture,
+  habitFixture,
+  memberFixture,
+  pauseRequestFixture,
+  seasonFixture,
+} from "./builders.ts";
 export { createCircleInput, joinCircleInput } from "./circle-inputs.ts";
 export { createFixedClock } from "./fixed-clock.ts";
 export type { FixedOffsetTimeZoneOptions } from "./fixed-time-zone.ts";
@@ -24,8 +30,8 @@ export type { InMemoryEntryRepository } from "./in-memory-entry-repository.ts";
 export { createInMemoryEntryRepository } from "./in-memory-entry-repository.ts";
 export type { InMemoryHabitRepository } from "./in-memory-habit-repository.ts";
 export { createInMemoryHabitRepository } from "./in-memory-habit-repository.ts";
-export type { InMemoryPauseRequestReader } from "./in-memory-pause-request-reader.ts";
-export { createInMemoryPauseRequestReader } from "./in-memory-pause-request-reader.ts";
+export type { InMemoryPauseRequestRepository } from "./in-memory-pause-request-repository.ts";
+export { createInMemoryPauseRequestRepository } from "./in-memory-pause-request-repository.ts";
 export type { InMemorySeasonRepository } from "./in-memory-season-repository.ts";
 export { createInMemorySeasonRepository } from "./in-memory-season-repository.ts";
 export type { InMemoryUnitOfWorkOptions } from "./in-memory-unit-of-work.ts";

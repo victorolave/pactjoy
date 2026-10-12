@@ -7,7 +7,7 @@ import { createTestApp } from "../testing/app-harness.ts";
 import { fixtureTimeZone, givenActiveSeason, localInstant } from "../testing/entry-fixtures.ts";
 import { localDate } from "../time/local-date.ts";
 import { memberScore, memberScoreView } from "./member-score.query.ts";
-import { scoreContextOf } from "./score-context.ts";
+import { loadPausesFor, scoreContextOf } from "./score-context.ts";
 import { standings, standingsView } from "./standings.query.ts";
 
 const DAILY_REACH: Measure = {
@@ -52,7 +52,7 @@ describe("score cores composed inside ONE read (SQ-S9, SQ-R10)", () => {
       const started = { ...context.value, start: context.value.start };
       const data = {
         entries: await repos.entries.listBySeason(season.id),
-        pauses: await repos.pauses.listBySeason(season.id),
+        pauses: await loadPausesFor(app, repos, context.value),
       };
       return {
         score: memberScoreView(started, data, started.viewer),

@@ -56,7 +56,7 @@ export const APP_ERROR_STATUS = {
   InviteNotFound: 404,
   MemberNotFound: 404,
   SeasonNotFound: 404,
-  // 409 (15)
+  // 409 (16)
   AlreadyInActiveCircle: 409,
   BeforeSeasonStart: 409,
   CircleArchived: 409,
@@ -65,6 +65,7 @@ export const APP_ERROR_STATUS = {
   DisplayNameTaken: 409,
   EntryDeleted: 409,
   FutureDay: 409,
+  OpportunityOnHold: 409,
   PactAlreadyClosed: 409,
   PactNotOpen: 409,
   SeasonInProgress: 409,

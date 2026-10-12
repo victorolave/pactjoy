@@ -1,7 +1,7 @@
 import type { CircleRepository } from "../circle/circle.repository.ts";
 import type { EntryRepository } from "../entry/entry.repository.ts";
 import type { HabitRepository } from "../habit/habit.repository.ts";
-import type { PauseRequestReader } from "../pause/pause-request.repository.ts";
+import type { PauseRequestRepository } from "../pause/pause-request.repository.ts";
 import type { SeasonRepository } from "../season/season.repository.ts";
 
 /**
@@ -13,7 +13,7 @@ export interface Repositories {
   readonly circles: CircleRepository;
   readonly entries: EntryRepository;
   readonly habits: HabitRepository;
-  /** Read-only until change A2 (app-pause-workflow). */
-  readonly pauses: PauseRequestReader;
+  /** Read it through `loadEffectivePauses`, never directly (ADR-0013). */
+  readonly pauses: PauseRequestRepository;
   readonly seasons: SeasonRepository;
 }

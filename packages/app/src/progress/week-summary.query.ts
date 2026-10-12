@@ -14,6 +14,7 @@ import {
 import { commitmentToEngine } from "../commitment/to-engine.ts";
 import { projectMeasure, projectTarget } from "../score/commitment-projection.ts";
 import {
+  loadPausesFor,
   loadScoreContext,
   type ScoreContextError,
   type ScoreData,
@@ -67,7 +68,7 @@ export async function weekSummary(
 
     const data: ScoreData = {
       entries: await repos.entries.listBySeason(season.id),
-      pauses: await repos.pauses.listBySeason(season.id),
+      pauses: await loadPausesFor(deps, repos, context.value),
     };
 
     const habits = await repos.habits.getMany(

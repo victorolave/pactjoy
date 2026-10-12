@@ -1,5 +1,5 @@
 import type { ScoreContextError, ScoreData, ScoreQueryDeps } from "../score/score-context.ts";
-import { loadScoreContext } from "../score/score-context.ts";
+import { loadPausesFor, loadScoreContext } from "../score/score-context.ts";
 import type { Actor } from "../shared/actor.ts";
 import type { SeasonId } from "../shared/ids.ts";
 import { ok, type Result } from "../shared/result.ts";
@@ -39,7 +39,7 @@ export async function seasonProgress(
 
     const data: ScoreData = {
       entries: await repos.entries.listBySeason(season.id),
-      pauses: await repos.pauses.listBySeason(season.id),
+      pauses: await loadPausesFor(deps, repos, context.value),
     };
 
     const habits = await repos.habits.getMany(
