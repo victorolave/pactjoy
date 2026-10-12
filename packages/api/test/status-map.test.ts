@@ -45,8 +45,8 @@ function errorCoverageGaps(index: string, source: string) {
 }
 
 describe("app error status map", () => {
-  it("EM-S1..S5: 84 kinds, 43x422 6x403 9x404 25x409 1x410", () => {
-    expect(KINDS).toHaveLength(84);
+  it("EM-S1..S5: 85 kinds, 43x422 6x403 9x404 26x409 1x410", () => {
+    expect(KINDS).toHaveLength(85);
     expect(kindsWith(422)).toHaveLength(43);
     expect(kindsWith(403)).toEqual([
       "CannotRespondToOwnPause",
@@ -67,7 +67,7 @@ describe("app error status map", () => {
       "ReviewPeriodNotFound",
       "SeasonNotFound",
     ]);
-    expect(kindsWith(409)).toHaveLength(25);
+    expect(kindsWith(409)).toHaveLength(26);
     expect(kindsWith(410)).toEqual(["InviteExpired"]);
   });
 

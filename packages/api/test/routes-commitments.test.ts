@@ -1,3 +1,4 @@
+import { instant } from "@pactjoy/app";
 import { describe, expect, it } from "vitest";
 import { createCircleBody } from "../src/testing/index.ts";
 import { setup, UNKNOWN_CIRCLE, VICTOR } from "./harness.ts";
@@ -101,6 +102,15 @@ describe("POST /seasons/:seasonId/commitments (UE-S-S5)", () => {
     await app.seasons.save({ ...season, status: "active", version: 9 }, season.version);
     const closed = await call("POST", path, "andrea", body(DONE));
     expect([closed.status, closed.json.error.code]).toEqual([409, "PactNotOpen"]);
+  });
+
+  it("409 HabitGraduated when the habit was graduated, and the pact is unchanged", async () => {
+    const { app, call, path, body, habitId } = await givenSeason();
+    const habit = await app.habits.get(habitId as never);
+    if (!habit) throw new Error("fixture setup failed");
+    await app.habits.save({ ...habit, graduatedAt: instant(1_700_000_000_000), version: 1 }, 0);
+    const { status, json } = await call("POST", path, "andrea", body(DONE));
+    expect([status, json.error.code]).toEqual([409, "HabitGraduated"]);
   });
 
   it("the owner sees their private commitment in full, marked private (SV-R2)", async () => {

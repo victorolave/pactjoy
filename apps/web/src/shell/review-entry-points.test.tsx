@@ -75,6 +75,7 @@ const CURRENT = {
   lengthWeeks: 8,
   week: 5,
   approvalCount: 2,
+  nextSeasonOpen: false,
 } as const;
 
 describe("the review notice in Temporada", () => {

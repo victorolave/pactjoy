@@ -80,6 +80,7 @@ export const APP_ERROR_STATUS = {
   OpportunityPaused: 409,
   PactAlreadyClosed: 409,
   PactNotOpen: 409,
+  HabitGraduated: 409,
   PauseAlreadyDecided: 409,
   PauseCapExceeded: 409,
   PauseNotActive: 409,

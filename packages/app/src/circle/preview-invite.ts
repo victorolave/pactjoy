@@ -3,12 +3,14 @@ import type { Actor } from "../shared/actor.ts";
 import { ok, type Result } from "../shared/result.ts";
 import type { Clock } from "../time/clock.port.ts";
 import type { Instant } from "../time/instant.ts";
+import type { TimeZone } from "../time/time-zone.port.ts";
 import { activeMembers } from "./circle.ts";
 import { checkJoinable, type JoinableError } from "./join-circle.ts";
 
 export interface PreviewInviteDeps {
   readonly uow: { read<T>(work: (repositories: Repositories) => Promise<T>): Promise<T> };
   readonly clock: Clock;
+  readonly timeZone: TimeZone;
 }
 
 export interface InvitePreview {
@@ -32,7 +34,13 @@ export async function previewInvite(
   input: { readonly inviteCode: string },
 ): Promise<Result<InvitePreview, PreviewInviteError>> {
   return deps.uow.read(async (repos) => {
-    const joinable = await checkJoinable(repos, input.inviteCode, actor, deps.clock.now());
+    const joinable = await checkJoinable(
+      repos,
+      input.inviteCode,
+      actor,
+      deps.clock.now(),
+      deps.timeZone,
+    );
     if (!joinable.ok) {
       return joinable;
     }

@@ -120,6 +120,7 @@ describe("myCircle (CR-R1..R3)", () => {
       lengthWeeks: 6,
       week: null,
       approvalCount: 1,
+      nextSeasonOpen: false,
     });
   });
 
@@ -140,6 +141,41 @@ describe("myCircle (CR-R1..R3)", () => {
       { status: "active", actualStart: DAY(0), lengthWeeks: 4 },
     );
     expect((await myCircle(app, ANDREA)).season).toMatchObject({ phase: "ended", week: 4 });
+  });
+
+  it("SC-F9: nextSeasonOpen is derived from the date alone: false until a week after the last season day", async () => {
+    const active = { status: "active" as const, actualStart: DAY(0), lengthWeeks: 4 as const };
+    // Season day n is DAY(n - 1): day 35 is the last day before the circle may move on, day 36 the first.
+    for (const [date, open] of [
+      [DAY(9), false],
+      [DAY(27), false],
+      [DAY(28), false],
+      [DAY(29), false],
+      [DAY(34), false],
+      [DAY(35), true],
+      [DAY(60), true],
+    ] as const) {
+      const { app } = await setup(date, {}, active);
+      expect((await myCircle(app, ANDREA)).season?.nextSeasonOpen, String(date)).toBe(open);
+    }
+  });
+
+  it("a pact still open or not yet started never has the next season open", async () => {
+    const open = await setup(DAY(60), {}, { status: "pactOpen" });
+    expect((await myCircle(open.app, ANDREA)).season?.nextSeasonOpen).toBe(false);
+    const future = await setup(DAY(0), {}, { status: "active", actualStart: DAY(5) });
+    expect((await myCircle(future.app, ANDREA)).season?.nextSeasonOpen).toBe(false);
+  });
+
+  it("reading never writes: the stale season stays active", async () => {
+    const { app } = await setup(
+      DAY(60),
+      {},
+      { status: "active", actualStart: DAY(0), lengthWeeks: 4 },
+    );
+    await myCircle(app, ANDREA);
+    const stored = await app.uow.read((repos) => repos.seasons.get(seasonId("season-1")));
+    expect(stored).toMatchObject({ status: "active", version: 0 });
   });
 
   it("a closed latest season is reported as no season", async () => {

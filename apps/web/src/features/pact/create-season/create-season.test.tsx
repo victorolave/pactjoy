@@ -144,6 +144,7 @@ describe("create season (design 8)", () => {
       lengthWeeks: 8,
       week: null,
       approvalCount: 1,
+      nextSeasonOpen: false,
     });
     const { deps, location } = renderCreateSeason(existingCircle);
     deps.api.setPactResponse("getSeason", seasonFixture("s-existing"));

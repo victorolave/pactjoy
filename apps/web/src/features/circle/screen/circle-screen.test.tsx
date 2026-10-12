@@ -17,6 +17,7 @@ const ACTIVE = {
   lengthWeeks: 8,
   week: 5,
   approvalCount: 2,
+  nextSeasonOpen: false,
 } as const;
 
 const SEASON: SeasonDto = {

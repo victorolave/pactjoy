@@ -90,6 +90,7 @@ describe("presentMyCircle", () => {
       lengthWeeks: 6,
       week: 2,
       approvalCount: 3,
+      nextSeasonOpen: true,
     },
   };
 
@@ -101,7 +102,14 @@ describe("presentMyCircle", () => {
         members: [{ id: "m1", displayName: "Me", joinedAt: ISO, isYou: true }],
         invite: { code: "AB3D7K", createdAt: ISO, expiresAt: "2023-11-14T22:13:21.123Z" },
       },
-      season: { id: "s1", phase: "active", lengthWeeks: 6, week: 2, approvalCount: 3 },
+      season: {
+        id: "s1",
+        phase: "active",
+        lengthWeeks: 6,
+        week: 2,
+        approvalCount: 3,
+        nextSeasonOpen: true,
+      },
     });
   });
 

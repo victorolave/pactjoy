@@ -1,9 +1,11 @@
 import type { MemberId } from "@pactjoy/engine";
 import type { ScoreQueryDeps } from "../score/score-context.ts";
-import type { SeasonLengthWeeks } from "../season/season.ts";
+import { seasonCloseCalendar, seasonCloseDay } from "../season/closure/season-calendar.ts";
+import type { Season, SeasonLengthWeeks } from "../season/season.ts";
 import type { Actor } from "../shared/actor.ts";
 import type { CircleId, SeasonId } from "../shared/ids.ts";
 import type { Instant } from "../time/instant.ts";
+import type { TimeZone } from "../time/time-zone.port.ts";
 import { type SeasonPhaseName, seasonPhase, weekOf } from "../today/season-phase.ts";
 import type { InviteCode } from "./invite-code.ts";
 
@@ -23,6 +25,19 @@ export interface MyCircleSeason {
   /** 1-based; `null` until the season has started. */
   readonly week: number | null;
   readonly approvalCount: number;
+  /**
+   * The circle may open its next season (REQ-L1): an ENDED season a week past its last day, when
+   * laggards no longer hold it. Derived from the date alone (no closure is read), so a read never
+   * writes; a season everybody closed is already `closed` and reported as no season.
+   */
+  readonly nextSeasonOpen: boolean;
+}
+
+/** True once an active season is a week past its last day (day-only: it reads no closure). */
+function isStale(season: Season, now: Instant, timeZone: TimeZone): boolean {
+  if (season.status !== "active") return false;
+  const day = seasonCloseDay(season, now, timeZone);
+  return day.kind === "day" && day.day >= seasonCloseCalendar(season.lengthWeeks).staleFrom;
 }
 
 /** The viewer's active circle for the Circle tab; `userId` never appears in it. */
@@ -76,7 +91,8 @@ export async function myCircle(deps: MyCircleDeps, actor: Actor): Promise<MyCirc
     if (!season || season.status === "closed") {
       return { circle: view, season: null };
     }
-    const today = deps.timeZone.localDateAt(deps.clock.now(), season.timeZone);
+    const now = deps.clock.now();
+    const today = deps.timeZone.localDateAt(now, season.timeZone);
     const phase = seasonPhase(season, today);
     return {
       circle: view,
@@ -86,6 +102,7 @@ export async function myCircle(deps: MyCircleDeps, actor: Actor): Promise<MyCirc
         lengthWeeks: season.lengthWeeks,
         week: "scoringDay" in phase ? weekOf(phase.scoringDay) : null,
         approvalCount: season.approvals.length,
+        nextSeasonOpen: isStale(season, now, deps.timeZone),
       },
     };
   });

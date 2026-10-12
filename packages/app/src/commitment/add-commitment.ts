@@ -33,6 +33,7 @@ export type AddCommitmentError =
   | { readonly kind: "SeasonNotFound" }
   | { readonly kind: "NotAMember" }
   | { readonly kind: "PactNotOpen" }
+  | { readonly kind: "HabitGraduated" }
   | ValidateCommitmentError;
 
 /**
@@ -63,6 +64,13 @@ export async function addCommitment(
 
     if (season.status !== "pactOpen") {
       return err({ kind: "PactNotOpen" });
+    }
+
+    // A graduated habit is finished for good (REQ-G3/G4): it cannot join a new pact. An unknown habit
+    // id is not checked here (a pre-existing gap: ownership is not verified either).
+    const habit = await repos.habits.get(input.habitId);
+    if (habit !== null && habit.graduatedAt !== null) {
+      return err({ kind: "HabitGraduated" });
     }
 
     const validated = validateCommitment({

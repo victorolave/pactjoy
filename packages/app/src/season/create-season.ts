@@ -11,6 +11,8 @@ import type { LocalDate } from "../time/local-date.ts";
 import { localDate } from "../time/local-date.ts";
 import type { TimeZone } from "../time/time-zone.port.ts";
 import { timeZoneId } from "../time/time-zone.port.ts";
+import { finalizeIfReady } from "./closure/finalize.ts";
+import { seasonCloseDay } from "./closure/season-calendar.ts";
 import {
   buildSeason,
   canCreateSeasonFor,
@@ -107,7 +109,16 @@ export async function createSeason(
     }
 
     const latest = await repos.seasons.findLatestByCircle(circle.id);
-    if (!canCreateSeasonFor(latest)) {
+    if (latest?.status === "active") {
+      // An ended season the circle may move on from (every participant closed, or a week has
+      // passed) is finalized here, in the same transaction that creates the next one. Its version
+      // is the guard: a concurrent closure or createSeason makes this one fail.
+      const day = seasonCloseDay(latest, now, deps.timeZone);
+      const moved = await finalizeIfReady(repos, latest, circle, day, "completeOrStale");
+      if (!canCreateSeasonFor(latest, moved.finalized)) {
+        return err({ kind: "SeasonInProgress" });
+      }
+    } else if (!canCreateSeasonFor(latest)) {
       return err({ kind: "SeasonInProgress" });
     }
 

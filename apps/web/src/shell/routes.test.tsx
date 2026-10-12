@@ -76,6 +76,7 @@ const CURRENT = {
   lengthWeeks: 8,
   week: 5,
   approvalCount: 2,
+  nextSeasonOpen: false,
 } as const;
 const MEMBER = "/season/season-1/members/member-andrea";
 const DETAIL = "/season/season-1/commitments/commitment-leer";

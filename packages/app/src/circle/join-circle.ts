@@ -2,11 +2,15 @@ import { resetApprovals } from "../pact/reset-approvals.ts";
 import type { IdGenerator } from "../ports/id-generator.ts";
 import type { Repositories } from "../ports/repositories.ts";
 import type { UnitOfWork } from "../ports/unit-of-work.ts";
+import { moveOnFor } from "../season/closure/finalize.ts";
+import { finalizeSeason } from "../season/closure/move-on.ts";
+import { seasonCloseDay } from "../season/closure/season-calendar.ts";
 import type { Season } from "../season/season.ts";
 import type { Actor } from "../shared/actor.ts";
 import { err, ok, type Result } from "../shared/result.ts";
 import type { Clock } from "../time/clock.port.ts";
 import type { Instant } from "../time/instant.ts";
+import type { TimeZone } from "../time/time-zone.port.ts";
 import {
   activeMembers,
   type Circle,
@@ -17,12 +21,14 @@ import {
 } from "./circle.ts";
 import { isDisplayNameTaken, normalizeDisplayName } from "./display-name.ts";
 import { normalizeInviteCode } from "./invite-code.ts";
-import { canJoinCircle } from "./season-gate.ts";
+import { canJoinCircle, type SeasonGateStatus } from "./season-gate.ts";
 
 export interface JoinCircleDeps {
   readonly uow: UnitOfWork<Repositories>;
   readonly ids: IdGenerator;
   readonly clock: Clock;
+  /** Turns the clock into the season day that decides whether an ended season blocks the join. */
+  readonly timeZone: TimeZone;
 }
 
 export interface JoinCircleInput {
@@ -64,7 +70,13 @@ export async function checkJoinable(
   code: string,
   actor: Actor,
   now: Instant,
-): Promise<Result<{ circle: Circle; invite: Invite; latestSeason: Season | null }, JoinableError>> {
+  timeZone: TimeZone,
+): Promise<
+  Result<
+    { circle: Circle; invite: Invite; latestSeason: Season | null; finalizeLatest: boolean },
+    JoinableError
+  >
+> {
   const normalizedCode = normalizeInviteCode(code);
   const circle = await repos.circles.findByInviteCode(normalizedCode);
   if (!circle?.invite) {
@@ -82,13 +94,24 @@ export async function checkJoinable(
   // One read of the season drives BOTH the join gate and the approval reset: reading them
   // separately would let a pact close in between and let someone join an already-active season.
   const latestSeason = await repos.seasons.findLatestByCircle(circle.id);
-  if (!canJoinCircle(latestSeason?.status ?? "noSeason")) {
+  // An ended ACTIVE season no longer blocks once the circle may move on from it (every participant
+  // closed, or a week passed): the join then finalizes it. A preview only reads that answer.
+  let finalizeLatest = false;
+  let gate: SeasonGateStatus = latestSeason?.status ?? "noSeason";
+  if (latestSeason?.status === "active") {
+    const day = seasonCloseDay(latestSeason, now, timeZone);
+    if ((await moveOnFor(repos, latestSeason, circle, day)).kind !== "blocked") {
+      finalizeLatest = true;
+      gate = "closed";
+    }
+  }
+  if (!canJoinCircle(gate)) {
     return err({ kind: "SeasonNotJoinable" });
   }
   if (activeMembers(circle).length >= MAX_MEMBERS) {
     return err({ kind: "CircleFull" });
   }
-  return ok({ circle, invite: circle.invite, latestSeason });
+  return ok({ circle, invite: circle.invite, latestSeason, finalizeLatest });
 }
 
 /**
@@ -106,11 +129,11 @@ export async function joinCircle(
 ): Promise<Result<Circle, JoinCircleError>> {
   return deps.uow.transaction(async (repos): Promise<Result<Circle, JoinCircleError>> => {
     const now = deps.clock.now();
-    const joinable = await checkJoinable(repos, input.inviteCode, actor, now);
+    const joinable = await checkJoinable(repos, input.inviteCode, actor, now, deps.timeZone);
     if (!joinable.ok) {
       return joinable;
     }
-    const { circle, latestSeason } = joinable.value;
+    const { circle, latestSeason, finalizeLatest } = joinable.value;
 
     const displayName = normalizeDisplayName(input.displayName);
     if (displayName === null) {
@@ -135,6 +158,9 @@ export async function joinCircle(
     };
     await repos.circles.save(updated, circle.version);
 
+    if (finalizeLatest && latestSeason) {
+      await repos.seasons.save(finalizeSeason(latestSeason), latestSeason.version);
+    }
     if (latestSeason?.status === "pactOpen") {
       await repos.seasons.save(
         { ...resetApprovals(latestSeason), version: latestSeason.version + 1 },

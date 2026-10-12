@@ -37,6 +37,7 @@ function setup(today = firstDay(), now = NOW, deviceStorage = new MemoryStorage(
       lengthWeeks: 8,
       week: 5,
       approvalCount: 2,
+      nextSeasonOpen: false,
     }),
   });
   app.deps.api.progress.setWeekSummary("season-1", 3, weekSummary());

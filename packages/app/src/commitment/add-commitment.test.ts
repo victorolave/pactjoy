@@ -5,6 +5,7 @@ import { ConcurrencyConflict } from "../shared/errors.ts";
 import { habitId, seasonId, userId } from "../shared/ids.ts";
 import { ok } from "../shared/result.ts";
 import { createTestApp } from "../testing/app-harness.ts";
+import { habitFixture } from "../testing/builders.ts";
 import { createCircleInput } from "../testing/circle-inputs.ts";
 import { instant } from "../time/instant.ts";
 import { addCommitment } from "./add-commitment.ts";
@@ -50,6 +51,54 @@ describe("addCommitment", () => {
 
     const stored = await app.uow.read((repos) => repos.seasons.get(season.id));
     expect(stored?.commitments).toHaveLength(1);
+  });
+
+  it("REQ-C6/C7: a graduated habit cannot be added to a pact (HabitGraduated) and nothing changes", async () => {
+    const app = createTestApp({ now: NOW });
+    const { season } = await seasonFor(app);
+    await app.uow.transaction(async (repos) => {
+      await repos.habits.save(
+        habitFixture({
+          id: habitId("habit-old"),
+          ownerId: userId("user-andrea"),
+          graduatedAt: NOW,
+        }),
+        null,
+      );
+      return ok(undefined);
+    });
+
+    const result = await addCommitment(app, actorFor("user-andrea"), {
+      seasonId: season.id,
+      habitId: habitId("habit-old"),
+      weightPercent: 20,
+      privacy: "visible",
+      measure: { unit: "done", frequency: { kind: "timesPerWeek", times: 3 } },
+    });
+
+    expect(result).toEqual({ ok: false, error: { kind: "HabitGraduated" } });
+    const stored = await app.uow.read((repos) => repos.seasons.get(season.id));
+    expect(stored).toMatchObject({ commitments: [], version: season.version });
+  });
+
+  it("an ungraduated habit still adds normally", async () => {
+    const app = createTestApp({ now: NOW });
+    const { season } = await seasonFor(app);
+    await app.uow.transaction(async (repos) => {
+      await repos.habits.save(
+        habitFixture({ id: habitId("habit-run"), ownerId: userId("user-andrea") }),
+        null,
+      );
+      return ok(undefined);
+    });
+    const result = await addCommitment(app, actorFor("user-andrea"), {
+      seasonId: season.id,
+      habitId: habitId("habit-run"),
+      weightPercent: 20,
+      privacy: "visible",
+      measure: { unit: "done", frequency: { kind: "timesPerWeek", times: 3 } },
+    });
+    expect(result.ok).toBe(true);
   });
 
   it("propagates precision errors: InvalidPrecision and PrecisionNotApplicable", async () => {

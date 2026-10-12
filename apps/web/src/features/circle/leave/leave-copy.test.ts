@@ -10,6 +10,7 @@ const season = (phase: Season["phase"]): Season => ({
   lengthWeeks: 8,
   week: phase === "active" ? 3 : null,
   approvalCount: 1,
+  nextSeasonOpen: false,
 });
 const circleOf = (myCircle: MyCircle) => {
   if (myCircle.circle === null) throw new Error("the fixture has a circle");
