@@ -118,6 +118,20 @@ describe("the review notice in Temporada", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows the closing review there too and opens it", async () => {
+    const app = temporada(
+      review({
+        state: "ended",
+        pendingReview: pendingReviewFixture({ kind: "closing", periodIndex: 4, dueUntil: null }),
+        seasonClose: seasonCloseFixture("closingReview"),
+      }),
+    );
+    expect(await screen.findByText("Tienes una revisión pendiente")).toBeInTheDocument();
+    expect(screen.getByText("Revisión de cierre")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Hacer la revisión" }));
+    expect(app.location()).toBe("/review/season-1/4");
+  });
+
   it("shows nothing when nothing is due", async () => {
     temporada(activeTodayFixture());
     await screen.findByRole("heading", { name: /Semana 5 de 8/ });

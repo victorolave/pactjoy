@@ -153,13 +153,34 @@ describe("ReviewNotice", () => {
     expect(await screen.findByText("Puedes responder tu punto de partida")).toBeInTheDocument();
   });
 
-  it("hides the closing review and an empty day", async () => {
-    const { deps } = render(
+  it("tells about the closing review too, titled as the card does and with no deadline", async () => {
+    render(
       <ReviewNotice />,
       withReview({ pendingReview: pendingReviewFixture({ kind: "closing", dueUntil: null }) }),
     );
+    expect(await screen.findByText("Tienes una revisión pendiente")).toBeInTheDocument();
+    expect(screen.getByText("Revisión de cierre")).toBeInTheDocument();
+    expect(screen.queryByText(/hasta el/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Hacer la revisión" })).toBeEnabled();
+  });
+
+  it("opens the closing review from the notice", async () => {
+    render(
+      <>
+        <ReviewNotice />
+        <LocationProbe />
+      </>,
+      withReview({ pendingReview: pendingReviewFixture({ kind: "closing", dueUntil: null }) }),
+    );
+    await userEvent.click(await screen.findByRole("button", { name: "Hacer la revisión" }));
+    expect(screen.getByTestId("where")).toHaveTextContent("/review/season-1/2");
+  });
+
+  it("renders nothing on a day with no review", async () => {
+    const { deps } = render(<ReviewNotice />, withReview({}));
     await waitFor(() => expect(deps.api.calls.getToday).toBe(1));
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(screen.queryByText("Tienes una revisión pendiente")).not.toBeInTheDocument();
   });
 
   it("opens the review from the notice", async () => {
