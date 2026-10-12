@@ -82,6 +82,7 @@ export async function weekSummary(
       actualStart: start.actualStart,
       weekIndex,
       pauses: data.pauses,
+      memberId: viewer.id,
     });
 
     const currentWeekIndex = weekOf(phase.scoringDay) - 1;

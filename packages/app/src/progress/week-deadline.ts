@@ -1,4 +1,4 @@
-import type { SeasonDay, Weekday } from "@pactjoy/engine";
+import type { MemberId, SeasonDay, Weekday } from "@pactjoy/engine";
 import { entryGraceDeadline, graceDeadline, seasonDay } from "@pactjoy/engine";
 import type { MemberPauseRequest } from "../pause/pause-request.repository.ts";
 import { startWeekdayOf } from "../score/score-input.ts";
@@ -12,6 +12,8 @@ export interface WeekDeadlineInput {
   readonly weekIndex: number;
   /** The effective Pauses (the choke point's output), never the stored ones. */
   readonly pauses: readonly MemberPauseRequest[];
+  /** Only this member's Commitments count; omitted means the whole circle. */
+  readonly memberId?: MemberId;
 }
 
 /**
@@ -26,12 +28,14 @@ export function weekDeadline({
   actualStart,
   weekIndex,
   pauses,
+  memberId,
 }: WeekDeadlineInput): SeasonDay {
   const firstDay = weekIndex * DAYS_PER_WEEK;
   const lastDay = seasonDay(firstDay + DAYS_PER_WEEK - 1);
   const startWeekday = startWeekdayOf(actualStart);
   let deadline: SeasonDay = graceDeadline(lastDay);
   for (const commitment of season.commitments) {
+    if (memberId !== undefined && commitment.memberId !== memberId) continue;
     const { schedule } = commitment.measure;
     const commitmentPauses = pauses.filter((pause) => pause.commitmentId === commitment.id);
     for (let offset = 0; offset < DAYS_PER_WEEK; offset++) {

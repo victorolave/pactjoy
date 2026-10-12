@@ -389,4 +389,24 @@ describe("weekSummary query (A2s)", () => {
     expect(open.ok && open.value.facts).toMatchObject({ editable: true, final: false });
     expect(done.ok && done.value.facts).toMatchObject({ editable: false, final: true });
   });
+
+  it("EW-3: another member's rejection does not extend the viewer's week facts", async () => {
+    const { app, given } = await setup();
+    app.pauses.seed(given.season.id, {
+      memberId: memberId("member-victor"),
+      commitmentId: given.victorCommitment,
+      requestedOn: seasonDay(5),
+      startDay: seasonDay(6),
+      end: { kind: "open" },
+      decision: { kind: "rejected", decidedOn: seasonDay(7) },
+    });
+
+    // Day 8 is past Andrea's own deadline (end of week + grace) but inside Victor's.
+    const result = await weekSummary(atInstant(app, localInstant(day(8))), given.andrea, {
+      seasonId: given.season.id,
+      weekIndex: 0,
+    });
+
+    expect(result.ok && result.value.facts).toMatchObject({ editable: false, final: true });
+  });
 });

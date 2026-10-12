@@ -56,6 +56,8 @@ export function seasonWeeks({
   return Array.from({ length: season.lengthWeeks }, (_, weekIndex) => {
     const firstDay = seasonDay(weekIndex * DAYS_PER_WEEK);
     const lastDay = seasonDay(weekIndex * DAYS_PER_WEEK + DAYS_PER_WEEK - 1);
+    // Circle-wide on purpose: one `facts` per week is shared by every standings row,
+    // so the week stays open while any member's window is still open.
     const deadline = weekDeadline({
       season,
       actualStart,
