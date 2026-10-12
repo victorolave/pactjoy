@@ -37,6 +37,17 @@ describe("POST /habits (UE-C-S9)", () => {
     expect((await call("GET", "/habits", "andrea")).json.data.habits).toEqual([created.json.data]);
   });
 
+  it("REQ-G1: the owner's habit carries graduatedAt (null, then an ISO string once graduated)", async () => {
+    const { app, call } = setup();
+    const created = await call("POST", "/habits", "andrea", { name: "Read" });
+    expect(created.json.data.graduatedAt).toBeNull();
+    const habit = await app.habits.get(created.json.data.id);
+    if (!habit) throw new Error("seed failed");
+    await app.habits.save({ ...habit, graduatedAt: instant(1_700_000_000_000), version: 1 }, 0);
+    const listed = await call("GET", "/habits", "andrea");
+    expect(listed.json.data.habits[0].graduatedAt).toBe("2023-11-14T22:13:20.000Z");
+  });
+
   it("RV-S22: the app owns content rules (NUL in name is InvalidName 422 from the app)", async () => {
     const { call, transaction } = setup();
     const { status, json } = await call("POST", "/habits", "andrea", { name: "a\u0000b" });

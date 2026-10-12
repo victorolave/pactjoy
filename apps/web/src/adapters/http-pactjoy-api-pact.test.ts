@@ -9,6 +9,7 @@ const habitDto = {
   why: null,
   category: null,
   icon: "book",
+  graduatedAt: null,
   createdAt: "2026-10-01T00:00:00.000Z",
   version: 1,
 };
@@ -159,6 +160,18 @@ describe("HttpPactJoyApi habit, season, commitment, pact and preview methods", (
       setup({ rows: [row] }).api.previewScoring({ measure, values: ["1"] }),
     ).rejects.toMatchObject({ code: "Internal" });
   });
+  it("REQ-G1: rejects a habit payload that lacks graduatedAt (a stale pre-graduation cache)", async () => {
+    const { graduatedAt: _omitted, ...legacy } = habitDto;
+    const internal = { code: "Internal" };
+    await expect(setup(legacy).api.createHabit(habit)).rejects.toMatchObject(internal);
+    await expect(setup({ habits: [legacy] }).api.listHabits()).rejects.toMatchObject(internal);
+    const graduated = { ...habitDto, graduatedAt: "2026-12-01T00:00:00.000Z" };
+    expect(await setup({ habits: [graduated] }).api.listHabits()).toEqual([graduated]);
+    await expect(
+      setup({ habits: [{ ...habitDto, graduatedAt: 5 }] }).api.listHabits(),
+    ).rejects.toMatchObject(internal);
+  });
+
   it("rejects habit and season bodies that only carry an id", async () => {
     const internal = { code: "Internal" };
     await expect(setup({ id: "h1" }).api.createHabit(habit)).rejects.toMatchObject(internal);

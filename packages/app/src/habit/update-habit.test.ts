@@ -49,6 +49,20 @@ describe("updateHabit", () => {
     expect(result.value).toMatchObject({ name: "Leer", why: null, icon: null });
   });
 
+  it("REQ-G1: an edit preserves graduatedAt (updateHabit never writes it)", async () => {
+    const { app, habit } = await seed();
+    const graduatedAt = instant(1_700_000_000_000);
+    await app.habits.save({ ...habit, graduatedAt, version: 1 }, 0);
+    const result = await updateHabit(app, ANDREA, {
+      habitId: habit.id,
+      expectedVersion: 1,
+      name: "Leer más",
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value).toMatchObject({ graduatedAt, version: 2 });
+  });
+
   it("another user's habit is HabitNotFound, same as an unknown id", async () => {
     const { app, habit } = await seed();
     const other = await updateHabit(app, VICTOR, { habitId: habit.id, expectedVersion: 0 });

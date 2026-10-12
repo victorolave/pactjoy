@@ -15,6 +15,7 @@ const habit: HabitDto = {
   why: "Aprender",
   category: "Leer",
   icon: "book",
+  graduatedAt: null,
   createdAt: "2026-10-01T00:00:00Z",
   version: 3,
 };

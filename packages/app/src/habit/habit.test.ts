@@ -23,6 +23,7 @@ describe("buildHabit", () => {
         why: null,
         category: null,
         icon: null,
+        graduatedAt: null,
         createdAt: NOW,
         version: 0,
       },

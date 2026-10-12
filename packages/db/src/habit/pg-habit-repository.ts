@@ -15,11 +15,12 @@ interface HabitRow {
   why: string | null;
   category: string | null;
   icon: string | null;
+  graduated_at: Instant | null;
   created_at: Instant;
   version: number;
 }
 
-const COLUMNS = "id, owner_id, name, why, category, icon, created_at, version";
+const COLUMNS = "id, owner_id, name, why, category, icon, graduated_at, created_at, version";
 
 function toHabit(row: HabitRow): Habit {
   return {
@@ -29,6 +30,7 @@ function toHabit(row: HabitRow): Habit {
     why: row.why,
     category: row.category,
     icon: row.icon,
+    graduatedAt: row.graduated_at,
     createdAt: row.created_at,
     version: row.version,
   };
@@ -67,10 +69,12 @@ export function createPgHabitRepository(exec: SqlExecutor): HabitRepository {
 
     async save(habit: Habit, expectedVersion) {
       const createdAt = new Date(habit.createdAt).toISOString();
+      const graduatedAt =
+        habit.graduatedAt === null ? null : new Date(habit.graduatedAt).toISOString();
       if (expectedVersion === null) {
         // A duplicate id raises 23505 on habits_pkey, which the unit of work maps to ConcurrencyConflict.
         await exec.query(
-          "insert into pactjoy.habits (id, owner_id, name, why, category, icon, created_at, version) values ($1, $2, $3, $4, $5, $6, $7::timestamptz, $8)",
+          "insert into pactjoy.habits (id, owner_id, name, why, category, icon, graduated_at, created_at, version) values ($1, $2, $3, $4, $5, $6, $7::timestamptz, $8::timestamptz, $9)",
           [
             habit.id,
             habit.ownerId,
@@ -78,6 +82,7 @@ export function createPgHabitRepository(exec: SqlExecutor): HabitRepository {
             habit.why,
             habit.category,
             habit.icon,
+            graduatedAt,
             createdAt,
             habit.version,
           ],
@@ -86,7 +91,7 @@ export function createPgHabitRepository(exec: SqlExecutor): HabitRepository {
       }
       // The key column (id) is never in SET: updating one would upgrade the row lock (ADR-0010).
       const { rowCount } = await exec.query(
-        "update pactjoy.habits set owner_id = $2, name = $3, why = $4, category = $5, icon = $6, created_at = $7::timestamptz, version = $8 where id = $1 and version = $9",
+        "update pactjoy.habits set owner_id = $2, name = $3, why = $4, category = $5, icon = $6, graduated_at = $7::timestamptz, created_at = $8::timestamptz, version = $9 where id = $1 and version = $10",
         [
           habit.id,
           habit.ownerId,
@@ -94,6 +99,7 @@ export function createPgHabitRepository(exec: SqlExecutor): HabitRepository {
           habit.why,
           habit.category,
           habit.icon,
+          graduatedAt,
           createdAt,
           habit.version,
           expectedVersion,

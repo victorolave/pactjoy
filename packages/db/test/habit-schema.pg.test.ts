@@ -6,7 +6,7 @@ describe("pactjoy.habits schema", () => {
     const sql = connect(databaseUrl());
     try {
       const columns = await sql.unsafe(
-        `select column_name, data_type, is_nullable from information_schema.columns
+        `select column_name, data_type, is_nullable, column_default from information_schema.columns
           where table_schema = 'pactjoy' and table_name = 'habits'`,
       );
       const [fks] = await sql.unsafe(
@@ -21,6 +21,12 @@ describe("pactjoy.habits schema", () => {
       expect(byName.version).toMatchObject({ data_type: "integer", is_nullable: "NO" });
       expect(byName.owner_id).toMatchObject({ data_type: "uuid", is_nullable: "NO" });
       expect(byName.id).toMatchObject({ data_type: "uuid" });
+      // REQ-G1: nullable timestamptz, no default (no backfill, no trigger).
+      expect(byName.graduated_at).toMatchObject({
+        data_type: "timestamp with time zone",
+        is_nullable: "YES",
+        column_default: null,
+      });
       expect(fks).toEqual({ n: 0 });
       expect(rls).toEqual({ on: true });
     } finally {

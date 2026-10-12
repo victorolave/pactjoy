@@ -104,6 +104,7 @@ const isHabitDto = (data: unknown): boolean =>
   typeof data.id === "string" &&
   typeof data.name === "string" &&
   (data.icon === null || typeof data.icon === "string") &&
+  (data.graduatedAt === null || typeof data.graduatedAt === "string") &&
   typeof data.version === "number";
 const isHabitList = (data: unknown): boolean =>
   isRecord(data) && Array.isArray(data.habits) && data.habits.every(isHabitDto);

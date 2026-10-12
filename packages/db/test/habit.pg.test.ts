@@ -12,6 +12,7 @@ const HABIT: Habit = {
   why: null,
   category: null,
   icon: null,
+  graduatedAt: null,
   createdAt: instant(1_700_000_000_000),
   version: 0,
 };

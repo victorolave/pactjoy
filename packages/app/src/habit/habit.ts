@@ -16,6 +16,11 @@ export interface Habit {
   readonly category: string | null;
   /** Opaque icon key; the backend checks only its format, the closed list lives in the client. */
   readonly icon: string | null;
+  /**
+   * When the owner graduated the habit (permanent), or null while it is still
+   * tracked. Written only by the season-closure use case; never by edits.
+   */
+  readonly graduatedAt: Instant | null;
   readonly createdAt: Instant;
   readonly version: number;
 }
@@ -108,6 +113,7 @@ export function buildHabit(input: BuildHabitInput): Result<Habit, BuildHabitErro
     id: input.id,
     ownerId: input.ownerId,
     ...fields.value,
+    graduatedAt: null,
     createdAt: input.now,
     version: 0,
   });
