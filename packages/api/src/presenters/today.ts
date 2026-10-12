@@ -164,6 +164,15 @@ function presentActive(view: Active): Active {
     rows: view.rows.map(presentRow),
     pendingYesterday: view.pendingYesterday.map(presentPending),
     standings: presentRanked(view.standings),
+    seasonClose:
+      view.seasonClose === null
+        ? null
+        : {
+            step: view.seasonClose.step,
+            resultsFrom: view.seasonClose.resultsFrom,
+            nextSeasonFrom: view.seasonClose.nextSeasonFrom,
+            nextSeasonOpen: view.seasonClose.nextSeasonOpen,
+          },
   };
 }
 

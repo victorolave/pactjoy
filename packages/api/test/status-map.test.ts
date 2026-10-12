@@ -45,9 +45,9 @@ function errorCoverageGaps(index: string, source: string) {
 }
 
 describe("app error status map", () => {
-  it("EM-S1..S5: 85 kinds, 43x422 6x403 9x404 26x409 1x410", () => {
-    expect(KINDS).toHaveLength(85);
-    expect(kindsWith(422)).toHaveLength(43);
+  it("EM-S1..S5: 91 kinds, 45x422 6x403 9x404 30x409 1x410", () => {
+    expect(KINDS).toHaveLength(91);
+    expect(kindsWith(422)).toHaveLength(45);
     expect(kindsWith(403)).toEqual([
       "CannotRespondToOwnPause",
       "CommitmentNotOwned",
@@ -67,7 +67,7 @@ describe("app error status map", () => {
       "ReviewPeriodNotFound",
       "SeasonNotFound",
     ]);
-    expect(kindsWith(409)).toHaveLength(26);
+    expect(kindsWith(409)).toHaveLength(30);
     expect(kindsWith(410)).toEqual(["InviteExpired"]);
   });
 
@@ -112,6 +112,20 @@ describe("app error status map", () => {
     expect(APP_ERROR_STATUS.ReviewPeriodNotFound).toBe(404);
   });
 
+  it("SC: the season-closure kinds map to the design's statuses", () => {
+    for (const k of ["InvalidClosureDecision", "ClosureIncomplete"] as const) {
+      expect(APP_ERROR_STATUS[k]).toBe(422);
+    }
+    for (const k of [
+      "SeasonResultsNotYet",
+      "NothingToClose",
+      "ClosingReviewRequired",
+      "ClosureAlreadySubmitted",
+    ] as const) {
+      expect(APP_ERROR_STATUS[k]).toBe(409);
+    }
+  });
+
   it("StaleSeason (approval precondition) is 409", () => {
     expect(APP_ERROR_STATUS.StaleSeason).toBe(409);
   });
@@ -153,7 +167,7 @@ describe("app error status map", () => {
     const index = readFileSync(resolve(import.meta.dirname, "../../app/src/index.ts"), "utf8");
     const source = readFileSync(resolve(import.meta.dirname, "../src/errors/app-error.ts"), "utf8");
     expect(errorCoverageGaps(index, source)).toEqual({ imports: [], union: [] });
-    expect(exportedErrorNames(index).length).toBe(38);
+    expect(exportedErrorNames(index).length).toBe(41);
   });
 
   it("EM-S16: the scan compares exact names, so a new CircleError is detected", () => {

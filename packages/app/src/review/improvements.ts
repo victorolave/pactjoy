@@ -24,7 +24,7 @@ const isItemOneOnly = (response: AutomaticityResponse): boolean =>
  * The two scores to compare, like for like (owner decision, ADR-0014): when either side is
  * item-1-only, item 1 of both; when both are full, the means of the four items.
  */
-function comparableScores(
+export function comparableScores(
   current: AutomaticityResponse,
   reference: AutomaticityResponse,
 ): { readonly current: Fraction; readonly reference: Fraction } {

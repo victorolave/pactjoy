@@ -5,7 +5,11 @@ import {
 } from "@tanstack/react-query-persist-client";
 import { describe, expect, it } from "vitest";
 import { todayKey } from "../shared/query-keys.ts";
-import { activeTodayFixture, pactOpenTodayFixture } from "../testing/fixtures/today.ts";
+import {
+  activeTodayFixture,
+  endedTodayFixture,
+  pactOpenTodayFixture,
+} from "../testing/fixtures/today.ts";
 import { MemoryStorage } from "../testing/memory-storage.ts";
 import { seedPersistedToday } from "../testing/seed-persisted-today.ts";
 import {
@@ -99,6 +103,33 @@ describe("a saved Today from before the shape changed is dropped, not rendered",
       }
     },
   );
+
+  it.each([
+    ["active", () => activeTodayFixture()],
+    ["ended", () => endedTodayFixture()],
+  ])(
+    "drops a %s Today saved before the season closure (version 7: no seasonClose)",
+    async (_state, make) => {
+      const { seasonClose: _removed, ...old } = make();
+      const { reloaded } = await restoreFrom(old);
+      expect(reloaded.getQueryData(todayKey)).toBeUndefined();
+    },
+  );
+
+  it("purges version 7: the season closure arrived with version 8", async () => {
+    const storage = new MemoryStorage();
+    seedPersistedToday(storage, activeTodayFixture());
+    const saved = JSON.parse(storage.getItem(STORAGE_KEY) ?? "null");
+    saved.buster = "7:user-1";
+    storage.setItem(STORAGE_KEY, JSON.stringify(saved));
+    const reloaded = new QueryClient();
+    await persistQueryClientRestore({
+      queryClient: reloaded,
+      ...persistOptionsFor(createTodayPersister(storage), bustFor("user-1")),
+    });
+    expect(reloaded.getQueryData(todayKey)).toBeUndefined();
+    expect(Number(CACHE_VERSION)).toBeGreaterThan(7);
+  });
 
   it("purges version 6 even with an otherwise valid shape: the review fields arrived with version 7", async () => {
     const storage = new MemoryStorage();

@@ -302,12 +302,46 @@ export type {
   PreviewProgressView,
 } from "./scoring/preview-progress.query.ts";
 export { previewProgress } from "./scoring/preview-progress.query.ts";
+export type {
+  CarryOverDeps,
+  CarryOverError,
+  CarryOverInput,
+  CarryOverItem,
+  CarryOverView,
+} from "./season/closure/carry-over.query.ts";
+export { carryOver } from "./season/closure/carry-over.query.ts";
+export type {
+  SeasonCloseStep,
+  SeasonCloseView,
+} from "./season/closure/season-close-of.ts";
 export type { SeasonClosureRepository } from "./season/closure/season-closure.repository.ts";
 export type {
   ClosureDecision,
   CommitmentClosureDecision,
   SeasonClosure,
 } from "./season/closure/season-closure.ts";
+export type {
+  SeasonHistoryDeps,
+  SeasonHistoryItem,
+  SeasonHistoryView,
+} from "./season/closure/season-history.query.ts";
+export { seasonHistory } from "./season/closure/season-history.query.ts";
+export type {
+  SeasonResultsCommitment,
+  SeasonResultsDeps,
+  SeasonResultsError,
+  SeasonResultsInput,
+  SeasonResultsView,
+} from "./season/closure/season-results.query.ts";
+export { seasonResults } from "./season/closure/season-results.query.ts";
+export type {
+  SubmitSeasonClosureDeps,
+  SubmitSeasonClosureError,
+  SubmitSeasonClosureInput,
+  SubmitSeasonClosureResult,
+  SubmittedDecision,
+} from "./season/closure/submit-season-closure.ts";
+export { submitSeasonClosure } from "./season/closure/submit-season-closure.ts";
 export type {
   CreateSeasonDeps,
   CreateSeasonError,

@@ -11,6 +11,7 @@ import { memberScoreView } from "../score/member-score.query.ts";
 import { type ScoreQueryDeps, scoreContextOf } from "../score/score-context.ts";
 import type { StandingsView } from "../score/standings.query.ts";
 import { standingsView } from "../score/standings.query.ts";
+import { type SeasonCloseView, seasonCloseOf } from "../season/closure/season-close-of.ts";
 import type { SeasonLengthWeeks } from "../season/season.ts";
 import type { Actor } from "../shared/actor.ts";
 import type { CircleId, SeasonId } from "../shared/ids.ts";
@@ -93,6 +94,11 @@ export type TodayView =
       /** Day-bound opportunities of yesterday still open to register (design 15d). */
       readonly pendingYesterday: readonly PendingYesterdayItem[];
       readonly standings: Extract<StandingsView, { kind: "ranked" }>;
+      /**
+       * The viewer's end-of-season state; `null` while the season is running. Only the viewer's own
+       * closure feeds it, never anyone else's.
+       */
+      readonly seasonClose: SeasonCloseView | null;
     } & TodayBase);
 
 /**
@@ -221,6 +227,12 @@ export async function today(deps: TodayDeps, actor: Actor): Promise<TodayView> {
         score: memberScoreView(started, data, viewer),
       },
       standings: standingsView(started, data),
+      seasonClose: await seasonCloseOf(repos, {
+        season,
+        memberId: viewer.id,
+        today: localToday,
+        pendingReview: reviews.pendingReview,
+      }),
     };
   });
 }

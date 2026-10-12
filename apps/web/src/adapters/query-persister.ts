@@ -13,9 +13,10 @@ const THROTTLE_MS = 1000;
 /**
  * Bump for shape OR scoring semantics: v5 purged ended-clamped scores and old weekly series; v6 adds
  * the rows' nested `pause` and pause-aware scoring; v7 adds `pendingReview` and `baselineOffer` to
- * every season state (periodic-review, ADR-0014).
+ * every season state (periodic-review, ADR-0014); v8 adds `seasonClose` to the running and ended
+ * states (season-close-graduation, ADR-0015).
  */
-export const CACHE_VERSION = "7";
+export const CACHE_VERSION = "8";
 
 /** The saved Today belongs to one user of one cache version: anything else is not restored. */
 export const bustFor = (userId: string | null): string => `${CACHE_VERSION}:${userId ?? "anon"}`;
@@ -41,7 +42,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 /**
  * A minimal shape check on top of the version buster: a running Today must carry what the screens
  * read without a guard (`points` and `pause` on every row, `pointsToday` in the summary, `pendingYesterday`, and
- * `pendingReview` and `baselineOffer` in every season state). The buster already drops
+ * `pendingReview` and `baselineOffer` in every season state, and `seasonClose` once running). The buster already drops
  * old copies; this keeps a copy that slipped past it from crashing the app. Pre-season states
  * also require the owned commitment list introduced by Lote 3.
  */
@@ -58,6 +59,8 @@ export function isCurrentToday(today: unknown): boolean {
   if (!("pendingReview" in today) || !("baselineOffer" in today)) return false;
   if (today.state === "pactOpen" || today.state === "notStarted")
     return Array.isArray(today.myCommitments);
+  // A running or ended copy from before the season closure would never show the closing step.
+  if (!("seasonClose" in today)) return false;
   const { rows, summary } = today;
   if (!Array.isArray(rows) || !isRecord(summary) || typeof summary.pointsToday !== "number") {
     return false;
