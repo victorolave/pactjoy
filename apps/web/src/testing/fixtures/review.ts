@@ -1,9 +1,14 @@
+import type { TodayView } from "@pactjoy/app";
 import type {
   CommitmentStageDto,
   ReviewDraftDto,
   SkippedBaselineDto,
   SubmittedReviewDto,
 } from "../../ports/wire.ts";
+
+type Season = Extract<TodayView, { state: "active" | "ended" }>;
+type PendingReviewDto = NonNullable<Season["pendingReview"]>;
+type BaselineOfferDto = NonNullable<Season["baselineOffer"]>;
 
 type Commitment = ReviewDraftDto["commitments"][number];
 type SummaryRow = NonNullable<ReviewDraftDto["summary"]>["commitments"][number];
@@ -133,3 +138,25 @@ export const stageFixture = (
   commitmentId: string,
   stage: CommitmentStageDto["stage"] = "new",
 ): CommitmentStageDto => ({ commitmentId, stage });
+
+/** The `pendingReview` Today carries (period 2 of an 8-week, 2-week-cadence season). */
+export const pendingReviewFixture = (overrides: Partial<PendingReviewDto> = {}): PendingReviewDto =>
+  ({
+    seasonId: "season-1",
+    periodIndex: 2,
+    kind: "interim",
+    fullSrbai: false,
+    firstWeek: 3,
+    lastWeek: 4,
+    dueUntil: "2026-10-06",
+    summaryAvailable: true,
+    ...overrides,
+  }) as PendingReviewDto;
+
+export const baselineOfferFixture = (overrides: Partial<BaselineOfferDto> = {}): BaselineOfferDto =>
+  ({
+    seasonId: "season-1",
+    periodIndex: 0,
+    offeredUntil: "2026-10-04",
+    ...overrides,
+  }) as BaselineOfferDto;

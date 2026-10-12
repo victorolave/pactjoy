@@ -426,12 +426,14 @@ export class FakePactJoyApi implements PactJoyApi {
 
   async submitReview(seasonId: string, periodIndex: number, cmd: SubmitReviewCommand) {
     await this.#reviewCall("submitReview", [seasonId, periodIndex, cmd]);
+    this.#markReview(seasonId, periodIndex, "completed");
     this.#clearReviewOffer();
     return this.#submitResult;
   }
 
   async skipBaseline(seasonId: string): Promise<void> {
     await this.#reviewCall("skipBaseline", [seasonId]);
+    this.#markReview(seasonId, 0, "skipped");
     this.#clearReviewOffer();
   }
 
@@ -482,6 +484,13 @@ export class FakePactJoyApi implements PactJoyApi {
     this.reviewCommands.push({ method, args });
     this.#enter(method);
     await gate;
+  }
+
+  /** Like the server: reading a saved review afterwards says it is saved, not due. */
+  #markReview(seasonId: string, periodIndex: number, status: "completed" | "skipped"): void {
+    const key = `${seasonId}:${periodIndex}`;
+    const draft = this.#reviews.get(key);
+    if (draft !== undefined) this.#reviews.set(key, { ...draft, status });
   }
 
   /** Like the server: a saved or skipped review is no longer pending, so the next Today has none. */

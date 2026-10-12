@@ -56,6 +56,16 @@ describe("FakePactJoyApi review methods", () => {
     expect(api.reviewCommands).toEqual([{ method: "skipBaseline", args: ["season-1"] }]);
   });
 
+  it("reads a saved or skipped review as saved afterwards, like the server", async () => {
+    const api = new FakePactJoyApi(activeTodayFixture());
+    api.setReview("season-1", 2, interimFullFixture());
+    api.setReview("season-1", 0, baselineFixture());
+    await api.submitReview("season-1", 2, command);
+    await api.skipBaseline("season-1");
+    expect((await api.getReview("season-1", 2)).status).toBe("completed");
+    expect((await api.getReview("season-1", 0)).status).toBe("skipped");
+  });
+
   it("fails the next call when scripted and waits on a held gate", async () => {
     const api = new FakePactJoyApi(activeTodayFixture());
     api.failNext("submitReview", new ApiError("ReviewAlreadySubmitted", 409, null));

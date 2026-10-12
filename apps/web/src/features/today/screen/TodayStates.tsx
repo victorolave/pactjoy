@@ -8,6 +8,7 @@ import { Icon } from "../../../ui/icon/Icon.tsx";
 import { Illustration } from "../../../ui/Placeholder.tsx";
 import { EntrySheetHost } from "../../entry/index.ts";
 import { EndsTomorrowBanner, PauseTodayAction } from "../../pause/index.ts";
+import { ReviewTodayCard } from "../../review/index.ts";
 import { PendingYesterday } from "../pending-yesterday/PendingYesterday.tsx";
 import { RowWithControls } from "../rows/RowWithControls.tsx";
 import { SeasonCard } from "../season/SeasonCard.tsx";
@@ -88,6 +89,7 @@ export function NotStarted({ model }: { readonly model: NotStartedModel }) {
           </div>
         </div>
       </Card>
+      <ReviewTodayCard />
       {model.myCommitments.length > 0 && (
         <div className={styles.section}>
           <h2 className={styles.sectionTitle}>Tu primera semana</h2>
@@ -213,6 +215,7 @@ export function RunningToday({
       <RunningHeader model={model} />
       {showDayState && <EndsTomorrowBanner rows={model.sheetRows} />}
       {banner}
+      <ReviewTodayCard />
       {model.kind === "ended" && (
         <InlineMessage tone="info" title="Temporada terminada">
           Los registros abiertos solo se pueden ajustar mientras dure su plazo.

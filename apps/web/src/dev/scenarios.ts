@@ -5,6 +5,7 @@ import {
   pauseBudgetFixture,
   pauseRequestFixture,
 } from "../testing/fixtures/pause.ts";
+import { baselineOfferFixture, pendingReviewFixture } from "../testing/fixtures/review.ts";
 import {
   activeTodayFixture,
   type DayRow,
@@ -505,6 +506,37 @@ export const SCENARIOS: readonly Scenario[] = [
     today: () =>
       pauseToday(pausedGym("paused", pauseOf({ endDate: date("2026-10-03"), endsTomorrow: true }))),
     pauseRequests: () => pauseRequestsFor("approved", "2026-10-03"),
+  },
+  {
+    id: "reviewPending",
+    title: "Revisión pendiente (33)",
+    description: "El primer día del periodo: la tarjeta de la revisión intermedia, semanas 3 y 4.",
+    mode: "data",
+    today: () => ({ ...mixed(), pendingReview: pendingReviewFixture() }) as TodayView,
+  },
+  {
+    id: "reviewBaselineOffer",
+    title: "Oferta de línea base (13)",
+    description: "Pacto cerrado, antes de empezar: Responder o Ahora no.",
+    mode: "data",
+    today: () =>
+      ({
+        ...pactOpenTodayFixture(),
+        state: "notStarted",
+        baselineOffer: baselineOfferFixture(),
+      }) as TodayView,
+  },
+  {
+    id: "reviewClosingHidden",
+    title: "Revisión de cierre oculta",
+    description:
+      "La revisión de cierre ya está vencida, pero no tiene pantalla todavía: no hay tarjeta.",
+    mode: "data",
+    today: () =>
+      ({
+        ...mixed(),
+        pendingReview: pendingReviewFixture({ kind: "closing", dueUntil: null }),
+      }) as TodayView,
   },
   {
     id: "loading",

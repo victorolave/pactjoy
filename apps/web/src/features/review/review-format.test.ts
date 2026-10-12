@@ -6,6 +6,7 @@ import {
   periodHeading,
   periodMeta,
   pointsLabel,
+  weeksPhrase,
 } from "./review-format.ts";
 
 describe("periodMeta and periodHeading (33)", () => {
@@ -147,5 +148,13 @@ describe("doneText (35b)", () => {
 
   it("says nothing about automaticity or a date when there is neither", () => {
     expect(doneText({ improvements: [], nextReviewDate: null }, names)).toBe("");
+  });
+});
+
+describe("weeksPhrase (the Today card and the Temporada notice)", () => {
+  it("names the weeks with their article, in the singular for one", () => {
+    expect(weeksPhrase({ first: 3, last: 4 })).toBe("las semanas 3 y 4");
+    expect(weeksPhrase({ first: 4, last: 4 })).toBe("la semana 4");
+    expect(weeksPhrase({ first: 4, last: 6 })).toBe("las semanas 4 a 6");
   });
 });

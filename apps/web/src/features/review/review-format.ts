@@ -75,3 +75,10 @@ export function doneText(input: DoneInput, names: ReadonlyMap<string, string>): 
   }
   return parts.join(" ");
 }
+
+/** "las semanas 3 y 4", "la semana 4" or "las semanas 4 a 6": the weeks a review covers, in a sentence. */
+export function weeksPhrase(weeks: Weeks): string {
+  const n = count(weeks);
+  if (n === 1) return `la semana ${weeks.first}`;
+  return `las semanas ${weeks.first} ${n === 2 ? "y" : "a"} ${weeks.last}`;
+}

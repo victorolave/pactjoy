@@ -87,3 +87,24 @@ describe("a scenario renders the real Today screen over the fake API", () => {
     expect(screen.getByRole("link", { name: /Escenarios/ })).toHaveAttribute("href", "/dev/today");
   });
 });
+
+describe("the review scenarios (periodic-review)", () => {
+  it("reviewPending shows the interim review card among the running Today", async () => {
+    at("/dev/today/reviewPending");
+    expect(await screen.findByText("Revisión de las semanas 3 y 4")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Hacer la revisión" })).toBeInTheDocument();
+  });
+
+  it("reviewBaselineOffer shows the optional baseline before the season starts", async () => {
+    at("/dev/today/reviewBaselineOffer");
+    expect(await screen.findByText("Antes de empezar")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Responder" })).toBeInTheDocument();
+  });
+
+  it("reviewClosingHidden has a closing review due and shows no card for it", async () => {
+    at("/dev/today/reviewClosingHidden");
+    await screen.findByRole("heading", { name: /Hola/ });
+    expect(screen.queryByRole("heading", { name: /^Revisión de la/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Hacer la revisión" })).not.toBeInTheDocument();
+  });
+});

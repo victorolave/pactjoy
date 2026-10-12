@@ -30,7 +30,7 @@ import {
 } from "../features/pact/index.ts";
 import { RedistributedBanner } from "../features/pause/index.ts";
 import { ProfileScreen, SettingsScreen } from "../features/profile/index.ts";
-import { ReviewFlowScreen } from "../features/review/index.ts";
+import { ReviewFlowScreen, ReviewNotice } from "../features/review/index.ts";
 import { SeasonScreen, SeasonSkeleton } from "../features/season/index.ts";
 import { CommitmentScreen } from "../features/season-commitment/index.ts";
 import { MemberSeasonScreen } from "../features/season-member/index.ts";
@@ -73,6 +73,11 @@ function SeasonRoute() {
   return (
     <div className={styles.season}>
       {season && (season.phase === "active" || season.phase === "ended") && <RedistributedBanner />}
+      {season && (season.phase === "active" || season.phase === "ended") && (
+        <div className={styles.notice}>
+          <ReviewNotice />
+        </div>
+      )}
       <SeasonScreen
         onNavigateToMember={(memberId) => {
           if (season) void navigate(progressRoutes.member(season.id, memberId));

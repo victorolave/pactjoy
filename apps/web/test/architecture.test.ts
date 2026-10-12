@@ -40,7 +40,7 @@ const ALLOWED_FEATURE_DEPS: Readonly<Record<string, readonly string[]>> = {
   profile: ["auth", "circle"],
   "season-progress-data": [],
   "season-member": ["habits", "season-progress-data"],
-  season: ["circle", "habits", "review", "season-progress-data"],
+  season: ["circle", "habits", "season-progress-data"],
   "season-week": ["season-progress-data"],
   "season-commitment": ["season-progress-data", "pause", "review"],
   // Reads Today and the circle through the API port and their shared query keys, never their features.
@@ -141,13 +141,16 @@ describe("the folder architecture", () => {
     expect(violationsOf("features/entry/Foo.tsx", ["../pause/index.ts"])).toHaveLength(1);
   });
 
-  it("lets Today, the pact, the season and a Commitment reach review only through its index, and review reach no feature", () => {
-    for (const from of ["today", "pact", "season", "season-commitment"]) {
+  it("lets Today, the pact and a Commitment reach review only through its index, and review reach no feature", () => {
+    for (const from of ["today", "pact", "season-commitment"]) {
       expect(violationsOf(`features/${from}/Foo.tsx`, ["../review/index.ts"])).toEqual([]);
       expect(violationsOf(`features/${from}/Foo.tsx`, ["../review/queries.ts"])).toHaveLength(1);
     }
     expect(violationsOf("features/review/Foo.tsx", ["../today/index.ts"])).toHaveLength(1);
     expect(violationsOf("features/review/Foo.tsx", ["../pause/index.ts"])).toHaveLength(1);
+    // The Temporada notice is mounted by the shell (like the pause banner), not by the season feature.
+    expect(violationsOf("shell/routes.tsx", ["../features/review/index.ts"])).toEqual([]);
+    expect(violationsOf("features/season/Foo.tsx", ["../review/index.ts"])).toHaveLength(1);
     expect(violationsOf("features/circle/Foo.tsx", ["../review/index.ts"])).toHaveLength(1);
     expect(violationsOf("features/entry/Foo.tsx", ["../review/index.ts"])).toHaveLength(1);
   });

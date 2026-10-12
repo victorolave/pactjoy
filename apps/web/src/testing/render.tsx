@@ -11,7 +11,7 @@ import { createSessionEvents, SessionManager } from "../features/auth/index.ts";
 import type { ApiError } from "../ports/api-error.ts";
 import type { NotificationPermissionState } from "../ports/notification-permission.ts";
 import type { MyCircle } from "../ports/pactjoy-api.ts";
-import type { ReviewDraftDto } from "../ports/wire.ts";
+import type { CommitmentStageDto, ReviewDraftDto } from "../ports/wire.ts";
 import { AppRoutes } from "../shell/routes.tsx";
 import { FakeAppInstall } from "./fake-app-install.ts";
 import { FakeAuth, fakeSession } from "./fake-auth.ts";
@@ -65,6 +65,10 @@ export interface RenderAppOptions {
   readonly nameDraft?: string;
   /** `getToday` rejects with these, one per call, before it answers `today`. */
   readonly todayFailures?: readonly ApiError[];
+  /** The stage `getCommitmentStage` answers per commitment (new when not listed). */
+  readonly stages?: readonly CommitmentStageDto[];
+  /** `getCommitmentStage` rejects with these, one per call, before it answers a stage. */
+  readonly stageFailures?: readonly ApiError[];
   /** `getReview` rejects with these, one per call, before it answers a draft. */
   readonly reviewFailures?: readonly ApiError[];
   /** The review drafts `getReview` answers, by season and period (0 is the baseline). */
@@ -123,6 +127,8 @@ function createFakeDeps({
   todayFailures = [],
   reviews = [],
   reviewFailures = [],
+  stages = [],
+  stageFailures = [],
   online = true,
   storage = new MemoryStorage(),
 }: RenderAppOptions = {}): RenderedApp["deps"] {
@@ -138,6 +144,8 @@ function createFakeDeps({
   if (installDone) device.set("installStep", "1");
   if (notificationStepDone) device.set("notificationStep", "1");
   for (const failure of todayFailures) api.failNext("getToday", failure);
+  for (const stage of stages) api.setStage(stage);
+  for (const failure of stageFailures) api.failNext("getCommitmentStage", failure);
   for (const failure of reviewFailures) api.failNext("getReview", failure);
   for (const { seasonId, periodIndex, draft } of reviews)
     api.setReview(seasonId, periodIndex, draft);
