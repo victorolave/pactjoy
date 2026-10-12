@@ -1,5 +1,5 @@
 import { useEffect, useReducer, useRef, useState } from "react";
-import { Navigate, useNavigate, useParams, useSearchParams } from "react-router";
+import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router";
 import type { CommitmentDto, HabitDto } from "../../../ports/wire.ts";
 import { Button } from "../../../ui/Button.tsx";
 import { FlowScreen } from "../../../ui/FlowScreen.tsx";
@@ -12,13 +12,21 @@ import { MeasureStep } from "./MeasureStep.tsx";
 import { PrivacyStep, WizardSummary } from "./PrivacyStep.tsx";
 import { TargetStep } from "./TargetStep.tsx";
 import styles from "./Wizard.module.css";
-import { initialWizard, prefillWizard, wizardReducer } from "./wizard-model.ts";
+import {
+  initialWizard,
+  prefillWizard,
+  readPrefill,
+  type WizardPrefill,
+  wizardReducer,
+} from "./wizard-model.ts";
 
 /** Both routes share the same editor, but only caller-owned commitments can prefill it. */
 export function HabitWizard() {
   const { seasonId, commitmentId } = useParams<{ seasonId: string; commitmentId: string }>();
   const [search] = useSearchParams();
   const habitId = search.get("habitId");
+  // Only a habit that is not yet a commitment can start from the previous season's one (Ajustar).
+  const prefill = readPrefill(useLocation().state);
   const navigate = useNavigate();
   const queries = useWizardData(seasonId);
   const [generation, setGeneration] = useState(0);
@@ -89,6 +97,7 @@ export function HabitWizard() {
       seasonId={seasonId}
       habit={habit}
       commitment={commitment}
+      prefill={commitmentId === undefined && habit !== undefined ? prefill : null}
       onCreateAnother={() => {
         setGeneration((previous) => previous + 1);
         navigate(`/season/${seasonId}/habits/new`);
@@ -101,19 +110,23 @@ function WizardForm({
   seasonId,
   habit,
   commitment,
+  prefill,
   onCreateAnother,
 }: {
   readonly seasonId: string;
   readonly habit?: HabitDto | undefined;
   readonly commitment?: Extract<CommitmentDto, { kind: "detail" }> | undefined;
+  readonly prefill: WizardPrefill | null;
   readonly onCreateAnother: () => void;
 }) {
   const navigate = useNavigate();
   const [draft, dispatch] = useReducer(
     wizardReducer,
-    habit ? prefillWizard(habit, commitment) : initialWizard(),
+    habit ? prefillWizard(habit, commitment ?? prefill ?? undefined) : initialWizard(),
   );
-  const save = useSaveWizard(seasonId, habit);
+  const save = useSaveWizard(seasonId, habit, prefill?.weightPercent);
+  // Adjusting last season's commitment ends back at the list, like editing one.
+  const returning = commitment !== undefined || prefill !== null;
   const heading = useRef<HTMLHeadingElement>(null);
   // biome-ignore lint/correctness/useExhaustiveDependencies: step transitions intentionally trigger heading focus, not edits within a step
   useEffect(() => {
@@ -161,7 +174,7 @@ function WizardForm({
       return;
     }
     if (draft.step === 4) {
-      if (commitment) navigate(`/season/${seasonId}/habits`);
+      if (returning) navigate(`/season/${seasonId}/habits`);
       else onCreateAnother();
       return;
     }
@@ -216,7 +229,7 @@ function WizardForm({
             {draft.step === 3
               ? "Guardar hábito"
               : draft.step === 4
-                ? commitment
+                ? returning
                   ? "Listo"
                   : "Crear otro hábito"
                 : "Continuar"}

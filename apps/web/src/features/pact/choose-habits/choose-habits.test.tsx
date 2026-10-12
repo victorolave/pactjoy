@@ -1,8 +1,8 @@
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { ApiError } from "../../../ports/api-error.ts";
-import type { HabitDto, SeasonDto } from "../../../ports/wire.ts";
+import type { CarryOverDto, HabitDto, SeasonDto } from "../../../ports/wire.ts";
 import { soloCircleFixture } from "../../../testing/fixtures/circle.ts";
 import { renderApp } from "../../../testing/render.tsx";
 import { chosenCommitmentsMessage, commitmentSubtitle } from "./ChooseHabitsScreen.tsx";
@@ -408,5 +408,167 @@ describe("choose habits screen (design 10)", () => {
     await screen.findByRole("heading", { level: 1, name: "¿Qué vas a trabajar esta temporada?" });
     const backBtn = screen.getByRole("button", { name: "Volver" });
     expect(backBtn).toBeInTheDocument();
+  });
+});
+
+describe("carry-over from the previous season (season-close-graduation, owner decision 4)", () => {
+  const habit = (id: string, name: string, graduatedAt: string | null = null): HabitDto => ({
+    id,
+    name,
+    why: null,
+    category: null,
+    icon: null,
+    graduatedAt,
+    createdAt: "2026-08-01T12:00:00.000Z",
+    version: 1,
+  });
+  const minutes = {
+    unit: "minutes",
+    customLabel: null,
+    precision: "integer",
+    target: { direction: "reach", minimum: "10", ideal: "30" },
+    schedule: { period: "perSession", frequency: { kind: "timesPerWeek", times: 5 } },
+  } as const;
+  const item = (
+    habitId: string,
+    decision: "continue" | "adjust" | "pause",
+    weightPercent = 30,
+  ): CarryOverDto["items"][number] => ({
+    habitId,
+    decision,
+    previous: { measure: minutes, weightPercent, privacy: "private" },
+  });
+  const habits = [
+    habit("h-estudiar", "Estudiar"),
+    habit("h-dibujar", "Dibujar"),
+    habit("h-nadar", "Nadar"),
+    habit("h-leer", "Leer", "2026-10-01T12:00:00.000Z"),
+  ];
+  // The viewer has no commitment yet in the new pact.
+  const emptySeason = (): SeasonDto => ({ ...seasonFixture(), commitments: [] });
+
+  function render(carryOver: CarryOverDto) {
+    const app = renderChooseHabits({ season: emptySeason(), habits });
+    app.deps.api.setCarryOver("s-1", carryOver);
+    return app;
+  }
+  const full: CarryOverDto = {
+    previousSeasonId: "s-0",
+    items: [
+      item("h-estudiar", "continue"),
+      item("h-dibujar", "adjust", 20),
+      item("h-nadar", "pause"),
+    ],
+  };
+
+  it("offers the habits to continue or adjust in their own group, with nothing created yet", async () => {
+    const { deps } = render(full);
+    const group = await screen.findByRole("region", { name: "De tu temporada anterior" });
+    const estudiar = within(group).getByRole("listitem", { name: "Estudiar" });
+    expect(estudiar).toHaveTextContent("5 veces por semana · mín. 10 · ideal 30 min");
+    expect(within(estudiar).getByRole("button", { name: "Seguir igual" })).toBeEnabled();
+    const dibujar = within(group).getByRole("listitem", { name: "Dibujar" });
+    expect(within(dibujar).getByRole("button", { name: "Ajustar" })).toBeEnabled();
+    expect(within(group).queryByText("Nadar")).not.toBeInTheDocument();
+    expect(deps.api.calls.addCommitment).toBe(0);
+    expect(screen.getByText("0 compromisos elegidos. Sugerimos entre 2 y 5.")).toBeVisible();
+  });
+
+  it("Seguir igual adds the commitment with the previous measure, weight and privacy in one tap", async () => {
+    const { deps } = render(full);
+    const added: SeasonDto = {
+      ...emptySeason(),
+      version: 2,
+      commitments: [
+        {
+          id: "c-estudiar",
+          memberId: "member-victor",
+          habitId: "h-estudiar",
+          weightPercent: 30,
+          privacy: "private",
+          kind: "detail",
+          measure: minutes,
+          habit: { name: "Estudiar", icon: null },
+        },
+      ],
+    };
+    const group = await screen.findByRole("region", { name: "De tu temporada anterior" });
+    deps.api.setPactResponse("addCommitment", added);
+    deps.api.setPactResponse("getSeason", added);
+    await userEvent.click(
+      within(within(group).getByRole("listitem", { name: "Estudiar" })).getByRole("button", {
+        name: "Seguir igual",
+      }),
+    );
+    expect(await screen.findByRole("checkbox", { name: "Estudiar" })).toBeChecked();
+    const command = deps.api.pactCommands.find((c) => c.method === "addCommitment");
+    expect(command?.args[0]).toBe("s-1");
+    expect(command?.args[1]).toMatchObject({
+      habitId: "h-estudiar",
+      weightPercent: 30,
+      privacy: "private",
+      measure: { unit: "minutes", minimum: "10", ideal: "30" },
+    });
+    expect(deps.api.calls.addCommitment).toBe(1);
+    expect(
+      within(screen.getByRole("region", { name: "De tu temporada anterior" })).queryByText(
+        "Estudiar",
+      ),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps the row and says so when Seguir igual fails", async () => {
+    const { deps } = render(full);
+    deps.api.failNext("addCommitment", new ApiError("InternalError", 500, null));
+    await userEvent.click(await screen.findByRole("button", { name: "Seguir igual" }));
+    expect(
+      await screen.findByText("No pudimos agregar el compromiso. Inténtalo de nuevo."),
+    ).toBeVisible();
+    expect(screen.getByRole("button", { name: "Seguir igual" })).toBeEnabled();
+  });
+
+  it("Ajustar opens the wizard for that habit, prefilled and not yet a commitment", async () => {
+    const { deps, location } = render(full);
+    const group = await screen.findByRole("region", { name: "De tu temporada anterior" });
+    await userEvent.click(within(group).getByRole("button", { name: "Ajustar" }));
+    expect(location()).toBe("/season/s-1/habits/new?habitId=h-dibujar");
+    expect(await screen.findByRole("textbox", { name: "Nombre" })).toHaveValue("Dibujar");
+    expect(deps.api.calls.addCommitment).toBe(0);
+    await userEvent.click(screen.getByRole("button", { name: "Continuar" }));
+    expect(screen.getByRole("radio", { name: "Minutos" })).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("lists a paused habit as a normal unchecked row with a hint, never preselected", async () => {
+    const { deps } = render(full);
+    const nadar = await screen.findByRole("checkbox", { name: "Nadar" });
+    expect(nadar).not.toBeChecked();
+    expect(await screen.findByText("La dejaste en pausa")).toBeVisible();
+    expect(deps.api.calls.addCommitment).toBe(0);
+    await userEvent.click(nadar);
+    expect(await screen.findByRole("textbox", { name: "Nombre" })).toHaveValue("Nadar");
+  });
+
+  it("never offers a graduated habit", async () => {
+    render(full);
+    await screen.findByRole("checkbox", { name: "Nadar" });
+    expect(screen.queryByText("Leer")).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["a member who never closed, or a first season", { previousSeasonId: null, items: [] }],
+    ["a laggard cut off without decisions", { previousSeasonId: "s-0", items: [] }],
+  ] as const)("shows no group for %s", async (_name, carryOver) => {
+    render(carryOver);
+    await screen.findByRole("checkbox", { name: "Nadar" });
+    expect(screen.queryByRole("region", { name: "De tu temporada anterior" })).toBeNull();
+    expect(screen.queryByText("La dejaste en pausa")).not.toBeInTheDocument();
+  });
+
+  it("works as before when the defaults cannot be read", async () => {
+    const app = renderChooseHabits({ season: emptySeason(), habits });
+    app.deps.api.failNext("getCarryOver", new ApiError("NetworkError", 0, null));
+    expect(await screen.findByRole("checkbox", { name: "Nadar" })).toBeVisible();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "De tu temporada anterior" })).toBeNull();
   });
 });

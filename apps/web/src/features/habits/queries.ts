@@ -57,7 +57,12 @@ export function useWizardData(seasonId: string | undefined) {
 type DetailCommitment = Extract<CommitmentDto, { kind: "detail" }>;
 
 /** A save is sequential. Retain successful habit writes when the season write must be retried. */
-export function useSaveWizard(seasonId: string, originalHabit?: HabitDto) {
+export function useSaveWizard(
+  seasonId: string,
+  originalHabit?: HabitDto,
+  /** The weight a new commitment starts at; the carry-over's previous one, else the provisional 5. */
+  startWeightPercent = 5,
+) {
   const api = usePactJoyApi();
   const client = useQueryClient();
   const savedHabit = useRef(originalHabit);
@@ -98,7 +103,7 @@ export function useSaveWizard(seasonId: string, originalHabit?: HabitDto) {
         }
       }
       const input = {
-        weightPercent: commitment?.weightPercent ?? 5,
+        weightPercent: commitment?.weightPercent ?? startWeightPercent,
         privacy: draft.privacy,
         measure: wireMeasure(draft.measure),
       };

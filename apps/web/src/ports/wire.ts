@@ -135,7 +135,18 @@ export interface SubmittedClosureDto {
   readonly graduatedHabitIds: readonly string[];
   readonly seasonClosed: boolean;
 }
-export type CarryOverDto = Serialized<CarryOverView>;
-export type CarryOverItemDto = CarryOverDto["items"][number];
+type CarryOverWire = Serialized<CarryOverView>;
+/**
+ * The API presents each previous measure as a `MeasureView` (the same shape as a commitment's),
+ * not as the domain `Measure` the use case returns, so the item's measure is typed as the former.
+ */
+export interface CarryOverItemDto extends Omit<CarryOverWire["items"][number], "previous"> {
+  readonly previous: Omit<CarryOverWire["items"][number]["previous"], "measure"> & {
+    readonly measure: Serialized<MeasureView>;
+  };
+}
+export interface CarryOverDto extends Omit<CarryOverWire, "items"> {
+  readonly items: readonly CarryOverItemDto[];
+}
 export type SeasonHistoryDto = Serialized<SeasonHistoryView>;
 export type SeasonHistoryItemDto = SeasonHistoryDto["seasons"][number];

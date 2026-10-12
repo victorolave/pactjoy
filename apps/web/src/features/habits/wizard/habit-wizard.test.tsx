@@ -5,8 +5,8 @@ import { ApiError } from "../../../ports/api-error.ts";
 import { renderApp } from "../../../testing/render.tsx";
 import { wizardHabit, wizardSeason } from "./wizard-fixtures.ts";
 
-function setup(path = `/season/${wizardSeason.id}/habits/new`) {
-  const app = renderApp({ path });
+function setup(path = `/season/${wizardSeason.id}/habits/new`, locationState?: unknown) {
+  const app = renderApp({ path, locationState });
   app.deps.api.setPactResponse("getSeason", wizardSeason);
   app.deps.api.setPactResponse("listHabits", [wizardHabit]);
   app.deps.api.setPactResponse("createHabit", wizardHabit);
@@ -321,6 +321,52 @@ describe("habit wizard routes (screens 9/9c)", () => {
     expect(deps.api.pactCommands.find((c) => c.method === "addCommitment")?.args[1]).toMatchObject({
       habitId: wizardHabit.id,
       weightPercent: 5,
+    });
+  });
+
+  describe("prefill from the previous season (carry-over, Ajustar)", () => {
+    const habitPath = `/season/${wizardSeason.id}/habits/new?habitId=${wizardHabit.id}`;
+    const previous = wizardSeason.commitments[0];
+    if (previous?.kind !== "detail") throw new Error("Detail fixture required");
+    const prefill = { measure: previous.measure, weightPercent: 40, privacy: "visible" as const };
+
+    it("opens with the previous measure, privacy and weight instead of the defaults", async () => {
+      const { deps, location } = setup(habitPath, { prefill });
+      expect(await ready()).toHaveValue(wizardHabit.name);
+      await next();
+      expect(screen.getByRole("radio", { name: "Km" })).toHaveAttribute("aria-checked", "true");
+      await next();
+      await next();
+      await userEvent.click(screen.getByRole("button", { name: "Guardar hábito" }));
+      expect(await screen.findByRole("heading", { name: "Hábito guardado" })).toBeVisible();
+      expect(
+        deps.api.pactCommands.find((c) => c.method === "addCommitment")?.args[1],
+      ).toMatchObject({
+        habitId: wizardHabit.id,
+        weightPercent: 40,
+        privacy: "visible",
+        measure: { unit: "km", minimum: "0.15", ideal: "0.75" },
+      });
+      expect(deps.api.calls.createHabit).toBe(0);
+      await userEvent.click(screen.getByRole("button", { name: "Listo" }));
+      expect(location()).toBe(`/season/${wizardSeason.id}/habits`);
+    });
+
+    it("ignores a router state that is not a prefill", async () => {
+      const { deps } = setup(habitPath, { prefill: { measure: "nope", weightPercent: "x" } });
+      await ready();
+      await next();
+      expect(screen.getByRole("radio", { name: "Minutos" })).toHaveAttribute(
+        "aria-checked",
+        "true",
+      );
+      await next();
+      await next();
+      await userEvent.click(screen.getByRole("button", { name: "Guardar hábito" }));
+      await screen.findByRole("heading", { name: "Hábito guardado" });
+      expect(
+        deps.api.pactCommands.find((c) => c.method === "addCommitment")?.args[1],
+      ).toMatchObject({ weightPercent: 5, measure: { unit: "minutes" } });
     });
   });
 

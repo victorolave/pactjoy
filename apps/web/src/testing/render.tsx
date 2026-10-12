@@ -1,7 +1,7 @@
 import type { TodayView } from "@pactjoy/app";
 import { act, type RenderResult, render } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { MemoryRouter, useLocation, useNavigate } from "react-router";
+import { MemoryRouter, parsePath, useLocation, useNavigate } from "react-router";
 import { LocalStorageDeviceStore } from "../adapters/local-storage-device-store.ts";
 import { createTodayPersister } from "../adapters/query-persister.ts";
 import type { AppDependencies } from "../composition/dependencies.ts";
@@ -29,6 +29,8 @@ import { SequentialIds } from "./sequential-ids.ts";
 
 export interface RenderAppOptions {
   readonly path?: string;
+  /** The router state the first entry carries (what a screen passes through `navigate(to, { state })`). */
+  readonly locationState?: unknown;
   /** Start with a stored session. Defaults to true. */
   readonly signedIn?: boolean;
   /** What `getToday` answers. Defaults to an active season. */
@@ -169,12 +171,20 @@ function createFakeDeps({
 }
 
 /** The whole route tree over fakes, at a given path. */
-export function renderApp({ path = "/", ...options }: RenderAppOptions = {}): RenderedApp {
+export function renderApp({
+  path = "/",
+  locationState,
+  ...options
+}: RenderAppOptions = {}): RenderedApp {
   const deps = createFakeDeps(options);
   let goBack = () => {};
   const result = render(
     <AppProviders deps={deps}>
-      <MemoryRouter initialEntries={[path]}>
+      <MemoryRouter
+        initialEntries={[
+          locationState === undefined ? path : { ...parsePath(path), state: locationState },
+        ]}
+      >
         <NavigationProbe onReady={(back) => (goBack = back)} />
         <AppRoutes />
       </MemoryRouter>

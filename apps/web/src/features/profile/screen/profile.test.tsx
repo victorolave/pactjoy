@@ -2,6 +2,7 @@ import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { ApiError } from "../../../ports/api-error.ts";
+import type { HabitDto } from "../../../ports/wire.ts";
 import { NO_CIRCLE, pairCircleFixture } from "../../../testing/fixtures/circle.ts";
 import { noCircleTodayFixture } from "../../../testing/fixtures/today.ts";
 import { renderApp } from "../../../testing/render.tsx";
@@ -21,7 +22,8 @@ describe("Perfil (design 39)", () => {
   });
 
   it("shows the design's sections in an empty state, with nothing invented (PS-S1)", async () => {
-    renderApp({ path: "/profile", myCircle: pairCircleFixture() });
+    const { deps } = renderApp({ path: "/profile", myCircle: pairCircleFixture() });
+    deps.api.setSeasonHistory({ seasons: [] });
     for (const title of [
       "Tus hábitos",
       "Temporadas",
@@ -77,6 +79,96 @@ describe("Perfil (design 39)", () => {
     expect(screen.queryByRole("navigation", { name: "Principal" })).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Volver al perfil" }));
     expect(await screen.findByRole("heading", { name: "Victor" })).toBeInTheDocument();
+  });
+});
+
+describe("Perfil, seasons and graduated habits (season-close-graduation S8)", () => {
+  const habit = (id: string, name: string, graduatedAt: string | null): HabitDto => ({
+    id,
+    name,
+    why: null,
+    category: null,
+    icon: null,
+    graduatedAt,
+    createdAt: "2026-08-20T12:00:00.000Z",
+    version: 1,
+  });
+
+  it("keeps the empty states when there is no closed season and no graduated habit", async () => {
+    const { deps } = renderApp({ path: "/profile", myCircle: pairCircleFixture() });
+    deps.api.setSeasonHistory({ seasons: [] });
+    deps.api.setPactResponse("listHabits", [habit("h-1", "Leer", null)]);
+    await screen.findByRole("heading", { name: "Victor" });
+    expect(await screen.findByText(/Aún no hay temporadas/)).toBeInTheDocument();
+    expect(
+      await screen.findByText("Aún ninguno. Graduar es decisión tuya, al cerrar una temporada."),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Temporada de/ })).not.toBeInTheDocument();
+  });
+
+  it("lists the closed seasons as links to their read-only results", async () => {
+    const { location } = renderApp({ path: "/profile", myCircle: pairCircleFixture() });
+    const link = await screen.findByRole("link", { name: /Temporada de 8 semanas/ });
+    expect(link).toHaveTextContent("25 ago – 19 oct");
+    expect(link).toHaveTextContent("Puesto 2 de 2");
+    expect(link).toHaveTextContent("792 pts");
+    expect(screen.queryByText(/Aún no hay temporadas/)).not.toBeInTheDocument();
+    await userEvent.click(link);
+    expect(location()).toBe("/season/season-0/results");
+  });
+
+  it("says so when the member closed a season without their own decisions", async () => {
+    const { deps } = renderApp({ path: "/profile", myCircle: pairCircleFixture() });
+    deps.api.setSeasonHistory({
+      seasons: [
+        {
+          seasonId: "season-9",
+          lengthWeeks: 4,
+          actualStart: "2026-06-01",
+          lastDay: "2026-06-28",
+          points: 0,
+          rank: null,
+          memberCount: 1,
+          closedByMe: false,
+        },
+      ],
+    });
+    const link = await screen.findByRole("link", { name: /Temporada de 4 semanas/ });
+    expect(link).toHaveTextContent("Cerrada sin tus decisiones");
+    expect(link).not.toHaveTextContent("Puesto");
+  });
+
+  it("lists the graduated habits, newest first, and leaves the others out", async () => {
+    const { deps } = renderApp({ path: "/profile", myCircle: pairCircleFixture() });
+    deps.api.setPactResponse("listHabits", [
+      habit("h-1", "Leer", "2026-09-01T10:00:00.000Z"),
+      habit("h-2", "Dibujar", null),
+      habit("h-3", "Meditar", "2026-10-20T10:00:00.000Z"),
+    ]);
+    const section = (await screen.findByRole("heading", { name: "Hábitos graduados" }))
+      .parentElement;
+    if (section === null) throw new Error("section expected");
+    const rows = await within(section).findAllByRole("listitem");
+    expect(rows.map((row) => row.textContent)).toEqual([
+      expect.stringContaining("Meditar"),
+      expect.stringContaining("Leer"),
+    ]);
+    expect(rows[0]).toHaveTextContent("Graduado el 20 de octubre");
+    expect(rows[0]).toHaveTextContent("🎓 Graduado");
+    expect(screen.queryByText("Dibujar")).not.toBeInTheDocument();
+  });
+
+  it("still shows the page when the season history cannot be read", async () => {
+    const { deps } = renderApp({ path: "/profile", myCircle: pairCircleFixture() });
+    deps.api.failNext("getSeasonHistory", new ApiError("NetworkError", 0, null));
+    expect(await screen.findByRole("heading", { name: "Victor" })).toBeInTheDocument();
+    expect(await screen.findByText("No pudimos cargar tus temporadas.")).toBeInTheDocument();
+  });
+
+  it("keeps Consistencia histórica and Tus hábitos as their empty states", async () => {
+    renderApp({ path: "/profile", myCircle: pairCircleFixture() });
+    expect(await screen.findByText(/La verás cuando cierres tu primera temporada/)).toBeVisible();
+    expect(screen.getByText(/Aún no hay hábitos/)).toBeVisible();
   });
 });
 
