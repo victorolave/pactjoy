@@ -1,4 +1,4 @@
-import type { MemberId } from "@pactjoy/engine";
+import type { MemberId, PauseRequest, SeasonDay } from "@pactjoy/engine";
 import type { Circle } from "../circle/circle.ts";
 import { findActiveMember } from "../circle/circle.ts";
 import type { CommitmentRecord } from "../commitment/commitment.ts";
@@ -32,6 +32,10 @@ export interface OwnEntryContext {
   readonly commitment: CommitmentRecord;
   /** The actor's own member id, resolved in the same transaction (== `entry.memberId`). */
   readonly memberId: MemberId;
+  /** The Commitment's effective pauses at this write's clock. */
+  readonly pauses: readonly PauseRequest[];
+  /** The season day of the write. */
+  readonly today: SeasonDay;
 }
 
 /**
@@ -93,5 +97,7 @@ export async function loadMutableEntry(
     lengthWeeks: season.lengthWeeks,
     pauses,
   });
-  return closed ? err(closed) : ok({ entry, season, circle, commitment, memberId: member.id });
+  return closed
+    ? err(closed)
+    : ok({ entry, season, circle, commitment, memberId: member.id, pauses, today: today.day });
 }

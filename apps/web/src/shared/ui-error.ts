@@ -28,6 +28,7 @@ export type UiKind =
   | "sessionExpired"
   | "retryable"
   | "closedWindow"
+  | "paused"
   | "entryGone"
   | "conflict"
   | "quantityField"
@@ -48,6 +49,8 @@ export const UI_KIND_BY_CODE = {
   OutsideSeason: "closedWindow",
   // A pending pause request put the day on hold (EW-4): Today refreshes and shows it "en espera".
   OpportunityOnHold: "closedWindow",
+  // An approved Pause covers the day: the member resumes it to record. Today refreshes.
+  OpportunityPaused: "paused",
   EntryDeleted: "entryGone",
   EntryNotFound: "entryGone",
   ConcurrencyConflict: "conflict",
@@ -72,6 +75,7 @@ export const UI_KIND_BY_CODE = {
 /** Kinds after which what the screen shows may be stale: Today is refetched. */
 const INVALIDATES_TODAY: ReadonlySet<UiKind> = new Set([
   "closedWindow",
+  "paused",
   "entryGone",
   "conflict",
   "generic",

@@ -23,6 +23,19 @@ export interface OnHoldInput {
  * engine's own week plan, so it cannot disagree with Today or the score.
  */
 export function isOnHold(input: OnHoldInput): boolean {
+  return excludedFor(input).onHold.includes(input.day);
+}
+
+/**
+ * Whether the opportunity is covered by an APPROVED Pause (and not resumed
+ * yet): `day` is among the week plan's paused days. A day shared with a
+ * pending request is on hold instead, see {@link isOnHold}.
+ */
+export function isPaused(input: OnHoldInput): boolean {
+  return excludedFor(input).paused.includes(input.day);
+}
+
+function excludedFor(input: OnHoldInput) {
   const { season, actualStart, commitment, day, today, pauses } = input;
   const progress = weekProgress({
     season: { lengthWeeks: season.lengthWeeks, startWeekday: startWeekdayOf(actualStart) },
@@ -32,5 +45,5 @@ export function isOnHold(input: OnHoldInput): boolean {
     pauses,
     today,
   });
-  return progress.excluded.onHold.includes(day);
+  return progress.excluded;
 }

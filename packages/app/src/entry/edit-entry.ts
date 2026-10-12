@@ -15,6 +15,7 @@ import {
   requestFingerprint,
 } from "./entry.ts";
 import { type EntryValueError, validateEntryValue } from "./entry-value.ts";
+import { isPaused } from "./on-hold.ts";
 import { loadMutableEntry, type OwnEntryError } from "./own-entry.ts";
 
 export interface EditEntryDeps {
@@ -37,6 +38,7 @@ export interface EditEntryInput {
 export type EditEntryError =
   | OwnEntryError
   | EntryValueError
+  | { readonly kind: "OpportunityPaused" }
   | { readonly kind: "NoteTooLong" }
   | { readonly kind: "InvalidNote" };
 
@@ -65,7 +67,22 @@ export async function editEntry(
     if (!loaded.ok) {
       return loaded;
     }
-    const { entry, season, circle, commitment, memberId } = loaded.value;
+    const { entry, season, circle, commitment, memberId, pauses, today } = loaded.value;
+
+    // An Entry on a day an approved Pause covers cannot be changed; deleting it stays allowed.
+    if (
+      season.actualStart !== null &&
+      isPaused({
+        season,
+        actualStart: season.actualStart,
+        commitment,
+        day: entry.day,
+        today,
+        pauses,
+      })
+    ) {
+      return err({ kind: "OpportunityPaused" });
+    }
 
     const value = validateEntryValue(commitment.measure, input.value);
     if (!value.ok) {

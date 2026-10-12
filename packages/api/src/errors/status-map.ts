@@ -66,6 +66,7 @@ export const APP_ERROR_STATUS = {
   EntryDeleted: 409,
   FutureDay: 409,
   OpportunityOnHold: 409,
+  OpportunityPaused: 409,
   PactAlreadyClosed: 409,
   PactNotOpen: 409,
   SeasonInProgress: 409,

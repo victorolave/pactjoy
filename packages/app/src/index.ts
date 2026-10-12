@@ -140,6 +140,19 @@ export type {
 } from "./pact/withdraw-approval.ts";
 export { withdrawApproval } from "./pact/withdraw-approval.ts";
 export type {
+  CancelPauseRequestDeps,
+  CancelPauseRequestInput,
+} from "./pause/cancel-pause-request.ts";
+export { cancelPauseRequest } from "./pause/cancel-pause-request.ts";
+export type {
+  AwaitingPauseRequest,
+  MyPauseRequestsDeps,
+  MyPauseRequestsView,
+  PauseBudgetView,
+  PauseRedistribution,
+} from "./pause/my-pause-requests.query.ts";
+export { myPauseRequests } from "./pause/my-pause-requests.query.ts";
+export type {
   MemberPauseRequest,
   PauseRequestRepository,
 } from "./pause/pause-request.repository.ts";
@@ -152,6 +165,29 @@ export type {
   PauseStatus,
 } from "./pause/pause-request.ts";
 export { AUTO_APPROVE_AFTER_MS, PAUSE_REASONS } from "./pause/pause-request.ts";
+export type {
+  PauseCapFailure,
+  PauseScope,
+  RequestPauseDeps,
+  RequestPauseInput,
+} from "./pause/request-pause.ts";
+export { requestPause } from "./pause/request-pause.ts";
+export type {
+  RespondToPauseDeps,
+  RespondToPauseInput,
+} from "./pause/respond-to-pause.ts";
+export { respondToPause } from "./pause/respond-to-pause.ts";
+export type {
+  ResumePauseDeps,
+  ResumePauseInput,
+} from "./pause/resume-pause.ts";
+export { resumePause } from "./pause/resume-pause.ts";
+export type {
+  SettleDuePausesDeps,
+  SettleDuePausesInput,
+  SettleDuePausesResult,
+} from "./pause/settle-due-pauses.ts";
+export { settleDuePauses } from "./pause/settle-due-pauses.ts";
 export type { IdGenerator } from "./ports/id-generator.ts";
 export type { RandomSource } from "./ports/random-source.ts";
 export type { Repositories } from "./ports/repositories.ts";

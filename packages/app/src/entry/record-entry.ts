@@ -25,7 +25,7 @@ import {
 } from "./entry.ts";
 import { type EntryValueError, validateEntryValue } from "./entry-value.ts";
 import { checkEntryWindow, type EntryWindowError } from "./entry-window.ts";
-import { isOnHold } from "./on-hold.ts";
+import { isOnHold, isPaused } from "./on-hold.ts";
 
 export interface RecordEntryDeps {
   readonly uow: UnitOfWork<Repositories>;
@@ -55,6 +55,7 @@ export type RecordEntryError =
   | { readonly kind: "InvalidNote" }
   | { readonly kind: "IdempotencyKeyReused" }
   | { readonly kind: "OpportunityOnHold" }
+  | { readonly kind: "OpportunityPaused" }
   | { readonly kind: "EntryDeleted" }
   | { readonly kind: "InvalidClientRequestId"; readonly reason: "empty" | "tooLong" | "malformed" }
   | EntryWindowError
@@ -199,17 +200,20 @@ export async function recordEntry(
         return err(closed);
       }
       // EW-4: a day covered by a still-pending request is on hold until it is decided.
-      if (
-        isOnHold({
-          season,
-          actualStart: season.actualStart,
-          commitment,
-          day: day.day,
-          today: today.day,
-          pauses,
-        })
-      ) {
+      const holdInput = {
+        season,
+        actualStart: season.actualStart,
+        commitment,
+        day: day.day,
+        today: today.day,
+        pauses,
+      };
+      if (isOnHold(holdInput)) {
         return err({ kind: "OpportunityOnHold" });
+      }
+      // An approved Pause refuses the Entry too (owner decision), until it is resumed.
+      if (isPaused(holdInput)) {
+        return err({ kind: "OpportunityPaused" });
       }
 
       const value = validateEntryValue(commitment.measure, input.value);

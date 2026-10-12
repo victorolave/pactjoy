@@ -17,6 +17,8 @@ const EXPECTED: Readonly<Record<string, UiKind>> = {
   FutureDay: "closedWindow",
   OutsideSeason: "closedWindow",
   OpportunityOnHold: "closedWindow",
+  // An approved Pause covers the day: resume it to record
+  OpportunityPaused: "paused",
   // The entry is gone
   EntryDeleted: "entryGone",
   EntryNotFound: "entryGone",

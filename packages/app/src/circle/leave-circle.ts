@@ -1,15 +1,19 @@
 import { resetApprovals } from "../pact/reset-approvals.ts";
+import { settlePausesOnLeave } from "../pause/settle-on-leave.ts";
 import type { Repositories } from "../ports/repositories.ts";
 import type { UnitOfWork } from "../ports/unit-of-work.ts";
 import type { Actor } from "../shared/actor.ts";
 import type { CircleId } from "../shared/ids.ts";
 import { err, ok, type Result } from "../shared/result.ts";
 import type { Clock } from "../time/clock.port.ts";
+import type { TimeZone } from "../time/time-zone.port.ts";
 import { type Circle, findActiveMember, type Member } from "./circle.ts";
 
 export interface LeaveCircleDeps {
   readonly uow: UnitOfWork<Repositories>;
   readonly clock: Clock;
+  /** Turns the leave instant into the season day a Pause request is decided on. */
+  readonly timeZone: TimeZone;
 }
 
 export interface LeaveCircleInput {
@@ -30,7 +34,9 @@ export type LeaveCircleError =
  * even with no approvals yet, so a concurrent approval can't commit over
  * the change (`ConcurrencyConflict`, D5). Once the season is active or
  * closed nothing on the season changes: the pact is locked and past data
- * is kept (B9). A member who has already left cannot leave again
+ * is kept (B9). During an ACTIVE season the leaver's pending Pause requests
+ * are cancelled and the others re-decided with the reduced approver set
+ * (`settlePausesOnLeave`, ADR-0013 D12). A member who has already left cannot leave again
  * (`NotAMember`).
  */
 export async function leaveCircle(
@@ -77,6 +83,16 @@ export async function leaveCircle(
           latestSeason.version,
         );
       }
+    }
+    if (latestSeason?.status === "active" && latestSeason.actualStart !== null) {
+      await settlePausesOnLeave(repos, {
+        season: latestSeason,
+        before: circle,
+        after: updated,
+        leaver: member.id,
+        now,
+        timeZone: deps.timeZone,
+      });
     }
     return ok(updated);
   });

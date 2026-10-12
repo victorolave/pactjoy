@@ -14,6 +14,8 @@ export function entryFailure(error: unknown, verb: "guardar" | "borrar" = "guard
       return { message: `No pudimos ${verb} el registro.`, retryable };
     case "closedWindow":
       return { message: "Ya no se puede registrar este día.", retryable };
+    case "paused":
+      return { message: "Este compromiso está en pausa. Reanúdalo para registrar.", retryable };
     case "entryGone":
       return { message: "Ese registro ya no existe.", retryable };
     case "conflict":

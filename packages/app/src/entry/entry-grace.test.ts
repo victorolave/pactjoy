@@ -164,7 +164,7 @@ describe("recordEntry: an opportunity on hold refuses new Entries (EW-4)", () =>
     expect((await recordFor(app, given, 4, localInstant(dayOf(5), END_OF_DAY))).ok).toBe(true);
   });
 
-  it("EW-S4: the write clock decides — refused a millisecond before the auto-approval, accepted at it", async () => {
+  it("EW-S4: the write clock decides — held a millisecond before the auto-approval, paused at it", async () => {
     const { app, given } = await setup();
     const pending = request(given, { end: { kind: "fixed", lastDay: seasonDay(6) } });
     await app.pauses.save(pending, null);
@@ -173,7 +173,7 @@ describe("recordEntry: an opportunity on hold refuses new Entries (EW-4)", () =>
     expect(justBefore).toEqual({ ok: false, error: { kind: "OpportunityOnHold" } });
 
     const atDeadline = await recordFor(app, given, 6, localInstant(dayOf(7)), "k2");
-    expect(atDeadline.ok).toBe(true);
+    expect(atDeadline).toEqual({ ok: false, error: { kind: "OpportunityPaused" } });
   });
 });
 

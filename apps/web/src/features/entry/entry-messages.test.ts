@@ -23,6 +23,13 @@ describe("entryFailure", () => {
     }
   });
 
+  it("tells the member the Commitment is paused and does not offer a retry", () => {
+    expect(failure("OpportunityPaused")).toEqual({
+      message: "Este compromiso está en pausa. Reanúdalo para registrar.",
+      retryable: false,
+    });
+  });
+
   it("explains a vanished entry and a conflict", () => {
     expect(failure("EntryDeleted").message).toBe("Ese registro ya no existe.");
     expect(failure("EntryNotFound").message).toBe("Ese registro ya no existe.");
