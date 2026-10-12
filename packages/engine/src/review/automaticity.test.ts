@@ -31,7 +31,7 @@ describe("automaticityOf (REQ-A4, SC-30..32)", () => {
   );
 });
 
-describe("comparableAutomaticity (REQ-A7, REQ-A11, SC-50..52)", () => {
+describe("comparableAutomaticity (REQ-A7, SC-50..52)", () => {
   it("names an improvement with the displayed from and to", () => {
     expect(comparableAutomaticity(fr("9/2"), fr("7/2"))).toEqual({
       improved: true,
@@ -55,7 +55,7 @@ describe("comparableAutomaticity (REQ-A7, REQ-A11, SC-50..52)", () => {
     });
   });
 
-  it("compares an item-1 score with a full reference as-is (REQ-A11)", () => {
+  it("compares the two scores it is given as they are (the caller picks like for like)", () => {
     expect(comparableAutomaticity(fromInt(5), fr("9/2")).improved).toBe(true);
   });
 });
