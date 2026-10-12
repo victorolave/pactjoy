@@ -6,7 +6,7 @@ import type { AppError, AppErrorKind } from "./app-error.ts";
  * kind AND an extra stale key a compile error.
  */
 export const APP_ERROR_STATUS = {
-  // 422 (36)
+  // 422 (41)
   CategoryTooLong: 422,
   CustomLabelBlank: 422,
   CustomLabelHasInvisibleCharacters: 422,
@@ -22,6 +22,8 @@ export const APP_ERROR_STATUS = {
   InvalidIcon: 422,
   InvalidLengthWeeks: 422,
   InvalidName: 422,
+  InvalidPauseReason: 422,
+  InvalidPauseScope: 422,
   InvalidPreviewValues: 422,
   InvalidNote: 422,
   InvalidPrecision: 422,
@@ -39,24 +41,30 @@ export const APP_ERROR_STATUS = {
   NoWeekdays: 422,
   NoteTooLong: 422,
   OutsideSeason: 422,
+  PauseEndBeforeStart: 422,
+  PauseEndsAfterSeason: 422,
+  PauseRetroactive: 422,
   PrecisionNotApplicable: 422,
   StartDateInPast: 422,
   StartDateTooFarAhead: 422,
   ValueKindMismatch: 422,
-  // 403 (4)
+  // 403 (6)
+  CannotRespondToOwnPause: 403,
   CommitmentNotOwned: 403,
   EntryNotOwned: 403,
   NotAMember: 403,
   NotOwner: 403,
-  // 404 (7)
+  NotPauseRequester: 403,
+  // 404 (8)
   CircleNotFound: 404,
   CommitmentNotFound: 404,
   EntryNotFound: 404,
   HabitNotFound: 404,
   InviteNotFound: 404,
   MemberNotFound: 404,
+  PauseRequestNotFound: 404,
   SeasonNotFound: 404,
-  // 409 (16)
+  // 409 (22)
   AlreadyInActiveCircle: 409,
   BeforeSeasonStart: 409,
   CircleArchived: 409,
@@ -69,6 +77,11 @@ export const APP_ERROR_STATUS = {
   OpportunityPaused: 409,
   PactAlreadyClosed: 409,
   PactNotOpen: 409,
+  PauseAlreadyDecided: 409,
+  PauseCapExceeded: 409,
+  PauseNotActive: 409,
+  PauseNotPending: 409,
+  PauseOverlaps: 409,
   SeasonInProgress: 409,
   SeasonNotActive: 409,
   SeasonNotJoinable: 409,

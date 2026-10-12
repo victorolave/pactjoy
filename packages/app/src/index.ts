@@ -141,6 +141,7 @@ export type {
 export { withdrawApproval } from "./pact/withdraw-approval.ts";
 export type {
   CancelPauseRequestDeps,
+  CancelPauseRequestError,
   CancelPauseRequestInput,
 } from "./pause/cancel-pause-request.ts";
 export { cancelPauseRequest } from "./pause/cancel-pause-request.ts";
@@ -166,19 +167,30 @@ export type {
 } from "./pause/pause-request.ts";
 export { AUTO_APPROVE_AFTER_MS, PAUSE_REASONS } from "./pause/pause-request.ts";
 export type {
+  PauseApprovalView,
+  PauseCommitmentApprovalView,
+  PauseCommitmentOwnView,
+  PauseRequestView,
+  PauseViewDeps,
+} from "./pause/pause-view.ts";
+export { pauseApprovalViews, pauseRequestViews } from "./pause/pause-view.ts";
+export type {
   PauseCapFailure,
   PauseScope,
   RequestPauseDeps,
+  RequestPauseError,
   RequestPauseInput,
 } from "./pause/request-pause.ts";
 export { requestPause } from "./pause/request-pause.ts";
 export type {
   RespondToPauseDeps,
+  RespondToPauseError,
   RespondToPauseInput,
 } from "./pause/respond-to-pause.ts";
 export { respondToPause } from "./pause/respond-to-pause.ts";
 export type {
   ResumePauseDeps,
+  ResumePauseError,
   ResumePauseInput,
 } from "./pause/resume-pause.ts";
 export { resumePause } from "./pause/resume-pause.ts";
@@ -312,6 +324,7 @@ export type {
   TodayView,
 } from "./today/today.query.ts";
 export { today } from "./today/today.query.ts";
+export type { TodayPause } from "./today/today-pause.ts";
 export type {
   OpportunityState,
   TodayEntry,

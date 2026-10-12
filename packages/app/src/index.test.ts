@@ -38,6 +38,8 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "resumePause",
   "settleDuePauses",
   "myPauseRequests",
+  "pauseRequestViews",
+  "pauseApprovalViews",
   "instant",
   "isInviteCodeFormat",
   "inviteCode",

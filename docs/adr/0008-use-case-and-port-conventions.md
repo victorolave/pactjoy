@@ -47,8 +47,9 @@ that ADR-0009 will build on.
 - **Aggregates and concurrency**: Circle, Habit, Season and Entry are the
   consistency boundaries (D6); each carries an optimistic `version` field,
   and a repository's `save(aggregate, expectedVersion)` throws
-  `ConcurrencyConflict` on a stale write (D5). `PauseRequest` is a
-  read-only port, not a written aggregate, in this change.
+  `ConcurrencyConflict` on a stale write (D5). `PauseRequest` was a
+  read-only port in this change; since change `pause-workflow` it is a
+  written aggregate with its own `version` (ADR-0013).
 - **Actor**: `{ readonly userId: UserId }` (`shared/actor.ts`) -- every use
   case receives an already-authenticated `Actor`; authentication itself is
   an adapter concern outside this package.

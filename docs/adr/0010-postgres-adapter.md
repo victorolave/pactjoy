@@ -31,7 +31,7 @@
 - **Retry:** at most 2 attempts in total, only for 40P01/40001 raised by Postgres. A version-mismatch `ConcurrencyConflict` is never retried. Rule: `work` has no external side effects (notifiers go after commit or through an outbox), because it may run twice.
 - **Expired invite codes:** the unique `code` also covers expired codes, while the in-memory adapter only rejects active collisions, and `generateUniqueInviteCode` only pre-checks active codes. Reusing an expired code therefore reaches `save()` and surfaces `ConcurrencyConflict` to the caller, and the client retries. Accepted as astronomically rare.
 - **Roles:** the migrations assume the `anon` and `authenticated` roles exist (Supabase provides them) and do not create them; there is no `DO` block. The test harness bootstraps both as `NOLOGIN` before migrating (tolerating a concurrent run that creates them first).
-- **Temporary stub:** the pause table is deferred to change A2 (`app-pause-workflow`). Until then a `PauseRequestReader` stub returns no pauses, so pause-aware scoring sees no pauses in production. Remove the stub when A2 lands.
+- **Pause tables (change `pause-workflow`, ADR-0013):** `pause_requests`, `pause_request_commitments` and `pause_responses` replace the earlier `PauseRequestReader` stub, which is removed. Same conventions as Season: a root plus children replaced wholesale on save, a version-checked UPDATE of the root, children cascading from it, no foreign key from a child to a Commitment, RLS on with no policies, and no triggers or SQL functions. `listDue` uses the partial index `pause_requests_due_idx`. The write lock order is circle, then season, then the pause rows (respond, cancel and resume guard the circle only). There is still no notifier.
 - **Tests:** real Postgres 17. Testcontainers locally; in CI the `db` job runs a `postgres:17` service container and sets `TEST_DATABASE_URL`, where the harness creates a fresh database on that server (the `ci` job skips `@pactjoy/db`). A missing database fails the run, never skips it. The same adapter-neutral contract suites (`@pactjoy/app/contracts`) run against the in-memory adapters and Postgres.
 - **Composition:** `createPostgresUnitOfWork({ url, max?, connectTimeoutSeconds? })` is the only runtime export; connections open lazily and `end()` closes the pool.
 
@@ -117,7 +117,6 @@ Both URL types ran the same scratch Edge Function, with `prepare: false` and the
 - Tests need Docker (or `TEST_DATABASE_URL`); test files run serially against one database.
 - Invite-code uniqueness is global, including expired codes.
 - FK checks take `KEY SHARE` on the parent row; `NO KEY UPDATE` guards do not block them, but saves must never update a key column of a guarded root (the invite lives in `circle_invites` for that reason).
-- Until A2, production scoring ignores pauses.
 
 ### Neutral
 

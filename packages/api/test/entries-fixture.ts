@@ -35,7 +35,10 @@ export async function givenActiveSeason(measure: object = DONE) {
 }
 
 /** Andrea owns the circle, Victor joins before the season; both commit and approve. */
-export async function givenTwoMemberSeason(measure: object = DONE) {
+export async function givenTwoMemberSeason(
+  measure: object = DONE,
+  privacy: { readonly andrea?: "visible" | "private" } = {},
+) {
   const ctx = setup();
   const circle = await ctx.call("POST", "/circles", "andrea", createCircleBody("Crew"));
   const circleId: string = circle.json.data.id;
@@ -54,7 +57,7 @@ export async function givenTwoMemberSeason(measure: object = DONE) {
     const added = await ctx.call("POST", `/seasons/${seasonId}/commitments`, who, {
       habitId: habit.json.data.id,
       weightPercent: 100,
-      privacy: "visible",
+      privacy: who === "andrea" ? (privacy.andrea ?? "visible") : "visible",
       measure,
     });
     const mine = added.json.data.commitments.find(

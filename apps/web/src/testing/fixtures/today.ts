@@ -82,6 +82,7 @@ export const dayRowFixture = (overrides: Partial<DayRow> = {}): DayRow => ({
   opportunity: { state: "open", graceUntil: localDate("2026-10-03") },
   points: pointsFixture({ perOpportunity: "8", earned: null, limitPercents: null }),
   entries: [],
+  pause: null,
   ...overrides,
 });
 
@@ -129,6 +130,7 @@ export const weekRowFixture = (overrides: Partial<WeekRow> = {}): WeekRow => ({
   opportunity: { state: "open", graceUntil: localDate("2026-10-05") },
   points: pointsFixture({ perOpportunity: "83.33", earned: null, limitPercents: null }),
   entries: [],
+  pause: null,
   progress: {
     value: "40",
     target: { direction: "reach", minimum: "10", ideal: "30" },

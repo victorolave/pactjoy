@@ -97,6 +97,7 @@ describe("today rows: day rows (TD-R4, TD-R6)", () => {
           limitPercents: null,
         },
         entries: [],
+        pause: null,
       },
     ]);
   });

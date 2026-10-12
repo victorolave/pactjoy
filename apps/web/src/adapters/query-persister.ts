@@ -10,8 +10,8 @@ export const STORAGE_KEY = "pactjoy.today-cache";
 /** Offline reads show the last Today for at most a day. */
 export const MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const THROTTLE_MS = 1000;
-/** Bump for shape OR scoring semantics: v5 purges ended-clamped scores and old weekly series. */
-export const CACHE_VERSION = "5";
+/** Bump for shape OR scoring semantics: v5 purged ended-clamped scores and old weekly series; v6 adds the rows' nested `pause` and pause-aware scoring. */
+export const CACHE_VERSION = "6";
 
 /** The saved Today belongs to one user of one cache version: anything else is not restored. */
 export const bustFor = (userId: string | null): string => `${CACHE_VERSION}:${userId ?? "anon"}`;

@@ -45,14 +45,16 @@ function errorCoverageGaps(index: string, source: string) {
 }
 
 describe("app error status map", () => {
-  it("EM-S1..S5: 65 kinds, 36x422 4x403 7x404 17x409 1x410", () => {
-    expect(KINDS).toHaveLength(65);
-    expect(kindsWith(422)).toHaveLength(36);
+  it("EM-S1..S5: 78 kinds, 41x422 6x403 8x404 22x409 1x410", () => {
+    expect(KINDS).toHaveLength(78);
+    expect(kindsWith(422)).toHaveLength(41);
     expect(kindsWith(403)).toEqual([
+      "CannotRespondToOwnPause",
       "CommitmentNotOwned",
       "EntryNotOwned",
       "NotAMember",
       "NotOwner",
+      "NotPauseRequester",
     ]);
     expect(kindsWith(404)).toEqual([
       "CircleNotFound",
@@ -61,10 +63,42 @@ describe("app error status map", () => {
       "HabitNotFound",
       "InviteNotFound",
       "MemberNotFound",
+      "PauseRequestNotFound",
       "SeasonNotFound",
     ]);
-    expect(kindsWith(409)).toHaveLength(17);
+    expect(kindsWith(409)).toHaveLength(22);
     expect(kindsWith(410)).toEqual(["InviteExpired"]);
+  });
+
+  it("PL/PA: the pause kinds map to the design's statuses", () => {
+    for (const k of [
+      "InvalidPauseReason",
+      "InvalidPauseScope",
+      "PauseRetroactive",
+      "PauseEndBeforeStart",
+      "PauseEndsAfterSeason",
+    ] as const) {
+      expect(APP_ERROR_STATUS[k]).toBe(422);
+    }
+    for (const k of [
+      "PauseOverlaps",
+      "PauseCapExceeded",
+      "PauseAlreadyDecided",
+      "PauseNotPending",
+      "PauseNotActive",
+    ] as const) {
+      expect(APP_ERROR_STATUS[k]).toBe(409);
+    }
+  });
+
+  it("PA-S1: a cap failure keeps its offending Commitments and remaining days as details", () => {
+    const commitments = [
+      { commitmentId: "c1", reason: "exceedsRemainingCap", remainingDays: 2 },
+    ] as never;
+    expect(appErrorResult({ kind: "PauseCapExceeded", commitments })).toEqual({
+      status: 409,
+      error: { code: "PauseCapExceeded", message: "PauseCapExceeded", details: { commitments } },
+    });
   });
 
   it("StaleSeason (approval precondition) is 409", () => {
@@ -108,7 +142,7 @@ describe("app error status map", () => {
     const index = readFileSync(resolve(import.meta.dirname, "../../app/src/index.ts"), "utf8");
     const source = readFileSync(resolve(import.meta.dirname, "../src/errors/app-error.ts"), "utf8");
     expect(errorCoverageGaps(index, source)).toEqual({ imports: [], union: [] });
-    expect(exportedErrorNames(index).length).toBe(30);
+    expect(exportedErrorNames(index).length).toBe(34);
   });
 
   it("EM-S16: the scan compares exact names, so a new CircleError is detected", () => {
