@@ -364,4 +364,29 @@ describe("weekSummary query (A2s)", () => {
       error: { kind: "SeasonNotFound" },
     });
   });
+
+  it("EW-3: a rejection extends the week's deadline in the summary facts", async () => {
+    const { app, given } = await setup();
+    app.pauses.seed(given.season.id, {
+      memberId: memberId("member-andrea"),
+      commitmentId: given.andreaCommitment,
+      requestedOn: seasonDay(5),
+      startDay: seasonDay(6),
+      end: { kind: "open" },
+      decision: { kind: "rejected", decidedOn: seasonDay(7) },
+    });
+    const at = (d: number) => atInstant(app, localInstant(day(d)));
+
+    const open = await weekSummary(at(8), given.andrea, {
+      seasonId: given.season.id,
+      weekIndex: 0,
+    });
+    const done = await weekSummary(at(9), given.andrea, {
+      seasonId: given.season.id,
+      weekIndex: 0,
+    });
+
+    expect(open.ok && open.value.facts).toMatchObject({ editable: true, final: false });
+    expect(done.ok && done.value.facts).toMatchObject({ editable: false, final: true });
+  });
 });
