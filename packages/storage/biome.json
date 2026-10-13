@@ -1,0 +1,74 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.14/schema.json",
+  "extends": "//",
+  "linter": {
+    "rules": {
+      "correctness": {
+        "noNodejsModules": "error",
+        "useImportExtensions": {
+          "level": "error",
+          "options": {
+            "forceJsExtensions": false
+          }
+        }
+      },
+      "style": {
+        "noRestrictedGlobals": {
+          "level": "error",
+          "options": {
+            "deniedGlobals": {
+              "Buffer": "packages/storage is standard TS/ESM that also runs on Deno (ADR-0016): use Uint8Array and TextEncoder.",
+              "process": "packages/storage is standard TS/ESM that also runs on Deno (ADR-0016): take configuration as arguments.",
+              "Deno": "packages/storage is runtime-neutral (ADR-0016): the Deno shell passes values in."
+            }
+          }
+        },
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "patterns": [
+              {
+                "group": ["@pactjoy/*/**"],
+                "message": "Import only package roots (their public index.ts) or the documented subpaths (CLAUDE.md, ADR-0008)."
+              },
+              {
+                "group": ["npm:*", "jsr:*"],
+                "message": "packages/storage is standard TypeScript/ESM: Deno-specific specifiers are not portable (ADR-0007, ADR-0016)."
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["test/**", "scripts/**", "src/**/*.test.ts"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noNodejsModules": "off"
+          },
+          "style": {
+            "noRestrictedGlobals": "off",
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@pactjoy/*/**", "!@pactjoy/app/contracts", "!@pactjoy/app/testing"],
+                    "message": "Import only package roots or the documented subpaths (@pactjoy/app/contracts and @pactjoy/app/testing are allowed in tests only)."
+                  },
+                  {
+                    "group": ["npm:*", "jsr:*"],
+                    "message": "Deno-specific specifiers are not portable (ADR-0007, ADR-0016)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

@@ -139,12 +139,13 @@ export function describeEvidenceStorageContract(
       const [bytesA, bytesB] = [JPEG(64), JPEG(65)];
       await put(subject, a, bytesA);
       await put(subject, b, bytesB);
-      const urls = await subject.storage.signDownloads([a, b], 600, subject.now());
+      const now = subject.now();
+      const urls = await subject.storage.signDownloads([a, b], 600, now);
       expect([...urls.keys()].sort()).toEqual([a, b].sort());
       const first = urls.get(a);
       const second = urls.get(b);
       expect(first?.method).toBe("GET");
-      expect(first?.expiresAt).toBe(instant(subject.now() + 600_000));
+      expect(first?.expiresAt).toBe(instant(now + 600_000));
       expect(first && (await subject.download(first))).toEqual(bytesA);
       expect(second && (await subject.download(second))).toEqual(bytesB);
     });

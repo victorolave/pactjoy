@@ -55,6 +55,26 @@ The adapter uses the Supabase S3-protocol access key pair, which reaches Storage
 
 Portability: R2, AWS S3 or MinIO is a change of endpoint, region and keys only.
 
+### Smoke against local Supabase Storage (2026-10-13, CLI 2.119.0, storage-api 1.79.28)
+
+`packages/storage/scripts/smoke.ts` ran with the real adapter. Status codes only; 404 on a missing object means the signature was accepted, 403 `SignatureDoesNotMatch` means it was not.
+
+| Check | Result |
+| --- | --- |
+| Bucket from `config.toml` | `supabase start` was not restarted; `supabase seed buckets` created `entry-photos` with its 3 MiB and `image/jpeg` limits |
+| Public host `127.0.0.1:54321`: PUT, HEAD, ranged GET (206), GET, DELETE (204), delete twice | all pass |
+| Size mismatch against the signed `content-length` | 403 |
+| 3 MiB + 1 byte / `text/plain` (bucket limits) | 413 / 415 |
+| Real Edge Runtime container (`edge-runtime:v1.77.1`, adapter imported out of tree), endpoint `host.docker.internal:54321` | all pass |
+| Same container, endpoint `kong:8000` (and `api.supabase.internal:8000`, `supabase_kong_pactjoy:8000`) | 403 on every signed call |
+| Same container, signed for `kong:54321` but connected to `kong:8000` | signature accepted |
+| Emulated https tunnel (`Host: <tunnel>` through `127.0.0.1:54321`): signed `<tunnel>` / `<tunnel>:443` / `<tunnel>:54321` | 403 / 403 / accepted |
+| Real Cloudflare tunnel | not testable from the build sandbox (no egress to Cloudflare) |
+
+Cause: the local Kong in front of Storage sets `X-Forwarded-Host` to the requested host without the port and `X-Forwarded-Port` to a fixed `54321`, and Storage validates the signature against `<forwarded host>:<forwarded port>`; a `Host` or `X-Forwarded-Host` sent by the client has no effect. The host to sign for is therefore `<requested host>:54321`, whatever port the caller connects to. That holds for `127.0.0.1:54321` and `host.docker.internal:54321` by coincidence, and fails for `kong:8000` and for a tunnel host (the browser sends `Host: <tunnel>` with no port). This is a property of the local gateway; the hosted gateway has not been checked (see the operational checklist).
+
+Consequence for the API work: the pair of endpoints in P15 is not enough for `kong:8000` or a tunnel; it needs either an endpoint whose port is 54321 (`host.docker.internal:54321` works as it is) or a separate signing host (sign for host A, call host B). Which one is open and is decided before the API commit.
+
 ## Alternatives considered
 
 ### Supabase native signed upload URLs
