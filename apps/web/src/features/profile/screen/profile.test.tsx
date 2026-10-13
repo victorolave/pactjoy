@@ -1,9 +1,10 @@
-import { screen, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { ApiError } from "../../../ports/api-error.ts";
 import type { HabitDto } from "../../../ports/wire.ts";
 import { NO_CIRCLE, pairCircleFixture } from "../../../testing/fixtures/circle.ts";
+import { profileSummaryFixture } from "../../../testing/fixtures/profile.ts";
 import { noCircleTodayFixture } from "../../../testing/fixtures/today.ts";
 import { renderApp } from "../../../testing/render.tsx";
 
@@ -21,20 +22,19 @@ describe("Perfil (design 39)", () => {
     expect(screen.getByText("andrea@example.com")).toBeInTheDocument();
   });
 
-  it("shows the design's sections in an empty state, with nothing invented (PS-S1)", async () => {
-    const { deps } = renderApp({ path: "/profile", myCircle: pairCircleFixture() });
-    deps.api.setSeasonHistory({ seasons: [] });
-    for (const title of [
+  it("renders the design's four sections in order: Consistencia, Tus hábitos, Temporadas, Graduados (SC-17)", async () => {
+    renderApp({ path: "/profile", myCircle: pairCircleFixture() });
+    await screen.findByText("84 %");
+    const titles = screen
+      .getAllByRole("heading", { level: 2 })
+      .map((heading) => heading.textContent)
+      .filter((title) => title !== "Victor");
+    expect(titles).toEqual([
+      "Consistencia histórica",
       "Tus hábitos",
       "Temporadas",
-      "Consistencia histórica",
       "Hábitos graduados",
-    ]) {
-      expect(await screen.findByRole("heading", { name: title })).toBeInTheDocument();
-    }
-    expect(screen.getByText(/Aún no hay temporadas/)).toBeInTheDocument();
-    expect(screen.getByText(/La verás cuando cierres tu primera temporada/)).toBeInTheDocument();
-    expect(screen.queryByText(/En desarrollo/)).not.toBeInTheDocument();
+    ]);
   });
 
   it("without a circle shows the name draft (PS-R1; the email fallback is the pure profileName)", async () => {
@@ -164,11 +164,101 @@ describe("Perfil, seasons and graduated habits (season-close-graduation S8)", ()
     expect(await screen.findByRole("heading", { name: "Victor" })).toBeInTheDocument();
     expect(await screen.findByText("No pudimos cargar tus temporadas.")).toBeInTheDocument();
   });
+});
 
-  it("keeps Consistencia histórica and Tus hábitos as their empty states", async () => {
+describe("Perfil, consistency and habits (profile-habits-consistency S6)", () => {
+  const zero = { kept: 0, counted: 0, percent: null, closedSeasons: 0, inProgress: false };
+
+  it("shows the pooled percent and the season line of design 39", async () => {
     renderApp({ path: "/profile", myCircle: pairCircleFixture() });
-    expect(await screen.findByText(/La verás cuando cierres tu primera temporada/)).toBeVisible();
-    expect(screen.getByText(/Aún no hay hábitos/)).toBeVisible();
+    const card = (await screen.findByText("84 %")).closest(".pj-card");
+    expect(card).toHaveTextContent("Consistencia histórica");
+    expect(card).toHaveTextContent("1 temporada");
+    expect(card).toHaveTextContent("en curso");
+  });
+
+  it("shows 'Aún sin datos' for no data, never '0 %' or 'NaN %'", async () => {
+    const { deps } = renderApp({ path: "/profile", myCircle: pairCircleFixture() });
+    deps.api.setProfileSummary(profileSummaryFixture({ consistency: zero }));
+    expect(
+      await screen.findByText("Aún sin datos. La verás cuando cierres tu primera temporada."),
+    ).toBeVisible();
+    expect(screen.queryByText(/0 %|NaN/)).not.toBeInTheDocument();
+  });
+
+  it("does not promise a first closed season while one is in progress without data", async () => {
+    const { deps } = renderApp({ path: "/profile", myCircle: pairCircleFixture() });
+    deps.api.setProfileSummary(
+      profileSummaryFixture({ consistency: { ...zero, inProgress: true } }),
+    );
+    expect(await screen.findByText("Aún sin datos.")).toBeVisible();
+    expect(screen.queryByText(/cuando cierres tu primera/)).not.toBeInTheDocument();
+  });
+
+  it("lists each habit with its name and stage badge; the note only when out of season (REQ-W5, W6)", async () => {
+    const { deps } = renderApp({ path: "/profile", myCircle: pairCircleFixture() });
+    deps.api.setProfileSummary(
+      profileSummaryFixture({
+        habits: [
+          { habitId: "h1", name: "Correr", icon: null, stage: "developing", inCurrentSeason: true },
+          { habitId: "h2", name: "Yoga", icon: null, stage: "integrated", inCurrentSeason: false },
+          { habitId: "h3", name: "Leer", icon: null, stage: "new", inCurrentSeason: false },
+        ],
+      }),
+    );
+    const section = (await screen.findByRole("heading", { name: "Tus hábitos" })).parentElement;
+    if (section === null) throw new Error("section expected");
+    const rows = await within(section).findAllByRole("listitem");
+    expect(rows).toHaveLength(3);
+    expect(rows[0]).toHaveTextContent("Correr");
+    expect(rows[0]).toHaveTextContent("🌿 En desarrollo");
+    expect(rows[0]).not.toHaveTextContent("Fuera de esta temporada");
+    expect(rows[1]).toHaveTextContent("Yoga");
+    expect(rows[1]).toHaveTextContent("🌳 Integrado");
+    expect(rows[1]).toHaveTextContent("Fuera de esta temporada");
+    expect(rows[2]).toHaveTextContent("🌱 Nuevo");
+    expect(rows[2]).toHaveTextContent("Fuera de esta temporada");
+  });
+
+  it("shows the existing empty copy when there are no habits (SC-15)", async () => {
+    const { deps } = renderApp({ path: "/profile", myCircle: pairCircleFixture() });
+    deps.api.setProfileSummary(profileSummaryFixture({ habits: [] }));
+    await waitFor(() => expect(screen.getByText(/Aún no hay hábitos/)).toBeVisible());
+  });
+
+  it("never repeats a graduated habit under Tus hábitos (REQ-W7)", async () => {
+    const { deps } = renderApp({ path: "/profile", myCircle: pairCircleFixture() });
+    deps.api.setPactResponse("listHabits", [
+      {
+        id: "h-9",
+        name: "Meditar",
+        why: null,
+        category: null,
+        icon: null,
+        graduatedAt: "2026-10-20T10:00:00.000Z",
+        createdAt: "2026-08-20T12:00:00.000Z",
+        version: 1,
+      },
+    ]);
+    const section = (await screen.findByRole("heading", { name: "Tus hábitos" })).parentElement;
+    if (section === null) throw new Error("section expected");
+    await screen.findByText("Graduado el 20 de octubre");
+    expect(within(section).queryByText("Meditar")).not.toBeInTheDocument();
+  });
+
+  it("a failure of the summary leaves the other sections standing (SC-16; like Temporadas, the error is a note, there is no retry button)", async () => {
+    const { deps } = renderApp({ path: "/profile", myCircle: pairCircleFixture() });
+    deps.api.failNext("getProfileSummary", new ApiError("NetworkError", 0, null));
+    expect(await screen.findByText("No pudimos cargar tu consistencia.")).toBeVisible();
+    expect(screen.getByText("No pudimos cargar tus hábitos.")).toBeVisible();
+    expect(await screen.findByRole("link", { name: /Temporada de 8 semanas/ })).toBeVisible();
+  });
+
+  it("shows a skeleton while the summary loads", async () => {
+    renderApp({ path: "/profile", myCircle: pairCircleFixture() });
+    const section = (await screen.findByRole("heading", { name: "Tus hábitos" })).parentElement;
+    expect(section).toHaveAttribute("aria-busy", "true");
+    await screen.findByText("84 %");
   });
 });
 

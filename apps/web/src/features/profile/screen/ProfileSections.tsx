@@ -6,28 +6,22 @@ import { Card } from "../../../ui/Card.tsx";
 import { Icon } from "../../../ui/icon/Icon.tsx";
 import { Skeleton } from "../../../ui/Skeleton.tsx";
 import { useMyHabits, useSeasonHistory } from "../queries.ts";
+import { ConsistencySection } from "./ConsistencySection.tsx";
+import { HabitsSection } from "./HabitsSection.tsx";
 import styles from "./ProfileScreen.module.css";
 import { graduatedHabits, seasonRowSubtitle, seasonRowTitle } from "./profile-sections.ts";
 
 /**
- * The design's sections (39). "Tus hábitos" and "Consistencia histórica" are still the empty
- * states (REQ-PR3, REQ-PR4); "Temporadas" and "Hábitos graduados" come from the season close
- * (change season-close-graduation). Only the viewer's own data is read.
+ * The design's sections (39), in its order: the consistency card, "Tus hábitos" (profile-habits-
+ * consistency), "Temporadas" and "Hábitos graduados" (season-close-graduation). Only the viewer's
+ * own data is read, and a failure in one section never blanks the others.
  */
 export function ProfileSections() {
   return (
     <>
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Tus hábitos</h2>
-        <p className={styles.note}>
-          Aún no hay hábitos. Los verás aquí cuando tu círculo empiece una temporada.
-        </p>
-      </section>
+      <ConsistencySection />
+      <HabitsSection />
       <SeasonHistory />
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Consistencia histórica</h2>
-        <p className={styles.note}>Aún sin datos. La verás cuando cierres tu primera temporada.</p>
-      </section>
       <GraduatedHabits />
     </>
   );

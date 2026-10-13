@@ -1,4 +1,4 @@
-import type { HabitDto, SeasonHistoryItemDto } from "../../../ports/wire.ts";
+import type { HabitDto, ProfileSummaryDto, SeasonHistoryItemDto } from "../../../ports/wire.ts";
 
 const MONTHS = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
 
@@ -37,3 +37,37 @@ export function graduatedHabits(
     )
     .sort((a, b) => b.graduatedAt.localeCompare(a.graduatedAt));
 }
+
+type Consistency = ProfileSummaryDto["consistency"];
+
+/** "84 %" from the server's rounded percent: the web never rounds or recomputes it. */
+export function consistencyPercentText(percent: number): string {
+  return `${percent} %`;
+}
+
+/**
+ * The card's right-hand text (design 39: "1 temporada" over "en curso"). The count is every season
+ * that contributed. With closed seasons behind it, "en curso" would read as if all of them were in
+ * progress, so the second line says how many are: "3 temporadas" over "1 en curso".
+ */
+export function consistencySeasonLines(consistency: Consistency): readonly string[] {
+  const total = consistency.closedSeasons + (consistency.inProgress ? 1 : 0);
+  if (total === 0) return [];
+  const head = `${total} ${total === 1 ? "temporada" : "temporadas"}`;
+  if (!consistency.inProgress) return [head];
+  return [head, consistency.closedSeasons === 0 ? "en curso" : "1 en curso"];
+}
+
+/** No figure yet: the existing wording, minus the promise of a closed season when one is running. */
+export function CONSISTENCY_EMPTY({ inProgress }: { readonly inProgress: boolean }): string {
+  return inProgress
+    ? "Aún sin datos."
+    : "Aún sin datos. La verás cuando cierres tu primera temporada.";
+}
+
+export const CONSISTENCY_ERROR = "No pudimos cargar tu consistencia.";
+export const HABITS_ERROR = "No pudimos cargar tus hábitos.";
+export const HABITS_EMPTY =
+  "Aún no hay hábitos. Los verás aquí cuando tu círculo empiece una temporada.";
+/** A habit with no commitment in the circle's current season (owner decision, 2026-10-13). */
+export const OUT_OF_SEASON_NOTE = "Fuera de esta temporada";
