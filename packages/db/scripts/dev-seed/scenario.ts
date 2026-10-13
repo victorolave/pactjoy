@@ -2,6 +2,7 @@ import type { Actor } from "@pactjoy/app";
 import type { Accounts } from "./accounts.ts";
 import { leaveCurrentCircle, type SeedContext } from "./core.ts";
 import { pairPactOpen } from "./scenarios/pair-pact-open.ts";
+import { pairPause } from "./scenarios/pair-pause.ts";
 import { pairSeasonEnded, pairSeasonStale } from "./scenarios/pair-season-ended.ts";
 import { pairWeek3 } from "./scenarios/pair-week-3.ts";
 

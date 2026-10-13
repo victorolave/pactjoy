@@ -5,6 +5,7 @@ import {
   listMyHabits,
   memberProgress,
   myCircle,
+  myPauseRequests,
   seasonProgress,
   seasonResults,
   today,
@@ -249,5 +250,44 @@ describe("pair-pact-open scenario (screens 8-13)", () => {
     expect(approved).toMatchObject({ ok: true, value: { season: { status: "active" } } });
     const view = await today(h.app, andrea);
     expect(view).toMatchObject({ baselineOffer: { periodIndex: 0 } });
+  });
+});
+
+describe("pair-pause scenario (screens 26-30b)", () => {
+  async function paused() {
+    const h = harness();
+    await h.run();
+    const andrea = await h.accounts.ensure("andrea.pausa@pactjoy.local");
+    const victor = await h.accounts.ensure("victor.pausa@pactjoy.local");
+    h.seed.setDate(TODAY);
+    return { ...h, andrea, victor };
+  }
+
+  it("gives Andrea a request to answer and Victor a pending one", async () => {
+    const { app, andrea, victor } = await paused();
+    const forAndrea = await myPauseRequests(app, andrea);
+    expect(forAndrea.awaitingMe).toHaveLength(1);
+    expect(forAndrea.awaitingMe[0]?.myResponse).toBeNull();
+    const forVictor = await myPauseRequests(app, victor);
+    expect(forVictor.mine.map((r) => r.status)).toEqual(["pending"]);
+    expect(forVictor.awaitingMe).toHaveLength(0);
+  });
+
+  it("gives Andrea two running approved pauses to resume, with the redistributed notice", async () => {
+    const { app, andrea } = await paused();
+    const view = await myPauseRequests(app, andrea);
+    expect(view.mine.map((r) => r.status)).toEqual(["approved", "approved"]);
+    expect(view.resumePreviews).toHaveLength(2);
+    expect(view.redistributed).not.toBeNull();
+    const { before, after } = view.redistributed?.total ?? { before: 0, after: 0 };
+    expect(after).not.toBe(before);
+  });
+
+  it("flags exactly one of Andrea's pauses as ending tomorrow (30a)", async () => {
+    const { app, andrea } = await paused();
+    const view = await today(app, andrea);
+    if (view.state !== "active") throw new Error(`expected an active day, got ${view.state}`);
+    const rows = JSON.stringify(view.rows);
+    expect(rows.match(/"endsTomorrow":true/g)).toHaveLength(1);
   });
 });
