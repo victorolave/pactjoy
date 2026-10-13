@@ -25,20 +25,33 @@
   list-style: none;
 }
 
+/* Name and value on one line, the bar under them at full width: a long habit name wraps in its own
+   column and the "2,3 → 3,8" value keeps one line. */
 .gainRow {
   display: grid;
-  grid-template-columns: 1fr 2fr auto;
-  align-items: center;
-  gap: var(--space-3);
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "name value"
+    "bar bar";
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+}
+
+.gainRow > [role="img"] {
+  grid-area: bar;
 }
 
 .gainName {
+  grid-area: name;
   font: var(--font-label);
+  overflow-wrap: anywhere;
 }
 
 .gainValue {
+  grid-area: value;
   font: var(--font-small);
   color: var(--text-secondary);
+  white-space: nowrap;
 }
 
 .nextReview {
@@ -64,11 +77,16 @@
 
 .totals {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-2);
 }
 
+/* Design 33: 12 px padding, label over value, 2 px apart; the value never wraps. */
 .total {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: calc(var(--space-1) / 2);
   padding: var(--space-3);
 }
 
@@ -79,6 +97,7 @@
 
 .totalValue {
   font: var(--font-stat);
+  white-space: nowrap;
 }
 
 .rows {
@@ -96,13 +115,21 @@
 .figureRow {
   display: flex;
   justify-content: space-between;
+  align-items: baseline;
   gap: var(--space-3);
   padding-block: var(--space-3);
   font: var(--font-small);
 }
 
+.figureRow > b {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .figureText {
+  flex-shrink: 0;
   text-align: right;
+  white-space: nowrap;
 }
 
 .reflect {
