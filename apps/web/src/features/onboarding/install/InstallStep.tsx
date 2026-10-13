@@ -64,7 +64,11 @@ export function InstallStep() {
         )
       }
     >
-      <Illustration alt="PactJoy en la pantalla de inicio de un teléfono" />
+      <Illustration
+        name="instalar-app"
+        size="hero"
+        alt="PactJoy en la pantalla de inicio de un teléfono"
+      />
       <p className={styles.body}>
         Se abre como una app, a pantalla completa, y tu sesión queda ahí. Es opcional.
       </p>

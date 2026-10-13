@@ -1,9 +1,11 @@
+import activarAvisos from "../design/brand/activar-avisos.webp";
 import celebrarJuntos from "../design/brand/celebrar-juntos.webp";
 import cocinar from "../design/brand/cocinar.webp";
 import crearPacto from "../design/brand/crear-pacto.webp";
 import diaDificilCrop from "../design/brand/dia-dificil-crop.webp";
 import graduarHabito from "../design/brand/graduar-habito.webp";
 import caminar from "../design/brand/imagery/caminar.png";
+import instalarApp from "../design/brand/instalar-app.webp";
 import invitarCirculo from "../design/brand/invitar-circulo.webp";
 import metasAndrea from "../design/brand/metas-andrea.webp";
 import metasVictor from "../design/brand/metas-victor.webp";
@@ -33,6 +35,8 @@ const ILLUSTRATIONS = {
   "revision-estudiar": revisionEstudiar,
   "celebrar-juntos": celebrarJuntos,
   "graduar-habito": graduarHabito,
+  "instalar-app": instalarApp,
+  "activar-avisos": activarAvisos,
 } as const;
 
 export type IllustrationName = keyof typeof ILLUSTRATIONS;
