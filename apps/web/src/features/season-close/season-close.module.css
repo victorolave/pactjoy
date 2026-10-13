@@ -100,6 +100,15 @@
   color: var(--text-inverse);
 }
 
+/* The vendor hover and press fills are light: on the dark hero they hide the cream icon. */
+.hero :global(.pj-iconbtn:hover) {
+  background: var(--ink-800);
+}
+
+.hero :global(.pj-iconbtn:active) {
+  background: var(--ink-700);
+}
+
 .heroMeta {
   margin: var(--space-3) 0 0;
   font: var(--font-meta);
