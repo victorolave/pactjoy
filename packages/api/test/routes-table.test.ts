@@ -23,6 +23,7 @@ const { spies, USE_CASE_NAMES } = vi.hoisted(() => ({
     "removeCommitment",
     "approvePact",
     "withdrawApproval",
+    "requestEntryPhotoUpload",
     "recordEntry",
     "editEntry",
     "deleteEntry",
@@ -105,6 +106,12 @@ const TABLE: Row[] = [
     `/seasons/${ID}/entries`,
     { commitmentId: ID2, value: { kind: "done" }, clientRequestId: "r-1" },
   ],
+  [
+    "requestEntryPhotoUpload",
+    "POST",
+    `/seasons/${ID}/commitments/${ID2}/photos`,
+    { byteSize: 1000, contentType: "image/jpeg" },
+  ],
   ["editEntry", "PUT", `/entries/${ID}`, { value: { kind: "done" }, note: null }],
   ["deleteEntry", "DELETE", `/entries/${ID}`],
   ["memberScore", "GET", `/seasons/${ID}/score`],
@@ -141,8 +148,8 @@ const TABLE: Row[] = [
 ];
 
 describe("route table completeness (RT-S4)", () => {
-  it("has 38 routes over exactly the 37 use cases, the score one routed twice", () => {
-    expect(TABLE).toHaveLength(38);
+  it("has 39 routes over exactly the 38 use cases, the score one routed twice", () => {
+    expect(TABLE).toHaveLength(39);
     expect(new Set(TABLE.map(([name]) => name))).toEqual(new Set(USE_CASE_NAMES));
     expect(TABLE.filter(([name]) => name === "memberScore")).toHaveLength(2);
   });
@@ -198,6 +205,14 @@ describe("route to use case wiring (AC-S8)", () => {
       if (name === "memberProgress") expect(args[2]).toEqual({ seasonId: ID, memberId: ID2 });
       if (name === "commitmentProgress")
         expect(args[2]).toEqual({ seasonId: ID, commitmentId: ID2 });
+      if (name === "requestEntryPhotoUpload") {
+        expect(args[2]).toEqual({
+          seasonId: ID,
+          commitmentId: ID2,
+          byteSize: 1000,
+          contentType: "image/jpeg",
+        });
+      }
       if (name === "weekSummary") expect(args[2]).toEqual({ seasonId: ID, weekIndex: 3 });
       if (name === "reviewDraft") expect(args[2]).toEqual({ seasonId: ID, periodIndex: 1 });
       if (name === "skipBaseline") expect(args[2]).toEqual({ seasonId: ID, periodIndex: 0 });

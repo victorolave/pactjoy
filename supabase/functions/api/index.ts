@@ -15,6 +15,7 @@ import {
   createUuidV7IdGenerator,
 } from "@pactjoy/app";
 import { createPostgresUnitOfWork, isDatabaseUnavailable } from "@pactjoy/db";
+import { createS3EvidenceStorage } from "@pactjoy/storage";
 
 const logger = createConsoleLogger();
 
@@ -30,6 +31,8 @@ const build = () => {
       timeZone: createIntlTimeZone(),
       ids: createUuidV7IdGenerator({ clock }),
       random: createCryptoRandomSource(),
+      // Photo evidence (ADR-0016): the storage-scoped S3 key pair from the validated env.
+      evidence: createS3EvidenceStorage(env.storage),
       tokenVerifier: createJwksTokenVerifier({ jwksUrl: env.jwksUrl, issuer: env.jwtIssuer }),
       logger,
       isUnavailable: isDatabaseUnavailable,

@@ -134,3 +134,10 @@ Both URL types ran the same scratch Edge Function, with `prepare: false` and the
 - `season_closures_pkey` and `season_closures_season_member_key` are in `CONFLICT_CONSTRAINTS`, so a duplicate insert maps to `ConcurrencyConflict`.
 - `SeasonRepository.listByCircle` orders by `insert_seq desc`.
 - Real-Postgres tests cover the contract, every CHECK, RLS and revoke, a concurrent double submit and the two last closers racing (`season-close-concurrency.pg.test.ts`).
+
+## Addendum: photo evidence (change `photo-evidence`, ADR-0016)
+
+- One table, `pactjoy.entry_photos` (the upload ledger: `id`, `season_id` RESTRICT, `member_id`, `commitment_id`, `object_key` unique and CHECKed to `o/` + 32 hex + `.jpg`, `byte_size` 1..3 MiB, `content_type` = `image/jpeg`, `status` in `pending | attached | released`, `created_at`, `attach_by` after it, `version`), indexes `(member_id, status)` and `(status, attach_by)`, and one column, `entries.photo_id uuid` (nullable, no backfill) with `entries_photo_id_fkey` RESTRICT, `entries_photo_id_key` UNIQUE and `entries_photo_shape` (a tombstone keeps no photo). RLS is on with no policies and the client roles are revoked; there are no triggers and no functions.
+- `entry_photos_pkey`, `entry_photos_object_key_key` and `entries_photo_id_key` are in `CONFLICT_CONSTRAINTS`, so a duplicate id or key, or a second Entry claiming one photo, maps to `ConcurrencyConflict`. Two attaches of one photo lose on the `version`-guarded UPDATE (`WHERE id = $1 AND version = $2`, affected rows checked).
+- Locks: a ledger save updates `status` and `version` only, never a key column, so it takes FOR NO KEY UPDATE and does not block the KEY SHARE the `entries.photo_id` foreign key takes on the row. Updating `entries.photo_id` (a unique column) takes FOR UPDATE on the entry row, which is safe because nothing references `entries`. `releaseExpired` selects `FOR UPDATE SKIP LOCKED`, so concurrent sweeps release disjoint rows.
+- Real-Postgres tests (`entry-photo.pg.test.ts`) cover the shared contract, every CHECK, RLS and revoke, the foreign key and unique key, the tombstone CHECK, a concurrent double attach and disjoint concurrent sweeps.

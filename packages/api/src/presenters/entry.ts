@@ -23,6 +23,8 @@ export interface EntryDto {
   readonly editedAt: string | null;
   readonly value: EntryValueDto | null;
   readonly note: string | null;
+  /** Owner-only: this presenter refuses anyone else's entry (ADR-0016). */
+  readonly photoId: string | null;
   readonly clientRequestId: string;
   readonly version: number;
   readonly deleted: boolean;
@@ -59,6 +61,7 @@ export function presentEntry(entry: StoredEntry, viewer: MemberId): EntryDto {
           ? { kind: "quantity", value: toDecimalString(value.value) }
           : { kind: value.kind },
     note: entry.note,
+    photoId: entry.photoId,
     clientRequestId: entry.clientRequestId,
     version: entry.version,
     deleted: entry.deleted,

@@ -204,3 +204,9 @@ that ADR-0009 will build on.
 
 - `Repositories` gains `seasonClosures: SeasonClosureRepository { getMine, closedMemberIds, save }`, an owner-only port in the style of `ReviewRepository` (ADR-0014). Its one season-wide read, `closedMemberIds`, returns member ids only. `closure-guard.test.ts` confines it to `src/season/closure/` and pins the method list.
 - `SeasonRepository` gains `listByCircle(circleId)`: every season of the circle, of any status, newest first (the same insertion order as `findLatestByCircle`, so an update never moves a season).
+
+## Addendum: the photo ports (change `photo-evidence`, ADR-0016)
+
+- `Repositories` gains `entryPhotos: EntryPhotoRepository { get, getMany, add, save, countOpen, releaseExpired, listReleased, purge }`, the upload ledger. It is confined to `src/entry-photo/` (`entry-photo-guard.test.ts` pins the method list and the confinement), because a row carries the object key. `save` moves `status` and `version` only; `releaseExpired` and `purge` are bounded bulk operations so a sweep stays small.
+- A new outbound port, `EvidenceStorage { signUpload, signDownloads, stat, readHead, delete }`, is NOT part of `Repositories`: it has no transaction. Use cases receive it as `deps.evidence`, call it only OUTSIDE a unit of work (verification before, deletion after the commit), and let its `EvidenceStorageError { code }` escape as infrastructure. The adapter is `packages/storage`; the app ships an in-memory fake and one contract suite.
+- `EntryRecord` gains `photoId: EntryPhotoId | null` (a tombstone's is `null`); the request fingerprint appends it only when present.

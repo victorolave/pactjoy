@@ -2,7 +2,15 @@ import { describe, expect, it } from "vitest";
 import { type ApiEnvError, describeEnvError, loadApiEnv } from "../src/composition/config.ts";
 
 const SECRET_URL = "postgres://u:secret@h:6543/db";
-const BASE = { API_DATABASE_URL: SECRET_URL, SUPABASE_URL: "https://abc.supabase.co" };
+const S3_SECRET = "s3-secret-must-never-leak-0123456789";
+const STORAGE = {
+  API_STORAGE_S3_ENDPOINT: "http://kong:8000/storage/v1/s3",
+  API_STORAGE_S3_REGION: "local",
+  API_STORAGE_S3_ACCESS_KEY_ID: "s3-key-id-123",
+  API_STORAGE_S3_SECRET_ACCESS_KEY: S3_SECRET,
+  API_STORAGE_BUCKET: "entry-photos",
+};
+const BASE = { API_DATABASE_URL: SECRET_URL, SUPABASE_URL: "https://abc.supabase.co", ...STORAGE };
 
 const load = (vars: Record<string, string | undefined>) => loadApiEnv((name) => vars[name]);
 
@@ -23,6 +31,13 @@ describe("loadApiEnv", () => {
         jwksUrl: "https://abc.supabase.co/auth/v1/.well-known/jwks.json",
         jwtIssuer: "https://abc.supabase.co/auth/v1",
         allowedOrigins: [],
+        storage: {
+          endpoint: "http://kong:8000/storage/v1/s3",
+          region: "local",
+          accessKeyId: "s3-key-id-123",
+          secretAccessKey: S3_SECRET,
+          bucket: "entry-photos",
+        },
       },
     });
   });
@@ -54,7 +69,18 @@ describe("loadApiEnv", () => {
   });
 
   it("reports every missing required variable at once", () => {
-    expect(failure({})).toEqual({ missing: ["API_DATABASE_URL", "SUPABASE_URL"], invalid: [] });
+    expect(failure({})).toEqual({
+      missing: [
+        "API_DATABASE_URL",
+        "SUPABASE_URL",
+        "API_STORAGE_S3_ENDPOINT",
+        "API_STORAGE_S3_REGION",
+        "API_STORAGE_S3_ACCESS_KEY_ID",
+        "API_STORAGE_S3_SECRET_ACCESS_KEY",
+        "API_STORAGE_BUCKET",
+      ],
+      invalid: [],
+    });
   });
 
   it("SUPABASE_URL must be an http(s) URL; a trailing slash is tolerated", () => {
@@ -86,6 +112,7 @@ describe("loadApiEnv", () => {
 
   it("API_JWT_ISSUER defaults to SUPABASE_URL/auth/v1 and can be overridden (local gateway)", () => {
     const local = load({
+      ...BASE,
       API_DATABASE_URL: SECRET_URL,
       SUPABASE_URL: "http://kong:8000",
       API_JWT_ISSUER: "http://127.0.0.1:54321/auth/v1",
@@ -133,8 +160,7 @@ describe("loadApiEnv", () => {
 
   it("AC-S6: describeEnvError names variables and never leaks a value, even with a bad ALLOWED_ORIGINS", () => {
     const error = failure({
-      API_DATABASE_URL: SECRET_URL,
-      SUPABASE_URL: "https://abc.supabase.co",
+      ...BASE,
       ALLOWED_ORIGINS: "https://secret-origin.example/leaky-path",
     });
     const message = describeEnvError(error);
@@ -142,7 +168,7 @@ describe("loadApiEnv", () => {
     for (const leaked of ["secret", "leaky-path", SECRET_URL]) {
       expect(message).not.toContain(leaked);
     }
-    const missing = describeEnvError(failure({ SUPABASE_URL: "bad-value-123" }));
+    const missing = describeEnvError(failure({ ...STORAGE, SUPABASE_URL: "bad-value-123" }));
     expect(missing).toContain("API_DATABASE_URL");
     expect(missing).toContain("SUPABASE_URL");
     expect(missing).not.toContain("bad-value-123");
@@ -158,7 +184,109 @@ describe("loadApiEnv", () => {
       "ALLOWED_ORIGINS",
       "API_DATABASE_URL",
       "API_JWT_ISSUER",
+      "API_STORAGE_BUCKET",
+      "API_STORAGE_S3_ACCESS_KEY_ID",
+      "API_STORAGE_S3_ENDPOINT",
+      "API_STORAGE_S3_PUBLIC_ENDPOINT",
+      "API_STORAGE_S3_PUBLIC_SIGNING_HOST",
+      "API_STORAGE_S3_REGION",
+      "API_STORAGE_S3_SECRET_ACCESS_KEY",
+      "API_STORAGE_S3_SIGNING_HOST",
       "SUPABASE_URL",
     ]);
+  });
+});
+
+describe("loadApiEnv: object storage (ADR-0016)", () => {
+  const storageOf = (vars: Record<string, string | undefined>) => {
+    const result = load({ ...BASE, ...vars });
+    if (!result.ok) throw new Error(JSON.stringify(result.error));
+    return result.value.storage;
+  };
+
+  it("each required storage variable is reported by name when missing or blank", () => {
+    for (const name of Object.keys(STORAGE)) {
+      for (const value of [undefined, "", "   "]) {
+        expect(failure({ ...BASE, [name]: value })).toEqual({ missing: [name], invalid: [] });
+      }
+    }
+  });
+
+  it("the public endpoint and the two signing hosts are optional and, when set, part of the config", () => {
+    expect(storageOf({}).publicEndpoint).toBeUndefined();
+    expect(storageOf({}).signingHost).toBeUndefined();
+    expect(storageOf({}).publicSigningHost).toBeUndefined();
+    expect(
+      storageOf({
+        API_STORAGE_S3_PUBLIC_ENDPOINT: "https://t.trycloudflare.com/storage/v1/s3/",
+        API_STORAGE_S3_SIGNING_HOST: "kong:54321",
+        API_STORAGE_S3_PUBLIC_SIGNING_HOST: "t.trycloudflare.com:54321",
+      }),
+    ).toEqual({
+      endpoint: "http://kong:8000/storage/v1/s3",
+      publicEndpoint: "https://t.trycloudflare.com/storage/v1/s3",
+      signingHost: "kong:54321",
+      publicSigningHost: "t.trycloudflare.com:54321",
+      region: "local",
+      accessKeyId: "s3-key-id-123",
+      secretAccessKey: S3_SECRET,
+      bucket: "entry-photos",
+    });
+    // Blank counts as unset.
+    expect(storageOf({ API_STORAGE_S3_PUBLIC_ENDPOINT: "  " }).publicEndpoint).toBeUndefined();
+  });
+
+  it("endpoints are http(s) base URLs, trailing slash tolerated, no query or fragment", () => {
+    expect(storageOf({ API_STORAGE_S3_ENDPOINT: "https://s3.example/base/" }).endpoint).toBe(
+      "https://s3.example/base",
+    );
+    for (const name of ["API_STORAGE_S3_ENDPOINT", "API_STORAGE_S3_PUBLIC_ENDPOINT"]) {
+      for (const bad of [
+        "not a url",
+        "ftp://s3.example",
+        "s3.example",
+        "https://s3.example/?x=1",
+      ]) {
+        expect([name, bad, failure({ ...BASE, [name]: bad }).invalid]).toEqual([name, bad, [name]]);
+      }
+    }
+  });
+
+  it("signing hosts are host[:port], never a URL", () => {
+    for (const name of ["API_STORAGE_S3_SIGNING_HOST", "API_STORAGE_S3_PUBLIC_SIGNING_HOST"]) {
+      for (const good of ["kong:54321", "127.0.0.1:54321", "tunnel.example.com", "localhost"]) {
+        expect(load({ ...BASE, [name]: good }).ok).toBe(true);
+      }
+      for (const bad of ["http://kong:54321", "kong:54321/path", "kong:", "kong:99999x", "a b"]) {
+        expect([name, bad, failure({ ...BASE, [name]: bad }).invalid]).toEqual([name, bad, [name]]);
+      }
+    }
+  });
+
+  it("the bucket is a plain name: no slash, no space", () => {
+    for (const bad of ["a/b", "has space", "../x"]) {
+      expect(failure({ ...BASE, API_STORAGE_BUCKET: bad }).invalid).toEqual(["API_STORAGE_BUCKET"]);
+    }
+  });
+
+  it("no storage value ever appears in an error message", () => {
+    const error = failure({
+      ...BASE,
+      API_STORAGE_S3_ENDPOINT: "nope-secret-endpoint",
+      API_STORAGE_BUCKET: "bad/secret-bucket",
+      API_STORAGE_S3_SIGNING_HOST: "http://secret-host",
+    });
+    const message = describeEnvError(error);
+    for (const leaked of [
+      "secret-endpoint",
+      "secret-bucket",
+      "secret-host",
+      S3_SECRET,
+      "s3-key-id-123",
+    ]) {
+      expect(message).not.toContain(leaked);
+      expect(JSON.stringify(error)).not.toContain(leaked);
+    }
+    expect(message).toContain("API_STORAGE_S3_ENDPOINT");
   });
 });
