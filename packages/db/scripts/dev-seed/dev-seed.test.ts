@@ -133,6 +133,24 @@ describe("pair scenario (week 3 of 8)", () => {
     expect(peer.value.commitments.filter((c) => c.kind === "hidden")).toHaveLength(1);
   });
 
+  it("a rerun survives a habit graduated by manual testing: it gets a fresh habit", async () => {
+    const h = harness();
+    await h.run();
+    const andrea = await h.accounts.ensure("andrea@pactjoy.local");
+    const leer = (await listMyHabits(h.app, andrea)).find((habit) => habit.name === "Leer");
+    if (!leer) throw new Error("expected the Leer habit");
+    await h.app.uow.transaction(async (repos) => {
+      await repos.habits.save(
+        { ...leer, graduatedAt: instant(1), version: leer.version + 1 },
+        leer.version,
+      );
+      return { ok: true as const, value: undefined };
+    });
+    await expect(h.run()).resolves.toBeUndefined();
+    const habits = (await listMyHabits(h.app, andrea)).filter((habit) => habit.name === "Leer");
+    expect(habits.map((habit) => habit.graduatedAt !== null).sort()).toEqual([false, true]);
+  });
+
   it("a rerun starts clean: a new circle, the same habits, nothing duplicated", async () => {
     const h = harness();
     await h.run();
