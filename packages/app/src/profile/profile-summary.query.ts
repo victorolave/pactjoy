@@ -151,6 +151,8 @@ export async function profileSummary(
     const rows: ProfileHabit[] = [];
     for (const habit of habits) {
       const stage = await stageOf(habit.id);
+      // Unreachable while graduated habits are filtered out above; kept so a graduated stage
+      // never lists the habit outside "Hábitos graduados".
       if (stage === "graduated") continue;
       rows.push(listed(habit, stage, current !== null && commits(current, member.id, habit.id)));
     }

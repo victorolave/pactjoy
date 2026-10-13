@@ -50,10 +50,14 @@ describe("consistencySeasonLines (design 39: '1 temporada / en curso')", () => {
 
 describe("copy", () => {
   it("never promises a closed season when one is already in progress", () => {
-    expect(CONSISTENCY_EMPTY({ inProgress: true })).toBe("Aún sin datos.");
-    expect(CONSISTENCY_EMPTY({ inProgress: false })).toBe(
+    expect(CONSISTENCY_EMPTY({ inProgress: true, closedSeasons: 0 })).toBe("Aún sin datos.");
+    expect(CONSISTENCY_EMPTY({ inProgress: false, closedSeasons: 0 })).toBe(
       "Aún sin datos. La verás cuando cierres tu primera temporada.",
     );
+  });
+
+  it("never promises a first closed season when one is already closed (all paused)", () => {
+    expect(CONSISTENCY_EMPTY({ inProgress: false, closedSeasons: 2 })).toBe("Aún sin datos.");
   });
 
   it("keeps the fixed strings", () => {

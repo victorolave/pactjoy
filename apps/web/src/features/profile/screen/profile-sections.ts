@@ -59,8 +59,14 @@ export function consistencySeasonLines(consistency: Consistency): readonly strin
 }
 
 /** No figure yet: the existing wording, minus the promise of a closed season when one is running. */
-export function CONSISTENCY_EMPTY({ inProgress }: { readonly inProgress: boolean }): string {
-  return inProgress
+export function CONSISTENCY_EMPTY({
+  inProgress,
+  closedSeasons,
+}: {
+  readonly inProgress: boolean;
+  readonly closedSeasons: number;
+}): string {
+  return inProgress || closedSeasons > 0
     ? "Aún sin datos."
     : "Aún sin datos. La verás cuando cierres tu primera temporada.";
 }
