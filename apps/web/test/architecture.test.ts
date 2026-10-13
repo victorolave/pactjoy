@@ -45,7 +45,7 @@ const ALLOWED_FEATURE_DEPS: Readonly<Record<string, readonly string[]>> = {
   auth: [],
   circle: ["onboarding", "pause"],
   onboarding: [],
-  profile: ["auth", "circle"],
+  profile: ["auth", "circle", "habits", "review"],
   "season-progress-data": [],
   "season-member": ["habits", "season-progress-data"],
   season: ["circle", "habits", "season-progress-data"],

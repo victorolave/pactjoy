@@ -10,6 +10,7 @@ import {
 import { type Circle, findActiveMember } from "../circle/circle.ts";
 import { loadEffectivePauses } from "../pause/effective-pauses.ts";
 import type { Repositories } from "../ports/repositories.ts";
+import type { ScoreData } from "../score/score-context.ts";
 import { toScoreInput } from "../score/score-input.ts";
 import type { Season } from "../season/season.ts";
 import type { Actor } from "../shared/actor.ts";
@@ -46,6 +47,12 @@ export interface CommitmentStagesInput {
   readonly circle: Circle;
   /** The member whose commitments are staged; the caller has already proven who they are. */
   readonly memberId: MemberId;
+  /**
+   * The season's entries and effective pauses when the caller already loaded them for the SAME
+   * instant (the Perfil read model); absent, they are read here. Only an optimisation: the result
+   * is identical either way.
+   */
+  readonly data?: ScoreData;
 }
 
 /**
@@ -86,18 +93,15 @@ export async function commitmentStages(
     return stages;
   }
 
-  const pauses = await loadEffectivePauses(repos, {
-    season,
-    circle,
-    now,
-    timeZone: deps.timeZone,
-  });
+  const pauses =
+    input.data?.pauses ??
+    (await loadEffectivePauses(repos, { season, circle, now, timeZone: deps.timeZone }));
   const series = commitmentWeeklySeries(
     toScoreInput({
       season,
       actualStart,
       memberId,
-      entries: await repos.entries.listBySeason(season.id),
+      entries: input.data?.entries ?? (await repos.entries.listBySeason(season.id)),
       pauses,
       today: day.day,
     }),

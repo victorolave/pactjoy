@@ -106,3 +106,26 @@
   flex: none;
   color: var(--text-secondary);
 }
+
+.consistency {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.consistencyLabel {
+  margin: 0;
+  font: var(--font-meta);
+  color: var(--text-secondary);
+}
+
+.consistencyValue {
+  font: var(--font-stat);
+}
+
+.consistencySeasons {
+  font: var(--font-small);
+  color: var(--text-secondary);
+  text-align: right;
+}

@@ -115,6 +115,10 @@ New browser capabilities follow the same rule as the first ports: a port in `src
 
 **Owner decision, 2026-10-07.** Circles have no timezone. At season creation the client captures the creator's device IANA timezone and sends it with the start date. That timezone is stored on the season and stays fixed for its calendar; a subsequent device timezone change does not change it. The default start is tomorrow in this season timezone, with the editable date window resolved in the same zone. This corrects D7's earlier wording, "circle timezone", without changing the existing implementation.
 
+## Addendum: Perfil reaches habits and review (change `profile-habits-consistency`)
+
+`profile` gains two feature edges in `ALLOWED_FEATURE_DEPS`: `habits` (for `HabitGlyph`, the habit tile) and `review` (for `HabitStageTag`, the stage badge), both through their `index.ts`. Both are leaf features that never import `profile`, so there is no cycle. The alternative, copying the stage label map and the icon catalog into `profile`, would let the copy drift from the badge on screen 17. The summary query (`profileSummaryKey`) lives under the progress root, so every settled entry, pause, review, closure or pact mutation refreshes it; it is not persisted, so `CACHE_VERSION` does not change. The table above is the original onboarding-era list; `test/architecture.test.ts` is the source of truth.
+
 ## References
 
 - ADR-0003 (Biome), ADR-0008 (ports), ADR-0011 (API layer)

@@ -206,6 +206,14 @@ export type { RandomSource } from "./ports/random-source.ts";
 export type { Repositories } from "./ports/repositories.ts";
 export type { UnitOfWork } from "./ports/unit-of-work.ts";
 export type {
+  ProfileConsistency,
+  ProfileHabit,
+  ProfileHabitStage,
+  ProfileSummaryDeps,
+  ProfileSummaryView,
+} from "./profile/profile-summary.query.ts";
+export { profileSummary } from "./profile/profile-summary.query.ts";
+export type {
   CommitmentProgressDeps,
   CommitmentProgressError,
   CommitmentProgressInput,

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { ApiError } from "../ports/api-error.ts";
+import { profileSummaryFixture } from "../testing/fixtures/profile.ts";
 import {
   carryOverFixture,
   resultsFixture,
@@ -103,5 +104,17 @@ describe("HttpPactJoyApi season close methods (ADR-0015)", () => {
     const { api, sent } = harness(json(200, { data: resultsFixture() }));
     await api.getSeasonResults("a/b");
     expect(sent().url).toBe(`${BASE}/seasons/a%2Fb/results`);
+  });
+
+  it("getProfileSummary reads GET /me/profile", async () => {
+    const view = profileSummaryFixture();
+    const { api, sent } = harness(json(200, { data: view }));
+    await expect(api.getProfileSummary()).resolves.toEqual(view);
+    expect([sent().method, sent().url]).toEqual(["GET", `${BASE}/me/profile`]);
+  });
+
+  it("getProfileSummary turns a malformed 2xx into an Internal error", async () => {
+    const { api } = harness(json(200, { data: { consistency: null, habits: [] } }));
+    await expect(api.getProfileSummary()).rejects.toMatchObject({ code: "Internal" });
   });
 });

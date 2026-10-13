@@ -4,6 +4,7 @@ import {
   commitmentProgressKey,
   habitsKey,
   memberProgressKey,
+  profileSummaryKey,
   progressKey,
   reviewKey,
   reviewsKey,
@@ -61,4 +62,11 @@ it("nests the results, the carry-over and the history under one season-close roo
   expect(carryOverKey("s2")).not.toEqual(carryOverKey("s1"));
   // A season-wide invalidation must not refresh the owner-only close reads by accident.
   expect(seasonResultsKey("s1").slice(0, 1)).not.toEqual(seasonKey("s1").slice(0, 1));
+});
+
+it("keys the Perfil summary under the progress root, so every settled mutation refreshes it", () => {
+  expect(profileSummaryKey.slice(0, 1)).toEqual(progressKey);
+  for (const other of [stageKey("s1", "c1"), seasonProgressKey("s1"), seasonHistoryKey]) {
+    expect(profileSummaryKey).not.toEqual(other);
+  }
 });

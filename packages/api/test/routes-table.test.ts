@@ -42,6 +42,7 @@ const { spies, USE_CASE_NAMES } = vi.hoisted(() => ({
     "seasonResults",
     "carryOver",
     "seasonHistory",
+    "profileSummary",
   ] as string[],
 }));
 
@@ -136,11 +137,12 @@ const TABLE: Row[] = [
   ],
   ["carryOver", "GET", `/seasons/${ID}/carry-over`],
   ["seasonHistory", "GET", "/me/seasons"],
+  ["profileSummary", "GET", "/me/profile"],
 ];
 
 describe("route table completeness (RT-S4)", () => {
-  it("has 37 routes over exactly the 36 use cases, the score one routed twice", () => {
-    expect(TABLE).toHaveLength(37);
+  it("has 38 routes over exactly the 37 use cases, the score one routed twice", () => {
+    expect(TABLE).toHaveLength(38);
     expect(new Set(TABLE.map(([name]) => name))).toEqual(new Set(USE_CASE_NAMES));
     expect(TABLE.filter(([name]) => name === "memberScore")).toHaveLength(2);
   });
@@ -202,7 +204,7 @@ describe("route to use case wiring (AC-S8)", () => {
       if (name === "commitmentStage") expect(args[2]).toEqual({ seasonId: ID, commitmentId: ID2 });
       if (name === "seasonResults") expect(args[2]).toEqual({ seasonId: ID });
       if (name === "carryOver") expect(args[2]).toEqual({ seasonId: ID });
-      if (name === "seasonHistory") expect(args).toHaveLength(2);
+      if (name === "seasonHistory" || name === "profileSummary") expect(args).toHaveLength(2);
       if (name === "submitSeasonClosure") {
         expect(args[2]).toEqual({
           seasonId: ID,

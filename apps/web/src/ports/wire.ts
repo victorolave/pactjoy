@@ -11,6 +11,7 @@ import type {
   PauseBudgetView,
   PauseRedistribution,
   PauseRequestView,
+  ProfileSummaryView,
   ResumePreview,
   ReviewDraftView,
   ReviewImprovement,
@@ -150,3 +151,5 @@ export interface CarryOverDto extends Omit<CarryOverWire, "items"> {
 }
 export type SeasonHistoryDto = Serialized<SeasonHistoryView>;
 export type SeasonHistoryItemDto = SeasonHistoryDto["seasons"][number];
+/** The Perfil consistency and the habit stages (`GET /me/profile`, ADR-0011 Q23). */
+export type ProfileSummaryDto = Serialized<ProfileSummaryView>;
