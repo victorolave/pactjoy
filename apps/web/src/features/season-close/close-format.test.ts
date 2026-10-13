@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   automaticityBar,
   automaticityLabel,
+  finalStandingsFootnote,
   graduationLead,
   percentText,
   shortDate,
   stageLine,
-  standingsText,
 } from "./close-format.ts";
 
 describe("percentText", () => {
@@ -74,54 +74,32 @@ describe("automaticityBar", () => {
   });
 });
 
-describe("standingsText", () => {
-  it("has no section for a solo circle", () => {
-    expect(standingsText({ rank: 1, memberCount: 1, gap: null })).toBeNull();
+describe("finalStandingsFootnote", () => {
+  it("gives the gap between first and second and calls a close season close", () => {
+    expect(finalStandingsFootnote([792, 798])).toBe(
+      "6 pts de diferencia. Fue una temporada muy pareja.",
+    );
   });
 
-  it("names the place and, behind someone, the difference", () => {
-    expect(
-      standingsText({ rank: 2, memberCount: 2, gap: { displayName: "Andrea", points: 6 } }),
-    ).toEqual({
-      headline: "Puesto 2 de 2, detrás de Andrea",
-      footnote: "6 pts de diferencia. Fue una temporada muy pareja.",
-    });
-  });
-
-  it("says a close season only when the gap is small", () => {
-    const far = standingsText({
-      rank: 2,
-      memberCount: 2,
-      gap: { displayName: "Andrea", points: 21 },
-    });
-    expect(far?.footnote).toBe("21 pts de diferencia.");
-    const edge = standingsText({
-      rank: 2,
-      memberCount: 3,
-      gap: { displayName: "Andrea", points: 20 },
-    });
-    expect(edge?.footnote).toBe("20 pts de diferencia. Fue una temporada muy pareja.");
+  it("says a close season only when the gap is at most 20 points", () => {
+    expect(finalStandingsFootnote([800, 779])).toBe("21 pts de diferencia.");
+    expect(finalStandingsFootnote([800, 780, 100])).toBe(
+      "20 pts de diferencia. Fue una temporada muy pareja.",
+    );
   });
 
   it("writes a single point in the singular", () => {
-    expect(
-      standingsText({ rank: 2, memberCount: 2, gap: { displayName: "Andrea", points: 1 } })
-        ?.footnote,
-    ).toBe("1 pt de diferencia. Fue una temporada muy pareja.");
+    expect(finalStandingsFootnote([799, 800])).toBe(
+      "1 pt de diferencia. Fue una temporada muy pareja.",
+    );
   });
 
-  it("names the first place with no difference to show", () => {
-    expect(standingsText({ rank: 1, memberCount: 2, gap: null })).toEqual({
-      headline: "Puesto 1 de 2",
-      footnote: null,
-    });
+  it("says so when the two are level", () => {
+    expect(finalStandingsFootnote([500, 500])).toBe("Mismos puntos. Fue una temporada muy pareja.");
   });
 
   it("says so when nobody scored", () => {
-    expect(standingsText({ rank: null, memberCount: 2, gap: null })).toEqual({
-      headline: "Nadie sumó puntos esta temporada",
-      footnote: null,
-    });
+    expect(finalStandingsFootnote([0, 0])).toBe("Nadie sumó puntos esta temporada");
   });
 });
 

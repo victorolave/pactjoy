@@ -60,31 +60,17 @@ export function automaticityBar(journey: Journey): { left: number; width: number
 /** A gap of at most this many points (2 % of the 1,000 a member can earn) is "muy pareja". */
 export const CLOSE_SEASON_MAX_GAP = 20;
 
-interface Standings {
-  readonly rank: number | null;
-  readonly memberCount: number;
-  readonly gap: { readonly displayName: string; readonly points: number } | null;
-}
-
-/** The final standings card: `null` for a solo circle, which has no one to be ranked against. */
-export function standingsText(
-  standings: Standings,
-): { readonly headline: string; readonly footnote: string | null } | null {
-  if (standings.memberCount <= 1) return null;
-  if (standings.rank === null) {
-    return { headline: "Nadie sumó puntos esta temporada", footnote: null };
-  }
-  const place = `Puesto ${standings.rank} de ${standings.memberCount}`;
-  const { gap } = standings;
-  if (gap === null) return { headline: place, footnote: null };
-  const difference = `${gap.points} ${gap.points === 1 ? "pt" : "pts"} de diferencia.`;
-  return {
-    headline: `${place}, detrás de ${gap.displayName}`,
-    footnote:
-      gap.points <= CLOSE_SEASON_MAX_GAP
-        ? `${difference} Fue una temporada muy pareja.`
-        : difference,
-  };
+/**
+ * The line under the final standings (36): the gap between first and second, and "muy pareja" when
+ * that gap is small. Points are the circle's, peer-visible figures.
+ */
+export function finalStandingsFootnote(points: readonly number[]): string {
+  const [first = 0, second = 0] = [...points].sort((a, b) => b - a);
+  if (first === 0) return "Nadie sumó puntos esta temporada";
+  const gap = first - second;
+  if (gap === 0) return "Mismos puntos. Fue una temporada muy pareja.";
+  const difference = `${gap} ${gap === 1 ? "pt" : "pts"} de diferencia.`;
+  return gap <= CLOSE_SEASON_MAX_GAP ? `${difference} Fue una temporada muy pareja.` : difference;
 }
 
 /** "Consistencia 88 % · automaticidad 5,8" (37), keeping only what is known. */

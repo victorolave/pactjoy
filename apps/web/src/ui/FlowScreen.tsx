@@ -1,12 +1,19 @@
 import type { FormEventHandler, ReactNode, Ref } from "react";
+import { cx } from "./cx.ts";
 import styles from "./FlowScreen.module.css";
 import { IconButton } from "./IconButton.tsx";
 import type { IconName } from "./icon/Icon.tsx";
 
 export interface FlowScreenProps {
   readonly title: string;
+  /** An id for the heading, so a field can be named by it (the review's reflection). */
+  readonly titleId?: string;
   /** Context or subtitle above the heading (e.g. circle name or season progress). */
   readonly meta?: ReactNode;
+  /** A picture above the heading (the review's reflection, design 34). */
+  readonly illustration?: ReactNode;
+  /** Centres the heading and the content between the top and the pinned action (a closing screen). */
+  readonly centered?: boolean;
   /** The primary action, pinned below the scrolling content (design 3, 4). Settings has none. */
   readonly footer?: ReactNode;
   readonly children: ReactNode;
@@ -29,7 +36,10 @@ export interface FlowScreenProps {
  */
 export function FlowScreen({
   title,
+  titleId,
   meta,
+  illustration,
+  centered = false,
   footer,
   children,
   onSubmit,
@@ -47,11 +57,13 @@ export function FlowScreen({
           {progress}
         </div>
       )}
-      <div className={styles.content}>
+      <div className={cx(styles.content, centered && styles.centered)}>
+        {illustration}
         {meta !== undefined ? (
           <div>
             <div className={styles.meta}>{meta}</div>
             <h1
+              id={titleId}
               ref={headingRef}
               tabIndex={headingRef ? -1 : undefined}
               className={styles.titleWithMeta}
@@ -60,7 +72,12 @@ export function FlowScreen({
             </h1>
           </div>
         ) : (
-          <h1 ref={headingRef} tabIndex={headingRef ? -1 : undefined} className={styles.title}>
+          <h1
+            id={titleId}
+            ref={headingRef}
+            tabIndex={headingRef ? -1 : undefined}
+            className={styles.title}
+          >
             {title}
           </h1>
         )}

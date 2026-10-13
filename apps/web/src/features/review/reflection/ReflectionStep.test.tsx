@@ -37,6 +37,20 @@ describe("ReflectionStep (34)", () => {
     );
   });
 
+  it("shows each question once, as the visible name of its field, under the designed picture", () => {
+    render(<ReflectionStep {...props} />);
+    expect(screen.getAllByText("¿Qué te ayudó?")).toHaveLength(1);
+    expect(screen.getAllByText("¿Qué costó más?")).toHaveLength(1);
+    const picture = screen.getByRole("img", {
+      name: "Un hombre escribe en su cuaderno en la mesa",
+    });
+    expect(picture).toHaveAttribute("src", expect.stringContaining("reflexion"));
+    const heading = screen.getByRole("heading", { level: 1 });
+    expect(
+      picture.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   it("reports what is typed in each field and caps it at the note limit", async () => {
     const onChange = vi.fn();
     render(<ReflectionStep {...props} onChange={onChange} />);

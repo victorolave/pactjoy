@@ -45,7 +45,7 @@ export function GraduateSheet({
       }
     >
       <div className={styles.sheetBody}>
-        <Illustration size="180" alt={graduateCopy.illustrationAlt} />
+        <Illustration name="graduar-habito" size="180" alt={graduateCopy.illustrationAlt} />
         <p className={styles.small}>{graduateCopy.meta(habitName)}</p>
         <h2 className={styles.sheetTitle}>{graduateCopy.title}</h2>
         <p className={styles.lead}>{graduateCopy.body}</p>

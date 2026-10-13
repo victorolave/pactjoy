@@ -2,6 +2,7 @@ import { useId } from "react";
 import { Button } from "../../../ui/Button.tsx";
 import { FlowScreen } from "../../../ui/FlowScreen.tsx";
 import { Icon } from "../../../ui/icon/Icon.tsx";
+import { Illustration } from "../../../ui/Placeholder.tsx";
 import type { StepChrome } from "../chrome.ts";
 import styles from "../review.module.css";
 
@@ -23,23 +24,22 @@ export interface ReflectionStepProps {
 }
 
 interface AreaProps {
-  readonly label: string;
+  /** The id of the visible question that names this field. */
+  readonly labelledBy: string;
   readonly placeholder: string;
   readonly value: string;
   readonly error: string | null;
   readonly onChange: (value: string) => void;
 }
 
-function Area({ label, placeholder, value, error, onChange }: AreaProps) {
+function Area({ labelledBy, placeholder, value, error, onChange }: AreaProps) {
   const id = useId();
   const errorId = `${id}-error`;
   return (
     <div className="pj-field">
-      <label className="pj-field__label" htmlFor={id}>
-        {label}
-      </label>
       <textarea
         id={id}
+        aria-labelledby={labelledBy}
         className="pj-input"
         value={value}
         maxLength={MAX_LENGTH}
@@ -68,9 +68,19 @@ export function ReflectionStep({
   onSkip,
   onNext,
 }: ReflectionStepProps) {
+  const helpedId = useId();
+  const hardId = useId();
   return (
     <FlowScreen
       title="¿Qué te ayudó?"
+      titleId={helpedId}
+      illustration={
+        <Illustration
+          name="reflexion"
+          size="180"
+          alt="Un hombre escribe en su cuaderno en la mesa"
+        />
+      }
       meta="Opcional · solo para ti"
       onBack={chrome.onBack}
       backLabel={chrome.backLabel}
@@ -89,15 +99,17 @@ export function ReflectionStep({
     >
       <div className={styles.reflect}>
         <Area
-          label="¿Qué te ayudó?"
+          labelledBy={helpedId}
           placeholder="Con tus palabras (opcional)"
           value={helped}
           error={errors.helped}
           onChange={(value) => onChange("helped", value)}
         />
-        <h2 className={styles.reflectSecond}>¿Qué costó más?</h2>
+        <h2 id={hardId} className={styles.reflectSecond}>
+          ¿Qué costó más?
+        </h2>
         <Area
-          label="¿Qué costó más?"
+          labelledBy={hardId}
           placeholder="Gym después del trabajo…"
           value={hard}
           error={errors.hard}

@@ -2,15 +2,10 @@ import type { ReactNode } from "react";
 import type { SeasonResultsDto } from "../../../ports/wire.ts";
 import { Card } from "../../../ui/Card.tsx";
 import { IconButton } from "../../../ui/IconButton.tsx";
-import {
-  automaticityBar,
-  automaticityLabel,
-  percentText,
-  shortDate,
-  standingsText,
-} from "../close-format.ts";
+import { automaticityBar, automaticityLabel, percentText, shortDate } from "../close-format.ts";
 import { resultsCopy } from "../copy.ts";
 import styles from "../season-close.module.css";
+import { FinalStandings } from "./FinalStandings.tsx";
 
 export interface ResultsViewProps {
   readonly results: SeasonResultsDto;
@@ -25,7 +20,6 @@ export interface ResultsViewProps {
  * confetti and no podium. Everything here is the viewer's: the automaticity is private.
  */
 export function ResultsView({ results, onBack, footer }: ResultsViewProps) {
-  const standings = standingsText(results.standings);
   const journeys = results.commitments.flatMap((row) => {
     const label = automaticityLabel(row.automaticity);
     const bar = automaticityBar(row.automaticity);
@@ -99,13 +93,7 @@ export function ResultsView({ results, onBack, footer }: ResultsViewProps) {
             <p className={styles.small}>{resultsCopy.automaticityNote}</p>
           </Card>
         )}
-        {standings !== null && (
-          <Card>
-            <h2 className={styles.cardTitle}>{resultsCopy.standings}</h2>
-            <p className={styles.standingLine}>{standings.headline}</p>
-            {standings.footnote !== null && <p className={styles.small}>{standings.footnote}</p>}
-          </Card>
-        )}
+        {results.standings.memberCount > 1 && <FinalStandings seasonId={results.seasonId} />}
       </div>
       {footer !== undefined && <div className={styles.pageFooter}>{footer}</div>}
     </main>

@@ -1,6 +1,8 @@
+import celebrarJuntos from "../design/brand/celebrar-juntos.webp";
 import cocinar from "../design/brand/cocinar.webp";
 import crearPacto from "../design/brand/crear-pacto.webp";
 import diaDificilCrop from "../design/brand/dia-dificil-crop.webp";
+import graduarHabito from "../design/brand/graduar-habito.webp";
 import caminar from "../design/brand/imagery/caminar.png";
 import invitarCirculo from "../design/brand/invitar-circulo.webp";
 import metasAndrea from "../design/brand/metas-andrea.webp";
@@ -9,7 +11,9 @@ import onboarding1 from "../design/brand/onboarding-1.webp";
 import horizontalLogo from "../design/brand/pactjoy-horizontal-proposed.svg";
 import symbolLogo from "../design/brand/pactjoy-symbol-gradient.svg";
 import primerHabito from "../design/brand/primer-habito.webp";
+import reflexion from "../design/brand/reflexion.webp";
 import registroGuardado from "../design/brand/registro-guardado.webp";
+import revisionEstudiar from "../design/brand/revision-estudiar.webp";
 import sinConexion from "../design/brand/sin-conexion.webp";
 import styles from "./Placeholder.module.css";
 
@@ -25,6 +29,10 @@ const ILLUSTRATIONS = {
   "invitar-circulo": invitarCirculo,
   "metas-andrea": metasAndrea,
   "metas-victor": metasVictor,
+  reflexion,
+  "revision-estudiar": revisionEstudiar,
+  "celebrar-juntos": celebrarJuntos,
+  "graduar-habito": graduarHabito,
 } as const;
 
 export type IllustrationName = keyof typeof ILLUSTRATIONS;

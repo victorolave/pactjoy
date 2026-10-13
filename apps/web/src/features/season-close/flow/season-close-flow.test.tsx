@@ -12,10 +12,30 @@ import {
   resultsFixture,
   submittedClosureFixture,
 } from "../../../testing/fixtures/season-close.ts";
+import { activeSeasonProgress } from "../../../testing/fixtures/season-progress.ts";
 import { activeTodayFixture } from "../../../testing/fixtures/today.ts";
 import { renderApp } from "../../../testing/render.tsx";
 
 const PATH = "/season/season-1/close";
+
+/** The season's standings as screen 36 shows them: Andrea 798, Victor (the viewer) 792. */
+const finalProgress = () => {
+  const base = activeSeasonProgress();
+  const [first, second] = base.standings.rows;
+  if (first === undefined || second === undefined) throw new Error("the fixture has a pair");
+  const andrea = first.displayName === "Andrea" ? first : second;
+  const victor = first.displayName === "Andrea" ? second : first;
+  return {
+    ...base,
+    standings: {
+      ...base.standings,
+      rows: [
+        { ...andrea, points: 798, rank: 1 },
+        { ...victor, points: 792, rank: 2 },
+      ],
+    },
+  };
+};
 
 const open = (
   results = resultsFixture(),
@@ -24,6 +44,7 @@ const open = (
 ) => {
   const app = renderApp({ path, ...options });
   app.deps.api.setSeasonResults(results);
+  app.deps.api.progress.setSeasonProgress("season-1", finalProgress());
   return app;
 };
 
@@ -62,10 +83,18 @@ describe("36 Resultados", () => {
     expect(screen.getByRole("img", { name: "Gym: 2 → 2,8" })).toBeInTheDocument();
     expect(screen.getByText("Privado. Solo tú ves estas cifras.")).toBeInTheDocument();
     expect(screen.getByText("Clasificación final")).toBeInTheDocument();
-    expect(screen.getByText("Puesto 2 de 2, detrás de Andrea")).toBeInTheDocument();
+    const list = await screen.findByRole("list", { name: "Clasificación final" });
+    const [first, second] = within(list).getAllByRole("listitem");
+    expect(first).toHaveTextContent("1");
+    expect(first).toHaveTextContent("Andrea");
+    expect(first).toHaveTextContent("798 pts");
+    expect(second).toHaveTextContent("2");
+    expect(second).toHaveTextContent("Victor");
+    expect(second).toHaveTextContent("792 pts");
     expect(
       screen.getByText("6 pts de diferencia. Fue una temporada muy pareja."),
     ).toBeInTheDocument();
+    expect(screen.queryByText(/Puesto 2 de 2/)).not.toBeInTheDocument();
   });
 
   it("has no standings and no talk of the others for a solo circle", async () => {
@@ -452,6 +481,30 @@ describe("states of the route", () => {
   });
 });
 
+describe("the design illustrations", () => {
+  it("draws the designed picture on the decisions-saved screen", async () => {
+    open();
+    await decideAll(NO_GRADUATION);
+    const picture = await screen.findByRole("img", {
+      name: "Dos personas chocan las manos en alto",
+    });
+    expect(picture).toHaveAttribute("src", expect.stringContaining("celebrar-juntos"));
+  });
+
+  it("draws the designed picture on the graduation question", async () => {
+    open();
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Decidir qué sigue con cada hábito" }),
+    );
+    await choose("Graduar 🎓");
+    await click("Continuar");
+    const picture = await screen.findByRole("img", {
+      name: "Un hombre camina tranquilo con un libro junto a una planta",
+    });
+    expect(picture).toHaveAttribute("src", expect.stringContaining("graduar-habito"));
+  });
+});
+
 describe("the read-only results route", () => {
   it("shows screen 36 for a closed season with no way to decide", async () => {
     const app = open(
@@ -460,7 +513,7 @@ describe("the read-only results route", () => {
       "/season/season-1/results",
     );
     expect(await screen.findByRole("heading", { name: "Cerramos esta temporada" })).toBeVisible();
-    expect(screen.getByText("Puesto 2 de 2, detrás de Andrea")).toBeInTheDocument();
+    expect(await screen.findByRole("list", { name: "Clasificación final" })).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /Decidir|revisión|decisiones/ }),
     ).not.toBeInTheDocument();

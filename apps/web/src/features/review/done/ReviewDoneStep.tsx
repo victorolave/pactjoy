@@ -40,6 +40,14 @@ export function ReviewDoneStep({
   return (
     <FlowScreen
       title="Revisión guardada."
+      centered
+      illustration={
+        <Illustration
+          name="revision-estudiar"
+          size="story"
+          alt="Una persona estudia con auriculares y toma notas"
+        />
+      }
       footer={
         <Button block onClick={onFinish}>
           {toResults ? "Ver mis resultados" : "Seguir con mi día"}
@@ -47,7 +55,6 @@ export function ReviewDoneStep({
       }
     >
       <div className={styles.section}>
-        <Illustration name="registro-guardado" size="hero" alt="Revisión guardada" />
         {text !== "" && <p className={styles.lead}>{text}</p>}
         {closing && resultsOpenOn !== null && (
           <p className={styles.lead}>

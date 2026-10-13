@@ -15,6 +15,8 @@ export interface StandingsProps {
   readonly calendar: { readonly weekIndex: number; readonly daysLeft: number };
   readonly onNavigateToMember?: ((memberId: string) => void) | undefined;
   readonly footer?: ReactNode | undefined;
+  /** The card's heading; "Así va la temporada" while the season runs, "Clasificación final" at its close. */
+  readonly title?: string | undefined;
 }
 
 /** Gap copy thresholds per Notion Mechanics & design 23a (pairs only). */
@@ -39,6 +41,7 @@ export function Standings({
   calendar,
   onNavigateToMember,
   footer,
+  title = "Así va la temporada",
 }: StandingsProps) {
   if (standings.memberCount <= 1) return null;
 
@@ -59,11 +62,11 @@ export function Standings({
   return (
     <div className={`pj-card ${styles.card}`}>
       <div className={styles.header}>
-        <span className={styles.title}>Así va la temporada</span>
+        <span className={styles.title}>{title}</span>
         {footer === undefined && <span className={styles.subtitle}>Puntos acumulados</span>}
       </div>
 
-      <ol className={styles.list}>
+      <ol className={styles.list} aria-label={title}>
         {rows.map((row) => {
           const content = (
             <>

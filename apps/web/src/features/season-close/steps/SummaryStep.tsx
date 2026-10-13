@@ -52,7 +52,7 @@ export function SummaryStep({ rows, canPrepare, onPrepare, onToday }: SummarySte
       }
     >
       <div className={styles.section}>
-        <Illustration size="hero" alt={savedCopy.illustrationAlt} />
+        <Illustration name="celebrar-juntos" size="hero" alt={savedCopy.illustrationAlt} />
         <p className={styles.lead}>{canPrepare ? savedCopy.body : savedCopy.bodyWaiting}</p>
         <Card flush>
           <ul className={styles.summaryRows} aria-label={savedCopy.listLabel}>

@@ -33,6 +33,18 @@ describe("ReviewDoneStep (35b)", () => {
     ).toBeInTheDocument();
   });
 
+  it("opens with the designed picture, before the heading", () => {
+    render(<ReviewDoneStep result={null} names={names} onFinish={() => {}} />);
+    const picture = screen.getByRole("img", {
+      name: "Una persona estudia con auriculares y toma notas",
+    });
+    expect(picture).toHaveAttribute("src", expect.stringContaining("revision-estudiar"));
+    const heading = screen.getByRole("heading", { level: 1 });
+    expect(
+      picture.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   it("says only when the next review is when nothing improved", () => {
     render(
       <ReviewDoneStep
