@@ -1,6 +1,6 @@
 # ADR-0014: Periodic review and derived habit stage
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-12
 - **Deciders:** Victor Olave
 
