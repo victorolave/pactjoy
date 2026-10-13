@@ -94,6 +94,7 @@ describe("commitmentProgress (24a, 24b)", () => {
         recordedOn: DAY(0),
         value: { kind: "quantity", value: "30" },
         note: "Capítulo 3",
+        photo: null,
       },
     ]);
     expect(week?.cells[1]?.evidence[0]).toMatchObject({ forDate: DAY(1), recordedOn: DAY(2) });

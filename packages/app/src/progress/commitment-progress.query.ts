@@ -9,7 +9,10 @@ import {
   weekProgress,
 } from "@pactjoy/engine";
 import type { Measure } from "../commitment/commitment.ts";
+import { photoViews } from "../entry-photo/photo-views.ts";
+import type { EvidenceStorage } from "../ports/evidence-storage.ts";
 import { memberScoreView } from "../score/member-score.query.ts";
+import { visiblePhotoId } from "../score/privacy.ts";
 import {
   loadPausesFor,
   loadScoreContext,
@@ -26,7 +29,10 @@ import { DAYS_PER_WEEK, seasonPhase, weekOf } from "../today/season-phase.ts";
 import { dateOfDay } from "../today/today-rows.ts";
 import type { CommitmentProgressView } from "./progress-view.ts";
 
-export type CommitmentProgressDeps = ScoreQueryDeps;
+export interface CommitmentProgressDeps extends ScoreQueryDeps {
+  /** Signs the download URLs of the photos the viewer may see; not touched when there are none. */
+  readonly evidence: EvidenceStorage;
+}
 export type CommitmentProgressError = ScoreContextError | { readonly kind: "CommitmentNotFound" };
 export interface CommitmentProgressInput {
   readonly seasonId: SeasonId;
@@ -115,6 +121,21 @@ export async function commitmentProgress(
     const ownerEntries = data.entries.filter((entry) => entry.memberId === owner.id);
     const commitment = scoreInput.commitments.find((c) => c.id === record.id);
     if (!commitment) throw new Error(`commitment ${record.id} missing from the score input`);
+    // The photos the viewer may see, signed once AFTER the visibility filter (REQ-P4), with the
+    // read's captured instant. A peer can only get here for a visible commitment, so for them the
+    // filter never drops anything; it is the same rule as the note, applied where the id is read.
+    const shown = ownerEntries.flatMap((entry) => {
+      if (entry.commitmentId !== record.id) return [];
+      const photoId = visiblePhotoId(entry, record, viewer.id);
+      return photoId ? [[entry.id, photoId] as const] : [];
+    });
+    const views = await photoViews(
+      repos,
+      deps.evidence,
+      shown.map(([, photoId]) => photoId),
+      context.value.now,
+    );
+    const photoOfEntry = new Map(shown.map(([entry, photoId]) => [entry, views.get(photoId)]));
     const counts = opportunityCounts(commitment, scoreInput);
     const currentWeek = weekOf(phase.scoringDay) - 1;
     const current = weekProgress({ ...scoreInput, commitment, week: currentWeek });
@@ -173,6 +194,7 @@ export async function commitmentProgress(
                     ? { kind: "quantity" as const, value: toDecimalString(value.value) }
                     : { kind: value.kind },
                 note: entry.note,
+                photo: photoOfEntry.get(entry.id) ?? null,
               },
             ];
           }),

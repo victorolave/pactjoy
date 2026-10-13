@@ -14,9 +14,10 @@ const THROTTLE_MS = 1000;
  * Bump for shape OR scoring semantics: v5 purged ended-clamped scores and old weekly series; v6 adds
  * the rows' nested `pause` and pause-aware scoring; v7 adds `pendingReview` and `baselineOffer` to
  * every season state (periodic-review, ADR-0014); v8 adds `seasonClose` to the running and ended
- * states (season-close-graduation, ADR-0015).
+ * states (season-close-graduation, ADR-0015); v9 adds `photo` to each entry of a row
+ * (photo-evidence, ADR-0016).
  */
-export const CACHE_VERSION = "8";
+export const CACHE_VERSION = "9";
 
 /** The saved Today belongs to one user of one cache version: anything else is not restored. */
 export const bustFor = (userId: string | null): string => `${CACHE_VERSION}:${userId ?? "anon"}`;

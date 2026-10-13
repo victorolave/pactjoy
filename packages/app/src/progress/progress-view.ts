@@ -3,6 +3,7 @@ import type { MeasureView } from "../score/commitment-projection.ts";
 import type { PreviewProgressView } from "../scoring/preview-progress.query.ts";
 import type { SeasonLengthWeeks } from "../season/season.ts";
 import type { CircleId, SeasonId } from "../shared/ids.ts";
+import type { Instant } from "../time/instant.ts";
 import type { LocalDate } from "../time/local-date.ts";
 import type { TimeZoneId } from "../time/time-zone.port.ts";
 import type { TodayEntry, TodayWeekProgress } from "../today/today-rows.ts";
@@ -146,6 +147,11 @@ export interface ProgressEvidence {
   readonly recordedOn: LocalDate;
   readonly value: TodayEntry["value"];
   readonly note: string | null;
+  /**
+   * The entry's photo as a short-lived signed download, or `null`. Exactly `{ url, expiresAt }`:
+   * never the photo id, the object key or the reservation state (REQ-P3).
+   */
+  readonly photo: { readonly url: string; readonly expiresAt: Instant } | null;
 }
 
 /**

@@ -206,6 +206,7 @@ describe("full pipeline logging (createApi)", () => {
         timeZone: app.timeZone,
         ids: createDeterministicUuidGenerator(),
         random: app.random,
+        evidence: app.evidence,
         tokenVerifier: createFakeTokenVerifier({ andrea: userId(ANDREA_ID) }),
         logger: { info: vi.fn(), warn: vi.fn(), error },
         isUnavailable: (e) => e === boom,

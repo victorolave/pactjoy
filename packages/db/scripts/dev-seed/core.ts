@@ -9,6 +9,7 @@ import type {
   Actor,
   Clock,
   EntryValueInput,
+  EvidenceStorage,
   IdGenerator,
   Instant,
   MeasureInput,
@@ -46,6 +47,8 @@ export interface SeedApp {
   readonly timeZone: TimeZone;
   readonly ids: IdGenerator;
   readonly random: RandomSource;
+  /** The seed never records a photo, so it is never called. */
+  readonly evidence: EvidenceStorage;
 }
 
 export interface SeedContext {

@@ -138,6 +138,7 @@ export const entryFixture = (value: Entry["value"], overrides: Partial<Entry> = 
   forDate: TODAY,
   value,
   note: null,
+  photo: null,
   ...overrides,
 });
 

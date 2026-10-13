@@ -20,6 +20,10 @@ import {
   type InMemoryEntryRepository,
 } from "./in-memory-entry-repository.ts";
 import {
+  createInMemoryEvidenceStorage,
+  type InMemoryEvidenceStorage,
+} from "./in-memory-evidence-storage.ts";
+import {
   createInMemoryHabitRepository,
   type InMemoryHabitRepository,
 } from "./in-memory-habit-repository.ts";
@@ -60,6 +64,8 @@ export interface TestApp {
   readonly circles: InMemoryCircleRepository;
   readonly entries: InMemoryEntryRepository;
   readonly entryPhotos: InMemoryEntryPhotoRepository;
+  /** The fake object storage; `upload` plays the browser. Expiry follows the clock the app was created with. */
+  readonly evidence: InMemoryEvidenceStorage;
   readonly habits: InMemoryHabitRepository;
   readonly pauses: InMemoryPauseRequestRepository;
   readonly reviews: InMemoryReviewRepository;
@@ -99,8 +105,10 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
     seasons,
   };
 
+  const clock = createFixedClock(options.now ?? DEFAULT_NOW);
   return {
-    clock: createFixedClock(options.now ?? DEFAULT_NOW),
+    clock,
+    evidence: createInMemoryEvidenceStorage({ clock }),
     ids: createSequentialIdGenerator(options.idPrefix),
     random: createSeededRandomSource(options.randomSeed ?? DEFAULT_RANDOM_SEED),
     timeZone: options.timeZone ?? createIntlTimeZone(),

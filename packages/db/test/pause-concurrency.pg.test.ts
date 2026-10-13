@@ -22,6 +22,7 @@ import {
   userId,
 } from "@pactjoy/app";
 import { afterAll, describe, expect, it } from "vitest";
+import { noEvidenceStorage } from "../scripts/dev-seed/no-evidence-storage.ts";
 import { createClient } from "../src/client.ts";
 import { bindRepositories } from "../src/repositories.ts";
 import { createUnitOfWork } from "../src/unit-of-work.ts";
@@ -89,7 +90,7 @@ const SEASON: Season = {
 const client = createClient({ url: databaseUrl(), max: 6 });
 const admin = connect(databaseUrl());
 const uow = createUnitOfWork(client.begin, bindRepositories);
-const deps = { uow, clock, timeZone, ids };
+const deps = { uow, clock, timeZone, ids, evidence: noEvidenceStorage };
 afterAll(async () => {
   await truncateAll(admin);
   await client.end();

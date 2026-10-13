@@ -54,7 +54,8 @@ const paths = [...new Set(complete.flatMap((view) => shape(view)))].sort();
 // v7: every season state gained `pendingReview` and `baselineOffer` (periodic-review); the matching
 // `isCurrentToday` check drops a saved copy that lacks them.
 // v8: the running and ended states gained `seasonClose` (season-close-graduation).
-const PINNED = { hash: "5d84301f", version: "8" };
+// v9: every entry of a row gained `photo` (photo-evidence).
+const PINNED = { hash: "0c4d2ab2", version: "9" };
 
 describe("saved Today cache version", () => {
   it("changes whenever the shape of Today changes", () => {

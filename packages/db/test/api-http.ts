@@ -7,6 +7,7 @@ import {
   instant,
   userId,
 } from "@pactjoy/app";
+import { noEvidenceStorage } from "../scripts/dev-seed/no-evidence-storage.ts";
 import { createPostgresUnitOfWork } from "../src/index.ts";
 import { databaseUrl } from "./db.ts";
 
@@ -41,6 +42,7 @@ export function createHttpOverPostgres(max = 3) {
       timeZone: createIntlTimeZone(),
       ids: createUuidV7IdGenerator({ clock }),
       random: createCryptoRandomSource(),
+      evidence: noEvidenceStorage,
       tokenVerifier: createFakeTokenVerifier(tokens),
       logger: { info: () => undefined, warn: () => undefined, error: () => undefined },
     },

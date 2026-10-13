@@ -125,6 +125,8 @@ export interface EntryPhotoTransactionScope {
 
 export interface InMemoryEntryPhotoRepository extends EntryPhotoRepository {
   beginTransaction(): EntryPhotoTransactionScope;
+  /** Every stored row, oldest first: for assertions, not part of the port. */
+  all(): readonly EntryPhoto[];
 }
 
 /**
@@ -141,6 +143,10 @@ export function createInMemoryEntryPhotoRepository(): InMemoryEntryPhotoReposito
 
   return {
     ...live,
+
+    all() {
+      return [...store.values()].sort(byAge);
+    },
 
     beginTransaction(): EntryPhotoTransactionScope {
       const staged = new Map<EntryPhotoId, StagedWrite>();

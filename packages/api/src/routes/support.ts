@@ -1,6 +1,7 @@
 import type {
   Actor,
   Clock,
+  EvidenceStorage,
   IdGenerator,
   RandomSource,
   Repositories,
@@ -24,6 +25,8 @@ export interface ApiDeps {
   readonly timeZone: TimeZone;
   readonly ids: IdGenerator;
   readonly random: RandomSource;
+  /** Object storage for photo evidence (ADR-0016); only touched when a request carries or removes a photo. */
+  readonly evidence: EvidenceStorage;
   readonly tokenVerifier: TokenVerifier;
   readonly logger: Logger;
   /** Millisecond clock for request durations; defaults to Date.now. */

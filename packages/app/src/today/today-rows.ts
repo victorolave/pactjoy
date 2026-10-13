@@ -29,7 +29,8 @@ import {
 import { startWeekdayOf, toEngineEntry } from "../score/score-input.ts";
 import type { Season } from "../season/season.ts";
 import { toDecimalString } from "../shared/decimal.ts";
-import type { EntryId, HabitId } from "../shared/ids.ts";
+import type { EntryId, EntryPhotoId, HabitId } from "../shared/ids.ts";
+import type { Instant } from "../time/instant.ts";
 import { epochDay, type LocalDate, localDateOfEpochDay } from "../time/local-date.ts";
 import { type TodayPause, todayPauseOf } from "./today-pause.ts";
 
@@ -55,6 +56,18 @@ export interface TodayEntry {
     | { readonly kind: "missed" }
     | { readonly kind: "quantity"; readonly value: string };
   readonly note: string | null;
+  /**
+   * The entry's photo as a short-lived signed download, or `null`. `todayRows` is pure and always
+   * leaves it `null`; `today()` fills it in for the entries it shows, which are the viewer's own, so
+   * the owner sees it whatever the commitment's privacy (REQ-P1). `photoId` is an owner-only field.
+   */
+  readonly photo: TodayEntryPhoto | null;
+}
+
+export interface TodayEntryPhoto {
+  readonly photoId: EntryPhotoId;
+  readonly url: string;
+  readonly expiresAt: Instant;
 }
 
 /** The week's figures for a `timesPerWeek` / `weeklyTotal` row; `null` while the whole week is paused or on hold. */
@@ -145,6 +158,7 @@ function entryView(record: EntryRecord, actualStart: LocalDate): TodayEntry {
         ? { kind: "quantity", value: toDecimalString(value.value) }
         : { kind: value.kind },
     note: record.note,
+    photo: null,
   };
 }
 

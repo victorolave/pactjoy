@@ -63,6 +63,15 @@ export const UI_KIND_BY_CODE = {
   CommitmentNotOwned: "generic",
   CommitmentNotFound: "generic",
   SeasonNotFound: "generic",
+  // Provisional until the photo UI (change `photo-evidence`, web units): the client checks size and
+  // type itself and never sends a photo with a missed entry, so those two are bugs; the rest mean
+  // "this photo cannot be used any more" and fall back to the generic message.
+  InvalidPhoto: "bug",
+  PhotoNotAllowedOnMissed: "bug",
+  PhotoNotFound: "generic",
+  PhotoNotUploaded: "generic",
+  PhotoUploadExpired: "generic",
+  PhotoNotAvailable: "generic",
   MissedNotAllowed: "bug",
   ValueKindMismatch: "bug",
   IdempotencyKeyReused: "bug",

@@ -165,6 +165,8 @@ const evidence = shape(
       shape({ kind: oneOf("done", "missed") }, true)(v) ||
       shape({ kind: oneOf("quantity"), value: decimal }, true)(v),
     note: nullable(text),
+    // Exactly the signed URL and its expiry: a peer never receives the photo id or the object key.
+    photo: nullable(shape({ url: id, expiresAt: num }, true)),
   },
   true,
 );

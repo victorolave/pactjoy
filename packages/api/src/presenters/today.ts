@@ -63,6 +63,12 @@ function presentTodayEntry(entry: TodayEntry): TodayEntry {
     value:
       value.kind === "quantity" ? { kind: "quantity", value: value.value } : { kind: value.kind },
     note: entry.note,
+    // Explicit whitelist (ADR-0011): `photoId` is an owner-only field and Today is the viewer's own;
+    // no object key, size or state exists on the view to leak.
+    photo:
+      entry.photo === null
+        ? null
+        : { photoId: entry.photo.photoId, url: entry.photo.url, expiresAt: entry.photo.expiresAt },
   };
 }
 

@@ -14,6 +14,7 @@ import { createPostgresUnitOfWork } from "../../src/index.ts";
 import { goTrueAdminAccounts } from "./accounts.ts";
 import { parseEnvLines, resolveConfig } from "./config.ts";
 import { createSeedClock, noonIn, type SeedContext } from "./core.ts";
+import { noEvidenceStorage } from "./no-evidence-storage.ts";
 import { runScenarios, selectScenarios } from "./scenario.ts";
 
 /** `supabase status -o env`, when the CLI is installed; never required. */
@@ -52,6 +53,7 @@ async function main(): Promise<number> {
       timeZone,
       ids: createUuidV7IdGenerator({ clock }),
       random: createCryptoRandomSource(),
+      evidence: noEvidenceStorage,
     },
     zone,
     setDate: (date) => clock.set(noonIn(date, zone, timeZone)),

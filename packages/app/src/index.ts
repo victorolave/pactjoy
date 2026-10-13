@@ -113,6 +113,20 @@ export type {
 export { recordEntry } from "./entry/record-entry.ts";
 export type { EntryPhotoRepository } from "./entry-photo/entry-photo.repository.ts";
 export type { EntryPhoto, EntryPhotoStatus } from "./entry-photo/entry-photo.ts";
+export type { InvalidPhotoReason, PhotoError } from "./entry-photo/errors.ts";
+export type {
+  RequestEntryPhotoUploadDeps,
+  RequestEntryPhotoUploadError,
+  RequestEntryPhotoUploadInput,
+  RequestEntryPhotoUploadResult,
+} from "./entry-photo/request-entry-photo-upload.ts";
+export { requestEntryPhotoUpload } from "./entry-photo/request-entry-photo-upload.ts";
+export type {
+  SweepEntryPhotosDeps,
+  SweepEntryPhotosInput,
+  SweepEntryPhotosResult,
+} from "./entry-photo/sweep-entry-photos.ts";
+export { sweepEntryPhotos } from "./entry-photo/sweep-entry-photos.ts";
 export type {
   CreateHabitDeps,
   CreateHabitError,
@@ -443,6 +457,7 @@ export type { TodayPause } from "./today/today-pause.ts";
 export type {
   OpportunityState,
   TodayEntry,
+  TodayEntryPhoto,
   TodayOpportunity,
   TodayPoints,
   TodayRow,
