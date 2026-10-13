@@ -64,7 +64,7 @@ function SeasonRow({ season }: { readonly season: SeasonHistoryItemDto }) {
       <Link to={`/season/${season.seasonId}/results`} className={styles.row}>
         <span className={styles.rowInfo}>
           <span className={styles.rowTitle}>{seasonRowTitle(season)}</span>
-          <span className={styles.rowSub}> {seasonRowSubtitle(season)}</span>
+          <span className={styles.rowSub}>{seasonRowSubtitle(season)}</span>
         </span>
         <span className={styles.chevron} aria-hidden="true">
           <Icon name="chevron-right" size="sm" />
@@ -107,7 +107,6 @@ function GraduatedRow({ habit }: { readonly habit: HabitDto & { readonly graduat
       <span className={styles.rowInfo}>
         <span className={styles.rowTitle}>{habit.name}</span>
         <span className={styles.rowSub}>
-          {" "}
           Graduado el {dayMonth(habit.graduatedAt.slice(0, 10))}
         </span>
       </span>

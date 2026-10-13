@@ -72,19 +72,22 @@
   gap: var(--space-3);
   align-items: center;
   min-height: var(--touch-target);
-  padding: var(--space-3) 0;
+  padding: var(--space-3) var(--space-4);
   border-bottom: var(--border-width) solid var(--pj-hairline);
   color: inherit;
   text-decoration: none;
   box-sizing: border-box;
 }
 
-.list > li:last-child .row {
+.list > li:last-child .row,
+.list > li.row:last-child {
   border-bottom: none;
 }
 
 .rowInfo {
+  display: flex;
   flex: 1;
+  flex-direction: column;
   min-width: 0;
 }
 
@@ -95,7 +98,6 @@
 }
 
 .rowSub {
-  margin-top: var(--space-1);
   font: var(--font-small);
   color: var(--text-secondary);
 }
