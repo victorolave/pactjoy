@@ -5,7 +5,7 @@ import { ButtonLink } from "../../../ui/ButtonLink.tsx";
 import { Card } from "../../../ui/Card.tsx";
 import { InlineMessage } from "../../../ui/InlineMessage.tsx";
 import { Icon } from "../../../ui/icon/Icon.tsx";
-import { Illustration } from "../../../ui/Placeholder.tsx";
+import { Illustration, type IllustrationName } from "../../../ui/Placeholder.tsx";
 import { EntrySheetHost } from "../../entry/index.ts";
 import { EndsTomorrowBanner, PauseTodayAction } from "../../pause/index.ts";
 import { ReviewTodayCard } from "../../review/index.ts";
@@ -27,15 +27,17 @@ type RunningModel = Extract<TodayModel, { kind: "active" | "ended" }>;
 function Empty({
   title,
   alt,
+  illustration,
   children,
 }: {
   readonly title: string;
   readonly alt: string;
+  readonly illustration: IllustrationName;
   readonly children: ReactNode;
 }) {
   return (
     <section className={styles.empty}>
-      <Illustration alt={alt} />
+      <Illustration name={illustration} size="hero" alt={alt} />
       <h1 className={styles.emptyTitle}>{title}</h1>
       {children}
     </section>
@@ -44,7 +46,11 @@ function Empty({
 
 export function NoCircle() {
   return (
-    <Empty title="Aún no estás en un círculo" alt="Sin círculo todavía">
+    <Empty
+      title="Aún no estás en un círculo"
+      alt="Sin círculo todavía"
+      illustration="invitar-circulo"
+    >
       <p className={styles.lead}>Cuando te unas a uno, tus compromisos de hoy aparecerán aquí.</p>
       <ButtonLink to="/circle/new">Crear o unirme a un círculo</ButtonLink>
     </Empty>
@@ -53,7 +59,7 @@ export function NoCircle() {
 
 export function NoSeason({ circleName }: { readonly circleName: string }) {
   return (
-    <Empty title="Todavía no hay temporada" alt="Sin temporada todavía">
+    <Empty title="Todavía no hay temporada" alt="Sin temporada todavía" illustration="crear-pacto">
       <p className={styles.meta}>{circleName}</p>
       <p className={styles.lead}>Cuando el círculo cree una, la verás aquí.</p>
       <ButtonLink to="/season/new">Preparar la temporada</ButtonLink>
@@ -63,7 +69,7 @@ export function NoSeason({ circleName }: { readonly circleName: string }) {
 
 export function PactOpen({ model }: { readonly model: PactOpenModel }) {
   return (
-    <Empty title="El pacto sigue abierto" alt="Pacto abierto">
+    <Empty title="El pacto sigue abierto" alt="Pacto abierto" illustration="crear-pacto">
       <p className={styles.meta}>{model.circleName}</p>
       <p className={styles.lead}>Temporada de {model.lengthWeeks} semanas</p>
       <p className={styles.lead}>Empieza el {longDate(model.startDate, false)}</p>
