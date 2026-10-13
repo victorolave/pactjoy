@@ -29,6 +29,7 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "editEntry",
   "editSeasonParams",
   "entryId",
+  "entryPhotoId",
   "err",
   "generateInvite",
   "habitId",

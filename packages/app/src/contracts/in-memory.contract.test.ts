@@ -1,11 +1,13 @@
 import { createTestApp } from "../testing/app-harness.ts";
 import { createFixedClock } from "../testing/fixed-clock.ts";
+import { createInMemoryEntryPhotoRepository } from "../testing/in-memory-entry-photo-repository.ts";
 import { createInMemoryEvidenceStorage } from "../testing/in-memory-evidence-storage.ts";
 import { createInMemoryReviewRepository } from "../testing/in-memory-review-repository.ts";
 import { createInMemorySeasonClosureRepository } from "../testing/in-memory-season-closure-repository.ts";
 import { instant } from "../time/instant.ts";
 import { describeCircleRepositoryContract } from "./circle.contract.ts";
 import { describeEntryRepositoryContract } from "./entry.contract.ts";
+import { describeEntryPhotoRepositoryContract } from "./entry-photo.contract.ts";
 import { describeEvidenceStorageContract } from "./evidence-storage.contract.ts";
 import {
   describeCircleGuardContract,
@@ -25,6 +27,9 @@ describeCircleGuardContract("in-memory", inMemory);
 describeSeasonGuardContract("in-memory", inMemory);
 describeEntryRepositoryContract("in-memory", inMemory);
 describeHabitRepositoryContract("in-memory", inMemory);
+describeEntryPhotoRepositoryContract("in-memory", async () => ({
+  repository: createInMemoryEntryPhotoRepository(),
+}));
 describeSeasonRepositoryContract("in-memory", inMemory);
 describePauseRequestRepositoryContract("in-memory", inMemory);
 describeReviewRepositoryContract("in-memory", async () => ({

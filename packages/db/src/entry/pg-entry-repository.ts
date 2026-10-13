@@ -5,6 +5,7 @@ import {
   type EntryRepository,
   type EntryValue,
   entryId,
+  entryPhotoId,
   type Instant,
   memberId,
   type StoredEntry,
@@ -30,14 +31,15 @@ interface EntryRow {
   value_num: bigint | null;
   value_den: bigint | null;
   note: string | null;
+  photo_id: string | null;
 }
 
 const COLUMNS =
-  "id, season_id, member_id, commitment_id, client_request_id, day, recorded_on, recorded_at, edited_at, version, request_fingerprint, deleted, value_kind, value_num, value_den, note";
+  "id, season_id, member_id, commitment_id, client_request_id, day, recorded_on, recorded_at, edited_at, version, request_fingerprint, deleted, value_kind, value_num, value_den, note, photo_id";
 
 /** What an edit must never change: the UPDATE does not touch these, so a difference is a caller bug. */
 const IMMUTABLE: Record<
-  Exclude<keyof EntryRecord, "value" | "note" | "editedAt" | "version">,
+  Exclude<keyof EntryRecord, "value" | "note" | "photoId" | "editedAt" | "version">,
   true
 > = {
   id: true,
@@ -83,8 +85,14 @@ function toStored(row: EntryRow): StoredEntry {
     version: row.version,
     requestFingerprint: row.request_fingerprint,
   };
-  if (row.deleted) return { ...core, value: null, note: null, deleted: true };
-  return { ...core, value: decodeValue(row), note: row.note, deleted: false };
+  if (row.deleted) return { ...core, value: null, note: null, photoId: null, deleted: true };
+  return {
+    ...core,
+    value: decodeValue(row),
+    note: row.note,
+    photoId: row.photo_id === null ? null : entryPhotoId(row.photo_id),
+    deleted: false,
+  };
 }
 
 /**
@@ -126,7 +134,7 @@ export function createPgEntryRepository(exec: SqlExecutor): EntryRepository {
     async add(entry) {
       const quantity = entry.value.kind === "quantity" ? entry.value.value : null;
       await exec.query(
-        "insert into pactjoy.entries (id, season_id, member_id, commitment_id, client_request_id, day, recorded_on, recorded_at, edited_at, version, request_fingerprint, deleted, value_kind, value_num, value_den, note) values ($1, $2, $3, $4, $5, $6, $7, $8::timestamptz, $9::timestamptz, $10, $11, false, $12, $13::int8, $14::int8, $15)",
+        "insert into pactjoy.entries (id, season_id, member_id, commitment_id, client_request_id, day, recorded_on, recorded_at, edited_at, version, request_fingerprint, deleted, value_kind, value_num, value_den, note, photo_id) values ($1, $2, $3, $4, $5, $6, $7, $8::timestamptz, $9::timestamptz, $10, $11, false, $12, $13::int8, $14::int8, $15, $16)",
         [
           entry.id,
           entry.seasonId,
@@ -143,6 +151,7 @@ export function createPgEntryRepository(exec: SqlExecutor): EntryRepository {
           quantity === null ? null : quantity.num.toString(),
           quantity === null ? null : quantity.den.toString(),
           entry.note,
+          entry.photoId,
         ],
       );
     },
@@ -156,7 +165,7 @@ export function createPgEntryRepository(exec: SqlExecutor): EntryRepository {
       const quantity = next.value.kind === "quantity" ? next.value.value : null;
       // Writes `expected + 1`, not `next.version`, which is validated above.
       const { rows } = await exec.query<EntryRow>(
-        `update pactjoy.entries set value_kind = $3, value_num = $4::int8, value_den = $5::int8, note = $6, edited_at = $7::timestamptz, version = version + 1 where id = $1 and version = $2 and not deleted returning ${COLUMNS}`,
+        `update pactjoy.entries set value_kind = $3, value_num = $4::int8, value_den = $5::int8, note = $6, photo_id = $8, edited_at = $7::timestamptz, version = version + 1 where id = $1 and version = $2 and not deleted returning ${COLUMNS}`,
         [
           next.id,
           expectedVersion,
@@ -165,6 +174,7 @@ export function createPgEntryRepository(exec: SqlExecutor): EntryRepository {
           quantity === null ? null : quantity.den.toString(),
           next.note,
           next.editedAt === null ? null : iso(next.editedAt),
+          next.photoId,
         ],
       );
       const [row] = rows;
@@ -180,7 +190,7 @@ export function createPgEntryRepository(exec: SqlExecutor): EntryRepository {
 
     async remove(id, expectedVersion) {
       const { rows } = await exec.query(
-        "update pactjoy.entries set deleted = true, value_kind = null, value_num = null, value_den = null, note = null, version = version + 1 where id = $1 and version = $2 and not deleted returning id",
+        "update pactjoy.entries set deleted = true, value_kind = null, value_num = null, value_den = null, note = null, photo_id = null, version = version + 1 where id = $1 and version = $2 and not deleted returning id",
         [id, expectedVersion],
       );
       if (rows.length === 0) throw new ConcurrencyConflict();

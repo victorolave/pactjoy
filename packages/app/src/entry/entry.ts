@@ -1,5 +1,5 @@
 import type { CommitmentId, Fraction, MemberId, SeasonDay } from "@pactjoy/engine";
-import type { EntryId, SeasonId } from "../shared/ids.ts";
+import type { EntryId, EntryPhotoId, SeasonId } from "../shared/ids.ts";
 import { isStorableText } from "../shared/storable-text.ts";
 import type { Instant } from "../time/instant.ts";
 
@@ -64,6 +64,8 @@ export interface EntryCore {
 export interface EntryRecord extends EntryCore {
   readonly value: EntryValue;
   readonly note: string | null;
+  /** The attached photo (ADR-0016); owner-visible only through the privacy helper. Never on `missed`. */
+  readonly photoId: EntryPhotoId | null;
   readonly deleted: false;
 }
 
@@ -76,6 +78,7 @@ export interface EntryRecord extends EntryCore {
 export interface EntryTombstone extends EntryCore {
   readonly value: null;
   readonly note: null;
+  readonly photoId: null;
   readonly deleted: true;
 }
 

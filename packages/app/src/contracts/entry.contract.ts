@@ -5,18 +5,32 @@ import { commitmentId } from "../commitment/commitment.ts";
 import type { EntryRecord, EntryValue } from "../entry/entry.ts";
 import type { Repositories } from "../ports/repositories.ts";
 import { ConcurrencyConflict } from "../shared/errors.ts";
-import { entryId, type SeasonId } from "../shared/ids.ts";
+import { type EntryPhotoId, entryId, entryPhotoId, type SeasonId } from "../shared/ids.ts";
 import { ok } from "../shared/result.ts";
+import { entryPhotoFixture } from "../testing/builders.ts";
 import { instant } from "../time/instant.ts";
 import { type ContractSubject, SEASON, seedCircleAndSeason } from "./fixtures.ts";
 
-type EntryRepositories = Pick<Repositories, "circles" | "seasons" | "entries">;
+type EntryRepositories = Pick<Repositories, "circles" | "seasons" | "entries" | "entryPhotos">;
 type Uow = ContractSubject<EntryRepositories>["uow"];
 
 const uuid = (n: number) => `00000000-0000-4000-8000-${n.toString(16).padStart(12, "0")}`;
 const MEMBER = memberId(uuid(0xa1));
 const COMMITMENT = commitmentId(uuid(0x301));
 const DONE: EntryValue = { kind: "done" };
+
+/** An attached ledger row, so an entry may point at it (the foreign key of a real database). */
+const photoRow = (n: number) =>
+  entryPhotoFixture({
+    id: entryPhotoId(uuid(0x700 + n)),
+    seasonId: SEASON.id,
+    memberId: MEMBER,
+    commitmentId: COMMITMENT,
+    objectKey: `o/${n.toString(16).padStart(32, "0")}.jpg`,
+    status: "attached",
+    version: 1,
+  });
+const PHOTO = (n: number): EntryPhotoId => photoRow(n).id;
 
 const entry = (n: number, options: Partial<EntryRecord> = {}): EntryRecord => ({
   id: entryId(uuid(0x500 + n)),
@@ -32,6 +46,7 @@ const entry = (n: number, options: Partial<EntryRecord> = {}): EntryRecord => ({
   requestFingerprint: `fp-${n}`,
   value: DONE,
   note: null,
+  photoId: null,
   deleted: false,
   ...options,
 });
@@ -89,6 +104,51 @@ export function describeEntryRepositoryContract(
       ];
       await add(...all);
       for (const e of all) expect(await get(e)).toEqual(e);
+    });
+
+    it("EP-P1: round-trips the photo id, null included", async () => {
+      const { uow, add, get } = await subject();
+      await uow.transaction(async ({ entryPhotos }) => {
+        await entryPhotos.add(photoRow(1));
+        return ok(undefined);
+      });
+      const withPhoto = entry(1, { photoId: PHOTO(1) });
+      const without = entry(2);
+      await add(withPhoto, without);
+      expect(await get(withPhoto)).toEqual(withPhoto);
+      expect(await get(without)).toEqual(without);
+    });
+
+    it("EP-P2: replace sets, swaps and clears the photo id", async () => {
+      const { uow, add, get, replace } = await subject();
+      await uow.transaction(async ({ entryPhotos }) => {
+        await entryPhotos.add(photoRow(1));
+        await entryPhotos.add(photoRow(2));
+        return ok(undefined);
+      });
+      const e = entry(1);
+      await add(e);
+      const first = entry(1, { photoId: PHOTO(1), version: 1 });
+      await replace(first, 0);
+      expect(await get(e)).toEqual(first);
+      const second = entry(1, { photoId: PHOTO(2), version: 2 });
+      await replace(second, 1);
+      expect(await get(e)).toEqual(second);
+      const cleared = entry(1, { photoId: null, version: 3 });
+      await replace(cleared, 2);
+      expect(await get(e)).toEqual(cleared);
+    });
+
+    it("EP-P3: remove blanks the photo id of the tombstone", async () => {
+      const { uow, add, stored, remove } = await subject();
+      await uow.transaction(async ({ entryPhotos }) => {
+        await entryPhotos.add(photoRow(1));
+        return ok(undefined);
+      });
+      const e = entry(1, { photoId: PHOTO(1) });
+      await add(e);
+      await remove(e, 0);
+      expect(await stored(e)).toMatchObject({ deleted: true, photoId: null });
     });
 
     it("EP-S2/S9: unknown id and unknown key read as null", async () => {
@@ -263,6 +323,7 @@ export function describeEntryRepositoryContract(
         requestFingerprint: e.requestFingerprint,
         value: null,
         note: null,
+        photoId: null,
         deleted: true,
       });
     });

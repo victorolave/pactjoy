@@ -18,6 +18,7 @@ const ENTRY: EntryRecord = {
   recordedAt: instant(1),
   value: { kind: "quantity", value: fromInt(30) },
   note: null,
+  photoId: null,
   clientRequestId: "req-1",
   editedAt: null,
   version: 0,

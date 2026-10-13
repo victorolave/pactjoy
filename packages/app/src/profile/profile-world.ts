@@ -210,6 +210,7 @@ export async function logDays(
         requestFingerprint: `fp-${entrySeq}`,
         value: { kind: "quantity", value: fromInt(options.minutes ?? 30) },
         note: null,
+        photoId: null,
         deleted: false,
       };
       await repos.entries.add(record);

@@ -2,6 +2,7 @@ import type { Repositories } from "@pactjoy/app";
 import { createPgCircleRepository } from "./circle/pg-circle-repository.ts";
 import type { BindMode, SqlExecutor } from "./client.ts";
 import { createPgEntryRepository } from "./entry/pg-entry-repository.ts";
+import { createPgEntryPhotoRepository } from "./entry-photo/pg-entry-photo-repository.ts";
 import { createPgHabitRepository } from "./habit/pg-habit-repository.ts";
 import { createPgPauseRequestRepository } from "./pause/pg-pause-request-repository.ts";
 import { createPgReviewRepository } from "./review/pg-review-repository.ts";
@@ -21,6 +22,7 @@ export function bindRepositories(exec: SqlExecutor, mode: BindMode): PgRepositor
     circles: createPgCircleRepository(exec, mode),
     seasons: createPgSeasonRepository(exec, mode),
     entries: createPgEntryRepository(exec),
+    entryPhotos: createPgEntryPhotoRepository(exec),
     pauses: createPgPauseRequestRepository(exec),
     reviews: createPgReviewRepository(exec),
     seasonClosures: createPgSeasonClosureRepository(exec),

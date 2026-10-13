@@ -15,6 +15,7 @@ export type {
 } from "./builders.ts";
 export {
   circleFixture,
+  entryPhotoFixture,
   habitFixture,
   memberFixture,
   pauseRequestFixture,
@@ -28,6 +29,8 @@ export type { FixedOffsetTimeZoneOptions } from "./fixed-time-zone.ts";
 export { createFixedOffsetTimeZone } from "./fixed-time-zone.ts";
 export type { InMemoryCircleRepository } from "./in-memory-circle-repository.ts";
 export { createInMemoryCircleRepository } from "./in-memory-circle-repository.ts";
+export type { InMemoryEntryPhotoRepository } from "./in-memory-entry-photo-repository.ts";
+export { createInMemoryEntryPhotoRepository } from "./in-memory-entry-photo-repository.ts";
 export type { InMemoryEntryRepository } from "./in-memory-entry-repository.ts";
 export { createInMemoryEntryRepository } from "./in-memory-entry-repository.ts";
 export type {

@@ -111,6 +111,8 @@ export type {
   RecordEntryResult,
 } from "./entry/record-entry.ts";
 export { recordEntry } from "./entry/record-entry.ts";
+export type { EntryPhotoRepository } from "./entry-photo/entry-photo.repository.ts";
+export type { EntryPhoto, EntryPhotoStatus } from "./entry-photo/entry-photo.ts";
 export type {
   CreateHabitDeps,
   CreateHabitError,
@@ -396,6 +398,7 @@ export { ConcurrencyConflict, InviteCodeGenerationFailed } from "./shared/errors
 export type {
   CircleId,
   EntryId,
+  EntryPhotoId,
   HabitId,
   PauseRequestId,
   ReviewId,
@@ -406,6 +409,7 @@ export type {
 export {
   circleId,
   entryId,
+  entryPhotoId,
   habitId,
   pauseRequestId,
   reviewId,

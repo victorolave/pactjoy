@@ -10,6 +10,7 @@ export type CircleId = string & { readonly __brand: "CircleId" };
 export type SeasonId = string & { readonly __brand: "SeasonId" };
 export type HabitId = string & { readonly __brand: "HabitId" };
 export type EntryId = string & { readonly __brand: "EntryId" };
+export type EntryPhotoId = string & { readonly __brand: "EntryPhotoId" };
 export type PauseRequestId = string & { readonly __brand: "PauseRequestId" };
 export type ReviewId = string & { readonly __brand: "ReviewId" };
 export type SeasonClosureId = string & { readonly __brand: "SeasonClosureId" };
@@ -62,4 +63,9 @@ export function reviewId(value: string): ReviewId {
 /** @throws {RangeError} if `value` is empty. */
 export function seasonClosureId(value: string): SeasonClosureId {
   return brand("SeasonClosureId", value) as SeasonClosureId;
+}
+
+/** @throws {RangeError} if `value` is empty. */
+export function entryPhotoId(value: string): EntryPhotoId {
+  return brand("EntryPhotoId", value) as EntryPhotoId;
 }

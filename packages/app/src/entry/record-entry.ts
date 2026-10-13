@@ -238,6 +238,7 @@ export async function recordEntry(
         recordedAt: now,
         value: value.value,
         note,
+        photoId: null,
         clientRequestId: input.clientRequestId,
         editedAt: null,
         version: 0,

@@ -47,6 +47,7 @@ describe("createPostgresUnitOfWork", () => {
     expect(names).toEqual([
       "circles",
       "entries",
+      "entryPhotos",
       "habits",
       "pauses",
       "reviews",

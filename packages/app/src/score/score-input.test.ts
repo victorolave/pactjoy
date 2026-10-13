@@ -44,6 +44,7 @@ function entryOf(
     recordedAt: instant(0),
     value,
     note: "private note",
+    photoId: null,
     clientRequestId: id,
     editedAt: null,
     version: 0,

@@ -34,6 +34,7 @@ function entry(note: string | null, id = "c-1"): EntryRecord {
     recordedAt: instant(0),
     value: { kind: "done" },
     note,
+    photoId: null,
     clientRequestId: "req-1",
     editedAt: null,
     version: 0,

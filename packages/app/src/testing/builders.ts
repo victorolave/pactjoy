@@ -1,6 +1,7 @@
-import { type MemberId, seasonDay } from "@pactjoy/engine";
+import { type CommitmentId, type MemberId, seasonDay } from "@pactjoy/engine";
 import type { Circle, Invite, Member } from "../circle/circle.ts";
 import { type CommitmentRecord, commitmentId } from "../commitment/commitment.ts";
+import type { EntryPhoto } from "../entry-photo/entry-photo.ts";
 import type { Habit } from "../habit/habit.ts";
 import { AUTO_APPROVE_AFTER_MS, type PauseRequestRecord } from "../pause/pause-request.ts";
 import type { ReviewRecord } from "../review/review.ts";
@@ -14,6 +15,7 @@ import type {
 } from "../season/season.ts";
 import {
   type CircleId,
+  entryPhotoId,
   type HabitId,
   pauseRequestId,
   reviewId,
@@ -206,6 +208,26 @@ export function seasonClosureFixture(overrides: Partial<SeasonClosure> = {}): Se
     memberId: "member-victor" as MemberId,
     decisions: [],
     decidedAt: DEFAULT_INSTANT,
+    version: 0,
+    ...overrides,
+  };
+}
+
+/**
+ * Builds an {@link EntryPhoto} for GIVEN-state setup: a pending reservation of 1 KiB whose
+ * attach window is wide open. Every field is overridable.
+ */
+export function entryPhotoFixture(overrides: Partial<EntryPhoto> = {}): EntryPhoto {
+  return {
+    id: entryPhotoId("photo-1"),
+    seasonId: seasonId("season-1"),
+    memberId: "member-victor" as MemberId,
+    commitmentId: "commitment-1" as CommitmentId,
+    objectKey: "o/00000000000000000000000000000001.jpg",
+    byteSize: 1024,
+    status: "pending",
+    createdAt: DEFAULT_INSTANT,
+    attachBy: instant(DEFAULT_INSTANT + 30 * 60_000),
     version: 0,
     ...overrides,
   };
