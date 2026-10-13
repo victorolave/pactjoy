@@ -1,0 +1,14 @@
+/* iOS Safari gives a native date input an intrinsic width wider than a sheet; make every input
+   obey its column. The picker still opens: only the native chrome is reset. */
+.input {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.input::-webkit-date-and-time-value {
+  min-width: 0;
+  text-align: left;
+}

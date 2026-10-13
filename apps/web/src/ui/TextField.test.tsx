@@ -19,6 +19,13 @@ describe("TextField", () => {
     expect(onChange).toHaveBeenCalledTimes(1);
   });
 
+  it("keeps the vendor input class and adds the width reset for native date inputs", () => {
+    render(<TextField label="Primer día" type="date" />);
+    const input = screen.getByLabelText("Primer día");
+    expect(input).toHaveClass("pj-input");
+    expect(input.classList.length).toBeGreaterThan(1);
+  });
+
   it("shows a hint and ties it to the input", () => {
     render(<TextField label="Código" hint="Seis dígitos" />);
     const input = screen.getByLabelText("Código");
