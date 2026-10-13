@@ -20,41 +20,10 @@ interface Journey {
   readonly to: string | null;
 }
 
-/** "3,5" -> 3.5. The API sends the engine's display text, with the decimal comma. */
-const score = (text: string | null): number | null => {
-  if (text === null) return null;
-  const value = Number(text.replace(",", "."));
-  return Number.isFinite(value) ? value : null;
-};
-
 /** "3,5 → 5,8", only the end when there was no start, `null` without the closing score. */
 export function automaticityLabel({ from, to }: Journey): string | null {
   if (to === null) return null;
   return from === null ? to : `${from} → ${to}`;
-}
-
-const SCALE_MIN = 1;
-const SCALE_SPAN = 6;
-/** A start that equals the end, or no start at all, is drawn as a small mark (percent of the track). */
-const MARK_WIDTH = 2;
-
-const positionOf = (value: number): number =>
-  (Math.min(Math.max(value, SCALE_MIN), SCALE_MIN + SCALE_SPAN) - SCALE_MIN) / SCALE_SPAN;
-
-/**
- * The bar of the automaticity card: the span from the start to the end on the 1 to 7 scale, as
- * percentages of the track. `null` without a closing score.
- */
-export function automaticityBar(journey: Journey): { left: number; width: number } | null {
-  const end = score(journey.to);
-  if (end === null) return null;
-  const start = score(journey.from);
-  if (start === null || start === end) {
-    return { left: positionOf(end) * 100 - MARK_WIDTH / 2, width: MARK_WIDTH };
-  }
-  const low = Math.min(start, end);
-  const high = Math.max(start, end);
-  return { left: positionOf(low) * 100, width: (positionOf(high) - positionOf(low)) * 100 };
 }
 
 /** A gap of at most this many points (2 % of the 1,000 a member can earn) is "muy pareja". */

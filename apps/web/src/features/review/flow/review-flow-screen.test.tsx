@@ -180,11 +180,8 @@ describe("the review route", () => {
     await click("Saltar");
     for (const phrase of [0, 1, 2, 3]) await answer(phrase, 5);
     await click("Terminar revisión");
-    expect(
-      await screen.findByText(
-        "Leer se siente más automático que antes (de 3,5 a 4,5). La próxima revisión es el martes 20 de octubre.",
-      ),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("img", { name: "Leer: de 3,5 a 4,5" })).toBeInTheDocument();
+    expect(screen.getByText("Próxima revisión: mar 20 oct")).toBeInTheDocument();
     await click("Seguir con mi día");
     await waitFor(() => expect(app.location()).toBe("/"));
   });

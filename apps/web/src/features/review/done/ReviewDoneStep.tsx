@@ -1,9 +1,12 @@
-import { longDate } from "../../../shared/format.ts";
+import { longDate, weekdayShortDate } from "../../../shared/format.ts";
+import { AutomaticityBar } from "../../../ui/AutomaticityBar.tsx";
 import { Button } from "../../../ui/Button.tsx";
 import { FlowScreen } from "../../../ui/FlowScreen.tsx";
+import { Icon } from "../../../ui/icon/Icon.tsx";
 import { Illustration } from "../../../ui/Placeholder.tsx";
 import styles from "../review.module.css";
-import { doneText } from "../review-format.ts";
+
+const LIST_LABEL_ID = "review-gains-label";
 
 export interface ReviewDoneStepProps {
   /** What the server said when it saved; `null` when the review was already saved before. */
@@ -27,7 +30,7 @@ export interface ReviewDoneStepProps {
   readonly onFinish: () => void;
 }
 
-/** 35b: "Revisión guardada." Only the improvements are named; with none, only the next date. */
+/** 35b: "Revisión guardada." Only the improvements are listed, then the next date as a chip. */
 export function ReviewDoneStep({
   result,
   names,
@@ -35,7 +38,8 @@ export function ReviewDoneStep({
   resultsOpenOn = null,
   onFinish,
 }: ReviewDoneStepProps) {
-  const text = result === null ? "" : doneText(result, names);
+  const improvements = result?.improvements ?? [];
+  const nextReviewDate = result?.nextReviewDate ?? null;
   const toResults = closing && resultsOpenOn === null;
   return (
     <FlowScreen
@@ -55,7 +59,33 @@ export function ReviewDoneStep({
       }
     >
       <div className={styles.section}>
-        {text !== "" && <p className={styles.lead}>{text}</p>}
+        {improvements.length > 0 && (
+          <>
+            <p id={LIST_LABEL_ID} className={styles.small}>
+              Se sienten más automáticos que al empezar
+            </p>
+            <ul className={styles.gains} aria-labelledby={LIST_LABEL_ID}>
+              {improvements.map(({ commitmentId, from, to }) => {
+                const name = names.get(commitmentId) ?? "Un hábito";
+                return (
+                  <li key={commitmentId} className={styles.gainRow}>
+                    <span className={styles.gainName}>{name}</span>
+                    <AutomaticityBar from={from} to={to} label={`${name}: de ${from} a ${to}`} />
+                    <span className={styles.gainValue}>
+                      {from} → {to}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </>
+        )}
+        {nextReviewDate !== null && (
+          <p className={styles.nextReview}>
+            <Icon name="calendar-days" size="sm" />
+            Próxima revisión: {weekdayShortDate(nextReviewDate)}
+          </p>
+        )}
         {closing && resultsOpenOn !== null && (
           <p className={styles.lead}>
             Tus resultados estarán listos el {longDate(resultsOpenOn, false)}.

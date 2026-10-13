@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   commitmentFigures,
-  doneText,
   percentText,
   periodHeading,
   periodMeta,
@@ -105,65 +104,6 @@ describe("the figures", () => {
         points: 30,
       }),
     ).toBe("3 de 6");
-  });
-});
-
-describe("doneText (35b)", () => {
-  const names = new Map([
-    ["l", "Leer"],
-    ["d", "Dibujar"],
-    ["i", "Inglés"],
-  ]);
-
-  it("names only the improvements and then the next review, as designed", () => {
-    expect(
-      doneText(
-        {
-          improvements: [
-            { commitmentId: "l", from: "3,5", to: "4,5" },
-            { commitmentId: "d", from: "3", to: "4" },
-          ],
-          nextReviewDate: "2026-10-06",
-        },
-        names,
-      ),
-    ).toBe(
-      "Leer y Dibujar se sienten más automáticos que antes (de 3,5 a 4,5 y de 3 a 4). La próxima revisión es el martes 6 de octubre.",
-    );
-  });
-
-  it("uses the singular for one and a list for three", () => {
-    expect(
-      doneText(
-        { improvements: [{ commitmentId: "l", from: "3,5", to: "4,5" }], nextReviewDate: null },
-        names,
-      ),
-    ).toBe("Leer se siente más automático que antes (de 3,5 a 4,5).");
-    expect(
-      doneText(
-        {
-          improvements: [
-            { commitmentId: "l", from: "3", to: "4" },
-            { commitmentId: "i", from: "2", to: "3" },
-            { commitmentId: "d", from: "5", to: "6" },
-          ],
-          nextReviewDate: "2026-10-20",
-        },
-        names,
-      ),
-    ).toBe(
-      "Leer, Inglés y Dibujar se sienten más automáticos que antes (de 3 a 4, de 2 a 3 y de 5 a 6). La próxima revisión es el martes 20 de octubre.",
-    );
-  });
-
-  it("says only the date when nothing improved", () => {
-    expect(doneText({ improvements: [], nextReviewDate: "2026-10-06" }, names)).toBe(
-      "La próxima revisión es el martes 6 de octubre.",
-    );
-  });
-
-  it("says nothing about automaticity or a date when there is neither", () => {
-    expect(doneText({ improvements: [], nextReviewDate: null }, names)).toBe("");
   });
 });
 

@@ -195,21 +195,6 @@
   font: var(--font-label);
 }
 
-.meterTrack {
-  position: relative;
-  height: var(--meter-height);
-  border-radius: var(--radius-pill);
-  background: var(--ink-100);
-}
-
-.meterFill {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  border-radius: var(--radius-pill);
-  background: var(--gradient-together);
-}
-
 .meterValue {
   font: var(--font-small);
   color: var(--text-secondary);

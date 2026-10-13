@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
 import type { SeasonResultsDto } from "../../../ports/wire.ts";
+import { AutomaticityBar } from "../../../ui/AutomaticityBar.tsx";
 import { Card } from "../../../ui/Card.tsx";
 import { IconButton } from "../../../ui/IconButton.tsx";
-import { automaticityBar, automaticityLabel, percentText, shortDate } from "../close-format.ts";
+import { automaticityLabel, percentText, shortDate } from "../close-format.ts";
 import { resultsCopy } from "../copy.ts";
 import styles from "../season-close.module.css";
 import { FinalStandings } from "./FinalStandings.tsx";
@@ -22,8 +23,7 @@ export interface ResultsViewProps {
 export function ResultsView({ results, onBack, footer }: ResultsViewProps) {
   const journeys = results.commitments.flatMap((row) => {
     const label = automaticityLabel(row.automaticity);
-    const bar = automaticityBar(row.automaticity);
-    return label === null || bar === null ? [] : [{ row, label, bar }];
+    return label === null ? [] : [{ row, label }];
   });
   return (
     <main className={styles.page}>
@@ -73,19 +73,14 @@ export function ResultsView({ results, onBack, footer }: ResultsViewProps) {
               <span className={styles.meta}>{resultsCopy.automaticityMeta}</span>
             </div>
             <ul className={styles.meters}>
-              {journeys.map(({ row, label, bar }) => (
+              {journeys.map(({ row, label }) => (
                 <li key={row.commitmentId} className={styles.meterRow}>
                   <span className={styles.meterName}>{row.habitName}</span>
-                  <span
-                    className={styles.meterTrack}
-                    role="img"
-                    aria-label={resultsCopy.automaticityRow(row.habitName, label)}
-                  >
-                    <span
-                      className={styles.meterFill}
-                      style={{ left: `${bar.left}%`, width: `${bar.width}%` }}
-                    />
-                  </span>
+                  <AutomaticityBar
+                    from={row.automaticity.from}
+                    to={row.automaticity.to}
+                    label={resultsCopy.automaticityRow(row.habitName, label)}
+                  />
                   <span className={styles.meterValue}>{label}</span>
                 </li>
               ))}
