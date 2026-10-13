@@ -44,13 +44,13 @@ export function ResultsView({ results, onBack, footer }: ResultsViewProps) {
         <section className={styles.section}>
           <h2 className={styles.h3}>{resultsCopy.yourSeason}</h2>
           <section className={styles.stats} aria-label={resultsCopy.statsLabel}>
-            <Card>
+            <Card flush>
               <div className={styles.stat}>
                 <div className={styles.statLabel}>{resultsCopy.points}</div>
                 <div className={styles.statValue}>{results.totals.points}</div>
               </div>
             </Card>
-            <Card>
+            <Card flush>
               <div className={styles.stat}>
                 <div className={styles.statLabel}>{resultsCopy.consistency}</div>
                 <div className={styles.statValue}>
@@ -58,7 +58,7 @@ export function ResultsView({ results, onBack, footer }: ResultsViewProps) {
                 </div>
               </div>
             </Card>
-            <Card>
+            <Card flush>
               <div className={styles.stat}>
                 <div className={styles.statLabel}>{resultsCopy.ideal}</div>
                 <div className={styles.statValue}>{percentText(results.totals.idealPercent)}</div>

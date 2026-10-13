@@ -18,6 +18,12 @@
   font: var(--font-label);
 }
 
+/* A legend is not a flex item of its fieldset, so the group gap skips it: give it the same gap. */
+legend.label {
+  padding: 0;
+  margin-bottom: var(--space-2);
+}
+
 .chips {
   display: flex;
   flex-wrap: wrap;

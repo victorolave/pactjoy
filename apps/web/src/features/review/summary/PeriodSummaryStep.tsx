@@ -45,7 +45,7 @@ export function PeriodSummaryStep({ chrome, draft, onNext }: PeriodSummaryStepPr
               </InlineMessage>
             )}
             <section className={styles.totals} aria-label="Totales del periodo">
-              <Card>
+              <Card flush>
                 <div className={styles.total}>
                   <div className={styles.totalLabel}>Consistencia</div>
                   <div className={styles.totalValue}>
@@ -53,7 +53,7 @@ export function PeriodSummaryStep({ chrome, draft, onNext }: PeriodSummaryStepPr
                   </div>
                 </div>
               </Card>
-              <Card>
+              <Card flush>
                 <div className={styles.total}>
                   <div className={styles.totalLabel}>Ideal</div>
                   <div className={styles.totalValue}>
@@ -61,14 +61,14 @@ export function PeriodSummaryStep({ chrome, draft, onNext }: PeriodSummaryStepPr
                   </div>
                 </div>
               </Card>
-              <Card>
+              <Card flush>
                 <div className={styles.total}>
                   <div className={styles.totalLabel}>Puntos</div>
                   <div className={styles.totalValue}>{pointsLabel(summary.totals.points)}</div>
                 </div>
               </Card>
             </section>
-            <Card>
+            <Card flush>
               <ul className={styles.rows} aria-label="Compromisos del periodo">
                 {summary.commitments.map((row) => (
                   <li key={row.commitmentId} className={styles.figureRow}>

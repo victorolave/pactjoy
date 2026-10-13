@@ -1,0 +1,8 @@
+/* Under the text, left-aligned with it; several actions wrap instead of squeezing the text. */
+.action {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cx } from "./cx.ts";
+import styles from "./InlineMessage.module.css";
 import { Icon, type IconName } from "./icon/Icon.tsx";
 
 export type MessageTone = "info" | "success" | "error" | "pending";
@@ -18,7 +19,11 @@ export interface InlineMessageProps {
   readonly action?: ReactNode;
 }
 
-/** An error is announced assertively (`alert`); everything else politely (`status`). */
+/**
+ * An error is announced assertively (`alert`); everything else politely (`status`). The action
+ * sits under the text, inside the body column, so the text keeps the full width at 375 px and
+ * narrower; beside it the text column shrank to a few characters.
+ */
 export function InlineMessage({ tone = "info", title, children, action }: InlineMessageProps) {
   return (
     <div className={cx("pj-msg", `pj-msg--${tone}`)} role={tone === "error" ? "alert" : "status"}>
@@ -28,8 +33,8 @@ export function InlineMessage({ tone = "info", title, children, action }: Inline
       <div className="pj-msg__body">
         {title !== undefined && <span className="pj-msg__title">{title}</span>}
         {children !== undefined && <span className="pj-msg__text">{children}</span>}
+        {action !== undefined && <div className={styles.action}>{action}</div>}
       </div>
-      {action !== undefined && <div className="pj-msg__action">{action}</div>}
     </div>
   );
 }

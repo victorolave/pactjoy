@@ -1,5 +1,7 @@
 import { type InputHTMLAttributes, useEffect, useId, useRef } from "react";
+import { cx } from "./cx.ts";
 import { Icon } from "./icon/Icon.tsx";
+import styles from "./TextField.module.css";
 
 export interface TextFieldProps
   extends Omit<InputHTMLAttributes<HTMLInputElement>, "className" | "id"> {
@@ -27,7 +29,7 @@ export function TextField({ label, hint, error, ...rest }: TextFieldProps) {
       <input
         ref={input}
         id={id}
-        className="pj-input"
+        className={cx("pj-input", styles.input)}
         aria-describedby={describedBy}
         {...(error === undefined ? {} : { "aria-invalid": true })}
         {...rest}

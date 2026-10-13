@@ -24,7 +24,7 @@ describe("InlineMessage", () => {
     expect(screen.getByText("Revisa tu red e inténtalo de nuevo.")).toBeInTheDocument();
   });
 
-  it("renders an action next to the message", () => {
+  it("renders the action inside the body column, after the text", () => {
     render(
       <InlineMessage
         tone="error"
@@ -32,7 +32,10 @@ describe("InlineMessage", () => {
         action={<button type="button">Reintentar</button>}
       />,
     );
-    expect(screen.getByRole("button", { name: "Reintentar" })).toBeInTheDocument();
+    const button = screen.getByRole("button", { name: "Reintentar" });
+    const body = screen.getByText("Falló").parentElement;
+    expect(body).toContainElement(button);
+    expect(body?.lastElementChild).toContainElement(button);
   });
 
   it("draws a decorative icon for the tone", () => {
