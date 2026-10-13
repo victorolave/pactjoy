@@ -58,6 +58,7 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "myCircle",
   "previewInvite",
   "previewProgress",
+  "profileSummary",
   "memberScore",
   "ok",
   "recordEntry",
