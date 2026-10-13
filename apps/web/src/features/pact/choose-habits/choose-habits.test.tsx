@@ -542,7 +542,7 @@ describe("carry-over from the previous season (season-close-graduation, owner de
     const { deps } = render(full);
     const nadar = await screen.findByRole("checkbox", { name: "Nadar" });
     expect(nadar).not.toBeChecked();
-    expect(await screen.findByText("La dejaste en pausa")).toBeVisible();
+    expect(await screen.findByText("La dejaste fuera la temporada pasada")).toBeVisible();
     expect(deps.api.calls.addCommitment).toBe(0);
     await userEvent.click(nadar);
     expect(await screen.findByRole("textbox", { name: "Nombre" })).toHaveValue("Nadar");
@@ -561,7 +561,7 @@ describe("carry-over from the previous season (season-close-graduation, owner de
     render(carryOver);
     await screen.findByRole("checkbox", { name: "Nadar" });
     expect(screen.queryByRole("region", { name: "De tu temporada anterior" })).toBeNull();
-    expect(screen.queryByText("La dejaste en pausa")).not.toBeInTheDocument();
+    expect(screen.queryByText("La dejaste fuera la temporada pasada")).not.toBeInTheDocument();
   });
 
   it("works as before when the defaults cannot be read", async () => {

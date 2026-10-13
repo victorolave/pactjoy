@@ -301,7 +301,7 @@ export function ChooseHabitsScreen() {
                           </div>
                           {pausedHabitIds.has(h.id) && (
                             <div id={pausedId} className={styles.habitSubtitle}>
-                              La dejaste en pausa
+                              La dejaste fuera la temporada pasada
                             </div>
                           )}
                         </div>
