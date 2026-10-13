@@ -23,7 +23,9 @@ describe("TextField", () => {
     render(<TextField label="Primer día" type="date" />);
     const input = screen.getByLabelText("Primer día");
     expect(input).toHaveClass("pj-input");
-    expect(input.classList.length).toBeGreaterThan(1);
+    expect([...input.classList].some((name) => /input/.test(name) && name !== "pj-input")).toBe(
+      true,
+    );
   });
 
   it("shows a hint and ties it to the input", () => {
