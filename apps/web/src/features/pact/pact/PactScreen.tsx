@@ -178,7 +178,7 @@ export function PactScreen() {
     const startFormatted = weekdayDay(startDate)?.toLowerCase() ?? startDate;
 
     return (
-      <FlowScreen title={`Esperando a ${otherNames}`}>
+      <FlowScreen title={`Esperando a ${otherNames}`} onBack={() => navigate("/")}>
         <div className={styles.section}>
           <AvatarStack names={circle.members.map((m) => m.displayName)} size="md" />
           <div>
