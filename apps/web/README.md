@@ -30,6 +30,27 @@ to tables directly and never imports server code at runtime.
 4. Open `http://<LAN-IP>:5173` on the phone. Plain http is enough to test; installing the PWA
    needs https.
 
+### Test the installed PWA over https
+
+Installing the app, the notification permission and the standalone session need https and the
+service worker, which only exists in a production build (`devOptions.enabled` is false). Two
+temporary Cloudflare tunnels give both origins https, with no account:
+
+1. `brew install cloudflared`, then run `cloudflared tunnel --url http://localhost:54321` (the
+   API) and `cloudflared tunnel --url http://localhost:4173` (the app). Each prints a
+   `https://<random>.trycloudflare.com` URL.
+2. Build against the API tunnel: `VITE_SUPABASE_URL=<api-tunnel>`,
+   `VITE_API_BASE_URL=<api-tunnel>/functions/v1/api` and the local anon key, then
+   `pnpm --filter @pactjoy/web build`.
+3. Serve the build: `__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS=<app-tunnel-host> pnpm --filter
+   @pactjoy/web exec vite preview --port 4173 --strictPort`.
+4. Add the app tunnel origin to `ALLOWED_ORIGINS` in `supabase/functions/.env` and restart the
+   function.
+5. Open the app tunnel URL in Safari, add it to the home screen and open it from the icon.
+
+The tunnel URLs change every time a tunnel restarts; rebuild and update `ALLOWED_ORIGINS` then.
+Push notifications will not arrive yet: they wait for the scheduled jobs (D).
+
 ## Sign in and seed data
 
 Sign-in uses a one-time email code. Locally, Supabase delivers it to Mailpit at
