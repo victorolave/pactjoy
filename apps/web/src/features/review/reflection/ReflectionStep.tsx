@@ -77,7 +77,7 @@ export function ReflectionStep({
       illustration={
         <Illustration
           name="reflexion"
-          size="180"
+          size="hero"
           alt="Un hombre escribe en su cuaderno en la mesa"
         />
       }
