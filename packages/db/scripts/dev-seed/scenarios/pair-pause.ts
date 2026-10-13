@@ -8,12 +8,13 @@ import {
   type SeedContext,
   type SeededSeason,
   seedSeason,
+  weekdayOf,
 } from "../core.ts";
 import type { Scenario } from "../scenario.ts";
 
 const EVERY_DAY = [0, 1, 2, 3, 4, 5, 6] as const;
 const TUE_THU_SAT = [1, 3, 5] as const;
-/** Season day of the real "today" (week 3, day 3). */
+/** 0-based season day of the real "today" (week 3, day 3 of the week): the 17th day, as other scenarios log it. */
 const TODAY_DAY = 16;
 
 const minutes = (value: number) => ({ kind: "quantity", value: String(value) }) as const;
@@ -164,7 +165,7 @@ export const pairPause: Scenario = {
     );
     seed.log(
       `pair-pause: season ${season.seasonId}; Inglés pause ${inglesPause} ends tomorrow, ` +
-        `Meditar pause running, Victor's Gym request ${pending.id} pending (today is day 17).`,
+        `Meditar pause running, Victor's Gym request ${pending.id} pending (today is day 17, 1-based: week 3, day 3).`,
     );
   },
 };
@@ -224,7 +225,10 @@ export function beforePauses(start: string): PlannedEntry[] {
   add(5, "ingles", minutes(90));
   add(9, "ingles", minutes(70));
   for (const n of [0, 2, 4, 8, 10]) add(n, "gym", DONE);
-  for (const n of [1, 3, 5, 8, 10, 12]) add(n, "dibujar", DONE);
+  // Only on its Tue/Thu/Sat days: the start weekday depends on the real "today".
+  for (let n = 0; n <= 12; n++) {
+    if (TUE_THU_SAT.includes(weekdayOf(d(n)) as 1)) add(n, "dibujar", DONE);
+  }
   for (let n = 0; n <= 12; n++) if (n !== 5) add(n, "diario", minutes(10));
   return plan;
 }
