@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { longDate, weekdayShortDate } from "../../../shared/format.ts";
 import { AutomaticityBar } from "../../../ui/AutomaticityBar.tsx";
 import { Button } from "../../../ui/Button.tsx";
@@ -5,8 +6,6 @@ import { FlowScreen } from "../../../ui/FlowScreen.tsx";
 import { Icon } from "../../../ui/icon/Icon.tsx";
 import { Illustration } from "../../../ui/Placeholder.tsx";
 import styles from "../review.module.css";
-
-const LIST_LABEL_ID = "review-gains-label";
 
 export interface ReviewDoneStepProps {
   /** What the server said when it saved; `null` when the review was already saved before. */
@@ -41,6 +40,7 @@ export function ReviewDoneStep({
   const improvements = result?.improvements ?? [];
   const nextReviewDate = result?.nextReviewDate ?? null;
   const toResults = closing && resultsOpenOn === null;
+  const listLabelId = useId();
   return (
     <FlowScreen
       title="Revisión guardada."
@@ -61,10 +61,10 @@ export function ReviewDoneStep({
       <div className={styles.section}>
         {improvements.length > 0 && (
           <>
-            <p id={LIST_LABEL_ID} className={styles.small}>
+            <p id={listLabelId} className={styles.small}>
               Se sienten más automáticos que al empezar
             </p>
-            <ul className={styles.gains} aria-labelledby={LIST_LABEL_ID}>
+            <ul className={styles.gains} aria-labelledby={listLabelId}>
               {improvements.map(({ commitmentId, from, to }) => {
                 const name = names.get(commitmentId) ?? "Un hábito";
                 return (

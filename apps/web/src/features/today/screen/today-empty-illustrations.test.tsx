@@ -12,14 +12,13 @@ describe("Today empty states: illustrations", () => {
       "Pacto abierto",
       <PactOpen
         key="p"
-        model={
-          {
-            circleName: "Andrea y Victor",
-            lengthWeeks: 8,
-            startDate: "2026-10-14",
-            seasonId: "s-1",
-          } as never
-        }
+        model={{
+          kind: "pactOpen",
+          circleName: "Andrea y Victor",
+          lengthWeeks: 8,
+          startDate: "2026-10-14",
+          seasonId: "s-1",
+        }}
       />,
       "crear-pacto",
     ],
