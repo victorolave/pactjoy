@@ -5,6 +5,7 @@ import {
   memberProgress,
   myCircle,
   seasonProgress,
+  seasonResults,
   userId,
   weekSummary,
 } from "@pactjoy/app";
@@ -69,6 +70,10 @@ describe("dev seed config (local only)", () => {
   it("selects one scenario or all, and rejects an unknown one", () => {
     expect(selectScenarios([])).toBe(SCENARIOS);
     expect(selectScenarios(["--scenario", "pair"])).toEqual([SCENARIOS[0]]);
+    expect(selectScenarios(["--scenario", "pair-season-ended"])).toEqual([SCENARIOS[1]]);
+    expect(new Set(SCENARIOS.flatMap((s) => s.accounts.map((a) => a.email))).size).toBe(
+      SCENARIOS.flatMap((s) => s.accounts).length,
+    );
     expect(selectScenarios(["--scenario", "nope"])).toMatch(/Unknown scenario/);
   });
 });
@@ -138,5 +143,49 @@ describe("pair scenario (week 3 of 8)", () => {
     expect(second).toBeDefined();
     expect(second).not.toBe(first);
     expect(await listMyHabits(h.app, andrea)).toHaveLength(4);
+  });
+});
+
+describe("pair-season-ended scenarios (screens 36-38b)", () => {
+  async function ended(email: string) {
+    const h = harness();
+    await h.run();
+    const actor = await h.accounts.ensure(email);
+    h.seed.setDate(TODAY);
+    const seasonId = (await myCircle(h.app, actor)).season?.id;
+    if (seasonId === undefined) throw new Error("expected a season");
+    const results = await seasonResults(h.app, actor, { seasonId });
+    if (!results.ok) throw new Error(`expected results, got ${results.error.kind}`);
+    return results.value;
+  }
+
+  it("lands on E+2: results open, nobody closed, Leer integrated with an inicio-cierre journey", async () => {
+    const andrea = await ended("andrea.cierre@pactjoy.local");
+    expect(andrea.lengthWeeks).toBe(4);
+    expect(andrea.actualStart).toBe("2026-09-09");
+    expect(andrea.closingReviewDone).toBe(false);
+    expect(andrea.closure).toBeNull();
+    const byName = new Map(andrea.commitments.map((c) => [c.habitName, c]));
+    expect(byName.get("Leer")).toMatchObject({ stage: "integrated" });
+    expect(byName.get("Meditar")).toMatchObject({ stage: "developing" });
+    expect(byName.get("Máximo 1 café al día")).toMatchObject({ stage: "new" });
+    // The inicio -> cierre bars need the closing review, which the tester submits in the app.
+    expect(byName.get("Leer")?.automaticity).toEqual({ from: null, to: null });
+    expect(andrea.standings.memberCount).toBe(2);
+    const victor = await ended("victor.cierre@pactjoy.local");
+    expect(victor.closure).toBeNull();
+    expect(victor.commitments.find((c) => c.habitName === "Diario")?.stage).toBe("integrated");
+  });
+
+  it("lands on E+8: Andrea closed, Victor did not", async () => {
+    const andrea = await ended("andrea.vencida@pactjoy.local");
+    expect(andrea.closingReviewDone).toBe(true);
+    expect(andrea.closure?.decisions).toHaveLength(3);
+    const leer = andrea.commitments.find((c) => c.habitName === "Leer");
+    expect(leer?.automaticity.from).not.toBeNull();
+    expect(leer?.automaticity.to).not.toBeNull();
+    const victor = await ended("victor.vencida@pactjoy.local");
+    expect(victor.closingReviewDone).toBe(false);
+    expect(victor.closure).toBeNull();
   });
 });

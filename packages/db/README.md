@@ -10,7 +10,7 @@ Realistic circles and seasons for testing the PWA on a real phone, against **loc
 supabase start
 export SEED_SERVICE_ROLE_KEY="$(supabase status -o env | sed -n 's/^SERVICE_ROLE_KEY="\(.*\)"$/\1/p')"
 pnpm seed:season                 # every scenario
-pnpm seed:season --scenario pair # one scenario
+pnpm seed:season --scenario pair # one scenario (also pair-season-ended, pair-season-stale)
 ```
 
 How it works:
@@ -24,3 +24,5 @@ How it works:
 | Scenario | Accounts | What it shows |
 |---|---|---|
 | `pair` | `andrea@pactjoy.local`, `victor@pactjoy.local` | Pair, week 3 of 8 (day 3). Week 1 good, week 2 difficult (under 50 %). Andrea: Leer (3/week, minutes), Meditar (every day, done, running streak, a "Hoy no salió", a late registro), Inglés (weekly total), Máximo 1 café al día (limit), a below-minimum session and a note. Victor: Gym (3/week), Dibujar (Tue/Thu/Sat) and a private Diario. |
+| `pair-season-ended` | `andrea.cierre@pactjoy.local`, `victor.cierre@pactjoy.local` | Pair, 4-week season on day E+2 (day 30): results and closure open, nobody has closed, the closing review is pending for both. Weekly reviews done (Andrea's baseline, three interim reviews, the second with the full SRBAI; Victor skipped the baseline). Andrea: Leer `integrated` (screen 37 highlights "Graduar"), Meditar `developing`, Máximo 1 café al día `new`. Victor: Gym `developing`, Dibujar `new`, private Diario `integrated`. |
+| `pair-season-stale` | `andrea.vencida@pactjoy.local`, `victor.vencida@pactjoy.local` | Same season on day E+8 (day 36): Andrea submitted her closing review and her closure, Victor did not, so the circle may move on without him. |

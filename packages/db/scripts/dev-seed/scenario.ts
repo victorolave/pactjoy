@@ -1,6 +1,7 @@
 import type { Actor } from "@pactjoy/app";
 import type { Accounts } from "./accounts.ts";
 import { leaveCurrentCircle, type SeedContext } from "./core.ts";
+import { pairSeasonEnded, pairSeasonStale } from "./scenarios/pair-season-ended.ts";
 import { pairWeek3 } from "./scenarios/pair-week-3.ts";
 
 export interface ScenarioAccount {
@@ -16,7 +17,7 @@ export interface Scenario {
   run(seed: SeedContext, actors: readonly Actor[], today: string): Promise<void>;
 }
 
-export const SCENARIOS: readonly Scenario[] = [pairWeek3];
+export const SCENARIOS: readonly Scenario[] = [pairWeek3, pairSeasonEnded, pairSeasonStale];
 
 /** `--scenario <id>` or `--scenario all` (default `all`). */
 export function selectScenarios(args: readonly string[]): readonly Scenario[] | string {
