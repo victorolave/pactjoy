@@ -57,6 +57,6 @@ status to `Superseded by ADR-XXXX`, linking to the new one. Small fixes
 | [0010](0010-postgres-adapter.md)                             | Postgres adapter: postgres.js, portable SQL migrations, non-exposed schema, NO KEY UPDATE guards, real-Postgres tests | Accepted | 2026-10-01 |
 | [0011](0011-api-layer.md)                                    | API layer: `packages/api` behind a thin Supabase Edge shell | Proposed | 2026-10-01 |
 | [0012](0012-web-client-architecture.md)                      | Web client architecture: `apps/web` as a hexagonal SPA      | Proposed | 2026-10-02 |
-| [0013](0013-pause-lifecycle-and-lazy-settlement.md)           | Pause lifecycle and lazy settlement                          | Proposed | 2026-10-12 |
-| [0014](0014-periodic-review-and-derived-habit-stage.md)       | Periodic review and derived habit stage                      | Proposed | 2026-10-12 |
-| [0015](0015-season-closure-and-graduation.md)                 | Season closure, lazy finalization and habit graduation        | Proposed | 2026-10-12 |
+| [0013](0013-pause-lifecycle-and-lazy-settlement.md)           | Pause lifecycle and lazy settlement                          | Accepted | 2026-10-12 |
+| [0014](0014-periodic-review-and-derived-habit-stage.md)       | Periodic review and derived habit stage                      | Accepted | 2026-10-12 |
+| [0015](0015-season-closure-and-graduation.md)                 | Season closure, lazy finalization and habit graduation        | Accepted | 2026-10-12 |

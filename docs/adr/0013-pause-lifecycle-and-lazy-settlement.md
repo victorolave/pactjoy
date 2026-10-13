@@ -1,6 +1,6 @@
 # ADR-0013: Pause lifecycle and lazy settlement
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-12
 - **Deciders:** Victor Olave
 

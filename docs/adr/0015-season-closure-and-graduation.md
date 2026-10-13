@@ -1,6 +1,6 @@
 # ADR-0015: Season closure, lazy finalization and habit graduation
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-12
 - **Deciders:** Victor Olave
 
