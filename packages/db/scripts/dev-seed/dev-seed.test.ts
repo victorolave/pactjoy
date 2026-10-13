@@ -1,11 +1,14 @@
 import type { Actor } from "@pactjoy/app";
 import {
+  approvePact,
   instant,
   listMyHabits,
   memberProgress,
   myCircle,
+  myPauseRequests,
   seasonProgress,
   seasonResults,
+  today,
   userId,
   weekSummary,
 } from "@pactjoy/app";
@@ -13,14 +16,14 @@ import { createTestApp } from "@pactjoy/app/testing";
 import { describe, expect, it } from "vitest";
 import type { Accounts } from "./accounts.ts";
 import { parseEnvLines, resolveConfig } from "./config.ts";
-import { createSeedClock, noonIn, type SeedContext } from "./core.ts";
+import { addDays, createSeedClock, noonIn, type SeedContext, weekdayOf } from "./core.ts";
 import { runScenarios, SCENARIOS, selectScenarios } from "./scenario.ts";
 
 const TODAY = "2026-10-08";
 const ZONE = "America/Bogota";
 
 /** The real use cases on the in-memory app, with the seed's movable clock. */
-function harness() {
+function harness(today: string = TODAY) {
   const base = createTestApp();
   const clock = createSeedClock(instant(0));
   const app = { ...base, clock };
@@ -38,7 +41,7 @@ function harness() {
       return actor;
     },
   };
-  const run = () => runScenarios(seed, accounts, SCENARIOS, TODAY, () => seed.setDate(TODAY));
+  const run = () => runScenarios(seed, accounts, SCENARIOS, today, () => seed.setDate(today));
   return { app, seed, accounts, run };
 }
 
@@ -133,6 +136,24 @@ describe("pair scenario (week 3 of 8)", () => {
     expect(peer.value.commitments.filter((c) => c.kind === "hidden")).toHaveLength(1);
   });
 
+  it("a rerun survives a habit graduated by manual testing: it gets a fresh habit", async () => {
+    const h = harness();
+    await h.run();
+    const andrea = await h.accounts.ensure("andrea@pactjoy.local");
+    const leer = (await listMyHabits(h.app, andrea)).find((habit) => habit.name === "Leer");
+    if (!leer) throw new Error("expected the Leer habit");
+    await h.app.uow.transaction(async (repos) => {
+      await repos.habits.save(
+        { ...leer, graduatedAt: instant(1), version: leer.version + 1 },
+        leer.version,
+      );
+      return { ok: true as const, value: undefined };
+    });
+    await expect(h.run()).resolves.toBeUndefined();
+    const habits = (await listMyHabits(h.app, andrea)).filter((habit) => habit.name === "Leer");
+    expect(habits.map((habit) => habit.graduatedAt !== null).sort()).toEqual([false, true]);
+  });
+
   it("a rerun starts clean: a new circle, the same habits, nothing duplicated", async () => {
     const h = harness();
     await h.run();
@@ -187,5 +208,153 @@ describe("pair-season-ended scenarios (screens 36-38b)", () => {
     const victor = await ended("victor.vencida@pactjoy.local");
     expect(victor.closingReviewDone).toBe(false);
     expect(victor.closure).toBeNull();
+  });
+});
+
+describe("pair-pact-open scenario (screens 8-13)", () => {
+  it("leaves the pact open: Victor approved, Andrea has not, one private commitment", async () => {
+    const h = harness();
+    await h.run();
+    const andrea = await h.accounts.ensure("andrea.pacto@pactjoy.local");
+    const victor = await h.accounts.ensure("victor.pacto@pactjoy.local");
+    h.seed.setDate(TODAY);
+    const circle = (await myCircle(h.app, andrea)).circle;
+    expect(circle?.name).toBe("Andrea y Victor (pacto)");
+    const season = await h.app.uow.read((repos) =>
+      circle ? repos.seasons.findLatestByCircle(circle.id) : Promise.resolve(null),
+    );
+    if (!season) throw new Error("expected a season");
+    expect(season.status).toBe("pactOpen");
+    expect(season.nominalStart).toBe("2026-10-11");
+    const members = (await myCircle(h.app, victor)).circle?.members ?? [];
+    const idOf = (name: string) => members.find((m) => m.displayName === name)?.id;
+    expect(season.approvals.map((a) => a.memberId)).toEqual([idOf("Victor")]);
+    expect(season.commitments).toHaveLength(7);
+    const privates = season.commitments.filter((c) => c.privacy === "private");
+    expect(privates.map((c) => c.memberId)).toEqual([idOf("Victor")]);
+    expect(season.commitments.filter((c) => c.memberId === idOf("Andrea"))).toHaveLength(4);
+  });
+
+  it("Andrea approving closes the pact and offers the baseline", async () => {
+    const h = harness();
+    await h.run();
+    const andrea = await h.accounts.ensure("andrea.pacto@pactjoy.local");
+    h.seed.setDate(TODAY);
+    const circle = (await myCircle(h.app, andrea)).circle;
+    const season = await h.app.uow.read((repos) =>
+      circle ? repos.seasons.findLatestByCircle(circle.id) : Promise.resolve(null),
+    );
+    if (!season) throw new Error("expected a season");
+    const approved = await approvePact(h.app, andrea, {
+      seasonId: season.id,
+      expectedPactRevision: season.pactRevision,
+    });
+    expect(approved).toMatchObject({ ok: true, value: { season: { status: "active" } } });
+    const view = await today(h.app, andrea);
+    expect(view).toMatchObject({ baselineOffer: { periodIndex: 0 } });
+  });
+});
+
+describe("pair-pause scenario (screens 26-30b)", () => {
+  async function paused() {
+    const h = harness();
+    await h.run();
+    const andrea = await h.accounts.ensure("andrea.pausa@pactjoy.local");
+    const victor = await h.accounts.ensure("victor.pausa@pactjoy.local");
+    h.seed.setDate(TODAY);
+    return { ...h, andrea, victor };
+  }
+
+  it("gives Andrea a request to answer and Victor a pending one", async () => {
+    const { app, andrea, victor } = await paused();
+    const forAndrea = await myPauseRequests(app, andrea);
+    expect(forAndrea.awaitingMe).toHaveLength(1);
+    expect(forAndrea.awaitingMe[0]?.myResponse).toBeNull();
+    const forVictor = await myPauseRequests(app, victor);
+    expect(forVictor.mine.map((r) => r.status)).toEqual(["pending"]);
+    expect(forVictor.awaitingMe).toHaveLength(0);
+  });
+
+  it("gives Andrea two running approved pauses to resume, with the redistributed notice", async () => {
+    const { app, andrea } = await paused();
+    const view = await myPauseRequests(app, andrea);
+    expect(view.mine.map((r) => r.status)).toEqual(["approved", "approved"]);
+    expect(view.resumePreviews).toHaveLength(2);
+    expect(view.redistributed).not.toBeNull();
+    const { before, after } = view.redistributed?.total ?? { before: 0, after: 0 };
+    expect(after).not.toBe(before);
+  });
+
+  it("flags exactly one of Andrea's pauses as ending tomorrow (30a)", async () => {
+    const { app, andrea } = await paused();
+    const view = await today(app, andrea);
+    if (view.state !== "active") throw new Error(`expected an active day, got ${view.state}`);
+    const ending = view.rows.filter((row) => row.pause?.endsTomorrow === true);
+    expect(ending.map((row) => row.habitName)).toEqual(["Inglés"]);
+    expect(ending[0]?.pause).toMatchObject({ status: "approved", canResume: true });
+  });
+});
+
+describe("pair-pause weekday alignment and reruns", () => {
+  // Mon 2026-10-12 ... Sun 2026-10-18: the start (today - 16) lands on every weekday.
+  it.each([
+    "2026-10-12",
+    "2026-10-13",
+    "2026-10-14",
+    "2026-10-15",
+    "2026-10-16",
+    "2026-10-17",
+    "2026-10-18",
+  ])("records Dibujar only on its scheduled weekdays (today %s)", async (day) => {
+    const h = harness(day);
+    await h.run();
+    const victor = await h.accounts.ensure("victor.pausa@pactjoy.local");
+    const season = await h.app.uow.read(async (repos) => {
+      const circle = await repos.circles.findActiveByUser(victor.userId);
+      return circle ? repos.seasons.findLatestByCircle(circle.id) : null;
+    });
+    if (!season || season.actualStart === null) throw new Error("expected a started season");
+    const start = season.actualStart;
+    const habit = (await listMyHabits(h.app, victor)).find((x) => x.name === "Dibujar");
+    const dibujar = season.commitments.find((c) => c.habitId === habit?.id);
+    expect(dibujar).toBeDefined();
+    const entries = await h.app.uow.read((repos) => repos.entries.listBySeason(season.id));
+    const mine = entries.filter((e) => e.commitmentId === dibujar?.id);
+    expect(mine.length).toBeGreaterThan(0);
+    for (const entry of mine) {
+      expect([1, 3, 5]).toContain(weekdayOf(addDays(start, entry.day)));
+    }
+  });
+
+  it("a second run resolves and leaves the same states", async () => {
+    const h = harness();
+    await h.run();
+    await h.run();
+    const andrea = await h.accounts.ensure("andrea.pausa@pactjoy.local");
+    const victor = await h.accounts.ensure("victor.pausa@pactjoy.local");
+    h.seed.setDate(TODAY);
+    expect((await myPauseRequests(h.app, andrea)).mine.map((r) => r.status)).toEqual([
+      "approved",
+      "approved",
+    ]);
+    expect((await myPauseRequests(h.app, andrea)).awaitingMe).toHaveLength(1);
+    expect((await myPauseRequests(h.app, victor)).mine.map((r) => r.status)).toEqual(["pending"]);
+  });
+});
+
+describe("pair-pact-open rerun", () => {
+  it("a second run resolves and still has only Victor's approval", async () => {
+    const h = harness();
+    await h.run();
+    await h.run();
+    const andrea = await h.accounts.ensure("andrea.pacto@pactjoy.local");
+    h.seed.setDate(TODAY);
+    const circle = (await myCircle(h.app, andrea)).circle;
+    const season = await h.app.uow.read((repos) =>
+      circle ? repos.seasons.findLatestByCircle(circle.id) : Promise.resolve(null),
+    );
+    expect(season?.status).toBe("pactOpen");
+    expect(season?.approvals).toHaveLength(1);
+    expect(season?.commitments).toHaveLength(7);
   });
 });

@@ -104,9 +104,17 @@ export async function leaveCurrentCircle(ctx: SeedContext, actor: Actor): Promis
   must(await leaveCircle(ctx.app, actor, { circleId: view.circle.id }), "leaveCircle");
 }
 
-/** Reuses the account's habit with that name, so reruns do not pile up duplicates in Perfil. */
+/**
+ * Reuses the account's NON-graduated habit with that name, so reruns do not pile up duplicates in
+ * Perfil. A habit graduated by manual testing (`graduatedAt` set) cannot take new commitments
+ * (`HabitGraduated`), so it is skipped and a fresh habit is created instead. Tradeoff: the same
+ * name may then appear twice (one under "Hábitos graduados"), which is fine for dev data and
+ * avoids touching a graduation the tester made on purpose (or needing SQL to undo it).
+ */
 async function habitFor(ctx: SeedContext, actor: Actor, name: string, icon: string | null) {
-  const existing = (await listMyHabits(ctx.app, actor)).find((habit) => habit.name === name);
+  const existing = (await listMyHabits(ctx.app, actor)).find(
+    (habit) => habit.name === name && habit.graduatedAt === null,
+  );
   return existing ?? must(await createHabit(ctx.app, actor, { name, icon }), `createHabit ${name}`);
 }
 
