@@ -47,7 +47,7 @@ describe("presign", () => {
 
   // Golden value computed with an independent implementation (Python hmac/hashlib) from the same
   // canonical request, so it does not just echo this module back at itself. The real servers
-  // (MinIO in test/, Supabase in scripts/smoke-supabase.ts) accept the same construction.
+  // (SeaweedFS in test/, Supabase in scripts/smoke-supabase.ts) accept the same construction.
   it("signs content-length and content-type for a path-style PUT with a port in the host", async () => {
     const url = await presign({
       method: "PUT",
@@ -69,6 +69,24 @@ describe("presign", () => {
         "&X-Amz-Expires=300" +
         "&X-Amz-SignedHeaders=content-length%3Bcontent-type%3Bhost" +
         "&X-Amz-Signature=89418305fca8856f2a2ae45c329a3aa575fee131bc44e6c9660dde992a7714fe",
+    );
+  });
+
+  // Same AWS doc vector as above, but the URL we CONNECT to is another host: only the signed Host
+  // changes, so the signature must still be the one in the documentation.
+  it("signs for `signedHost` while keeping the connection URL (host override)", async () => {
+    const url = await presign({
+      method: "GET",
+      url: "https://gateway.internal:9000/test.txt",
+      signedHost: "examplebucket.s3.amazonaws.com",
+      region: "us-east-1",
+      credentials,
+      now: 1_369_353_600_000,
+      expiresSeconds: 86_400,
+    });
+    expect(url.startsWith("https://gateway.internal:9000/test.txt?")).toBe(true);
+    expect(url).toContain(
+      "X-Amz-Signature=aeeed9bbccd4d02ee5c0109b86d86835f995330da4c265957d157751f604d404",
     );
   });
 

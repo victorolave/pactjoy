@@ -1,6 +1,6 @@
 # ADR-0016: Evidence storage: app-owned port, S3-protocol adapter with hand-rolled SigV4 presigning, upload ledger
 
-- **Status:** Accepted
+- **Status:** Proposed
 - **Date:** 2026-10-13
 - **Deciders:** Victor Olave
 
@@ -47,7 +47,7 @@ The storage spike (local Supabase CLI 2.119.0) verified: S3 presigned PUT, GET a
 - **P14. `packages/storage`** is a new adapter package, not part of `packages/db`: ADR-0010 keeps `db` to the Postgres unit of work, and storage must be replaceable on its own. It is standard TypeScript/ESM (no `node:`, `npm:` or `jsr:`) and runs on Node and Deno.
 - **P15. Two endpoints.** `endpoint` (server to storage: HEAD, ranged GET, DELETE) and an optional `publicEndpoint` (the host the browser uses for the presigned PUT and GET, which is the https tunnel for a phone). SigV4 signs the `Host`, so each URL is signed for the host that will be called.
 - **P16. Presigned URLs for server calls too.** HEAD, ranged GET and DELETE use the same query-auth signer: one signing mode, no header-auth variant.
-- **P17. Hand-rolled SigV4 on WebCrypto.** `crypto.subtle` and `TextEncoder` only, `UNSIGNED-PAYLOAD`, path-style `/{bucket}/{key}`, verified against the AWS documentation vectors. Tests run against MinIO through Testcontainers (like `packages/db`, ADR-0010), with a `TEST_S3_ENDPOINT` override for CI, plus a manual smoke script against local Supabase for what only Supabase enforces (413, 415).
+- **P17. Hand-rolled SigV4 on WebCrypto.** `crypto.subtle` and `TextEncoder` only, `UNSIGNED-PAYLOAD`, path-style `/{bucket}/{key}`, verified against the AWS documentation vectors. Tests run against SeaweedFS' S3 gateway through Testcontainers (like `packages/db`, ADR-0010; see the CI image note below), with `TEST_S3_ENDPOINT` and `TEST_S3_IMAGE` overrides, plus a manual smoke script against local Supabase for what only Supabase enforces (413, 415).
 
 ### Credential policy
 
@@ -73,7 +73,34 @@ Portability: R2, AWS S3 or MinIO is a change of endpoint, region and keys only.
 
 Cause: the local Kong in front of Storage sets `X-Forwarded-Host` to the requested host without the port and `X-Forwarded-Port` to a fixed `54321`, and Storage validates the signature against `<forwarded host>:<forwarded port>`; a `Host` or `X-Forwarded-Host` sent by the client has no effect. The host to sign for is therefore `<requested host>:54321`, whatever port the caller connects to. That holds for `127.0.0.1:54321` and `host.docker.internal:54321` by coincidence, and fails for `kong:8000` and for a tunnel host (the browser sends `Host: <tunnel>` with no port). This is a property of the local gateway; the hosted gateway has not been checked (see the operational checklist).
 
-Consequence for the API work: the pair of endpoints in P15 is not enough for `kong:8000` or a tunnel; it needs either an endpoint whose port is 54321 (`host.docker.internal:54321` works as it is) or a separate signing host (sign for host A, call host B). Which one is open and is decided before the API commit.
+### Decision: a configurable signing host
+
+The adapter takes two optional settings, `signingHost` (server calls) and `publicSigningHost` (browser URLs), each a `host[:port]` to sign for while the connection still goes to the endpoint URL (`presign({ signedHost })` swaps only the signed `Host`; the returned URL is untouched). Unset, it signs for the host it connects to, which is right for AWS S3, R2, `127.0.0.1:54321` and any hosted gateway that does not rewrite the host. The environment names for the API are `API_STORAGE_S3_SIGNING_HOST` and `API_STORAGE_S3_PUBLIC_SIGNING_HOST` (values are `host:port`, never a URL). Locally, with the Edge Function reaching storage through Kong, `API_STORAGE_S3_ENDPOINT=http://kong:8000/storage/v1/s3` pairs with `API_STORAGE_S3_SIGNING_HOST=kong:54321`, and a phone on a https tunnel `t` pairs `API_STORAGE_S3_PUBLIC_ENDPOINT=https://t/storage/v1/s3` with `API_STORAGE_S3_PUBLIC_SIGNING_HOST=t:54321`. If `API_STORAGE_S3_PUBLIC_ENDPOINT` is not set, the browser URLs use the server endpoint and its signing host.
+
+Re-run of the smoke with the override (same day):
+
+| Check | Result |
+| --- | --- |
+| Real Edge Runtime container, endpoint `kong:8000`, `signingHost` `kong:54321`: PUT, HEAD, ranged GET, GET, DELETE twice, 403 size mismatch, 413, 415 | all pass |
+| Same container, endpoint `kong:8000`, no `signingHost` (control) | 403 on the server calls |
+| Emulated https tunnel (`Host: tun.test` through `127.0.0.1:54321`), `publicSigningHost` `tun.test:54321`: PUT, GET, then HEAD from the server side | 200, 200, found |
+| Same, no `publicSigningHost` (control) | 403, 403, not found |
+| Host smoke, `127.0.0.1:54321`, no override | all pass |
+
+The hosted Supabase gateway is not covered: whether it validates the forwarded host or the real one is checked at deploy time (operational checklist), and the same two settings absorb either answer.
+
+### CI image for the S3 contract tests
+
+The contract suite needs a real S3 server that validates SigV4 query presigns (including a signed `content-length`, so a body of another size is a 403), answers path-style PUT, HEAD, GET with `Range` (206) and DELETE. `minio/minio` (Docker Hub) and `quay.io/minio/minio` no longer allow anonymous pulls (`denied` / `401`), which is all a GitHub Actions runner has. Evaluated on 2026-10-13 with an empty `DOCKER_CONFIG`:
+
+| Candidate | Anonymous pull | Fit |
+| --- | --- | --- |
+| `chrislusf/seaweedfs:4.48` (`server -s3`) | yes | passes all 10 contract tests, including 403 on a length mismatch and 206 ranges |
+| `quay.io/minio/minio`, `minio/minio` | no | rejected |
+| `adobe/s3mock`, `localstack/localstack` (community) | manifest readable | not pulled: they do not verify signatures, so the 403 assertions could not pass |
+| `dxflrs/garage`, `rustfs/rustfs` | manifest readable | not evaluated; Garage needs a cluster layout step before it serves |
+
+Chosen: `chrislusf/seaweedfs:4.48@sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d`, overridable with `TEST_S3_IMAGE`. Every contract assertion stays unconditional: the gateway enforces the signed length, and so does Supabase Storage, the production target. If a future image cannot enforce it, that assertion may become conditional only while Supabase keeps enforcing it, and the reason must be written here.
 
 ## Alternatives considered
 

@@ -1,12 +1,19 @@
-import { MinioContainer } from "@testcontainers/minio";
+import { GenericContainer, Wait } from "testcontainers";
 import { presign } from "../src/index.ts";
 
 /**
- * MinIO pinned to the release the contract was verified on. `TEST_S3_IMAGE` overrides it: Docker Hub
- * no longer serves `minio/minio` for anonymous pulls, so a machine without the image cached
- * either points this at a mirror or sets `TEST_S3_ENDPOINT` (see below).
+ * SeaweedFS (S3 gateway) pinned by tag AND digest. It replaced MinIO: `minio/minio` on Docker Hub
+ * and `quay.io/minio/minio` no longer serve anonymous pulls, which is all a GitHub Actions runner
+ * has. `chrislusf/seaweedfs` pulls anonymously, validates SigV4 query presigns (including the
+ * signed `content-length`, so a body of another size is a 403) and answers ranged GETs with 206:
+ * what the contract needs. `TEST_S3_IMAGE` overrides the reference (a mirror, a newer tag).
  */
-const MINIO_IMAGE = process.env.TEST_S3_IMAGE ?? "minio/minio:RELEASE.2025-09-07T16-13-09Z";
+const S3_IMAGE =
+  process.env.TEST_S3_IMAGE ??
+  "chrislusf/seaweedfs:4.48@sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d";
+const S3_PORT = 8333;
+const ACCESS_KEY_ID = "pactjoy-test-key";
+const SECRET_ACCESS_KEY = "pactjoy-test-secret-0123456789";
 const BUCKET = "entry-photos";
 
 export interface S3Source {
@@ -35,10 +42,23 @@ async function createBucket(source: Omit<S3Source, "stop">): Promise<void> {
   }
 }
 
+/** A freshly started gateway answers connection errors and 5xx for a few seconds. */
+async function createBucketWhenReady(source: Omit<S3Source, "stop">): Promise<void> {
+  const deadline = Date.now() + 60_000;
+  for (;;) {
+    try {
+      return await createBucket(source);
+    } catch (error) {
+      if (Date.now() > deadline) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+  }
+}
+
 /**
  * The S3 server for the integration tests: `TEST_S3_ENDPOINT` (+ `TEST_S3_ACCESS_KEY_ID`,
  * `TEST_S3_SECRET_ACCESS_KEY`, `TEST_S3_REGION`) when set, as in CI with a service container;
- * otherwise a MinIO Testcontainer, like packages/db does for Postgres. Throws, never skips.
+ * otherwise a SeaweedFS Testcontainer, like packages/db does for Postgres. Throws, never skips.
  */
 export async function startS3Source(): Promise<S3Source> {
   const env = process.env;
@@ -56,16 +76,21 @@ export async function startS3Source(): Promise<S3Source> {
     await createBucket(source);
     return { ...source, stop: async () => {} };
   }
-  const container = await new MinioContainer(MINIO_IMAGE).start();
+  const container = await new GenericContainer(S3_IMAGE)
+    .withExposedPorts(S3_PORT)
+    .withEnvironment({ AWS_ACCESS_KEY_ID: ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY: SECRET_ACCESS_KEY })
+    .withCommand(["server", "-s3", "-dir=/data", "-volume.max=4", "-master.volumeSizeLimitMB=64"])
+    .withWaitStrategy(Wait.forListeningPorts())
+    .start();
   const source = {
-    endpoint: container.getConnectionUrl().replace(/\/+$/, ""),
+    endpoint: `http://${container.getHost()}:${container.getMappedPort(S3_PORT)}`,
     region: "us-east-1",
     bucket: BUCKET,
-    accessKeyId: container.getUsername(),
-    secretAccessKey: container.getPassword(),
+    accessKeyId: ACCESS_KEY_ID,
+    secretAccessKey: SECRET_ACCESS_KEY,
   };
   try {
-    await createBucket(source);
+    await createBucketWhenReady(source);
   } catch (error) {
     await container.stop();
     throw error;

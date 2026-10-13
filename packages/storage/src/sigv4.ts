@@ -22,6 +22,12 @@ export interface PresignOptions {
   readonly credentials: Credentials;
   /** Epoch milliseconds the signature starts at. */
   readonly now: number;
+  /**
+   * `host[:port]` to SIGN instead of the URL's own, while the returned URL still points at `url`.
+   * For a gateway that validates the signature against a host other than the one we connect to
+   * (local Supabase: Kong makes Storage check `<X-Forwarded-Host>:54321`).
+   */
+  readonly signedHost?: string;
   /** 1 to 604800 (7 days), the SigV4 limits. */
   readonly expiresSeconds: number;
   /** Headers to sign besides `host` (e.g. `content-length`, `content-type`). The client must send them verbatim. */
@@ -88,7 +94,7 @@ export async function presign(options: PresignOptions): Promise<string> {
   const date = stamp.slice(0, 8);
   const scope = `${date}/${region}/${service}/aws4_request`;
 
-  const signed = new Map<string, string>([["host", url.host]]);
+  const signed = new Map<string, string>([["host", options.signedHost ?? url.host]]);
   for (const [name, value] of Object.entries(options.headers ?? {})) {
     signed.set(name.toLowerCase(), value.trim().replace(/\s+/g, " "));
   }

@@ -18,7 +18,7 @@ export default defineConfig({
         },
       },
       {
-        // Needs an S3 server: MinIO through Testcontainers, or TEST_S3_ENDPOINT (see test/s3-source.ts).
+        // Needs an S3 server: SeaweedFS through Testcontainers, or TEST_S3_ENDPOINT (see test/s3-source.ts).
         extends: true,
         test: {
           name: "s3",

@@ -8,6 +8,8 @@ import { runSmoke } from "./smoke.ts";
  *   SMOKE_BUCKET=entry-photos pnpm --filter @pactjoy/storage smoke
  *
  * `SMOKE_ENDPOINT` (server calls) and `SMOKE_PUBLIC_ENDPOINT` (browser) default to `STORAGE_S3_URL`.
+ * `SMOKE_SIGNING_HOST` / `SMOKE_PUBLIC_SIGNING_HOST` sign for another `host[:port]` than the one
+ * connected to (local Supabase needs `<host>:54321`, see ADR-0016).
  * Prints statuses and verdicts only; exits 1 if any row is not as expected.
  */
 const env = process.env;
@@ -24,6 +26,8 @@ if (!endpoint || !accessKeyId || !secretAccessKey) {
 const rows = await runSmoke({
   endpoint,
   publicEndpoint: env.SMOKE_PUBLIC_ENDPOINT ?? endpoint,
+  ...(env.SMOKE_SIGNING_HOST ? { signingHost: env.SMOKE_SIGNING_HOST } : {}),
+  ...(env.SMOKE_PUBLIC_SIGNING_HOST ? { publicSigningHost: env.SMOKE_PUBLIC_SIGNING_HOST } : {}),
   region: env.S3_PROTOCOL_REGION ?? "local",
   bucket: env.SMOKE_BUCKET ?? "entry-photos",
   accessKeyId,

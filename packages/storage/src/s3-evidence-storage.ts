@@ -16,6 +16,13 @@ export interface S3EvidenceStorageOptions {
    * the browser will really call (the https tunnel for a phone). Defaults to `endpoint`.
    */
   readonly publicEndpoint?: string;
+  /**
+   * `host[:port]` to SIGN server-side calls for, when it differs from the one in `endpoint`. Local
+   * Supabase: Storage validates `<X-Forwarded-Host>:54321`, so `http://kong:8000/...` needs `kong:54321`.
+   */
+  readonly signingHost?: string;
+  /** Same, for the browser URLs (`publicEndpoint`): the https tunnel `t` needs `t:54321` locally. */
+  readonly publicSigningHost?: string;
   readonly region: string;
   readonly bucket: string;
   readonly accessKeyId: string;
@@ -37,7 +44,7 @@ function codeForStatus(status: number): EvidenceStorageErrorCode {
 }
 
 /**
- * {@link EvidenceStorage} over the S3 protocol (AWS S3, Cloudflare R2, MinIO, Supabase Storage's S3
+ * {@link EvidenceStorage} over the S3 protocol (AWS S3, Cloudflare R2, SeaweedFS, MinIO, Supabase Storage's S3
  * endpoint), path-style. Every call, browser or server, is a SigV4 query-presigned URL from the
  * same signer. Failures become {@link EvidenceStorageError}: a fixed message and a code, never the
  * URL, the key or the signature, and no `cause` that could carry them.
@@ -50,11 +57,15 @@ export function createS3EvidenceStorage(options: S3EvidenceStorageOptions): Evid
   const base = (endpoint: string) => endpoint.replace(/\/+$/, "");
   const server = base(options.endpoint);
   const browser = base(options.publicEndpoint ?? options.endpoint);
+  const serverHost = options.signingHost;
+  const browserHost =
+    options.publicSigningHost ?? (options.publicEndpoint ? undefined : serverHost);
   const objectUrl = (root: string, key: string) => `${root}/${bucket}/${key}`;
 
   const sign = (
     method: string,
     root: string,
+    signedHost: string | undefined,
     key: string,
     now: Instant,
     ttlSeconds: number,
@@ -62,6 +73,7 @@ export function createS3EvidenceStorage(options: S3EvidenceStorageOptions): Evid
   ) =>
     presign({
       method,
+      ...(signedHost ? { signedHost } : {}),
       url: objectUrl(root, key),
       region,
       credentials,
@@ -76,7 +88,7 @@ export function createS3EvidenceStorage(options: S3EvidenceStorageOptions): Evid
     key: string,
     extraHeaders?: Record<string, string>,
   ): Promise<Response> {
-    const url = await sign(method, server, key, wallClock(), SERVER_CALL_TTL_SECONDS);
+    const url = await sign(method, server, serverHost, key, wallClock(), SERVER_CALL_TTL_SECONDS);
     try {
       return await doFetch(url, {
         method,
@@ -94,7 +106,7 @@ export function createS3EvidenceStorage(options: S3EvidenceStorageOptions): Evid
 
   return {
     async signUpload(key, object, ttlSeconds, now) {
-      const url = await sign("PUT", browser, key, now, ttlSeconds, {
+      const url = await sign("PUT", browser, browserHost, key, now, ttlSeconds, {
         "content-length": String(object.size),
         "content-type": object.contentType,
       });
@@ -114,7 +126,7 @@ export function createS3EvidenceStorage(options: S3EvidenceStorageOptions): Evid
           async (key): Promise<[string, SignedRequest]> => [
             key,
             {
-              url: await sign("GET", browser, key, now, ttlSeconds),
+              url: await sign("GET", browser, browserHost, key, now, ttlSeconds),
               method: "GET",
               headers: {},
               expiresAt: instant(now + ttlSeconds * 1000),

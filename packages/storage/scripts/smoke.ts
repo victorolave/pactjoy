@@ -12,6 +12,10 @@ export interface SmokeConfig {
   readonly endpoint: string;
   /** What the browser reaches (presigned PUT and GET); this process plays the browser against it. */
   readonly publicEndpoint: string;
+  /** `host[:port]` to sign server calls for, when it differs from `endpoint` (see the adapter options). */
+  readonly signingHost?: string;
+  /** Same for the browser URLs. */
+  readonly publicSigningHost?: string;
   readonly region: string;
   readonly bucket: string;
   readonly accessKeyId: string;
@@ -48,6 +52,8 @@ export async function runSmoke(config: SmokeConfig): Promise<SmokeRow[]> {
   const storage = createS3EvidenceStorage({
     endpoint: config.endpoint,
     publicEndpoint: config.publicEndpoint,
+    ...(config.signingHost ? { signingHost: config.signingHost } : {}),
+    ...(config.publicSigningHost ? { publicSigningHost: config.publicSigningHost } : {}),
     region: config.region,
     bucket: config.bucket,
     accessKeyId: config.accessKeyId,
@@ -124,6 +130,7 @@ export async function runSmoke(config: SmokeConfig): Promise<SmokeRow[]> {
   const raw = async (rawKey: string, size: number, contentType: string) => {
     const url = await presign({
       method: "PUT",
+      ...(config.publicSigningHost ? { signedHost: config.publicSigningHost } : {}),
       url: `${config.publicEndpoint.replace(/\/+$/, "")}/${config.bucket}/${rawKey}`,
       region: config.region,
       credentials: { accessKeyId: config.accessKeyId, secretAccessKey: config.secretAccessKey },

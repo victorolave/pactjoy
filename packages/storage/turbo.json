@@ -6,6 +6,7 @@
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/supabase/config.toml"],
       "env": [
         "TEST_S3_ENDPOINT",
+        "TEST_S3_IMAGE",
         "TEST_S3_REGION",
         "TEST_S3_ACCESS_KEY_ID",
         "TEST_S3_SECRET_ACCESS_KEY"

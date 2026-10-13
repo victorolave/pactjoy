@@ -1,6 +1,7 @@
 import { EvidenceStorageError, instant } from "@pactjoy/app";
 import { describe, expect, it, vi } from "vitest";
 import { createS3EvidenceStorage } from "./s3-evidence-storage.ts";
+import { presign } from "./sigv4.ts";
 
 const KEY = "o/0123456789abcdef0123456789abcdef.jpg";
 const SECRET = "secretKeyThatMustNeverLeak0123456789";
@@ -11,7 +12,12 @@ type FetchFn = typeof fetch;
 function setup(
   respond: (url: string, init: RequestInit) => Response | Promise<Response> = () =>
     new Response(null, { status: 200 }),
-  extra: { publicEndpoint?: string; endpoint?: string } = {},
+  extra: {
+    publicEndpoint?: string;
+    endpoint?: string;
+    signingHost?: string;
+    publicSigningHost?: string;
+  } = {},
 ) {
   const calls: Array<{ url: string; init: RequestInit }> = [];
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -22,6 +28,8 @@ function setup(
   const storage = createS3EvidenceStorage({
     endpoint: extra.endpoint ?? "http://kong:8000/storage/v1/s3",
     ...(extra.publicEndpoint ? { publicEndpoint: extra.publicEndpoint } : {}),
+    ...(extra.signingHost ? { signingHost: extra.signingHost } : {}),
+    ...(extra.publicSigningHost ? { publicSigningHost: extra.publicSigningHost } : {}),
     region: "local",
     bucket: "entry-photos",
     accessKeyId: "AKIDEXAMPLE",
@@ -64,6 +72,63 @@ describe("signUpload", () => {
     const { storage } = setup(undefined, { endpoint: "http://kong:8000/storage/v1/s3/" });
     const signed = await storage.signUpload(KEY, { size: 1, contentType: "image/jpeg" }, 60, NOW);
     expect(signed.url.startsWith("http://kong:8000/storage/v1/s3/entry-photos/o/")).toBe(true);
+  });
+});
+
+const signatureOf = (url: string) => new URL(url).searchParams.get("X-Amz-Signature");
+
+describe("signing host override (Kong validates <X-Forwarded-Host>:54321)", () => {
+  const reference = async (host: string, method: string, path: string, expiresSeconds = 60) =>
+    signatureOf(
+      await presign({
+        method,
+        url: `http://${host}${path}`,
+        region: "local",
+        credentials: { accessKeyId: "AKIDEXAMPLE", secretAccessKey: SECRET },
+        now: NOW,
+        expiresSeconds,
+      }),
+    );
+
+  it("server calls connect to the endpoint but sign for `signingHost`", async () => {
+    const { storage, calls } = setup(
+      () => new Response(null, { status: 200, headers: { "content-length": "1" } }),
+      { signingHost: "kong:54321" },
+    );
+    await storage.stat(KEY);
+    const url = calls[0]?.url ?? "";
+    expect(url.startsWith(`http://kong:8000/storage/v1/s3/entry-photos/${KEY}?`)).toBe(true);
+    expect(signatureOf(url)).toBe(
+      await reference("kong:54321", "HEAD", `/storage/v1/s3/entry-photos/${KEY}`),
+    );
+  });
+
+  it("browser URLs keep the public endpoint and sign for `publicSigningHost`", async () => {
+    const { storage } = setup(undefined, {
+      publicEndpoint: "https://tunnel.example/storage/v1/s3",
+      publicSigningHost: "tunnel.example:54321",
+    });
+    const downloads = await storage.signDownloads([KEY], 600, NOW);
+    const url = downloads.get(KEY)?.url ?? "";
+    expect(url.startsWith(`https://tunnel.example/storage/v1/s3/entry-photos/${KEY}?`)).toBe(true);
+    expect(signatureOf(url)).toBe(
+      await reference("tunnel.example:54321", "GET", `/storage/v1/s3/entry-photos/${KEY}`, 600),
+    );
+    const upload = await storage.signUpload(KEY, { size: 5, contentType: "image/jpeg" }, 300, NOW);
+    expect(upload.url.startsWith("https://tunnel.example/")).toBe(true);
+    expect(upload.url).not.toContain("tunnel.example:54321");
+  });
+
+  it("the two overrides are independent", async () => {
+    const { storage, calls } = setup(
+      () => new Response(null, { status: 200, headers: { "content-length": "1" } }),
+      { publicEndpoint: "https://tunnel.example/s3", publicSigningHost: "tunnel.example:54321" },
+    );
+    await storage.stat(KEY);
+    // server side has no override: signed for the host it connects to
+    expect(signatureOf(calls[0]?.url ?? "")).toBe(
+      await reference("kong:8000", "HEAD", `/storage/v1/s3/entry-photos/${KEY}`),
+    );
   });
 });
 

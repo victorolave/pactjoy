@@ -16,7 +16,7 @@ afterAll(async () => {
 
 // The same suite the in-memory fake runs, against a real S3 server: this proves the signatures,
 // not just the bookkeeping (a wrong host, length or type must be refused by the server).
-describeEvidenceStorageContract("S3 adapter on MinIO", async () => {
+describeEvidenceStorageContract("S3 adapter on a real S3 server", async () => {
   const s3 = await source();
   const storage = createS3EvidenceStorage({
     endpoint: s3.endpoint,
