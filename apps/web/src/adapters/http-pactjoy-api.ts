@@ -34,6 +34,7 @@ import type {
   MyPauseRequests,
   PauseApprovalDto,
   PauseRequestDto,
+  ProfileSummaryDto,
   ReviewDraftDto,
   SeasonDto,
   SeasonHistoryDto,
@@ -45,6 +46,7 @@ import type {
 } from "../ports/wire.ts";
 import { progressApiPaths } from "../shared/season-progress-routes.ts";
 import { isMyPauseRequests, isPauseApproval, isPauseRequest } from "./pause-guards.ts";
+import { isProfileSummary } from "./profile-guards.ts";
 import {
   isCommitmentStage,
   isReviewDraft,
@@ -473,6 +475,10 @@ export class HttpPactJoyApi implements PactJoyApi {
 
   async getSeasonHistory(signal?: AbortSignal): Promise<SeasonHistoryDto> {
     return this.#read("/me/seasons", isSeasonHistory, signal);
+  }
+
+  async getProfileSummary(signal?: AbortSignal): Promise<ProfileSummaryDto> {
+    return this.#read("/me/profile", isProfileSummary, signal);
   }
 
   async getSeasonProgress(seasonId: string, signal?: AbortSignal): Promise<SeasonProgress> {

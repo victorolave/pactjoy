@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { usePactJoyApi } from "../../context/api-context.tsx";
-import { habitsKey, seasonHistoryKey } from "../../shared/query-keys.ts";
+import { habitsKey, profileSummaryKey, seasonHistoryKey } from "../../shared/query-keys.ts";
 
 /**
  * The viewer's own habits, read through the API port and the shared key (profile reaches no other
@@ -17,5 +17,18 @@ export function useSeasonHistory() {
   return useQuery({
     queryKey: seasonHistoryKey,
     queryFn: ({ signal }) => api.getSeasonHistory(signal),
+  });
+}
+
+/**
+ * The viewer's pooled consistency and their non-graduated habits with the derived stage. Always
+ * fresh (`staleTime: 0`) and not persisted: the stage and the figures move with every entry.
+ */
+export function useProfileSummary() {
+  const api = usePactJoyApi();
+  return useQuery({
+    queryKey: profileSummaryKey,
+    queryFn: ({ signal }) => api.getProfileSummary(signal),
+    staleTime: 0,
   });
 }

@@ -48,3 +48,9 @@ export const seasonResultsKey = (seasonId: string) =>
 export const carryOverKey = (seasonId: string) =>
   [...seasonCloseKey, "carryOver", seasonId] as const;
 export const seasonHistoryKey = [...seasonCloseKey, "history"] as const;
+/**
+ * The Perfil summary (`GET /me/profile`): pooled consistency and the habit stages. Under the
+ * progress root so every settled entry, pause, review, closure or pact mutation refreshes it.
+ * Never persisted offline (only `["today"]` is), so the persisted cache version does not change.
+ */
+export const profileSummaryKey = [...progressKey, "profile"] as const;

@@ -20,6 +20,7 @@ import type {
   MyPauseRequests,
   PauseApprovalDto,
   PauseRequestDto,
+  ProfileSummaryDto,
   ReviewDraftDto,
   SeasonDto,
   SeasonHistoryDto,
@@ -197,4 +198,9 @@ export interface PactJoyApi extends SeasonProgressApi {
   getCarryOver(seasonId: string, signal?: AbortSignal): Promise<CarryOverDto>;
   /** The closed seasons of the viewer's circle in which they held a commitment, newest first. */
   getSeasonHistory(signal?: AbortSignal): Promise<SeasonHistoryDto>;
+  /**
+   * The viewer's pooled consistency across the circle's seasons and their habits with the derived
+   * stage (Perfil). Owner-only and total: no circle is zeros, never an error (ADR-0011 Q23).
+   */
+  getProfileSummary(signal?: AbortSignal): Promise<ProfileSummaryDto>;
 }

@@ -30,6 +30,7 @@ import type {
   MyPauseRequests,
   PauseApprovalDto,
   PauseRequestDto,
+  ProfileSummaryDto,
   ReviewDraftDto,
   SeasonDto,
   SeasonHistoryDto,
@@ -44,6 +45,7 @@ import {
   pauseApprovalFixture,
   pauseRequestFixture,
 } from "./fixtures/pause.ts";
+import { profileSummaryFixture } from "./fixtures/profile.ts";
 import { carryOverFixture, seasonHistoryFixture } from "./fixtures/season-close.ts";
 
 type ExistingMethod =
@@ -72,6 +74,7 @@ type ExistingMethod =
   | "submitSeasonClosure"
   | "getCarryOver"
   | "getSeasonHistory"
+  | "getProfileSummary"
   | ProgressMethod;
 type ProgressMethod = keyof SeasonProgressApi;
 
@@ -134,6 +137,7 @@ export class FakePactJoyApi implements PactJoyApi {
     submitSeasonClosure: 0,
     getCarryOver: 0,
     getSeasonHistory: 0,
+    getProfileSummary: 0,
     getSeasonProgress: 0,
     getMemberProgress: 0,
     getCommitmentProgress: 0,
@@ -173,6 +177,7 @@ export class FakePactJoyApi implements PactJoyApi {
   readonly #seasonResults = new Map<string, SeasonResultsDto>();
   readonly #carryOvers = new Map<string, CarryOverDto>();
   #seasonHistory: SeasonHistoryDto = seasonHistoryFixture();
+  #profileSummary: ProfileSummaryDto = profileSummaryFixture();
   #closureResult: SubmittedClosureDto | null = null;
   #submitResult: SubmittedReviewDto = {
     status: "completed",
@@ -222,6 +227,10 @@ export class FakePactJoyApi implements PactJoyApi {
 
   setSeasonHistory(view: SeasonHistoryDto): void {
     this.#seasonHistory = view;
+  }
+
+  setProfileSummary(view: ProfileSummaryDto): void {
+    this.#profileSummary = view;
   }
 
   /** What `submitSeasonClosure` answers; by default it echoes the decisions it was given. */
@@ -518,6 +527,11 @@ export class FakePactJoyApi implements PactJoyApi {
   async getSeasonHistory(_signal?: AbortSignal) {
     this.#enter("getSeasonHistory");
     return this.#seasonHistory;
+  }
+
+  async getProfileSummary(_signal?: AbortSignal) {
+    this.#enter("getProfileSummary");
+    return this.#profileSummary;
   }
 
   async getSeasonProgress(seasonId: string, signal?: AbortSignal) {
