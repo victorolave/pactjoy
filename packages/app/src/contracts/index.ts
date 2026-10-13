@@ -8,6 +8,8 @@
 
 export { describeCircleRepositoryContract } from "./circle.contract.ts";
 export { describeEntryRepositoryContract } from "./entry.contract.ts";
+export type { EvidenceStorageContractSubject } from "./evidence-storage.contract.ts";
+export { describeEvidenceStorageContract } from "./evidence-storage.contract.ts";
 export type { ContractSubject } from "./fixtures.ts";
 export {
   describeCircleGuardContract,

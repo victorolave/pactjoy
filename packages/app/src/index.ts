@@ -201,6 +201,13 @@ export type {
   SettleDuePausesResult,
 } from "./pause/settle-due-pauses.ts";
 export { settleDuePauses } from "./pause/settle-due-pauses.ts";
+export type {
+  EvidenceStorage,
+  EvidenceStorageErrorCode,
+  SignedRequest,
+  StoredObject,
+} from "./ports/evidence-storage.ts";
+export { EvidenceStorageError } from "./ports/evidence-storage.ts";
 export type { IdGenerator } from "./ports/id-generator.ts";
 export type { RandomSource } from "./ports/random-source.ts";
 export type { Repositories } from "./ports/repositories.ts";

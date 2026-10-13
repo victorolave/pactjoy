@@ -8,6 +8,7 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "createFixedOffsetTimeZone",
   "createInMemoryCircleRepository",
   "createInMemoryEntryRepository",
+  "createInMemoryEvidenceStorage",
   "createInMemoryHabitRepository",
   "createInMemoryPauseRequestRepository",
   "createInMemoryReviewRepository",
