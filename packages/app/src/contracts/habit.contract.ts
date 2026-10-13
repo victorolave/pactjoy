@@ -27,6 +27,15 @@ export function describeHabitRepositoryContract(
   factory: () => Promise<ContractSubject<HabitRepositories>>,
 ): void {
   describe(`HabitRepository contract (${name})`, () => {
+    it("round-trips graduatedAt: null by default, and a timestamp once graduated", async () => {
+      const { uow } = await factory();
+      await saveHabit(uow, HABIT, null);
+      expect((await readHabit(uow))?.graduatedAt).toBeNull();
+      const graduated = { ...HABIT, graduatedAt: instant(1_700_000_123_456), version: 1 };
+      await saveHabit(uow, graduated, 0);
+      expect(await readHabit(uow)).toEqual(graduated);
+    });
+
     it("get returns null for an unknown id", async () => {
       const { uow } = await factory();
       expect(await readHabit(uow)).toBeNull();

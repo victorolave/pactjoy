@@ -52,7 +52,11 @@ export function NotificationStep() {
         </div>
       }
     >
-      <Illustration alt="Un aviso de PactJoy en la pantalla de un teléfono" />
+      <Illustration
+        name="activar-avisos"
+        size="hero"
+        alt="Un aviso de PactJoy en la pantalla de un teléfono"
+      />
       <p className={styles.body}>
         Permite las notificaciones de PactJoy en este teléfono. Es opcional: puedes seguir sin
         ellas.

@@ -6,9 +6,10 @@ import type { AppError, AppErrorKind } from "./app-error.ts";
  * kind AND an extra stale key a compile error.
  */
 export const APP_ERROR_STATUS = {
-  // 422 (43)
+  // 422 (45)
   AutomaticityIncomplete: 422,
   CategoryTooLong: 422,
+  ClosureIncomplete: 422,
   CustomLabelBlank: 422,
   CustomLabelHasInvisibleCharacters: 422,
   CustomLabelMalformed: 422,
@@ -20,6 +21,7 @@ export const APP_ERROR_STATUS = {
   InvalidCategory: 422,
   InvalidAutomaticity: 422,
   InvalidClientRequestId: 422,
+  InvalidClosureDecision: 422,
   InvalidDisplayName: 422,
   InvalidIcon: 422,
   InvalidLengthWeeks: 422,
@@ -67,19 +69,23 @@ export const APP_ERROR_STATUS = {
   PauseRequestNotFound: 404,
   ReviewPeriodNotFound: 404,
   SeasonNotFound: 404,
-  // 409 (25)
+  // 409 (30)
   AlreadyInActiveCircle: 409,
   BeforeSeasonStart: 409,
   CircleArchived: 409,
   CircleFull: 409,
+  ClosingReviewRequired: 409,
+  ClosureAlreadySubmitted: 409,
   CommitmentWeightsNotFull: 409,
   DisplayNameTaken: 409,
   EntryDeleted: 409,
   FutureDay: 409,
+  NothingToClose: 409,
   OpportunityOnHold: 409,
   OpportunityPaused: 409,
   PactAlreadyClosed: 409,
   PactNotOpen: 409,
+  HabitGraduated: 409,
   PauseAlreadyDecided: 409,
   PauseCapExceeded: 409,
   PauseNotActive: 409,
@@ -91,6 +97,7 @@ export const APP_ERROR_STATUS = {
   SeasonInProgress: 409,
   SeasonNotActive: 409,
   SeasonNotJoinable: 409,
+  SeasonResultsNotYet: 409,
   StaleSeason: 409,
   WindowClosed: 409,
   // 410 (1)

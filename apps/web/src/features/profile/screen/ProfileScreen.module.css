@@ -58,3 +58,51 @@
   font: var(--font-small);
   color: var(--text-secondary);
 }
+
+.list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  min-height: var(--touch-target);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: var(--border-width) solid var(--pj-hairline);
+  color: inherit;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+.list > li:last-child .row,
+.list > li.row:last-child {
+  border-bottom: none;
+}
+
+.rowInfo {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.rowTitle {
+  font: var(--font-label);
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.rowSub {
+  font: var(--font-small);
+  color: var(--text-secondary);
+}
+
+.chevron {
+  flex: none;
+  color: var(--text-secondary);
+}

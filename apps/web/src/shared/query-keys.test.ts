@@ -1,5 +1,6 @@
 import { expect, it } from "vitest";
 import {
+  carryOverKey,
   commitmentProgressKey,
   habitsKey,
   memberProgressKey,
@@ -7,8 +8,11 @@ import {
   reviewKey,
   reviewsKey,
   scoringPreviewKey,
+  seasonCloseKey,
+  seasonHistoryKey,
   seasonKey,
   seasonProgressKey,
+  seasonResultsKey,
   stageKey,
   weekSummaryKey,
 } from "./query-keys.ts";
@@ -46,4 +50,15 @@ it("keys a commitment's stage under the progress root, so progress invalidation 
   expect(stageKey("s1", "c1").slice(0, 1)).toEqual(progressKey);
   expect(stageKey("s1", "c2")).not.toEqual(stageKey("s1", "c1"));
   expect(stageKey("s1", "c1")).not.toEqual(commitmentProgressKey("s1", "c1"));
+});
+
+it("nests the results, the carry-over and the history under one season-close root, apart from the season reads", () => {
+  expect(seasonCloseKey).toEqual(["seasonClose"]);
+  const keys = [seasonResultsKey("s1"), carryOverKey("s1"), seasonHistoryKey];
+  for (const key of keys) expect(key.slice(0, 1)).toEqual(seasonCloseKey);
+  expect(new Set(keys.map((key) => JSON.stringify(key))).size).toBe(3);
+  expect(seasonResultsKey("s2")).not.toEqual(seasonResultsKey("s1"));
+  expect(carryOverKey("s2")).not.toEqual(carryOverKey("s1"));
+  // A season-wide invalidation must not refresh the owner-only close reads by accident.
+  expect(seasonResultsKey("s1").slice(0, 1)).not.toEqual(seasonKey("s1").slice(0, 1));
 });

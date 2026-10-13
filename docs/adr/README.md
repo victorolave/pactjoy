@@ -59,3 +59,4 @@ status to `Superseded by ADR-XXXX`, linking to the new one. Small fixes
 | [0012](0012-web-client-architecture.md)                      | Web client architecture: `apps/web` as a hexagonal SPA      | Proposed | 2026-10-02 |
 | [0013](0013-pause-lifecycle-and-lazy-settlement.md)           | Pause lifecycle and lazy settlement                          | Proposed | 2026-10-12 |
 | [0014](0014-periodic-review-and-derived-habit-stage.md)       | Periodic review and derived habit stage                      | Proposed | 2026-10-12 |
+| [0015](0015-season-closure-and-graduation.md)                 | Season closure, lazy finalization and habit graduation        | Proposed | 2026-10-12 |

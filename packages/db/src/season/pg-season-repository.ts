@@ -143,6 +143,20 @@ export function createPgSeasonRepository(exec: SqlExecutor, mode: BindMode): Sea
     findLatestByCircle: (circle) =>
       one("where circle_id = $1 order by insert_seq desc limit 1", [circle]),
 
+    // Newest first by `insert_seq`, the same order `findLatestByCircle` takes its first row from.
+    async listByCircle(circle) {
+      const { rows } = await exec.query<SeasonRow>(
+        `select ${SEASON_COLUMNS} from pactjoy.seasons where circle_id = $1 order by insert_seq desc`,
+        [circle],
+      );
+      const seasons: Season[] = [];
+      for (const row of rows) {
+        const season = await load(row);
+        if (season) seasons.push(season);
+      }
+      return seasons;
+    },
+
     /**
      * Eager read-set guard: `FOR NO KEY UPDATE`, never FOR SHARE (two guards
      * upgrading to a write deadlock) and not FOR UPDATE (it would block the KEY

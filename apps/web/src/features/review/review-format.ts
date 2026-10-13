@@ -1,6 +1,5 @@
 import type { CommitmentPeriodSummary } from "@pactjoy/app";
 import type { Serialized } from "../../ports/wire.ts";
-import { longDate } from "../../shared/format.ts";
 
 type Weeks = { readonly first: number; readonly last: number };
 type SummaryRow = Serialized<CommitmentPeriodSummary>;
@@ -41,40 +40,6 @@ export function commitmentFigures(row: SummaryRow): string {
   const unit = row.scheduleKind === "weeklyTotal" ? weeks : "";
   const kept = `${row.kept} de ${row.counted}${unit}`;
   return row.idealPercent === null ? kept : `${kept} · ideal ${row.idealPercent} %`;
-}
-
-interface DoneInput {
-  readonly improvements: readonly {
-    readonly commitmentId: string;
-    readonly from: string;
-    readonly to: string;
-  }[];
-  readonly nextReviewDate: string | null;
-}
-
-function list(items: readonly string[]): string {
-  if (items.length <= 1) return items.join("");
-  return `${items.slice(0, -1).join(", ")} y ${items[items.length - 1]}`;
-}
-
-/**
- * The body of 35b: only the commitments that improved, as "de X a Y", then the next date. With
- * no improvement it is the date alone, and nothing at all after the closing review.
- */
-export function doneText(input: DoneInput, names: ReadonlyMap<string, string>): string {
-  const parts: string[] = [];
-  const { improvements } = input;
-  if (improvements.length > 0) {
-    const who = list(improvements.map((i) => names.get(i.commitmentId) ?? "Un hábito"));
-    const verb =
-      improvements.length === 1 ? "se siente más automático" : "se sienten más automáticos";
-    const pairs = list(improvements.map((i) => `de ${i.from} a ${i.to}`));
-    parts.push(`${who} ${verb} que antes (${pairs}).`);
-  }
-  if (input.nextReviewDate !== null) {
-    parts.push(`La próxima revisión es el ${longDate(input.nextReviewDate, false)}.`);
-  }
-  return parts.join(" ");
 }
 
 /** "las semanas 3 y 4", "la semana 4" or "las semanas 4 a 6": the weeks a review covers, in a sentence. */

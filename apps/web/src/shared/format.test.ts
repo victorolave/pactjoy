@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayMonth, longDate, weekdayName } from "./format.ts";
+import { dayMonth, longDate, weekdayName, weekdayShortDate } from "./format.ts";
 
 describe("longDate", () => {
   it("writes a Friday in Spanish, capitalised, without a year", () => {
@@ -51,5 +51,16 @@ describe("dayMonth", () => {
 
   it("returns the input untouched when it is not a date", () => {
     expect(dayMonth("pronto")).toBe("pronto");
+  });
+});
+
+describe("weekdayShortDate", () => {
+  it("writes the short weekday, the day and the short month", () => {
+    expect(weekdayShortDate("2026-10-20")).toBe("mar 20 oct");
+    expect(weekdayShortDate("2026-10-04")).toBe("dom 4 oct");
+  });
+
+  it("returns anything that is not a calendar date as is", () => {
+    expect(weekdayShortDate("pronto")).toBe("pronto");
   });
 });

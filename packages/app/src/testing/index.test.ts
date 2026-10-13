@@ -11,6 +11,7 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "createInMemoryHabitRepository",
   "createInMemoryPauseRequestRepository",
   "createInMemoryReviewRepository",
+  "createInMemorySeasonClosureRepository",
   "createInMemorySeasonRepository",
   "createInMemoryUnitOfWork",
   "createSeededRandomSource",
@@ -21,6 +22,7 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "memberFixture",
   "pauseRequestFixture",
   "reviewFixture",
+  "seasonClosureFixture",
   "seasonFixture",
 ].sort();
 

@@ -21,10 +21,12 @@ import type {
   RecordedEntry,
   RequestPauseCommand,
   ScoringPreview,
+  SubmitClosureCommand,
   SubmitReviewCommand,
   UpdateHabitCommand,
 } from "../ports/pactjoy-api.ts";
 import type {
+  CarryOverDto,
   CommitmentProgress,
   CommitmentStageDto,
   HabitDto,
@@ -34,7 +36,10 @@ import type {
   PauseRequestDto,
   ReviewDraftDto,
   SeasonDto,
+  SeasonHistoryDto,
   SeasonProgress,
+  SeasonResultsDto,
+  SubmittedClosureDto,
   SubmittedReviewDto,
   WeekSummary,
 } from "../ports/wire.ts";
@@ -46,6 +51,12 @@ import {
   isSkippedBaseline,
   isSubmittedReview,
 } from "./review-guards.ts";
+import {
+  isCarryOver,
+  isSeasonHistory,
+  isSeasonResults,
+  isSubmittedClosure,
+} from "./season-close-guards.ts";
 import {
   isCommitmentProgress,
   isMemberProgress,
@@ -104,6 +115,7 @@ const isHabitDto = (data: unknown): boolean =>
   typeof data.id === "string" &&
   typeof data.name === "string" &&
   (data.icon === null || typeof data.icon === "string") &&
+  (data.graduatedAt === null || typeof data.graduatedAt === "string") &&
   typeof data.version === "number";
 const isHabitList = (data: unknown): boolean =>
   isRecord(data) && Array.isArray(data.habits) && data.habits.every(isHabitDto);
@@ -437,6 +449,30 @@ export class HttpPactJoyApi implements PactJoyApi {
     signal?: AbortSignal,
   ): Promise<CommitmentStageDto> {
     return this.#read(`${commitmentPath(seasonId, commitmentId)}/stage`, isCommitmentStage, signal);
+  }
+
+  async getSeasonResults(seasonId: string, signal?: AbortSignal): Promise<SeasonResultsDto> {
+    return this.#read(`${seasonPath(seasonId)}/results`, isSeasonResults, signal);
+  }
+
+  async submitSeasonClosure(
+    seasonId: string,
+    cmd: SubmitClosureCommand,
+  ): Promise<SubmittedClosureDto> {
+    return (await this.#request({
+      method: "POST",
+      path: `${seasonPath(seasonId)}/closure`,
+      body: cmd,
+      valid: isSubmittedClosure,
+    })) as SubmittedClosureDto;
+  }
+
+  async getCarryOver(seasonId: string, signal?: AbortSignal): Promise<CarryOverDto> {
+    return this.#read(`${seasonPath(seasonId)}/carry-over`, isCarryOver, signal);
+  }
+
+  async getSeasonHistory(signal?: AbortSignal): Promise<SeasonHistoryDto> {
+    return this.#read("/me/seasons", isSeasonHistory, signal);
   }
 
   async getSeasonProgress(seasonId: string, signal?: AbortSignal): Promise<SeasonProgress> {

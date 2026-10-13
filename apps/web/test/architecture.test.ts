@@ -30,7 +30,15 @@ function filesUnder(dir: string): string[] {
 
 /** feature -> the features it may reach (always through their index.ts). */
 const ALLOWED_FEATURE_DEPS: Readonly<Record<string, readonly string[]>> = {
-  today: ["entry", "habits", "pause", "review", "season-progress-data", "season-week"],
+  today: [
+    "entry",
+    "habits",
+    "pause",
+    "review",
+    "season-close",
+    "season-progress-data",
+    "season-week",
+  ],
   habits: [],
   pact: ["habits", "review"],
   entry: [],
@@ -47,6 +55,10 @@ const ALLOWED_FEATURE_DEPS: Readonly<Record<string, readonly string[]>> = {
   pause: [],
   // Reads Today and the review through the API port and the shared query keys, never other features.
   review: [],
+  // The closing review comes before the decisions; Today, the circle and the habits are read through
+  // the API port and the shared query keys, never their features. The final standings (36) reuse the
+  // season's standings card and its progress read, the same peer-visible rows.
+  "season-close": ["review", "season", "season-progress-data"],
 };
 
 const BASE_LAYERS = /^(shared|ui|ports|adapters|context|platform)\//;
@@ -153,6 +165,26 @@ describe("the folder architecture", () => {
     expect(violationsOf("features/season/Foo.tsx", ["../review/index.ts"])).toHaveLength(1);
     expect(violationsOf("features/circle/Foo.tsx", ["../review/index.ts"])).toHaveLength(1);
     expect(violationsOf("features/entry/Foo.tsx", ["../review/index.ts"])).toHaveLength(1);
+  });
+
+  it("lets Today reach season-close only through its index, and season-close reach no feature but review and the season standings", () => {
+    expect(violationsOf("features/today/Foo.tsx", ["../season-close/index.ts"])).toEqual([]);
+    expect(violationsOf("features/today/Foo.tsx", ["../season-close/queries.ts"])).toHaveLength(1);
+    expect(violationsOf("features/season-close/Foo.tsx", ["../review/index.ts"])).toEqual([]);
+    expect(violationsOf("features/season-close/Foo.tsx", ["../review/queries.ts"])).toHaveLength(1);
+    expect(violationsOf("features/season-close/Foo.tsx", ["../season/index.ts"])).toEqual([]);
+    expect(
+      violationsOf("features/season-close/Foo.tsx", ["../season-progress-data/index.ts"]),
+    ).toEqual([]);
+    for (const other of ["today", "circle", "habits", "pause", "pact", "profile"]) {
+      expect(violationsOf("features/season-close/Foo.tsx", [`../${other}/index.ts`])).toHaveLength(
+        1,
+      );
+    }
+    // Only Today places the card; the shell mounts the screens.
+    expect(violationsOf("shell/routes.tsx", ["../features/season-close/index.ts"])).toEqual([]);
+    expect(violationsOf("features/circle/Foo.tsx", ["../season-close/index.ts"])).toHaveLength(1);
+    expect(violationsOf("features/review/Foo.tsx", ["../season-close/index.ts"])).toHaveLength(1);
   });
 
   it("keeps every import inside the dependency rules", () => {

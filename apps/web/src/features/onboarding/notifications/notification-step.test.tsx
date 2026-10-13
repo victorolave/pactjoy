@@ -12,6 +12,16 @@ const installed = { standalone: true, notificationPermission: "default" } as con
 const newUser = { ...installed, myCircle: NO_CIRCLE, today: noCircleTodayFixture() } as const;
 
 describe("the permission step in an installed app (OB-R4)", () => {
+  it("draws the official illustration, not the neutral placeholder", async () => {
+    renderApp(newUser);
+    await screen.findByRole("heading", TITLE);
+    const image = screen.getByRole("img", {
+      name: "Un aviso de PactJoy en la pantalla de un teléfono",
+    });
+    expect(image.tagName).toBe("IMG");
+    expect(image.getAttribute("src")).toContain("activar-avisos");
+  });
+
   it("is the first screen after login, before the name step", async () => {
     const app = renderApp(newUser);
     expect(await screen.findByRole("heading", TITLE)).toBeInTheDocument();

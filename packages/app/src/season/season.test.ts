@@ -130,6 +130,26 @@ describe("canCreateSeasonFor", () => {
     expect(canCreateSeasonFor(open)).toBe(false);
     expect(canCreateSeasonFor({ ...open, status: "active" })).toBe(false);
   });
+
+  it("REQ-L1: an ACTIVE season the circle may move on from (complete or stale) no longer blocks", () => {
+    const active = {
+      ...buildSeason({
+        id: seasonId("season-1"),
+        circleId: circleId("circle-1"),
+        timeZone: timeZoneId("America/Santiago"),
+        nominalStart: localDate("2026-10-01"),
+        lengthWeeks: 4,
+        reviewCadenceWeeks: 1,
+        now: NOW,
+      }),
+      status: "active" as const,
+    };
+
+    expect(canCreateSeasonFor(active, true)).toBe(true);
+    expect(canCreateSeasonFor(active, false)).toBe(false);
+    // A pact-open season never moves on, whatever the flag says.
+    expect(canCreateSeasonFor({ ...active, status: "pactOpen" }, true)).toBe(false);
+  });
 });
 
 describe("isSeasonLengthWeeks", () => {

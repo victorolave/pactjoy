@@ -168,6 +168,9 @@ export function buildSeason(input: BuildSeasonInput): Season {
  * of any status (`SeasonRepository.findLatestByCircle`), or `null` if it
  * never had one.
  */
-export function canCreateSeasonFor(latest: Season | null): boolean {
-  return latest === null || latest.status === "closed";
+export function canCreateSeasonFor(latest: Season | null, mayMoveOn = false): boolean {
+  if (latest === null || latest.status === "closed") return true;
+  // An ended ACTIVE season no longer blocks forever (REQ-L1): once every participant closed, or a
+  // week has passed (`moveOnFor`), the next season may be created. The caller finalizes it.
+  return latest.status === "active" && mayMoveOn;
 }

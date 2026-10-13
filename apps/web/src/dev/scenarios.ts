@@ -6,6 +6,7 @@ import {
   pauseRequestFixture,
 } from "../testing/fixtures/pause.ts";
 import { baselineOfferFixture, pendingReviewFixture } from "../testing/fixtures/review.ts";
+import { seasonCloseFixture } from "../testing/fixtures/season-close.ts";
 import {
   activeTodayFixture,
   type DayRow,
@@ -325,6 +326,19 @@ const pendingYesterdayNothingToday = (): TodayView => {
   });
 };
 
+/** An ended season in one of the steps of the close (C10); `pendingReview` only on the closing review. */
+function closeToday(
+  step: "closingReview" | "resultsSoon" | "decide" | "waiting",
+  pendingReview: ReturnType<typeof pendingReviewFixture> | null = null,
+  nextSeasonOpen = false,
+): TodayView {
+  return endedTodayFixture({
+    rows: [leer({ opportunity: { state: "closed", graceUntil: date("2026-10-26") } })],
+    pendingReview,
+    seasonClose: seasonCloseFixture(step, { nextSeasonOpen }),
+  });
+}
+
 export const SCENARIOS: readonly Scenario[] = [
   {
     id: "noCircle",
@@ -527,16 +541,45 @@ export const SCENARIOS: readonly Scenario[] = [
       }) as TodayView,
   },
   {
-    id: "reviewClosingHidden",
-    title: "Revisión de cierre oculta",
+    id: "reviewClosing",
+    title: "Revisión de cierre pendiente",
     description:
-      "La revisión de cierre ya está vencida, pero no tiene pantalla todavía: no hay tarjeta.",
+      "Pasó el último día: la revisión de cierre está pendiente y es la única tarjeta del final de temporada.",
     mode: "data",
     today: () =>
-      ({
-        ...mixed(),
-        pendingReview: pendingReviewFixture({ kind: "closing", dueUntil: null }),
-      }) as TodayView,
+      closeToday(
+        "closingReview",
+        pendingReviewFixture({ kind: "closing", periodIndex: 4, dueUntil: null }),
+      ),
+  },
+  {
+    id: "closeResultsSoon",
+    title: "Resultados en camino",
+    description: "La revisión de cierre ya está hecha; los resultados abren mañana.",
+    mode: "data",
+    today: () => closeToday("resultsSoon"),
+  },
+  {
+    id: "closeDecide",
+    title: "Cierre de temporada: decidir (36)",
+    description: "Los resultados están abiertos y aún no cerraste: Ver resultados.",
+    mode: "data",
+    today: () => closeToday("decide"),
+  },
+  {
+    id: "closeWaiting",
+    title: "Cierre de temporada: esperando",
+    description: "Ya cerraste; faltan miembros del círculo y no hay camino todavía.",
+    mode: "data",
+    today: () => closeToday("waiting"),
+  },
+  {
+    id: "closeStale",
+    title: "Cierre de temporada: el círculo puede seguir",
+    description:
+      "Pasó una semana del último día: aunque falten cierres, se puede preparar la siguiente temporada.",
+    mode: "data",
+    today: () => closeToday("waiting", null, true),
   },
   {
     id: "loading",

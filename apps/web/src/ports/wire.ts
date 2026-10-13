@@ -1,4 +1,6 @@
 import type {
+  CarryOverView,
+  ClosureDecision,
   CommitmentProgressView,
   CommitmentRecord,
   Habit,
@@ -13,7 +15,9 @@ import type {
   ReviewDraftView,
   ReviewImprovement,
   Season,
+  SeasonHistoryView,
   SeasonProgressView,
+  SeasonResultsView,
   WeekSummaryView,
 } from "@pactjoy/app";
 
@@ -111,3 +115,38 @@ export interface CommitmentStageDto {
   readonly commitmentId: string;
   readonly stage: HabitStageDto;
 }
+
+/**
+ * The season close as it arrives over the wire (change season-close-graduation, ADR-0015). Every
+ * view is the OWNER's: no member id appears in them, and no route carries one.
+ */
+export type SeasonResultsDto = Serialized<SeasonResultsView>;
+export type SeasonResultsCommitmentDto = SeasonResultsDto["commitments"][number];
+/** Leave it as it is, adjust it, leave it out of the next season ("Pausar", NOT a Pause) or graduate it. */
+export type ClosureDecisionDto = ClosureDecision;
+export interface ClosureDecisionEntryDto {
+  readonly commitmentId: string;
+  readonly decision: ClosureDecisionDto;
+}
+/** `POST /seasons/:id/closure` (201): the stored decisions, the habits graduated now and whether the season closed. */
+export interface SubmittedClosureDto {
+  readonly decidedAt: string;
+  readonly decisions: readonly ClosureDecisionEntryDto[];
+  readonly graduatedHabitIds: readonly string[];
+  readonly seasonClosed: boolean;
+}
+type CarryOverWire = Serialized<CarryOverView>;
+/**
+ * The API presents each previous measure as a `MeasureView` (the same shape as a commitment's),
+ * not as the domain `Measure` the use case returns, so the item's measure is typed as the former.
+ */
+export interface CarryOverItemDto extends Omit<CarryOverWire["items"][number], "previous"> {
+  readonly previous: Omit<CarryOverWire["items"][number]["previous"], "measure"> & {
+    readonly measure: Serialized<MeasureView>;
+  };
+}
+export interface CarryOverDto extends Omit<CarryOverWire, "items"> {
+  readonly items: readonly CarryOverItemDto[];
+}
+export type SeasonHistoryDto = Serialized<SeasonHistoryView>;
+export type SeasonHistoryItemDto = SeasonHistoryDto["seasons"][number];

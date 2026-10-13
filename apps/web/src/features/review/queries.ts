@@ -63,6 +63,20 @@ export function useReviewOffer() {
   return { pendingReview: today.pendingReview, baselineOffer: today.baselineOffer };
 }
 
+/**
+ * The date the season results open, while they are not open yet (the grace day: the closing
+ * review can be done but the decisions cannot be taken). `null` otherwise. Read through the Today
+ * query, like the offer, so the closing review's last screen never sends the member to a results
+ * screen that would only say "not yet".
+ */
+export function useResultsOpenOn(): string | null {
+  const api = usePactJoyApi();
+  const query = useQuery({ queryKey: todayKey, queryFn: ({ signal }) => api.getToday(signal) });
+  const today = query.data;
+  if (today === undefined || !("seasonClose" in today) || today.seasonClose === null) return null;
+  return today.seasonClose.step === "resultsSoon" ? today.seasonClose.resultsFrom : null;
+}
+
 /** The derived stage of one of MY commitments; the badge asks only for the viewer's own. */
 export function useCommitmentStage(seasonId: string, commitmentId: string, enabled: boolean) {
   const api = usePactJoyApi();

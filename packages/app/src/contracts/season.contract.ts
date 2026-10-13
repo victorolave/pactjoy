@@ -229,6 +229,19 @@ export function describeSeasonRepositoryContract(
       expect((await latest())?.id).toBe(season(2).id);
     });
 
+    it("listByCircle returns every season of the circle newest-inserted first, ignoring updates and other circles", async () => {
+      const { uow } = await subject();
+      const list = (circle = CIRCLE.id) => uow.read(({ seasons }) => seasons.listByCircle(circle));
+      expect(await list()).toEqual([]);
+      await saveSeason(uow, season(1), null);
+      await saveSeason(uow, season(2, { circleId: OTHER_CIRCLE.id }), null);
+      await saveSeason(uow, season(3), null);
+      await saveSeason(uow, season(1, { version: 1, status: "closed" }), 0);
+      expect((await list()).map((s) => s.id)).toEqual([season(3).id, season(1).id]);
+      expect((await list())[1]?.status).toBe("closed");
+      expect((await list(OTHER_CIRCLE.id)).map((s) => s.id)).toEqual([season(2).id]);
+    });
+
     it("SP-S10: no seasons gives null and other circles' seasons are ignored", async () => {
       const { uow, latest } = await subject();
       expect(await latest()).toBeNull();

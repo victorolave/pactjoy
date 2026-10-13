@@ -18,4 +18,6 @@ export { describePauseRequestRepositoryContract } from "./pause.contract.ts";
 export type { ReviewContractSubject } from "./review.contract.ts";
 export { describeReviewRepositoryContract } from "./review.contract.ts";
 export { describeSeasonRepositoryContract } from "./season.contract.ts";
+export type { SeasonClosureContractSubject } from "./season-closure.contract.ts";
+export { describeSeasonClosureRepositoryContract } from "./season-closure.contract.ts";
 export { describeUnitOfWorkContract } from "./unit-of-work.contract.ts";

@@ -11,6 +11,7 @@ const season = (
   lengthWeeks: 8,
   week: null,
   approvalCount: 0,
+  nextSeasonOpen: false,
   ...extra,
 });
 

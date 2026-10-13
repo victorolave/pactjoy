@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { memberId } from "../circle/circle.ts";
 import { commitmentId } from "../commitment/commitment.ts";
-import { seasonId, userId } from "../shared/ids.ts";
-import { commitmentStage } from "./commitment-stage.query.ts";
+import { circleId, habitId, seasonId, userId } from "../shared/ids.ts";
+import { ok } from "../shared/result.ts";
+import { instant } from "../time/instant.ts";
+import { commitmentStage, commitmentStages } from "./commitment-stage.query.ts";
 import { givenReviewWorld, logMinutes, type ReviewWorld } from "./review-fixtures.ts";
 import { submitReview } from "./submit-review.ts";
 
@@ -15,6 +18,19 @@ const stageOn = async (world: ReviewWorld, day: number, which: "meditar" | "leer
   if (!result.ok) throw new Error(`stage refused: ${result.error.kind}`);
   return result.value.stage;
 };
+
+/** Graduates one of Andrea's habits, bypassing the closure use case (GIVEN state). */
+async function graduate(world: ReviewWorld, id: string) {
+  await world.app.uow.transaction(async (repos) => {
+    const habit = await repos.habits.get(habitId(id));
+    if (!habit) throw new Error("fixture missing");
+    await repos.habits.save(
+      { ...habit, graduatedAt: instant(1), version: habit.version + 1 },
+      habit.version,
+    );
+    return ok(undefined);
+  });
+}
 
 async function logDays(world: ReviewWorld, from: number, to: number) {
   for (let day = from; day <= to; day++) await logMinutes(world, "meditar", day);
@@ -87,11 +103,48 @@ describe("commitmentStage", () => {
     expect(await stageOn(world, 0)).toBe("new");
   });
 
-  it("is never graduated (no graduation path yet)", async () => {
+  it("REQ-H9: a strong habit is never graduated by the stage alone (only the owner decides)", async () => {
     const world = await givenReviewWorld();
     await answerBaseline(world, 7);
     await logDays(world, 0, 55);
     expect(await stageOn(world, 70)).not.toBe("graduated");
+  });
+
+  it("SC-G5/REQ-H3: a habit with graduatedAt reads graduated, for its own commitment only, and it is not stored", async () => {
+    const world = await givenReviewWorld();
+    await graduate(world, "habit-meditar");
+    expect(await stageOn(world, 16)).toBe("graduated");
+    expect(await stageOn(world, 16, "leer")).toBe("new");
+    const stored = await world.app.uow.read((repos) => repos.habits.get(habitId("habit-meditar")));
+    expect(stored?.version).toBe(1);
+  });
+
+  it("a graduated habit reads graduated even in a season that has not started", async () => {
+    const world = await givenReviewWorld();
+    await graduate(world, "habit-leer");
+    expect(await stageOn(world, 0, "leer")).toBe("graduated");
+  });
+
+  it("commitmentStages derives every own commitment at once, with graduated wired per habit", async () => {
+    const world = await givenReviewWorld();
+    await graduate(world, "habit-leer");
+    const app = world.at(16);
+    const stages = await app.uow.read(async (repos) => {
+      const season = await repos.seasons.get(SEASON);
+      const circle = await repos.circles.get(circleId("circle-1"));
+      if (!season || !circle) throw new Error("fixture missing");
+      return commitmentStages(app, repos, {
+        season,
+        circle,
+        memberId: memberId("member-andrea"),
+      });
+    });
+    expect([...stages.entries()].sort()).toEqual(
+      [
+        [world.meditar, "new"],
+        [world.leer, "graduated"],
+      ].sort(),
+    );
   });
 
   it("SC-101/105: only the owner reads it; anyone else gets not found", async () => {

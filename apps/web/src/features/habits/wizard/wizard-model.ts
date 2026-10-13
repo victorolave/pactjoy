@@ -122,7 +122,56 @@ export function previewValues(measure: WizardMeasure): readonly string[] {
 
 type DetailCommitment = Extract<CommitmentDto, { kind: "detail" }>;
 
-export function prefillWizard(habit: HabitDto, commitment?: DetailCommitment): WizardDraft {
+/** The part of a commitment the editor starts from: its measure and who sees it. */
+export interface PrefillSource {
+  readonly measure: DetailCommitment["measure"];
+  readonly privacy: "visible" | "private";
+}
+
+/**
+ * What a screen hands the editor to start from a commitment that is not in this season yet (the
+ * carry-over's "Ajustar"): the previous season's measure, weight and privacy. It travels in the
+ * router state of `navigate`, so it is checked before use (`readPrefill`).
+ */
+export interface WizardPrefill extends PrefillSource {
+  readonly weightPercent: number;
+}
+
+/** The wire measure of a commitment as the editor's draft (and, trimmed, as a command's input). */
+export function measureFromView(view: DetailCommitment["measure"]): WizardMeasure {
+  return view.unit === "done"
+    ? { unit: "done", frequency: view.schedule.frequency }
+    : {
+        unit: view.unit,
+        customLabel: view.customLabel,
+        precision: view.precision,
+        schedule: view.schedule,
+        ...view.target,
+      };
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+/**
+ * Router state is whatever the previous entry left, including nothing: only a well formed prefill
+ * is used. The server still validates the measure when it is saved.
+ */
+export function readPrefill(state: unknown): WizardPrefill | null {
+  if (!isRecord(state) || !isRecord(state.prefill)) return null;
+  const { measure, weightPercent, privacy } = state.prefill;
+  if (!isRecord(measure) || typeof measure.unit !== "string" || !isRecord(measure.schedule)) {
+    return null;
+  }
+  if (typeof weightPercent !== "number" || !Number.isInteger(weightPercent)) return null;
+  if (privacy !== "visible" && privacy !== "private") return null;
+  return { measure: measure as unknown as PrefillSource["measure"], weightPercent, privacy };
+}
+
+export function prefillWizard(
+  habit: HabitDto,
+  source?: DetailCommitment | WizardPrefill,
+): WizardDraft {
   const category = Object.hasOwn(CATEGORY_ICONS, habit.category ?? "")
     ? Object.keys(CATEGORY_ICONS).find((key): key is Category => key === habit.category)
     : undefined;
@@ -133,19 +182,8 @@ export function prefillWizard(habit: HabitDto, commitment?: DetailCommitment): W
     category: habit.category,
     icon: habit.icon,
   };
-  if (commitment === undefined) return draft;
-  const view = commitment.measure;
-  const measure: WizardMeasure =
-    view.unit === "done"
-      ? { unit: "done", frequency: view.schedule.frequency }
-      : {
-          unit: view.unit,
-          customLabel: view.customLabel,
-          precision: view.precision,
-          schedule: view.schedule,
-          ...view.target,
-        };
-  return { ...draft, measure, privacy: commitment.privacy };
+  if (source === undefined) return draft;
+  return { ...draft, measure: measureFromView(source.measure), privacy: source.privacy };
 }
 
 /** Metadata edits do not reset approvals; do not issue an unnecessary PATCH. */

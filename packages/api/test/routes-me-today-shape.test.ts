@@ -124,8 +124,13 @@ const SCORE = [
   "points",
   "scope",
 ];
+/** The viewer's end-of-season state: `null` while the season runs, an object once it ended. */
+const SEASON_CLOSE = ["nextSeasonFrom", "nextSeasonOpen", "resultsFrom", "step"].map(
+  (k) => `seasonClose.${k}`,
+);
 const SCORED = [
   "pendingYesterday",
+  "seasonClose",
   ...under("rows", []).concat(ROW_KEYS.map((k) => `rows[].${k}`)),
   ...under("standings", [
     "eligibleParticipantCount",
@@ -247,7 +252,7 @@ describe("GET /me/today emits exactly the documented keys (ADR-0011)", () => {
     const res = await call("GET", "/me/today", "andrea");
     expect(res.json.data.state).toBe("ended");
     expect(keys(res.json.data)).toEqual(
-      [...BASE, ...PENDING_REVIEW, ...SCORED, "rows[].entries"].sort(),
+      [...BASE, ...PENDING_REVIEW, ...SCORED, ...SEASON_CLOSE, "rows[].entries"].sort(),
     );
   });
 });

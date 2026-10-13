@@ -1,0 +1,15 @@
+.track {
+  position: relative;
+  display: block;
+  height: var(--meter-height);
+  border-radius: var(--radius-pill);
+  background: var(--ink-100);
+}
+
+.fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: var(--radius-pill);
+  background: var(--gradient-together);
+}

@@ -248,6 +248,18 @@ describe("PactScreen: Screen 12a (Review and Approve)", () => {
 });
 
 describe("PactScreen: Screen 12b (Waiting)", () => {
+  it("offers a way back to Today while the others are still pending", async () => {
+    const waitingSeason = pairSeasonFixture("pactOpen", [
+      { memberId: "member-victor", approvedAt: "2026-10-06T12:00:00Z" },
+    ]);
+    const { location } = renderPact({ season: waitingSeason });
+
+    await screen.findByRole("heading", { name: "Esperando a Andrea" });
+    await userEvent.click(screen.getByRole("button", { name: "Volver" }));
+
+    expect(location()).toBe("/");
+  });
+
   it("renders waiting state with member status card, dynamic approval count, and lets viewer withdraw approval", async () => {
     const waitingSeason = pairSeasonFixture("pactOpen", [
       { memberId: "member-victor", approvedAt: "2026-10-06T12:00:00Z" },

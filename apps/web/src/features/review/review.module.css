@@ -16,6 +16,44 @@
   color: var(--text-secondary);
 }
 
+.gains {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gainRow {
+  display: grid;
+  grid-template-columns: 1fr 2fr auto;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.gainName {
+  font: var(--font-label);
+}
+
+.gainValue {
+  font: var(--font-small);
+  color: var(--text-secondary);
+}
+
+.nextReview {
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunken);
+  font: var(--font-small);
+  color: var(--text-secondary);
+}
+
 .privateNote {
   display: flex;
   align-items: center;

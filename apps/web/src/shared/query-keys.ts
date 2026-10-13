@@ -37,3 +37,14 @@ export const reviewKey = (seasonId: string, periodIndex: number) =>
 /** The owner's derived stage of one commitment; under the progress root so a settled mutation refreshes it. */
 export const stageKey = (seasonId: string, commitmentId: string) =>
   [...progressKey, "stage", seasonId, commitmentId] as const;
+/**
+ * Every season close read (ADR-0015) shares this root: the final results (36), the carry-over
+ * defaults for the next pact and the closed-season history. Owner-only and never persisted
+ * offline: a stale copy would offer a closure that was already saved.
+ */
+export const seasonCloseKey = ["seasonClose"] as const;
+export const seasonResultsKey = (seasonId: string) =>
+  [...seasonCloseKey, "results", seasonId] as const;
+export const carryOverKey = (seasonId: string) =>
+  [...seasonCloseKey, "carryOver", seasonId] as const;
+export const seasonHistoryKey = [...seasonCloseKey, "history"] as const;

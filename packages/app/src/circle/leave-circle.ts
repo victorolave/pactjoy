@@ -2,6 +2,8 @@ import { resetApprovals } from "../pact/reset-approvals.ts";
 import { settlePausesOnLeave } from "../pause/settle-on-leave.ts";
 import type { Repositories } from "../ports/repositories.ts";
 import type { UnitOfWork } from "../ports/unit-of-work.ts";
+import { finalizeIfReady } from "../season/closure/finalize.ts";
+import { seasonCloseDay } from "../season/closure/season-calendar.ts";
 import type { Actor } from "../shared/actor.ts";
 import type { CircleId } from "../shared/ids.ts";
 import { err, ok, type Result } from "../shared/result.ts";
@@ -93,6 +95,16 @@ export async function leaveCircle(
         now,
         timeZone: deps.timeZone,
       });
+      // An ended season waiting only for this member is complete without them (SC-F3): the leave
+      // that completes the set finalizes it. Only `complete`, never `stale`: laggards are cut off
+      // by opening the next season, not by someone leaving.
+      await finalizeIfReady(
+        repos,
+        latestSeason,
+        updated,
+        seasonCloseDay(latestSeason, now, deps.timeZone),
+        "complete",
+      );
     }
     return ok(updated);
   });

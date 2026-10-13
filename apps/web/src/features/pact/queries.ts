@@ -1,7 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePactJoyApi } from "../../context/api-context.tsx";
-import type { CreateSeasonCommand, EditCommitmentCommand } from "../../ports/pactjoy-api.ts";
-import { habitsKey, myCircleKey, seasonKey, todayKey } from "../../shared/query-keys.ts";
+import type {
+  AddCommitmentCommand,
+  CreateSeasonCommand,
+  EditCommitmentCommand,
+} from "../../ports/pactjoy-api.ts";
+import {
+  carryOverKey,
+  habitsKey,
+  myCircleKey,
+  seasonKey,
+  todayKey,
+} from "../../shared/query-keys.ts";
 
 /** The viewer's active circle and current season. */
 export function useCurrentCircle() {
@@ -71,6 +81,48 @@ export function useRemoveCommitment() {
       readonly seasonId: string;
       readonly commitmentId: string;
     }) => api.removeCommitment(seasonId, commitmentId),
+    onSuccess: (data, { seasonId }) => {
+      client.setQueryData(seasonKey(seasonId), data);
+    },
+    onSettled: async (_data, _err, { seasonId }) => {
+      await Promise.all([
+        client.invalidateQueries({ queryKey: seasonKey(seasonId) }),
+        client.invalidateQueries({ queryKey: todayKey }),
+        client.invalidateQueries({ queryKey: myCircleKey }),
+      ]);
+    },
+  });
+}
+
+/**
+ * The defaults from the member's own closure of the previous season (suggestions only: nothing is
+ * created by reading them). They are optional, so a failure is not retried and not shown.
+ */
+export function useCarryOver(seasonId: string | undefined, enabled: boolean) {
+  const api = usePactJoyApi();
+  return useQuery({
+    queryKey: carryOverKey(seasonId ?? ""),
+    queryFn: ({ signal }) => {
+      if (!seasonId) throw new Error("seasonId required");
+      return api.getCarryOver(seasonId, signal);
+    },
+    enabled: enabled && Boolean(seasonId),
+    retry: false,
+  });
+}
+
+/** Adds a commitment to the viewer's share of an open pact (a one-tap "Seguir igual"). */
+export function useAddCommitment() {
+  const api = usePactJoyApi();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      seasonId,
+      input,
+    }: {
+      readonly seasonId: string;
+      readonly input: AddCommitmentCommand;
+    }) => api.addCommitment(seasonId, input),
     onSuccess: (data, { seasonId }) => {
       client.setQueryData(seasonKey(seasonId), data);
     },

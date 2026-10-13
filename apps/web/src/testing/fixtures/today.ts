@@ -196,6 +196,7 @@ export const activeTodayFixture = (overrides: Partial<Active> = {}): Active => (
   rows: [dayRowFixture(), weekRowFixture()],
   pendingYesterday: [],
   standings: STANDINGS,
+  seasonClose: null,
   ...overrides,
 });
 
@@ -208,5 +209,6 @@ export const endedTodayFixture = (overrides: Partial<Active> = {}): Active => ({
   rows: [weekRowFixture({ opportunity: { state: "closed", graceUntil: localDate("2026-10-26") } })],
   pendingYesterday: [],
   standings: STANDINGS,
+  seasonClose: null,
   ...overrides,
 });

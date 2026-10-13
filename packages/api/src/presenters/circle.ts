@@ -80,6 +80,7 @@ export interface MyCircleDto {
     readonly lengthWeeks: number;
     readonly week: number | null;
     readonly approvalCount: number;
+    readonly nextSeasonOpen: boolean;
   };
 }
 
@@ -107,6 +108,7 @@ export function presentMyCircle(view: MyCircleView): MyCircleDto {
       lengthWeeks: view.season.lengthWeeks,
       week: view.season.week,
       approvalCount: view.season.approvalCount,
+      nextSeasonOpen: view.season.nextSeasonOpen,
     },
   };
 }

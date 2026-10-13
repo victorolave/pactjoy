@@ -7,6 +7,8 @@ export interface HabitDto {
   readonly why: string | null;
   readonly category: string | null;
   readonly icon: string | null;
+  /** OWNER-ONLY, like `why`: graduation is private until the social line exists. */
+  readonly graduatedAt: string | null;
   readonly createdAt: string;
   readonly version: number;
 }
@@ -23,6 +25,7 @@ export function presentHabit(habit: Habit): HabitDto {
     why: habit.why,
     category: habit.category,
     icon: habit.icon,
+    graduatedAt: habit.graduatedAt === null ? null : presentInstant(habit.graduatedAt),
     createdAt: presentInstant(habit.createdAt),
     version: habit.version,
   };

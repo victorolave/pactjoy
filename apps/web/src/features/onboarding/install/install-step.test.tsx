@@ -21,6 +21,16 @@ describe("the install step on iOS (OB-R3, OB-S2)", () => {
     expect(screen.queryByRole("button", { name: "Instalar" })).not.toBeInTheDocument();
   });
 
+  it("draws the official illustration, not the neutral placeholder", async () => {
+    renderApp({ ...ios, path: "/welcome/install" });
+    await screen.findByRole("heading", TITLE);
+    const image = screen.getByRole("img", {
+      name: "PactJoy en la pantalla de inicio de un teléfono",
+    });
+    expect(image.tagName).toBe("IMG");
+    expect(image.getAttribute("src")).toContain("instalar-app");
+  });
+
   it("keeps list semantics and hides the visible numbers from assistive tech", async () => {
     renderApp({ ...ios, path: "/welcome/install" });
     const list = await screen.findByRole("list");

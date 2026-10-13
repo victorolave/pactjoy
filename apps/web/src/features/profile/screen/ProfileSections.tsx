@@ -1,0 +1,116 @@
+import { Link } from "react-router";
+import type { HabitDto, SeasonHistoryItemDto } from "../../../ports/wire.ts";
+import { dayMonth } from "../../../shared/format.ts";
+import { Badge } from "../../../ui/Badge.tsx";
+import { Card } from "../../../ui/Card.tsx";
+import { Icon } from "../../../ui/icon/Icon.tsx";
+import { Skeleton } from "../../../ui/Skeleton.tsx";
+import { useMyHabits, useSeasonHistory } from "../queries.ts";
+import styles from "./ProfileScreen.module.css";
+import { graduatedHabits, seasonRowSubtitle, seasonRowTitle } from "./profile-sections.ts";
+
+/**
+ * The design's sections (39). "Tus hábitos" and "Consistencia histórica" are still the empty
+ * states (REQ-PR3, REQ-PR4); "Temporadas" and "Hábitos graduados" come from the season close
+ * (change season-close-graduation). Only the viewer's own data is read.
+ */
+export function ProfileSections() {
+  return (
+    <>
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>Tus hábitos</h2>
+        <p className={styles.note}>
+          Aún no hay hábitos. Los verás aquí cuando tu círculo empiece una temporada.
+        </p>
+      </section>
+      <SeasonHistory />
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>Consistencia histórica</h2>
+        <p className={styles.note}>Aún sin datos. La verás cuando cierres tu primera temporada.</p>
+      </section>
+      <GraduatedHabits />
+    </>
+  );
+}
+
+function SeasonHistory() {
+  const query = useSeasonHistory();
+  const seasons = query.data?.seasons ?? [];
+  return (
+    <section className={styles.section} aria-busy={query.isLoading}>
+      <h2 className={styles.sectionTitle}>Temporadas</h2>
+      {query.isError ? (
+        <p className={styles.note}>No pudimos cargar tus temporadas.</p>
+      ) : query.isLoading ? (
+        <Skeleton shape="line" />
+      ) : seasons.length === 0 ? (
+        <p className={styles.note}>Aún no hay temporadas. Las que cierres aparecerán aquí.</p>
+      ) : (
+        <Card flush>
+          <ul className={styles.list}>
+            {seasons.map((season) => (
+              <SeasonRow key={season.seasonId} season={season} />
+            ))}
+          </ul>
+        </Card>
+      )}
+    </section>
+  );
+}
+
+function SeasonRow({ season }: { readonly season: SeasonHistoryItemDto }) {
+  return (
+    <li>
+      <Link to={`/season/${season.seasonId}/results`} className={styles.row}>
+        <span className={styles.rowInfo}>
+          <span className={styles.rowTitle}>{seasonRowTitle(season)}</span>
+          <span className={styles.rowSub}>{seasonRowSubtitle(season)}</span>
+        </span>
+        <span className={styles.chevron} aria-hidden="true">
+          <Icon name="chevron-right" size="sm" />
+        </span>
+      </Link>
+    </li>
+  );
+}
+
+function GraduatedHabits() {
+  const query = useMyHabits();
+  const habits = graduatedHabits(query.data ?? []);
+  return (
+    <section className={styles.section} aria-busy={query.isLoading}>
+      <h2 className={styles.sectionTitle}>Hábitos graduados</h2>
+      {query.isError ? (
+        <p className={styles.note}>No pudimos cargar tus hábitos graduados.</p>
+      ) : query.isLoading ? (
+        <Skeleton shape="line" />
+      ) : habits.length === 0 ? (
+        <p className={styles.note}>
+          Aún ninguno. Graduar es decisión tuya, al cerrar una temporada.
+        </p>
+      ) : (
+        <Card flush>
+          <ul className={styles.list}>
+            {habits.map((habit) => (
+              <GraduatedRow key={habit.id} habit={habit} />
+            ))}
+          </ul>
+        </Card>
+      )}
+    </section>
+  );
+}
+
+function GraduatedRow({ habit }: { readonly habit: HabitDto & { readonly graduatedAt: string } }) {
+  return (
+    <li className={styles.row}>
+      <span className={styles.rowInfo}>
+        <span className={styles.rowTitle}>{habit.name}</span>
+        <span className={styles.rowSub}>
+          Graduado el {dayMonth(habit.graduatedAt.slice(0, 10))}
+        </span>
+      </span>
+      <Badge tone="info">🎓 Graduado</Badge>
+    </li>
+  );
+}

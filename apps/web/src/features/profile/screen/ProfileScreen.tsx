@@ -7,8 +7,8 @@ import { Skeleton } from "../../../ui/Skeleton.tsx";
 import { useSession } from "../../auth/index.ts";
 import { useMyCircle } from "../../circle/index.ts";
 import { RenameNameSheet } from "../rename/RenameNameSheet.tsx";
-import { EmptySections } from "./EmptySections.tsx";
 import styles from "./ProfileScreen.module.css";
+import { ProfileSections } from "./ProfileSections.tsx";
 import { profileName } from "./profile-name.ts";
 
 /** Ajustes (design 40) lives outside the tab bar. */
@@ -50,7 +50,7 @@ export function ProfileScreen() {
           <IconButton icon="settings" label="Ajustes" onClick={() => navigate(SETTINGS_PATH)} />
         </div>
       </header>
-      <EmptySections />
+      <ProfileSections />
       {circle !== null && memberName !== null && (
         <RenameNameSheet
           circleId={circle.id}

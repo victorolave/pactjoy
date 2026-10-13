@@ -68,3 +68,14 @@ export function dayMonth(isoDate: string): string {
     ? isoDate
     : `${Number(match[3])} de ${monthName}`;
 }
+
+/** "2026-10-20" -> "mar 20 oct": the short weekday, the day and the short month. */
+export function weekdayShortDate(isoDate: string): string {
+  const match = ISO_DATE.exec(isoDate);
+  if (match === null) return isoDate;
+  const day = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+  const weekday = WEEKDAYS[day.getUTCDay()];
+  const monthName = MONTHS[Number(match[2]) - 1];
+  if (weekday === undefined || monthName === undefined) return isoDate;
+  return `${weekday.slice(0, 3)} ${Number(match[3])} ${monthName.slice(0, 3)}`;
+}

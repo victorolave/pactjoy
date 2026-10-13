@@ -13,6 +13,8 @@ import type {
 } from "@pactjoy/app";
 import type { SeasonProgressApi } from "./season-progress-api.ts";
 import type {
+  CarryOverDto,
+  ClosureDecisionEntryDto,
   CommitmentStageDto,
   HabitDto,
   MyPauseRequests,
@@ -20,7 +22,10 @@ import type {
   PauseRequestDto,
   ReviewDraftDto,
   SeasonDto,
+  SeasonHistoryDto,
+  SeasonResultsDto,
   Serialized,
+  SubmittedClosureDto,
   SubmittedReviewDto,
 } from "./wire.ts";
 
@@ -117,6 +122,11 @@ export interface SubmitReviewCommand {
   readonly automaticity: readonly ReviewAnswer[];
 }
 
+/** One decision per commitment of the member: the client sends them all at once, exactly once. */
+export interface SubmitClosureCommand {
+  readonly decisions: readonly ClosureDecisionEntryDto[];
+}
+
 /** Everything the screens know about the backend. Adapters throw `ApiError`. */
 export interface PactJoyApi extends SeasonProgressApi {
   listHabits(signal?: AbortSignal): Promise<readonly HabitDto[]>;
@@ -176,4 +186,15 @@ export interface PactJoyApi extends SeasonProgressApi {
     commitmentId: string,
     signal?: AbortSignal,
   ): Promise<CommitmentStageDto>;
+  /**
+   * The owner's final figures of an ended season (36). Readable from the results day on, before
+   * and after the season is finalized; owner-only, no route carries a member id (ADR-0015).
+   */
+  getSeasonResults(seasonId: string, signal?: AbortSignal): Promise<SeasonResultsDto>;
+  /** The member's single, final closure (37 to 38b); a second one is `ClosureAlreadySubmitted` (409). */
+  submitSeasonClosure(seasonId: string, cmd: SubmitClosureCommand): Promise<SubmittedClosureDto>;
+  /** The defaults for the next pact, from the member's own closure of the previous season (pactOpen only). */
+  getCarryOver(seasonId: string, signal?: AbortSignal): Promise<CarryOverDto>;
+  /** The closed seasons of the viewer's circle in which they held a commitment, newest first. */
+  getSeasonHistory(signal?: AbortSignal): Promise<SeasonHistoryDto>;
 }

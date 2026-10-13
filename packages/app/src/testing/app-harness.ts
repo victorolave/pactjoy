@@ -28,6 +28,10 @@ import {
   type InMemoryReviewRepository,
 } from "./in-memory-review-repository.ts";
 import {
+  createInMemorySeasonClosureRepository,
+  type InMemorySeasonClosureRepository,
+} from "./in-memory-season-closure-repository.ts";
+import {
   createInMemorySeasonRepository,
   type InMemorySeasonRepository,
 } from "./in-memory-season-repository.ts";
@@ -54,6 +58,7 @@ export interface TestApp {
   readonly habits: InMemoryHabitRepository;
   readonly pauses: InMemoryPauseRequestRepository;
   readonly reviews: InMemoryReviewRepository;
+  readonly seasonClosures: InMemorySeasonClosureRepository;
   readonly seasons: InMemorySeasonRepository;
 }
 
@@ -75,8 +80,17 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
   const habits = createInMemoryHabitRepository();
   const pauses = createInMemoryPauseRequestRepository();
   const reviews = createInMemoryReviewRepository();
+  const seasonClosures = createInMemorySeasonClosureRepository();
   const seasons = createInMemorySeasonRepository();
-  const repositories: Repositories = { circles, entries, habits, pauses, reviews, seasons };
+  const repositories: Repositories = {
+    circles,
+    entries,
+    habits,
+    pauses,
+    reviews,
+    seasonClosures,
+    seasons,
+  };
 
   return {
     clock: createFixedClock(options.now ?? DEFAULT_NOW),
@@ -88,6 +102,7 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
     habits,
     pauses,
     reviews,
+    seasonClosures,
     seasons,
     uow: createInMemoryUnitOfWork({
       repositories,
@@ -103,6 +118,7 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
         const habitScope = habits.beginTransaction();
         const pauseScope = pauses.beginTransaction();
         const reviewScope = reviews.beginTransaction();
+        const seasonClosureScope = seasonClosures.beginTransaction();
         const seasonScope = seasons.beginTransaction();
         return {
           repositories: {
@@ -111,6 +127,7 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
             habits: habitScope.repository,
             pauses: pauseScope.repository,
             reviews: reviewScope.repository,
+            seasonClosures: seasonClosureScope.repository,
             seasons: seasonScope.repository,
           },
           commit(): void {
@@ -119,12 +136,14 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
             habitScope.validate();
             pauseScope.validate();
             reviewScope.validate();
+            seasonClosureScope.validate();
             seasonScope.validate();
             circleScope.apply();
             entryScope.apply();
             habitScope.apply();
             pauseScope.apply();
             reviewScope.apply();
+            seasonClosureScope.apply();
             seasonScope.apply();
           },
         };

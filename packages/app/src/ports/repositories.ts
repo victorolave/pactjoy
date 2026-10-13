@@ -3,6 +3,7 @@ import type { EntryRepository } from "../entry/entry.repository.ts";
 import type { HabitRepository } from "../habit/habit.repository.ts";
 import type { PauseRequestRepository } from "../pause/pause-request.repository.ts";
 import type { ReviewRepository } from "../review/review.repository.ts";
+import type { SeasonClosureRepository } from "../season/closure/season-closure.repository.ts";
 import type { SeasonRepository } from "../season/season.repository.ts";
 
 /**
@@ -18,5 +19,7 @@ export interface Repositories {
   readonly pauses: PauseRequestRepository;
   /** Owner-only: read it only from `src/review/` (`review-guard.test.ts`), never for a peer. */
   readonly reviews: ReviewRepository;
+  /** Decisions are owner-only: use it only from `src/season/closure/` (`closure-guard.test.ts`). */
+  readonly seasonClosures: SeasonClosureRepository;
   readonly seasons: SeasonRepository;
 }

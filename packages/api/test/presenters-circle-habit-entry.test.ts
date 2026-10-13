@@ -69,6 +69,7 @@ const habit: Habit = {
   why: null,
   category: "health",
   icon: "book",
+  graduatedAt: null,
   createdAt: T,
   version: 1,
 };
@@ -216,6 +217,7 @@ describe("presenters: circle, habit, entry", () => {
       why: null,
       category: "health",
       icon: "book",
+      graduatedAt: null,
       createdAt: ISO,
       version: 1,
     });

@@ -101,10 +101,38 @@ describe("the review scenarios (periodic-review)", () => {
     expect(screen.getByRole("button", { name: "Responder" })).toBeInTheDocument();
   });
 
-  it("reviewClosingHidden has a closing review due and shows no card for it", async () => {
-    at("/dev/today/reviewClosingHidden");
-    await screen.findByRole("heading", { name: /Hola/ });
-    expect(screen.queryByRole("heading", { name: /^Revisión de la/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Hacer la revisión" })).not.toBeInTheDocument();
+  it("reviewClosing has the closing review due and shows its card, once", async () => {
+    at("/dev/today/reviewClosing");
+    expect(await screen.findByRole("button", { name: "Hacer la revisión" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Revisión de cierre" })).toBeInTheDocument();
+    expect(screen.queryByText("Cerramos esta temporada.")).not.toBeInTheDocument();
+  });
+
+  it("closeResultsSoon says when the results come", async () => {
+    at("/dev/today/closeResultsSoon");
+    expect(await screen.findByText("Tus resultados llegan pronto.")).toBeInTheDocument();
+    expect(screen.getByText("Estarán listos el miércoles 21 de octubre.")).toBeInTheDocument();
+  });
+
+  it("closeDecide opens the results", async () => {
+    at("/dev/today/closeDecide");
+    expect(await screen.findByText("Cerramos esta temporada.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Ver resultados" })).toBeInTheDocument();
+  });
+
+  it("closeWaiting waits for the circle with no way forward", async () => {
+    at("/dev/today/closeWaiting");
+    expect(await screen.findByText("Esperando a tu círculo")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Preparar la siguiente temporada" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("closeStale lets the circle move on without the members who have not closed", async () => {
+    at("/dev/today/closeStale");
+    expect(await screen.findByText("Esperando a tu círculo")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Preparar la siguiente temporada" }),
+    ).toBeInTheDocument();
   });
 });
