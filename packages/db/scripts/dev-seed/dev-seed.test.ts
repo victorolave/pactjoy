@@ -1,11 +1,13 @@
 import type { Actor } from "@pactjoy/app";
 import {
+  approvePact,
   instant,
   listMyHabits,
   memberProgress,
   myCircle,
   seasonProgress,
   seasonResults,
+  today,
   userId,
   weekSummary,
 } from "@pactjoy/app";
@@ -205,5 +207,47 @@ describe("pair-season-ended scenarios (screens 36-38b)", () => {
     const victor = await ended("victor.vencida@pactjoy.local");
     expect(victor.closingReviewDone).toBe(false);
     expect(victor.closure).toBeNull();
+  });
+});
+
+describe("pair-pact-open scenario (screens 8-13)", () => {
+  it("leaves the pact open: Victor approved, Andrea has not, one private commitment", async () => {
+    const h = harness();
+    await h.run();
+    const andrea = await h.accounts.ensure("andrea.pacto@pactjoy.local");
+    const victor = await h.accounts.ensure("victor.pacto@pactjoy.local");
+    h.seed.setDate(TODAY);
+    const circle = (await myCircle(h.app, andrea)).circle;
+    expect(circle?.name).toBe("Andrea y Victor (pacto)");
+    const season = await h.app.uow.read((repos) =>
+      circle ? repos.seasons.findLatestByCircle(circle.id) : Promise.resolve(null),
+    );
+    if (!season) throw new Error("expected a season");
+    expect(season.status).toBe("pactOpen");
+    expect(season.nominalStart).toBe("2026-10-11");
+    const members = (await myCircle(h.app, victor)).circle?.members ?? [];
+    const idOf = (name: string) => members.find((m) => m.displayName === name)?.id;
+    expect(season.approvals.map((a) => a.memberId)).toEqual([idOf("Victor")]);
+    expect(season.commitments).toHaveLength(7);
+    expect(season.commitments.filter((c) => c.privacy === "private")).toHaveLength(1);
+  });
+
+  it("Andrea approving closes the pact and offers the baseline", async () => {
+    const h = harness();
+    await h.run();
+    const andrea = await h.accounts.ensure("andrea.pacto@pactjoy.local");
+    h.seed.setDate(TODAY);
+    const circle = (await myCircle(h.app, andrea)).circle;
+    const season = await h.app.uow.read((repos) =>
+      circle ? repos.seasons.findLatestByCircle(circle.id) : Promise.resolve(null),
+    );
+    if (!season) throw new Error("expected a season");
+    const approved = await approvePact(h.app, andrea, {
+      seasonId: season.id,
+      expectedPactRevision: season.pactRevision,
+    });
+    expect(approved).toMatchObject({ ok: true, value: { season: { status: "active" } } });
+    const view = await today(h.app, andrea);
+    expect(view).toMatchObject({ baselineOffer: { periodIndex: 0 } });
   });
 });
