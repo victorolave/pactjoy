@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { memberId } from "../circle/circle.ts";
 import { commitmentId } from "../commitment/commitment.ts";
+import { loadEffectivePauses } from "../pause/effective-pauses.ts";
 import { circleId, habitId, seasonId, userId } from "../shared/ids.ts";
 import { ok } from "../shared/result.ts";
 import { instant } from "../time/instant.ts";
@@ -145,6 +146,43 @@ describe("commitmentStage", () => {
         [world.leer, "graduated"],
       ].sort(),
     );
+  });
+
+  it("reuses preloaded score data: same stages, and no entries or pauses read (profile-habits-consistency P9)", async () => {
+    const world = await givenReviewWorld();
+    await logDays(world, 0, 13);
+    const app = world.at(16);
+    const { without, withData, reads } = await app.uow.read(async (repos) => {
+      const season = await repos.seasons.get(SEASON);
+      const circle = await repos.circles.get(circleId("circle-1"));
+      if (!season || !circle) throw new Error("fixture missing");
+      const input = { season, circle, memberId: memberId("member-andrea") };
+      const without = await commitmentStages(app, repos, input);
+      const data = {
+        entries: await repos.entries.listBySeason(SEASON),
+        pauses: await loadEffectivePauses(repos, {
+          season,
+          circle,
+          now: app.clock.now(),
+          timeZone: app.timeZone,
+        }),
+      };
+      const reads: string[] = [];
+      const spy = new Proxy(repos, {
+        get(target, key, receiver) {
+          const value = Reflect.get(target, key, receiver);
+          if ((key === "entries" || key === "pauses") && typeof value === "object") {
+            reads.push(String(key));
+          }
+          return value;
+        },
+      });
+      const withData = await commitmentStages(app, spy, { ...input, data });
+      return { without, withData, reads };
+    });
+    expect(withData).toEqual(without);
+    expect([...withData.values()]).toContain("developing");
+    expect(reads).toEqual([]);
   });
 
   it("SC-101/105: only the owner reads it; anyone else gets not found", async () => {
