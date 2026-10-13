@@ -56,6 +56,14 @@ All days are 1-based and in the season's own time zone (`reviewDayOf` is reused)
 
 `seasonResults` is owner-only and recomputes everything from Entries on every call. It is readable from `resultsFrom` on, before and after finalization. The closing review is not a precondition of reading: `closingReviewDone` says whether it is done, and the automaticity end is absent until it is. This deviates from the raw spec (REQ-RS4 rejects the read), which the design superseded so that a closed season stays readable from Perfil for a member who was cut off before answering.
 
+### Web behaviour
+
+- **Closing review on the grace day.** The results open on `resultsFrom`, so a closing review finished on the grace day cannot lead to them. Its done step reads Today (`seasonClose.step === "resultsSoon"`) and shows "Tus resultados estarán listos el {fecha}." with a "Seguir con mi día" button to Today; otherwise the button is "Ver mis resultados" to `/season/:id/close`. The Temporada tab's review notice also shows the closing review (label "Revisión de cierre", no deadline).
+- **Perfil.** The "Temporadas" section lists the closed seasons of `seasonHistory` as links to the read-only `/season/:id/results` (rank, points; a laggard row reads "Cerrada sin tus decisiones"). "Hábitos graduados" lists the viewer's graduated habits, newest first. "Consistencia histórica" and "Tus hábitos" keep their existing empty states.
+- **ChooseHabits carry-over.** The group "De tu temporada anterior" offers "Seguir igual" (one-tap `addCommitment` with the previous measure, weight and privacy) and "Ajustar" (opens the wizard prefilled through router state). A habit the member left out ("Pausar") appears as a normal unchecked row with the hint "La dejaste fuera la temporada pasada" ("Pausa" is the ADR-0013 Pause, which the decision never creates, C8). Graduated habits are excluded, and a failed carry-over read is silent.
+- **Deviations from the design copy.** Screen 38a says "Graduarlo significa dejar de registrarlo. Seguirá en tu perfil como hábito graduado. La decisión es definitiva.": graduation is permanent (C7), so the design's "podrás retomarlo en otra temporada" would contradict `HabitGraduated`. Screen 38b says "Solo tú ves esta decisión." instead of announcing it to the circle: graduation is private (REQ-V7) and there is no activity feed until A3.
+- **Copy review.** The copy not taken from the design or the spec was derived and reviewed by the owner on 2026-10-12; the only change requested was the ChooseHabits hint above.
+
 ### Data
 
 Two additive migrations: `season_closures` and `season_closure_decisions` (RLS on with no policies, no triggers, no functions), and `habits.graduated_at` (nullable, no backfill). Rollback drops them; seasons already `closed` stay valid.

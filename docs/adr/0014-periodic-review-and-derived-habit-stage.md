@@ -98,7 +98,7 @@ Four forces shape the design:
 
 ## Addendum: closing review surfaced, graduation wired (change `season-close-graduation`, ADR-0015)
 
-- The closing review is now surfaced in the web ("Revisión de cierre") and its completion leads to the season closure (`/season/:id/close`). It is a precondition of submitting a closure (`ClosingReviewRequired`) and stays due from the day after the last season day; it still never lapses.
+- The closing review is now surfaced in the web (the Today card and the Temporada notice, both titled "Revisión de cierre") and its completion leads to the season closure (`/season/:id/close`). It is a precondition of submitting a closure (`ClosingReviewRequired`) and stays due from the day after the last season day; it still never lapses.
 - Its window now ends at finalization: once the season is `closed`, a submit is `SeasonNotActive` (nothing is stored for a member who was cut off before answering).
 - `graduated` is wired: `commitmentStages` passes `graduated = habit.graduatedAt !== null`, so the limitation "`graduated` is never returned" no longer holds. The stage is still derived and never stored; `graduatedAt` is the only stored input.
 - `automaticityJourney` (start: the baseline, else the earliest earlier completed review; end: the closing review) lives in the review module and is compared like for like, as `improvementsOf`.
