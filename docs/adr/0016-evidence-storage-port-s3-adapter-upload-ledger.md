@@ -102,6 +102,12 @@ The contract suite needs a real S3 server that validates SigV4 query presigns (i
 
 Chosen: `chrislusf/seaweedfs:4.48@sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d`, overridable with `TEST_S3_IMAGE`. Every contract assertion stays unconditional: the gateway enforces the signed length, and so does Supabase Storage, the production target. If a future image cannot enforce it, that assertion may become conditional only while Supabase keeps enforcing it, and the reason must be written here.
 
+### Web client
+
+- **P18. Two web ports, no picker port.** `ImageProcessor` (canvas: decode with the camera orientation, at most 1600 px on the long side, JPEG at 0.8 and again at 0.6 if above 3 MiB; the re-encode drops EXIF and GPS) and `PhotoUploader` (the signed PUT with the signed headers only; `Authorization` and cookies are never sent to the storage origin, and a test pins it). The picker is a plain `<input type="file">` with no `capture`, so the phone offers camera and library. HEIC works where the browser decodes it (iOS Safari); elsewhere the image is "unusable".
+- **P19. The upload starts on pick.** Prepare, reserve for the prepared size, PUT; the entry later names the photo by id. Saving waits while a photo is preparing or uploading and never needs one (a failed upload keeps the note and the save). A photo the server turns down at save time (`PhotoUploadExpired`, `PhotoNotUploaded`, `PhotoNotFound`, `PhotoNotAvailable`, `InvalidPhoto`) returns the field to "Reintentar", which reserves a new slot and resends the prepared bytes. Photos are offline-disabled and disabled on a missed entry.
+- **P20. Signed links expire.** A peer's photo is `{url, expiresAt}` valid for 10 minutes. `CACHE_VERSION` is 9 and a restored Today may hold expired links: `EvidencePhoto` does not request an expired link, shows "Foto no disponible" and asks its screen for one refetch; a failed image load does the same.
+
 ## Alternatives considered
 
 ### Supabase native signed upload URLs
@@ -178,6 +184,7 @@ Chosen: `chrislusf/seaweedfs:4.48@sha256:4e61d15fd35994cb1e43e1e553dff106794841f
 4. Check CORS on the hosted storage for the web origin (PUT and GET).
 5. Verify presigned-host validation behind the hosted gateway (SigV4 signs `Host`).
 6. Schedule `sweepEntryPhotos` when job D exists.
+7. Real-device checks (not done by the tests): iPhone camera and library, HEIC, orientation, and the https tunnel path with the signing-host variables (apps/web README).
 
 ## References
 
