@@ -1,6 +1,6 @@
 # ADR-0016: Evidence storage: app-owned port, S3-protocol adapter with hand-rolled SigV4 presigning, upload ledger
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-13
 - **Deciders:** Victor Olave
 
