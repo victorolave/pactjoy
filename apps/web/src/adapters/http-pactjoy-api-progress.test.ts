@@ -198,6 +198,77 @@ const malformed: [string, Read, unknown][] = [
     },
   ],
   [
+    "evidence whose photo leaks its id",
+    (a) => a.getCommitmentProgress("s1", "c1"),
+    {
+      ...detail,
+      weeks: [
+        {
+          ...detail.weeks[0],
+          cells: [
+            {
+              ...cell,
+              evidence: [
+                {
+                  ...cell?.evidence[0],
+                  photo: { url: "https://s.test/a", expiresAt: 5, photoId: "p1" },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+  [
+    "evidence whose photo lacks an expiry",
+    (a) => a.getCommitmentProgress("s1", "c1"),
+    {
+      ...detail,
+      weeks: [
+        {
+          ...detail.weeks[0],
+          cells: [
+            { ...cell, evidence: [{ ...cell?.evidence[0], photo: { url: "https://s.test/a" } }] },
+          ],
+        },
+      ],
+    },
+  ],
+  [
+    "evidence whose photo has an unreadable expiry",
+    (a) => a.getCommitmentProgress("s1", "c1"),
+    {
+      ...detail,
+      weeks: [
+        {
+          ...detail.weeks[0],
+          cells: [
+            {
+              ...cell,
+              evidence: [
+                { ...cell?.evidence[0], photo: { url: "https://s.test/a", expiresAt: "soon" } },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+  [
+    "evidence from before photos (no photo field)",
+    (a) => a.getCommitmentProgress("s1", "c1"),
+    {
+      ...detail,
+      weeks: [
+        {
+          ...detail.weeks[0],
+          cells: [{ ...cell, evidence: [{ ...cell?.evidence[0], photo: undefined }] }],
+        },
+      ],
+    },
+  ],
+  [
     "an unknown headline",
     (a) => a.getWeekSummary("s1", 3),
     { ...weekSummary(), headline: "worst" },
@@ -215,5 +286,31 @@ const malformed: [string, Read, unknown][] = [
 describe("HttpPactJoyApi progress guards", () => {
   it.each(malformed)("rejects a 2xx with %s as Internal, never as data", async (_n, read, data) => {
     await expect(read(apiReturning(data).api)).rejects.toMatchObject({ code: "Internal" });
+  });
+});
+
+describe("HttpPactJoyApi progress guards accept a peer's photo", () => {
+  it.each([
+    ["epoch milliseconds (what the API sends)", 1_760_000_000_000],
+    ["an ISO instant", "2026-10-13T12:00:00.000Z"],
+  ])("with its expiry as %s", async (_name, expiresAt) => {
+    const withPhoto = {
+      ...detail,
+      weeks: [
+        {
+          ...detail.weeks[0],
+          cells: [
+            {
+              ...cell,
+              evidence: [{ ...cell?.evidence[0], photo: { url: "https://s.test/a", expiresAt } }],
+            },
+          ],
+        },
+      ],
+    };
+
+    await expect(apiReturning(withPhoto).api.getCommitmentProgress("s1", "c1")).resolves.toEqual(
+      withPhoto,
+    );
   });
 });

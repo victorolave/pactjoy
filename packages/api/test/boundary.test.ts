@@ -82,6 +82,30 @@ describe("package boundary", () => {
     expect(offenders).toEqual([]);
   });
 
+  it("ADR-0016: src never imports the storage adapter (only the shell composes it) or an S3/vendor SDK", () => {
+    const offenders = sources(SRC).flatMap((file) => {
+      const text = readFileSync(file, "utf8");
+      return ["@pactjoy/storage", "@aws-sdk/client-s3", "aws-sdk", "@supabase/supabase-js"]
+        .filter((name) => importsModule(text, name))
+        .map((name) => `${rel(file)}: ${name}`);
+    });
+    expect(offenders).toEqual([]);
+  });
+
+  it("ADR-0016: the service-role key is neither used nor named by the storage adapter or the shell", () => {
+    const roots = [
+      resolve(API_ROOT, "..", "storage", "src"),
+      resolve(API_ROOT, "..", "storage", "scripts"),
+      resolve(API_ROOT, "..", "..", "supabase", "functions", "api"),
+    ];
+    const scanned = roots.flatMap(sources);
+    expect(scanned.length).toBeGreaterThan(5);
+    const offenders = scanned
+      .filter((file) => /service[_-]?role/i.test(readFileSync(file, "utf8")))
+      .map((file) => relative(resolve(API_ROOT, "..", ".."), file));
+    expect(offenders).toEqual([]);
+  });
+
   it("DE-S3: every relative import in src ends in .ts (ADR-0007)", () => {
     const offenders = sources(SRC).flatMap((file) =>
       relativeSpecifiers(readFileSync(file, "utf8"))

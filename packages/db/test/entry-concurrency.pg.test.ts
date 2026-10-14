@@ -60,6 +60,7 @@ const E: EntryRecord = {
   requestFingerprint: "fp-1",
   value: { kind: "done" },
   note: null,
+  photoId: null,
   deleted: false,
 };
 
@@ -115,6 +116,7 @@ describe("entry writes on Postgres", () => {
       "value_num",
       "value_den",
       "note",
+      "photo_id",
       "edited_at",
       "version",
     ]);
@@ -124,6 +126,7 @@ describe("entry writes on Postgres", () => {
       "value_num",
       "value_den",
       "note",
+      "photo_id",
       "version",
     ]);
     expect(updates.every((u) => /where id = \$1 and version = \$2 and not deleted/i.test(u))).toBe(

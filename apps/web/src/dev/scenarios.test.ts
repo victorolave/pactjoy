@@ -9,6 +9,7 @@ const WANTED = [
   "mixed",
   "nothingToday",
   "allDone",
+  "loggedWithPhoto",
   "allLoggedWithMiss",
   "endedInGrace",
   "weekRowsOnly",
@@ -40,5 +41,12 @@ describe("the Today scenario gallery", () => {
   it("finds a scenario by id, and not an unknown one", () => {
     expect(scenarioById("mixed")?.id).toBe("mixed");
     expect(scenarioById("nope")).toBeUndefined();
+  });
+
+  it("has a logged entry with a photo, so the edit sheet can be seen with one", () => {
+    const view = scenarioById("loggedWithPhoto")?.today();
+    const rows = view?.state === "active" ? view.rows : [];
+    const photos = rows.flatMap((row) => row.entries.map((entry) => entry.photo));
+    expect(photos.filter((photo) => photo !== null)).toHaveLength(1);
   });
 });

@@ -1,12 +1,16 @@
 import type { CommitmentId, MemberId } from "@pactjoy/engine";
 import { findActiveMember } from "../circle/circle.ts";
 import type { Measure } from "../commitment/commitment.ts";
+import type { PhotoError } from "../entry-photo/errors.ts";
+import { attachPhoto, verifyUploadedPhoto } from "../entry-photo/photo-lifecycle.ts";
 import { loadEffectivePauses } from "../pause/effective-pauses.ts";
+import type { EvidenceStorage } from "../ports/evidence-storage.ts";
 import type { IdGenerator } from "../ports/id-generator.ts";
 import type { Repositories } from "../ports/repositories.ts";
 import type { UnitOfWork } from "../ports/unit-of-work.ts";
 import type { Actor } from "../shared/actor.ts";
-import { entryId, type SeasonId } from "../shared/ids.ts";
+import { ConcurrencyConflict } from "../shared/errors.ts";
+import { type EntryPhotoId, entryId, type SeasonId } from "../shared/ids.ts";
 import { err, ok, type Result } from "../shared/result.ts";
 import { isStorableText } from "../shared/storable-text.ts";
 import type { Clock } from "../time/clock.port.ts";
@@ -32,6 +36,8 @@ export interface RecordEntryDeps {
   readonly clock: Clock;
   readonly timeZone: TimeZone;
   readonly ids: IdGenerator;
+  /** Only touched when the request carries a `photoId` (ADR-0016). */
+  readonly evidence: EvidenceStorage;
 }
 
 export interface RecordEntryInput {
@@ -41,6 +47,11 @@ export interface RecordEntryInput {
   readonly forDate?: LocalDate;
   readonly value: EntryValueInput;
   readonly note?: string | null;
+  /**
+   * A photo reserved with `requestEntryPhotoUpload` and already PUT by the browser. Never with a
+   * `missed` value. Part of what an idempotency key stands for (REQ-A6).
+   */
+  readonly photoId?: EntryPhotoId | null;
   /** T1: client-supplied idempotency key, unique per (member, commitment), no TTL. */
   readonly clientRequestId: string;
 }
@@ -59,7 +70,8 @@ export type RecordEntryError =
   | { readonly kind: "EntryDeleted" }
   | { readonly kind: "InvalidClientRequestId"; readonly reason: "empty" | "tooLong" | "malformed" }
   | EntryWindowError
-  | EntryValueError;
+  | EntryValueError
+  | Exclude<PhotoError, { kind: "TooManyPhotoUploads" }>;
 
 export interface RecordEntryResult {
   readonly entry: EntryRecord;
@@ -85,7 +97,12 @@ function samePayload(
   if (!value.ok) {
     return false;
   }
-  if (requestFingerprint(value.value, normalizeNote(input.note)) !== original.requestFingerprint) {
+  const fingerprint = requestFingerprint(
+    value.value,
+    normalizeNote(input.note),
+    input.photoId ?? null,
+  );
+  if (fingerprint !== original.requestFingerprint) {
     return false;
   }
   if (input.forDate !== undefined && actualStart !== null) {
@@ -126,6 +143,21 @@ export async function recordEntry(
   // distinct keys could collide on the unique key. Replay compares the raw string.
   if (!isStorableText(input.clientRequestId)) {
     return err({ kind: "InvalidClientRequestId", reason: "malformed" });
+  }
+  const photoId = input.photoId ?? null;
+  // The cheapest check first and purely on the input: no I/O for a request that can never succeed.
+  if (photoId !== null && input.value.kind === "missed") {
+    return err({ kind: "PhotoNotAllowedOnMissed" });
+  }
+  // The object is checked OUTSIDE the transaction (storage I/O, and `work` may run twice). A replay
+  // is not checked at all: the photo is already attached, or even gone (REQ-A6).
+  let verifiedVersion: number | null = null;
+  if (photoId !== null && !(await isReplay(deps, actor, input))) {
+    const verified = await verifyUploadedPhoto(deps, actor, photoId);
+    if (!verified.ok) {
+      return verified;
+    }
+    verifiedVersion = verified.value.version;
   }
   return deps.uow.transaction(
     async (repos): Promise<Result<RecordEntryResult, RecordEntryError>> => {
@@ -228,6 +260,24 @@ export async function recordEntry(
         return err({ kind: "NoteTooLong" });
       }
 
+      if (photoId !== null) {
+        if (verifiedVersion === null) {
+          // The pre-check saw a replay that this transaction no longer finds: stale, start over.
+          throw new ConcurrencyConflict();
+        }
+        const attached = await attachPhoto(repos, {
+          photoId,
+          verifiedVersion,
+          memberId: member.id,
+          seasonId: season.id,
+          commitmentId: commitment.id,
+          now,
+        });
+        if (!attached.ok) {
+          return attached;
+        }
+      }
+
       const entry: EntryRecord = {
         id: entryId(deps.ids.next()),
         seasonId: season.id,
@@ -238,14 +288,35 @@ export async function recordEntry(
         recordedAt: now,
         value: value.value,
         note,
+        photoId,
         clientRequestId: input.clientRequestId,
         editedAt: null,
         version: 0,
-        requestFingerprint: requestFingerprint(value.value, note),
+        requestFingerprint: requestFingerprint(value.value, note, photoId),
         deleted: false,
       };
       await repos.entries.add(entry);
       return ok({ entry, replayed: false, memberId: member.id });
     },
   );
+}
+
+/** Whether this idempotency key was already recorded by the actor: a replay needs no photo check. */
+async function isReplay(
+  deps: RecordEntryDeps,
+  actor: Actor,
+  input: RecordEntryInput,
+): Promise<boolean> {
+  return deps.uow.read(async (repos) => {
+    const season = await repos.seasons.get(input.seasonId);
+    const circle = season ? await repos.circles.get(season.circleId) : null;
+    const member = circle ? findActiveMember(circle, actor.userId) : undefined;
+    if (!member) return false;
+    const found = await repos.entries.findByClientRequest(
+      member.id,
+      input.commitmentId,
+      input.clientRequestId,
+    );
+    return found !== null;
+  });
 }

@@ -12,7 +12,10 @@ import { ProgressBar } from "../../ui/ProgressBar.tsx";
 import { Skeleton } from "../../ui/Skeleton.tsx";
 import { CommitmentPauseSection } from "../pause/index.ts";
 import { HabitStageBadge } from "../review/index.ts";
-import { useCommitmentProgress } from "../season-progress-data/index.ts";
+import {
+  useCommitmentProgress,
+  useRefreshCommitmentProgress,
+} from "../season-progress-data/index.ts";
 import styles from "./CommitmentScreen.module.css";
 import {
   commitmentSubtitle,
@@ -148,6 +151,8 @@ function Commitment({
   const row = view.commitment;
   // The stage is the owner's alone: a peer's is never requested (REQ-H10).
   const isOwner = view.memberId === view.viewerId;
+  // A signed photo link outlives its read (10 min): ask for a new read, once per photo.
+  const refreshLinks = useRefreshCommitmentProgress(view.season.id, commitmentId);
   return (
     <>
       <div className={styles.header}>
@@ -169,7 +174,7 @@ function Commitment({
       </div>
       <CommitmentPauseSection commitmentId={commitmentId} />
       <PointsCard view={view} />
-      <HistoryGrid view={view} />
+      <HistoryGrid view={view} onPhotoUnavailable={refreshLinks} />
       <Scoring view={view} />
     </>
   );

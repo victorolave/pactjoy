@@ -75,7 +75,7 @@ const MEASURE = [
   "target.minimum",
   "unit",
 ];
-const ENTRY = ["entryId", "forDate", "note", "value", "value.kind", "value.value"];
+const ENTRY = ["entryId", "forDate", "note", "photo", "value", "value.kind", "value.value"];
 const ROW_KEYS = [
   "commitmentId",
   "habitName",

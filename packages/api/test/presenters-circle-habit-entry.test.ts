@@ -88,10 +88,17 @@ const entry: EntryRecord = {
   requestFingerprint: '["quantity","15/2","secret note"]',
   value: { kind: "quantity", value: parseDecimal("7.5") },
   note: "secret note",
+  photoId: null,
   deleted: false,
 };
 
-const tombstone: EntryTombstone = { ...entry, value: null, note: null, deleted: true };
+const tombstone: EntryTombstone = {
+  ...entry,
+  value: null,
+  note: null,
+  photoId: null,
+  deleted: true,
+};
 
 /** Walks every value (no bigint/function/undefined/Date) and returns all keys seen. */
 function walk(value: unknown, keys: string[] = []): string[] {

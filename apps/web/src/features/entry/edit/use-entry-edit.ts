@@ -10,7 +10,13 @@ export interface EntryEdit {
   /** What to confirm once the change is saved; null until then. */
   readonly saved: string | null;
   readonly problem: EntryProblem | null;
-  save(value: EntryValueInput, note: string | null, confirmation: string): void;
+  /** `photoId`: omitted keeps the entry's photo, `null` removes it, an id replaces it. */
+  save(
+    value: EntryValueInput,
+    note: string | null,
+    confirmation: string,
+    photoId?: string | null,
+  ): void;
 }
 
 /** Saves a change to one entry (PUT is idempotent, so a retry needs no request id). */
@@ -31,12 +37,12 @@ export function useEntryEdit(entryId: string): EntryEdit {
     },
   });
 
-  const save: EntryEdit["save"] = (value, note, text) => {
+  const save: EntryEdit["save"] = (value, note, text, photoId) => {
     if (saving.current) return;
     saving.current = true;
     confirmation.current = text;
     setProblem(null);
-    edit.mutate({ entryId, value, note });
+    edit.mutate({ entryId, value, note, ...(photoId === undefined ? {} : { photoId }) });
   };
 
   return { pending: edit.isPending, saved, problem, save };

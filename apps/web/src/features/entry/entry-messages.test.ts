@@ -72,4 +72,23 @@ describe("entryFailure", () => {
       "Ese registro ya no existe.",
     );
   });
+
+  it("leaves the photo errors to the photo field, with a generic line if one shows anyway", () => {
+    for (const code of [
+      "InvalidPhoto",
+      "PhotoNotFound",
+      "PhotoNotUploaded",
+      "PhotoUploadExpired",
+      "PhotoNotAvailable",
+    ]) {
+      expect(failure(code)).toEqual({ message: "No pudimos usar la foto.", retryable: false });
+    }
+  });
+
+  it("says too many photos are waiting, and that waiting is the fix", () => {
+    expect(failure("TooManyPhotoUploads")).toEqual({
+      message: "Tienes demasiadas fotos pendientes. Inténtalo en unos minutos.",
+      retryable: false,
+    });
+  });
 });

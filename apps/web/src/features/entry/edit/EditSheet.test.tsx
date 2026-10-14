@@ -39,7 +39,7 @@ describe("editing a logged entry (EN-R7)", () => {
     const { deps } = renderToday([reading([quantity("25", "entry-1", "borrar")])]);
     await userEvent.click(await screen.findByRole("button", { name: "Editar registro de Leer" }));
     const dialog = await screen.findByRole("dialog", { name: "Leer" });
-    await userEvent.click(within(dialog).getByRole("button", { name: "Quitar nota" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Quitar nota y foto" }));
     await userEvent.click(within(dialog).getByRole("button", { name: "Guardar 25 min" }));
     await screen.findByText("Registro guardado.");
     expect(deps.api.edited[0]?.note).toBeNull();
@@ -52,7 +52,7 @@ describe("editing a logged entry (EN-R7)", () => {
     );
     const dialog = await screen.findByRole("dialog", { name: "Meditar" });
     expect(within(dialog).queryByRole("textbox", { name: "Cantidad" })).not.toBeInTheDocument();
-    await userEvent.click(within(dialog).getByRole("button", { name: "Añadir nota" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Añadir nota o foto" }));
     await userEvent.type(
       within(dialog).getByRole("textbox", { name: "Nota (opcional)" }),
       "en la mañana",

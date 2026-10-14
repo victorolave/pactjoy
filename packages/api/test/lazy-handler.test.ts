@@ -41,6 +41,7 @@ function composition() {
         timeZone: app.timeZone,
         ids: createDeterministicUuidGenerator(),
         random: app.random,
+        evidence: app.evidence,
         tokenVerifier: {
           verify: (token) => {
             verify(token);

@@ -1,0 +1,25 @@
+{
+  "name": "@pactjoy/storage",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "S3-protocol adapter for the EvidenceStorage port of @pactjoy/app, with hand-rolled SigV4 presigning on WebCrypto. Standard TS/ESM: runs on Node and Deno.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "biome lint .",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "smoke": "node --experimental-transform-types --no-warnings scripts/smoke-supabase.ts"
+  },
+  "dependencies": {
+    "@pactjoy/app": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "testcontainers": "^11.0.0",
+    "vitest": "^5.0.1"
+  }
+}

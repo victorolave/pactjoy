@@ -29,7 +29,14 @@ const LEGEND = [
  * The season's history, one row per week (S1, S2…) and one cell per ENGINE opportunity: scheduled
  * days, the best-N sessions, or the week itself for a weekly total. Nothing here decides a status.
  */
-export function HistoryGrid({ view }: { readonly view: Started }) {
+export function HistoryGrid({
+  view,
+  onPhotoUnavailable,
+}: {
+  readonly view: Started;
+  /** A photo in the evidence sheet could not be shown: refetch this read for fresh links. */
+  readonly onPhotoUnavailable?: () => void;
+}) {
   const headingId = useId();
   const columns = Math.max(1, ...view.weeks.map((week) => week.cells.length));
   const hint = cellsHint(view.commitment);
@@ -108,6 +115,7 @@ export function HistoryGrid({ view }: { readonly view: Started }) {
           cell={opened}
           measure={view.commitment.measure}
           onClose={() => setOpened(null)}
+          {...(onPhotoUnavailable === undefined ? {} : { onPhotoUnavailable })}
         />
       )}
     </section>

@@ -1,6 +1,7 @@
 export {
   useCommitmentProgress,
   useMemberProgress,
+  useRefreshCommitmentProgress,
   useSeasonProgress,
   useWeekSummary,
 } from "./queries.ts";

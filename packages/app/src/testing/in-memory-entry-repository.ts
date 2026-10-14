@@ -15,7 +15,7 @@ function requestKey(entry: StoredEntry): string {
  * or listed below.
  */
 const IMMUTABLE: Record<
-  Exclude<keyof EntryRecord, "value" | "note" | "editedAt" | "version">,
+  Exclude<keyof EntryRecord, "value" | "note" | "photoId" | "editedAt" | "version">,
   true
 > = {
   id: true,
@@ -50,7 +50,7 @@ function tombstone(entry: EntryRecord): EntryTombstone {
     version: entry.version + 1,
     requestFingerprint: entry.requestFingerprint,
   };
-  return { ...core, value: null, note: null, deleted: true };
+  return { ...core, value: null, note: null, photoId: null, deleted: true };
 }
 
 /** Programming errors in the caller, not races: thrown as plain errors. */

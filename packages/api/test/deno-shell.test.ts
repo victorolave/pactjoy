@@ -22,6 +22,13 @@ describe("Deno shell (supabase/functions/api)", () => {
     expect(code).toContain("Deno.serve(");
   });
 
+  it("ADR-0016: the entry composes the S3 evidence storage from the validated env, with no URL, key or host of its own", () => {
+    const code = codeLines(read(ENTRY)).join("\n");
+    expect(code).toContain("createS3EvidenceStorage(env.storage)");
+    expect(code).toMatch(/evidence:\s*createS3EvidenceStorage/);
+    expect(code).not.toMatch(/https?:\/\//);
+  });
+
   it("DE-S3: the entry imports only @pactjoy/* packages (vendors go through the import map)", () => {
     // static `from "x"`, side-effect `import "x"` and dynamic `import("x")`
     const code = codeLines(read(ENTRY)).join("\n");
@@ -42,6 +49,7 @@ describe("Deno shell (supabase/functions/api)", () => {
       "@pactjoy/app",
       "@pactjoy/db",
       "@pactjoy/engine",
+      "@pactjoy/storage",
     ]);
     for (const [, target] of local) {
       expect(existsSync(resolve(dirname(DENO_JSON), target))).toBe(true);

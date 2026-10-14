@@ -16,6 +16,7 @@ import {
   userId,
 } from "@pactjoy/app";
 import { afterAll, describe, expect, it } from "vitest";
+import { noEvidenceStorage } from "../scripts/dev-seed/no-evidence-storage.ts";
 import { createClient } from "../src/client.ts";
 import { createPostgresUnitOfWork, isDatabaseUnavailable } from "../src/index.ts";
 import { connect, databaseUrl } from "./db.ts";
@@ -47,6 +48,7 @@ describe("createPostgresUnitOfWork", () => {
     expect(names).toEqual([
       "circles",
       "entries",
+      "entryPhotos",
       "habits",
       "pauses",
       "reviews",
@@ -86,7 +88,7 @@ describe("createPostgresUnitOfWork", () => {
   });
 
   it("DC-S13: runs the real use cases end to end and scores with no pauses", async () => {
-    const deps = { uow, ids, clock, timeZone };
+    const deps = { uow, ids, clock, timeZone, evidence: noEvidenceStorage };
     const circle = must(
       await createCircle(deps, andrea, { name: "Rio Runners", displayName: "Andrea" }),
     );

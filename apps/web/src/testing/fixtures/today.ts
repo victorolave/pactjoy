@@ -131,6 +131,7 @@ export const pendingItemFixture = (overrides: Partial<PendingItem> = {}): Pendin
 });
 
 export type Entry = DayRow["entries"][number];
+export type EntryPhoto = NonNullable<Entry["photo"]>;
 
 /** One of the viewer's entries for today (2026-10-02). */
 export const entryFixture = (value: Entry["value"], overrides: Partial<Entry> = {}): Entry => ({
@@ -138,6 +139,7 @@ export const entryFixture = (value: Entry["value"], overrides: Partial<Entry> = 
   forDate: TODAY,
   value,
   note: null,
+  photo: null,
   ...overrides,
 });
 

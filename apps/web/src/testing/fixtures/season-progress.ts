@@ -185,6 +185,7 @@ export function commitmentProgress(): Started<CommitmentProgress> {
                 recordedOn: addDays(current.start, 1),
                 value: { kind: "quantity", value: "30" },
                 note: "Capítulo 3",
+                photo: null,
               },
             ],
           },

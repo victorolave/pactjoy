@@ -6,7 +6,7 @@ import type { AppError, AppErrorKind } from "./app-error.ts";
  * kind AND an extra stale key a compile error.
  */
 export const APP_ERROR_STATUS = {
-  // 422 (45)
+  // 422 (47)
   AutomaticityIncomplete: 422,
   CategoryTooLong: 422,
   ClosureIncomplete: 422,
@@ -27,6 +27,8 @@ export const APP_ERROR_STATUS = {
   InvalidLengthWeeks: 422,
   InvalidName: 422,
   InvalidPauseReason: 422,
+  InvalidPhoto: 422,
+  PhotoNotAllowedOnMissed: 422,
   InvalidPauseScope: 422,
   InvalidPreviewValues: 422,
   InvalidNote: 422,
@@ -59,7 +61,7 @@ export const APP_ERROR_STATUS = {
   NotAMember: 403,
   NotOwner: 403,
   NotPauseRequester: 403,
-  // 404 (9)
+  // 404 (10)
   CircleNotFound: 404,
   CommitmentNotFound: 404,
   EntryNotFound: 404,
@@ -67,9 +69,10 @@ export const APP_ERROR_STATUS = {
   InviteNotFound: 404,
   MemberNotFound: 404,
   PauseRequestNotFound: 404,
+  PhotoNotFound: 404,
   ReviewPeriodNotFound: 404,
   SeasonNotFound: 404,
-  // 409 (30)
+  // 409 (34)
   AlreadyInActiveCircle: 409,
   BeforeSeasonStart: 409,
   CircleArchived: 409,
@@ -91,6 +94,9 @@ export const APP_ERROR_STATUS = {
   PauseNotActive: 409,
   PauseNotPending: 409,
   PauseOverlaps: 409,
+  PhotoNotAvailable: 409,
+  PhotoNotUploaded: 409,
+  PhotoUploadExpired: 409,
   ReviewAlreadySubmitted: 409,
   ReviewNotDue: 409,
   ReviewNotSkippable: 409,
@@ -99,6 +105,7 @@ export const APP_ERROR_STATUS = {
   SeasonNotJoinable: 409,
   SeasonResultsNotYet: 409,
   StaleSeason: 409,
+  TooManyPhotoUploads: 409,
   WindowClosed: 409,
   // 410 (1)
   InviteExpired: 410,

@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { NoteField } from "./NoteField.tsx";
 
 function Controlled({ initial = "", error }: { initial?: string; error?: string }) {
@@ -43,5 +43,52 @@ describe("NoteField", () => {
     const area = screen.getByRole("textbox", { name: "Nota (opcional)" });
     expect(area).toHaveAccessibleDescription("La nota es demasiado larga.");
     expect(area).toHaveAttribute("aria-invalid", "true");
+  });
+
+  describe("with a photo slot (design 19)", () => {
+    function WithPhoto({ onClear, open }: { onClear?: () => void; open?: boolean }) {
+      const [note, setNote] = useState("");
+      return (
+        <NoteField
+          value={note}
+          onChange={setNote}
+          hint="Solo tú la verás"
+          photo={<p>campo de foto</p>}
+          {...(onClear === undefined ? {} : { onClear })}
+          {...(open === undefined ? {} : { startOpen: open })}
+        />
+      );
+    }
+
+    it("the toggle covers both: 'Añadir nota o foto' opens the note, its help and the photo", async () => {
+      render(<WithPhoto />);
+      expect(screen.queryByText("campo de foto")).not.toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole("button", { name: "Añadir nota o foto" }));
+
+      expect(screen.getByRole("textbox", { name: "Nota (opcional)" })).toHaveAccessibleDescription(
+        "Solo tú la verás",
+      );
+      expect(screen.getByText("campo de foto")).toBeInTheDocument();
+    });
+
+    it("'Quitar nota y foto' clears the note, drops the photo and collapses", async () => {
+      const onClear = vi.fn();
+      render(<WithPhoto onClear={onClear} />);
+      await userEvent.click(screen.getByRole("button", { name: "Añadir nota o foto" }));
+      await userEvent.type(screen.getByRole("textbox"), "algo");
+
+      await userEvent.click(screen.getByRole("button", { name: "Quitar nota y foto" }));
+
+      expect(onClear).toHaveBeenCalledTimes(1);
+      expect(screen.queryByText("campo de foto")).not.toBeInTheDocument();
+      await userEvent.click(screen.getByRole("button", { name: "Añadir nota o foto" }));
+      expect(screen.getByRole("textbox")).toHaveValue("");
+    });
+
+    it("starts open when the entry already has a photo", () => {
+      render(<WithPhoto open />);
+      expect(screen.getByText("campo de foto")).toBeInTheDocument();
+    });
   });
 });

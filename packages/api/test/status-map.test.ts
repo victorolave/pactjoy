@@ -9,7 +9,12 @@ const KINDS = Object.keys(APP_ERROR_STATUS) as AppErrorKind[];
 const kindsWith = (status: number) => KINDS.filter((k) => APP_ERROR_STATUS[k] === status).sort();
 
 // Sub-unions already contained in the use case unions; not AppError members themselves.
-const SUB_UNIONS = new Set(["ValidateCommitmentError", "EntryValueError", "EntryWindowError"]);
+const SUB_UNIONS = new Set([
+  "ValidateCommitmentError",
+  "EntryValueError",
+  "EntryWindowError",
+  "PhotoError",
+]);
 
 /** Every `*Error` name exported with `export type { ... }` from the app index, sorted. */
 function exportedErrorNames(index: string): string[] {
@@ -45,9 +50,9 @@ function errorCoverageGaps(index: string, source: string) {
 }
 
 describe("app error status map", () => {
-  it("EM-S1..S5: 91 kinds, 45x422 6x403 9x404 30x409 1x410", () => {
-    expect(KINDS).toHaveLength(91);
-    expect(kindsWith(422)).toHaveLength(45);
+  it("EM-S1..S5: 98 kinds, 47x422 6x403 10x404 34x409 1x410", () => {
+    expect(KINDS).toHaveLength(98);
+    expect(kindsWith(422)).toHaveLength(47);
     expect(kindsWith(403)).toEqual([
       "CannotRespondToOwnPause",
       "CommitmentNotOwned",
@@ -64,10 +69,11 @@ describe("app error status map", () => {
       "InviteNotFound",
       "MemberNotFound",
       "PauseRequestNotFound",
+      "PhotoNotFound",
       "ReviewPeriodNotFound",
       "SeasonNotFound",
     ]);
-    expect(kindsWith(409)).toHaveLength(30);
+    expect(kindsWith(409)).toHaveLength(34);
     expect(kindsWith(410)).toEqual(["InviteExpired"]);
   });
 
@@ -90,6 +96,25 @@ describe("app error status map", () => {
     ] as const) {
       expect(APP_ERROR_STATUS[k]).toBe(409);
     }
+  });
+
+  it("PH: the seven photo kinds map to 422 / 404 / 409 (a state cap is a conflict, not a 429)", () => {
+    for (const k of ["InvalidPhoto", "PhotoNotAllowedOnMissed"] as const) {
+      expect(APP_ERROR_STATUS[k]).toBe(422);
+    }
+    expect(APP_ERROR_STATUS.PhotoNotFound).toBe(404);
+    for (const k of [
+      "PhotoNotUploaded",
+      "PhotoUploadExpired",
+      "PhotoNotAvailable",
+      "TooManyPhotoUploads",
+    ] as const) {
+      expect(APP_ERROR_STATUS[k]).toBe(409);
+    }
+    expect(appErrorResult({ kind: "InvalidPhoto", reason: "tooLarge" })).toEqual({
+      status: 422,
+      error: { code: "InvalidPhoto", message: "InvalidPhoto", details: { reason: "tooLarge" } },
+    });
   });
 
   it("PA-S1: a cap failure keeps its offending Commitments and remaining days as details", () => {
@@ -167,7 +192,7 @@ describe("app error status map", () => {
     const index = readFileSync(resolve(import.meta.dirname, "../../app/src/index.ts"), "utf8");
     const source = readFileSync(resolve(import.meta.dirname, "../src/errors/app-error.ts"), "utf8");
     expect(errorCoverageGaps(index, source)).toEqual({ imports: [], union: [] });
-    expect(exportedErrorNames(index).length).toBe(41);
+    expect(exportedErrorNames(index).length).toBe(43);
   });
 
   it("EM-S16: the scan compares exact names, so a new CircleError is detected", () => {

@@ -153,3 +153,19 @@ export type SeasonHistoryDto = Serialized<SeasonHistoryView>;
 export type SeasonHistoryItemDto = SeasonHistoryDto["seasons"][number];
 /** The Perfil consistency and the habit stages (`GET /me/profile`, ADR-0011 Q23). */
 export type ProfileSummaryDto = Serialized<ProfileSummaryView>;
+
+/**
+ * `POST /seasons/:id/commitments/:id/photos` (201, ADR-0016): the signed request the browser runs
+ * with the photo's bytes, the photo to name when the entry is saved, and until when that works.
+ */
+export interface PhotoUploadDto {
+  readonly photoId: string;
+  readonly upload: {
+    readonly method: "PUT";
+    readonly url: string;
+    /** Exactly the headers the signature covers; nothing else may be added (no Authorization). */
+    readonly headers: Readonly<Record<string, string>>;
+    readonly expiresAt: string;
+  };
+  readonly attachBy: string;
+}

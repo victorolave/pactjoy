@@ -29,6 +29,13 @@ export function entryFailure(error: unknown, verb: "guardar" | "borrar" = "guard
       return { message: "La cantidad no es válida.", retryable };
     case "noteField":
       return { message: "La nota es demasiado larga.", retryable };
+    case "photo":
+      return { message: "No pudimos usar la foto.", retryable };
+    case "photoLimit":
+      return {
+        message: "Tienes demasiadas fotos pendientes. Inténtalo en unos minutos.",
+        retryable,
+      };
     case "generic":
       return { message: `No pudimos ${verb} el registro.`, retryable };
     default:

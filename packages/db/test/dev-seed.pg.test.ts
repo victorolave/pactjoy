@@ -10,6 +10,7 @@ import {
 import { afterAll, describe, expect, it } from "vitest";
 import type { Accounts } from "../scripts/dev-seed/accounts.ts";
 import { createSeedClock, noonIn, type SeedContext } from "../scripts/dev-seed/core.ts";
+import { noEvidenceStorage } from "../scripts/dev-seed/no-evidence-storage.ts";
 import { runScenarios, SCENARIOS } from "../scripts/dev-seed/scenario.ts";
 import { createPostgresUnitOfWork } from "../src/index.ts";
 import { databaseUrl } from "./db.ts";
@@ -33,6 +34,7 @@ describe("dev seed on Postgres", () => {
         timeZone,
         ids: createUuidV7IdGenerator({ clock }),
         random: createCryptoRandomSource(),
+        evidence: noEvidenceStorage,
       },
       zone: ZONE,
       setDate: (date) => clock.set(noonIn(date, ZONE, timeZone)),

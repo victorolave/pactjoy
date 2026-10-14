@@ -60,3 +60,4 @@ status to `Superseded by ADR-XXXX`, linking to the new one. Small fixes
 | [0013](0013-pause-lifecycle-and-lazy-settlement.md)           | Pause lifecycle and lazy settlement                          | Accepted | 2026-10-12 |
 | [0014](0014-periodic-review-and-derived-habit-stage.md)       | Periodic review and derived habit stage                      | Accepted | 2026-10-12 |
 | [0015](0015-season-closure-and-graduation.md)                 | Season closure, lazy finalization and habit graduation        | Accepted | 2026-10-12 |
+| [0016](0016-evidence-storage-port-s3-adapter-upload-ledger.md) | Evidence storage: app-owned port, S3 adapter with hand-rolled SigV4 presigning, upload ledger | Proposed | 2026-10-13 |

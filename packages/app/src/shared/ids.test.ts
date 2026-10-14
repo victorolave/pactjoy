@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { circleId, entryId, habitId, pauseRequestId, reviewId, seasonId, userId } from "./ids.ts";
+import {
+  circleId,
+  entryId,
+  entryPhotoId,
+  habitId,
+  pauseRequestId,
+  reviewId,
+  seasonId,
+  userId,
+} from "./ids.ts";
 
 describe("userId", () => {
   it("brands a non-empty string as a UserId", () => {
@@ -40,5 +49,12 @@ describe("circleId / seasonId / habitId / entryId", () => {
     expect(() => seasonId("")).toThrow(RangeError);
     expect(() => habitId("")).toThrow(RangeError);
     expect(() => entryId("")).toThrow(RangeError);
+  });
+});
+
+describe("entryPhotoId", () => {
+  it("brands a non-empty string and rejects an empty one", () => {
+    expect(entryPhotoId("photo-1")).toBe("photo-1");
+    expect(() => entryPhotoId("")).toThrow(RangeError);
   });
 });

@@ -11,8 +11,10 @@ import { FakeAppInstall } from "./testing/fake-app-install.ts";
 import { FakeAuth, fakeSession } from "./testing/fake-auth.ts";
 import { FakeConnectivity } from "./testing/fake-connectivity.ts";
 import { FakeHaptics } from "./testing/fake-haptics.ts";
+import { FakeImageProcessor } from "./testing/fake-image-processor.ts";
 import { FakeNotificationPermission } from "./testing/fake-notification-permission.ts";
 import { FakePactJoyApi } from "./testing/fake-pactjoy-api.ts";
+import { FakePhotoUploader } from "./testing/fake-photo-uploader.ts";
 import { FakeSharing } from "./testing/fake-sharing.ts";
 import { FixedClock } from "./testing/fixed-clock.ts";
 import { activeTodayFixture, noCircleTodayFixture } from "./testing/fixtures/today.ts";
@@ -33,6 +35,8 @@ function deps(signedIn: boolean): AppDependencies {
     auth,
     api,
     ids: new SequentialIds(),
+    imageProcessor: new FakeImageProcessor(),
+    photoUploader: new FakePhotoUploader(),
     haptics: new FakeHaptics(),
     connectivity: new FakeConnectivity(),
     store,

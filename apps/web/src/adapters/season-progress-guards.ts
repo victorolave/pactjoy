@@ -33,6 +33,8 @@ const zone: Check = (v) => {
     return false;
   }
 };
+/** An ISO-8601 instant as text (what the API's other instants look like). */
+const instantText: Check = (v) => typeof v === "string" && !Number.isNaN(Date.parse(v));
 const decimal: Check = (v) => typeof v === "string" && /^\d{1,12}(\.\d{1,12})?$/.test(v);
 const nullable =
   (check: Check): Check =>
@@ -165,6 +167,9 @@ const evidence = shape(
       shape({ kind: oneOf("done", "missed") }, true)(v) ||
       shape({ kind: oneOf("quantity"), value: decimal }, true)(v),
     note: nullable(text),
+    // Exactly the signed URL and its expiry: a peer never receives the photo id or the object key.
+    // The expiry is epoch ms today; an ISO instant is read the same way (`epochMs`).
+    photo: nullable(shape({ url: id, expiresAt: (v) => num(v) || instantText(v) }, true)),
   },
   true,
 );

@@ -24,6 +24,7 @@ function setup(overrides: Partial<ApiDeps> = {}, allowedOrigins: string[] = []) 
       timeZone: app.timeZone,
       ids: createDeterministicUuidGenerator(),
       random: app.random,
+      evidence: app.evidence,
       tokenVerifier: createFakeTokenVerifier({ andrea: ANDREA, victor: VICTOR }),
       logger: { info: () => undefined, warn: () => undefined, error: () => undefined },
       ...overrides,

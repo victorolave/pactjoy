@@ -1,5 +1,5 @@
 import type { CommitmentId, Fraction, MemberId, SeasonDay } from "@pactjoy/engine";
-import type { EntryId, SeasonId } from "../shared/ids.ts";
+import type { EntryId, EntryPhotoId, SeasonId } from "../shared/ids.ts";
 import { isStorableText } from "../shared/storable-text.ts";
 import type { Instant } from "../time/instant.ts";
 
@@ -64,6 +64,8 @@ export interface EntryCore {
 export interface EntryRecord extends EntryCore {
   readonly value: EntryValue;
   readonly note: string | null;
+  /** The attached photo (ADR-0016); owner-visible only through the privacy helper. Never on `missed`. */
+  readonly photoId: EntryPhotoId | null;
   readonly deleted: false;
 }
 
@@ -76,6 +78,7 @@ export interface EntryRecord extends EntryCore {
 export interface EntryTombstone extends EntryCore {
   readonly value: null;
   readonly note: null;
+  readonly photoId: null;
   readonly deleted: true;
 }
 
@@ -83,13 +86,20 @@ export interface EntryTombstone extends EntryCore {
 export type StoredEntry = EntryRecord | EntryTombstone;
 
 /**
- * A canonical string for a value and note, so "the same request" is an
+ * A canonical string for a value, note and photo, so "the same request" is an
  * exact comparison: quantities are normalized fractions (2, 2.0 and 2.00
- * are the same), never floats.
+ * are the same), never floats. The photo id is appended ONLY when there is one,
+ * so the fingerprint of a photo-less request is exactly what it was before
+ * photos existed and every stored one still matches its replay (T1, ADR-0016).
  */
-export function requestFingerprint(value: EntryValue, note: string | null): string {
+export function requestFingerprint(
+  value: EntryValue,
+  note: string | null,
+  photoId?: EntryPhotoId | null,
+): string {
   const quantity = value.kind === "quantity" ? `${value.value.num}/${value.value.den}` : null;
-  return JSON.stringify([value.kind, quantity, normalizeNote(note)]);
+  const parts = [value.kind, quantity, normalizeNote(note)];
+  return JSON.stringify(photoId ? [...parts, photoId] : parts);
 }
 
 /** Whether `note` is storable text (well-formed, no NUL); `null` is. */

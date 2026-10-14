@@ -1,6 +1,8 @@
 import type { MemberId } from "@pactjoy/engine";
+import { photoViews } from "../entry-photo/photo-views.ts";
 import { loadEffectiveRequests } from "../pause/effective-pauses.ts";
 import { toEnginePauses } from "../pause/to-engine.ts";
+import type { EvidenceStorage } from "../ports/evidence-storage.ts";
 import {
   type BaselineOffer,
   type PendingReview,
@@ -21,7 +23,10 @@ import { type PendingYesterdayItem, pendingYesterday } from "./pending-yesterday
 import { seasonPhase, weekOf } from "./season-phase.ts";
 import { type TodayRow, todayRows } from "./today-rows.ts";
 
-export type TodayDeps = ScoreQueryDeps;
+export interface TodayDeps extends ScoreQueryDeps {
+  /** Signs the download URLs of the viewer's own photos; not touched when there are none. */
+  readonly evidence: EvidenceStorage;
+}
 
 export interface TodayCircle {
   readonly id: CircleId;
@@ -213,7 +218,29 @@ export async function today(deps: TodayDeps, actor: Actor): Promise<TodayView> {
       today: day,
       refDay: scoringDay,
     };
-    const { rows, pointsToday } = todayRows(rowsInput);
+    const { rows: pureRows, pointsToday } = todayRows(rowsInput);
+    // The viewer's own entries only: the owner sees their photo whatever the commitment's privacy
+    // (REQ-P1), so no visibility filter applies. Signed once, with the same captured instant.
+    const photoOf = new Map(rowsInput.entries.map((entry) => [entry.id, entry.photoId]));
+    const views = await photoViews(
+      repos,
+      deps.evidence,
+      pureRows.flatMap((row) =>
+        row.entries.flatMap((entry) => {
+          const photoId = photoOf.get(entry.entryId);
+          return photoId ? [photoId] : [];
+        }),
+      ),
+      now,
+    );
+    const rows = pureRows.map((row) => ({
+      ...row,
+      entries: row.entries.map((entry) => {
+        const photoId = photoOf.get(entry.entryId);
+        const view = photoId ? views.get(photoId) : undefined;
+        return photoId && view ? { ...entry, photo: { photoId, ...view } } : entry;
+      }),
+    })) as typeof pureRows;
     return {
       state: ended ? "ended" : "active",
       ...base,

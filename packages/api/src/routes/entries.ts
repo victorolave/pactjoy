@@ -1,4 +1,12 @@
-import { commitmentId, deleteEntry, editEntry, entryId, recordEntry, seasonId } from "@pactjoy/app";
+import {
+  commitmentId,
+  deleteEntry,
+  editEntry,
+  entryId,
+  entryPhotoId,
+  recordEntry,
+  seasonId,
+} from "@pactjoy/app";
 import { appErrorResult } from "../errors/status-map.ts";
 import { presentEditEntryResult, presentRecordEntryResult } from "../presenters/entry.ts";
 import { entryValue } from "../validation/entry.ts";
@@ -14,6 +22,8 @@ const recordBody = object({
   forDate: optional(forDate),
   value: entryValue,
   note: nullable(optional(string)),
+  // A photo reserved with POST .../photos and already uploaded; part of what the key stands for.
+  photoId: nullable(optional(uuid)),
   clientRequestId: string,
 });
 
@@ -21,7 +31,13 @@ const entryParams = object({ entryId: uuid });
 // Both fields are required (`note: null` clears it), so nothing is silently kept or dropped. The
 // day, the key and the member are not editable: any other field is an unknownField.
 const none = object({});
-const editBody = object({ value: entryValue, note: nullable(string) });
+// `photoId` is the one optional field: omitted keeps the photo (an old cached client does not send
+// it), `null` removes it, a new id replaces it.
+const editBody = object({
+  value: entryValue,
+  note: nullable(string),
+  photoId: nullable(optional(uuid)),
+});
 
 export function entryRoutes(deps: ApiDeps): Route[] {
   return [
@@ -31,8 +47,12 @@ export function entryRoutes(deps: ApiDeps): Route[] {
       async handle(ctx) {
         const input = validate(ctx, { params: seasonParams, body: recordBody });
         if (!input.ok) return input.result;
+        const { photoId, ...rest } = input.body;
         const result = await recordEntry(deps, ctx.actor, {
-          ...input.body,
+          ...rest,
+          ...(photoId === undefined
+            ? {}
+            : { photoId: photoId === null ? null : entryPhotoId(photoId) }),
           seasonId: seasonId(input.params.seasonId),
           commitmentId: commitmentId(input.body.commitmentId),
         });
@@ -51,8 +71,12 @@ export function entryRoutes(deps: ApiDeps): Route[] {
       async handle(ctx) {
         const input = validate(ctx, { params: entryParams, body: editBody });
         if (!input.ok) return input.result;
+        const { photoId, ...rest } = input.body;
         const result = await editEntry(deps, ctx.actor, {
-          ...input.body,
+          ...rest,
+          ...(photoId === undefined
+            ? {}
+            : { photoId: photoId === null ? null : entryPhotoId(photoId) }),
           entryId: entryId(input.params.entryId),
         });
         if (!result.ok) return appErrorResult(result.error);

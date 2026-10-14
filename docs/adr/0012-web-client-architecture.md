@@ -119,6 +119,10 @@ New browser capabilities follow the same rule as the first ports: a port in `src
 
 `profile` gains two feature edges in `ALLOWED_FEATURE_DEPS`: `habits` (for `HabitGlyph`, the habit tile) and `review` (for `HabitStageTag`, the stage badge), both through their `index.ts`. Both are leaf features that never import `profile`, so there is no cycle. The alternative, copying the stage label map and the icon catalog into `profile`, would let the copy drift from the badge on screen 17. The summary query (`profileSummaryKey`) lives under the progress root, so every settled entry, pause, review, closure or pact mutation refreshes it; it is not persisted, so `CACHE_VERSION` does not change. The table above is the original onboarding-era list; `test/architecture.test.ts` is the source of truth.
 
+## Addendum: entry photos (change `photo-evidence`, ADR-0016)
+
+The web side adds two ports and no new vendor in a screen: `ImageProcessor` (a picked file in, a JPEG of at most 1600 px and 3 MiB out; the canvas re-encode is what drops EXIF and GPS) and `PhotoUploader` (the signed PUT to the storage origin, with the signed headers only: never `Authorization`, never cookies). Both are adapters (`canvas-image-processor`, `fetch-photo-uploader`) provided through `PhotoProvider`; the picker is a plain `<input type="file">` inside `PhotoField`, with no `capture`, so the phone offers camera and library. `PactJoyApi` gains `requestPhotoUpload`; record and edit carry `photoId` (an edit that omits it keeps the photo). `entry` still depends on no other feature: `EvidencePhoto` is shared in `ui/`, and the commitment screen refreshes its read through `useRefreshCommitmentProgress` (the `season-progress-data` hook) when a signed link has expired. `CACHE_VERSION` is 9: the persisted Today now holds signed photo URLs, which expire after 10 minutes, so a restored copy shows "Foto no disponible" and refetches once instead of a broken image; `isCurrentToday` also drops a copy whose entries have no `photo` field. Photos are offline-disabled, like every write.
+
 ## References
 
 - ADR-0003 (Biome), ADR-0008 (ports), ADR-0011 (API layer)

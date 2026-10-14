@@ -21,6 +21,9 @@ function presentCell(cell: Cell): Cell {
           ? { kind: "quantity", value: entry.value.value }
           : { kind: entry.value.kind },
       note: entry.note,
+      // A peer gets the signed URL only: never the photo id or anything about the object (REQ-P3).
+      photo:
+        entry.photo === null ? null : { url: entry.photo.url, expiresAt: entry.photo.expiresAt },
     })),
   };
 }

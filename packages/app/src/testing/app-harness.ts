@@ -12,9 +12,17 @@ import {
   type InMemoryCircleRepository,
 } from "./in-memory-circle-repository.ts";
 import {
+  createInMemoryEntryPhotoRepository,
+  type InMemoryEntryPhotoRepository,
+} from "./in-memory-entry-photo-repository.ts";
+import {
   createInMemoryEntryRepository,
   type InMemoryEntryRepository,
 } from "./in-memory-entry-repository.ts";
+import {
+  createInMemoryEvidenceStorage,
+  type InMemoryEvidenceStorage,
+} from "./in-memory-evidence-storage.ts";
 import {
   createInMemoryHabitRepository,
   type InMemoryHabitRepository,
@@ -55,6 +63,9 @@ export interface TestApp {
   readonly uow: UnitOfWork<Repositories>;
   readonly circles: InMemoryCircleRepository;
   readonly entries: InMemoryEntryRepository;
+  readonly entryPhotos: InMemoryEntryPhotoRepository;
+  /** The fake object storage; `upload` plays the browser. Expiry follows the clock the app was created with. */
+  readonly evidence: InMemoryEvidenceStorage;
   readonly habits: InMemoryHabitRepository;
   readonly pauses: InMemoryPauseRequestRepository;
   readonly reviews: InMemoryReviewRepository;
@@ -77,6 +88,7 @@ const DEFAULT_RANDOM_SEED = 42;
 export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
   const circles = createInMemoryCircleRepository();
   const entries = createInMemoryEntryRepository();
+  const entryPhotos = createInMemoryEntryPhotoRepository();
   const habits = createInMemoryHabitRepository();
   const pauses = createInMemoryPauseRequestRepository();
   const reviews = createInMemoryReviewRepository();
@@ -85,6 +97,7 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
   const repositories: Repositories = {
     circles,
     entries,
+    entryPhotos,
     habits,
     pauses,
     reviews,
@@ -92,13 +105,16 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
     seasons,
   };
 
+  const clock = createFixedClock(options.now ?? DEFAULT_NOW);
   return {
-    clock: createFixedClock(options.now ?? DEFAULT_NOW),
+    clock,
+    evidence: createInMemoryEvidenceStorage({ clock }),
     ids: createSequentialIdGenerator(options.idPrefix),
     random: createSeededRandomSource(options.randomSeed ?? DEFAULT_RANDOM_SEED),
     timeZone: options.timeZone ?? createIntlTimeZone(),
     circles,
     entries,
+    entryPhotos,
     habits,
     pauses,
     reviews,
@@ -115,6 +131,7 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
       beginTransaction: () => {
         const circleScope = circles.beginTransaction();
         const entryScope = entries.beginTransaction();
+        const entryPhotoScope = entryPhotos.beginTransaction();
         const habitScope = habits.beginTransaction();
         const pauseScope = pauses.beginTransaction();
         const reviewScope = reviews.beginTransaction();
@@ -124,6 +141,7 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
           repositories: {
             circles: circleScope.repository,
             entries: entryScope.repository,
+            entryPhotos: entryPhotoScope.repository,
             habits: habitScope.repository,
             pauses: pauseScope.repository,
             reviews: reviewScope.repository,
@@ -133,6 +151,7 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
           commit(): void {
             circleScope.validate();
             entryScope.validate();
+            entryPhotoScope.validate();
             habitScope.validate();
             pauseScope.validate();
             reviewScope.validate();
@@ -140,6 +159,7 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
             seasonScope.validate();
             circleScope.apply();
             entryScope.apply();
+            entryPhotoScope.apply();
             habitScope.apply();
             pauseScope.apply();
             reviewScope.apply();

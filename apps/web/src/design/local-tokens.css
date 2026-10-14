@@ -93,4 +93,7 @@
   /* Entry sheets (design 17, 22): 52 px stepper buttons, a 48 px quantity. */
   --stepper-button: 52px;
   --font-quantity: 800 48px / 52px var(--font-sans);
+  /* Photo evidence (design 19): the chosen photo and the "Cambiar" tile are 96 square; a peer's photo is shown up to 320 high. */
+  --photo-tile: 96px;
+  --evidence-photo-max-height: 320px;
 }

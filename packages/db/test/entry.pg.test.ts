@@ -51,6 +51,7 @@ const entry = (n: number, options: Partial<EntryRecord> = {}): EntryRecord => ({
   requestFingerprint: `fp-${n}`,
   value: { kind: "done" },
   note: null,
+  photoId: null,
   deleted: false,
   ...options,
 });

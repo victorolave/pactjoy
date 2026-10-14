@@ -1,5 +1,6 @@
 import { frac, fromInt } from "@pactjoy/engine";
 import { describe, expect, it } from "vitest";
+import { entryPhotoId } from "../shared/ids.ts";
 import { normalizeNote, requestFingerprint } from "./entry.ts";
 
 describe("requestFingerprint", () => {
@@ -21,6 +22,29 @@ describe("requestFingerprint", () => {
 
   it("treats an empty note and no note as the same", () => {
     expect(requestFingerprint({ kind: "done" }, "")).toBe(
+      requestFingerprint({ kind: "done" }, null),
+    );
+  });
+});
+
+describe("requestFingerprint and the photo", () => {
+  it("is exactly what it was before photos existed when there is no photo", () => {
+    // Stored fingerprints of photo-less entries must keep matching their replays (T1, REQ-A6).
+    expect(requestFingerprint({ kind: "done" }, null)).toBe('["done",null,null]');
+    expect(requestFingerprint({ kind: "quantity", value: fromInt(2) }, "nota")).toBe(
+      '["quantity","2/1","nota"]',
+    );
+    expect(requestFingerprint({ kind: "done" }, null, null)).toBe('["done",null,null]');
+    expect(requestFingerprint({ kind: "done" }, null, undefined)).toBe('["done",null,null]');
+  });
+
+  it("appends the photo id only when there is one, and tells photos apart", () => {
+    const one = entryPhotoId("photo-1");
+    expect(requestFingerprint({ kind: "done" }, null, one)).toBe('["done",null,null,"photo-1"]');
+    expect(requestFingerprint({ kind: "done" }, null, one)).not.toBe(
+      requestFingerprint({ kind: "done" }, null, entryPhotoId("photo-2")),
+    );
+    expect(requestFingerprint({ kind: "done" }, null, one)).not.toBe(
       requestFingerprint({ kind: "done" }, null),
     );
   });

@@ -111,6 +111,22 @@ export type {
   RecordEntryResult,
 } from "./entry/record-entry.ts";
 export { recordEntry } from "./entry/record-entry.ts";
+export type { EntryPhotoRepository } from "./entry-photo/entry-photo.repository.ts";
+export type { EntryPhoto, EntryPhotoStatus } from "./entry-photo/entry-photo.ts";
+export type { InvalidPhotoReason, PhotoError } from "./entry-photo/errors.ts";
+export type {
+  RequestEntryPhotoUploadDeps,
+  RequestEntryPhotoUploadError,
+  RequestEntryPhotoUploadInput,
+  RequestEntryPhotoUploadResult,
+} from "./entry-photo/request-entry-photo-upload.ts";
+export { requestEntryPhotoUpload } from "./entry-photo/request-entry-photo-upload.ts";
+export type {
+  SweepEntryPhotosDeps,
+  SweepEntryPhotosInput,
+  SweepEntryPhotosResult,
+} from "./entry-photo/sweep-entry-photos.ts";
+export { sweepEntryPhotos } from "./entry-photo/sweep-entry-photos.ts";
 export type {
   CreateHabitDeps,
   CreateHabitError,
@@ -201,6 +217,13 @@ export type {
   SettleDuePausesResult,
 } from "./pause/settle-due-pauses.ts";
 export { settleDuePauses } from "./pause/settle-due-pauses.ts";
+export type {
+  EvidenceStorage,
+  EvidenceStorageErrorCode,
+  SignedRequest,
+  StoredObject,
+} from "./ports/evidence-storage.ts";
+export { EvidenceStorageError } from "./ports/evidence-storage.ts";
 export type { IdGenerator } from "./ports/id-generator.ts";
 export type { RandomSource } from "./ports/random-source.ts";
 export type { Repositories } from "./ports/repositories.ts";
@@ -389,6 +412,7 @@ export { ConcurrencyConflict, InviteCodeGenerationFailed } from "./shared/errors
 export type {
   CircleId,
   EntryId,
+  EntryPhotoId,
   HabitId,
   PauseRequestId,
   ReviewId,
@@ -399,6 +423,7 @@ export type {
 export {
   circleId,
   entryId,
+  entryPhotoId,
   habitId,
   pauseRequestId,
   reviewId,
@@ -432,6 +457,7 @@ export type { TodayPause } from "./today/today-pause.ts";
 export type {
   OpportunityState,
   TodayEntry,
+  TodayEntryPhoto,
   TodayOpportunity,
   TodayPoints,
   TodayRow,

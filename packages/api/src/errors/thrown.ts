@@ -1,10 +1,14 @@
-import { ConcurrencyConflict, InviteCodeGenerationFailed } from "@pactjoy/app";
+import {
+  ConcurrencyConflict,
+  EvidenceStorageError,
+  InviteCodeGenerationFailed,
+} from "@pactjoy/app";
 import type { Logger } from "../composition/logger.ts";
 import type { OnError } from "../http/pipeline.ts";
 import { apiFailure } from "./api-error.ts";
 
 /** Class OR name: a second copy of the app module (as under Deno) breaks `instanceof`. */
-const is = (e: unknown, cls: new () => Error, name: string): boolean =>
+const is = (e: unknown, cls: abstract new (...args: never[]) => Error, name: string): boolean =>
   e instanceof cls || (e instanceof Error && e.name === name);
 
 const safe = (predicate: ((e: unknown) => boolean) | undefined, e: unknown): boolean => {
@@ -49,6 +53,15 @@ export function createThrownMapper(
     if (is(e, InviteCodeGenerationFailed, "InviteCodeGenerationFailed")) {
       record(e, requestId);
       return apiFailure("InviteCodeGenerationFailed", { requestId });
+    }
+    // Object storage down: transient, like the database. Any other storage failure (rejected,
+    // unauthorized) is a misconfiguration, so it stays an opaque 500.
+    if (
+      is(e, EvidenceStorageError, "EvidenceStorageError") &&
+      (e as { code?: unknown }).code === "unavailable"
+    ) {
+      record(e, requestId);
+      return apiFailure("ServiceUnavailable", undefined, { "Retry-After": "5" });
     }
     if (safe(isUnavailable, e)) {
       record(e, requestId);

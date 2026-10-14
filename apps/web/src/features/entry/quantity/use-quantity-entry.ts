@@ -17,7 +17,13 @@ export interface QuantityEntry {
   /** The id of the entry just recorded, to undo it. */
   readonly entryId: string | null;
   readonly problem: EntryProblem | null;
-  submit(value: EntryValueInput, note: string | null, confirmation: string): void;
+  /** `photoId`: a photo already uploaded to its slot; omitted or null records none. */
+  submit(
+    value: EntryValueInput,
+    note: string | null,
+    confirmation: string,
+    photoId?: string | null,
+  ): void;
 }
 
 /** Resending the same entry after a failure reuses its clientRequestId; a changed one gets a new id. */
@@ -50,11 +56,12 @@ export function useQuantityEntry(
     },
   });
 
-  const submit: QuantityEntry["submit"] = (value, note, text) => {
+  const submit: QuantityEntry["submit"] = (value, note, text, photoId = null) => {
     if (saving.current) return;
-    // The day is part of what is being resent: the same value for another day is another entry.
+    // The day and the photo are part of what is being resent: the same value for another day, or with
+    // another photo, is another entry.
     const day = forDate ?? dates?.refDate ?? null;
-    const signature = JSON.stringify([value, note, day]);
+    const signature = JSON.stringify([value, note, day, photoId]);
     const id = attempt.current?.signature === signature ? attempt.current.id : ids.newId();
     attempt.current = { signature, id };
     saving.current = true;
@@ -66,6 +73,7 @@ export function useQuantityEntry(
       ...(day === null ? {} : { forDate: day }),
       value,
       note,
+      ...(photoId === null ? {} : { photoId }),
       clientRequestId: id,
     });
   };

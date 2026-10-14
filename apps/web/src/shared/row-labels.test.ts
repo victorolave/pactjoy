@@ -114,6 +114,7 @@ describe("entryText on another day (B-W1)", () => {
     forDate: forDate as TodayEntry["forDate"],
     value,
     note: null,
+    photo: null,
   });
   const done = dayRowFixture().measure;
 
@@ -144,6 +145,7 @@ describe("entryText", () => {
       forDate: "2026-10-02" as TodayEntry["forDate"],
       value,
       note: null,
+      photo: null,
     });
     const done = dayRowFixture().measure;
     expect(entryText(entry({ kind: "done" }), done)).toBe("Registrado hoy");

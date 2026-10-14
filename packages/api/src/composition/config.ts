@@ -1,5 +1,24 @@
 import { err, ok, type Result } from "@pactjoy/app";
 
+/**
+ * Object storage for photo evidence (ADR-0016). Its shape is what the S3 adapter takes, so the
+ * shell passes it on as it is. `secretAccessKey` is a secret: never log it.
+ */
+export interface StorageEnv {
+  /** Where THIS process reaches storage; no trailing slash. */
+  readonly endpoint: string;
+  /** What the browser reaches (the https tunnel for a phone); defaults to `endpoint`. */
+  readonly publicEndpoint?: string;
+  /** `host[:port]` to sign server calls for, when it differs from `endpoint` (local Supabase: `kong:54321`). */
+  readonly signingHost?: string;
+  /** `host[:port]` to sign browser URLs for, when it differs from `publicEndpoint` (tunnel: `<host>:54321`). */
+  readonly publicSigningHost?: string;
+  readonly region: string;
+  readonly accessKeyId: string;
+  readonly secretAccessKey: string;
+  readonly bucket: string;
+}
+
 /** Validated production configuration (ADR-0011). `databaseUrl` is a secret: never log it. */
 export interface ApiEnv {
   readonly databaseUrl: string;
@@ -9,6 +28,7 @@ export interface ApiEnv {
   readonly jwtIssuer: string;
   /** Exact origins; empty allows no browser origin (Q5 default). */
   readonly allowedOrigins: readonly string[];
+  readonly storage: StorageEnv;
 }
 
 /** Variable NAMES only: a value never appears in an error (AC-R5). */
@@ -51,6 +71,13 @@ const isExactOrigin = (value: string): boolean => {
   }
 };
 
+/** `host` or `host:port`, no scheme, path or userinfo. */
+const isHostPort = (value: string): boolean =>
+  /^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?(:[0-9]{1,5})?$/.test(value);
+
+/** A bucket name is a plain token: it is joined into a path, so no slash or space. */
+const isBucketName = (value: string): boolean => /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(value);
+
 /**
  * Reads the configuration through an injected getter (no `process`/Deno access here, so the
  * package stays runtime-agnostic). Blank counts as unset. Reports every problem at once.
@@ -81,11 +108,52 @@ export function loadApiEnv(get: (name: string) => string | undefined): Result<Ap
   const origins = rawOrigins === undefined ? [] : rawOrigins.split(",").map((o) => o.trim());
   if (!origins.every(isExactOrigin)) invalid.push("ALLOWED_ORIGINS");
 
+  const baseUrlOf = (name: string, required: boolean): string | undefined => {
+    const raw = read(name);
+    if (raw === undefined) {
+      if (required) missing.push(name);
+      return undefined;
+    }
+    if (!isBaseUrl(raw)) {
+      invalid.push(name);
+      return undefined;
+    }
+    return raw.replace(/\/+$/, "");
+  };
+  const hostOf = (name: string): string | undefined => {
+    const raw = read(name);
+    if (raw === undefined) return undefined;
+    if (!isHostPort(raw)) {
+      invalid.push(name);
+      return undefined;
+    }
+    return raw;
+  };
+  const required = (name: string, isValid: (value: string) => boolean = () => true) => {
+    const raw = read(name);
+    if (raw === undefined) missing.push(name);
+    else if (!isValid(raw)) invalid.push(name);
+    return raw;
+  };
+  const s3Endpoint = baseUrlOf("API_STORAGE_S3_ENDPOINT", true);
+  const s3PublicEndpoint = baseUrlOf("API_STORAGE_S3_PUBLIC_ENDPOINT", false);
+  const s3SigningHost = hostOf("API_STORAGE_S3_SIGNING_HOST");
+  const s3PublicSigningHost = hostOf("API_STORAGE_S3_PUBLIC_SIGNING_HOST");
+  const s3Region = required("API_STORAGE_S3_REGION");
+  const s3AccessKeyId = required("API_STORAGE_S3_ACCESS_KEY_ID");
+  const s3SecretAccessKey = required("API_STORAGE_S3_SECRET_ACCESS_KEY");
+  const s3Bucket = required("API_STORAGE_BUCKET", isBucketName);
+
   if (
     missing.length > 0 ||
     invalid.length > 0 ||
     databaseUrl === undefined ||
-    supabaseUrl === undefined
+    supabaseUrl === undefined ||
+    s3Endpoint === undefined ||
+    s3Region === undefined ||
+    s3AccessKeyId === undefined ||
+    s3SecretAccessKey === undefined ||
+    s3Bucket === undefined
   ) {
     return err({ missing, invalid });
   }
@@ -95,6 +163,16 @@ export function loadApiEnv(get: (name: string) => string | undefined): Result<Ap
     jwksUrl: `${supabaseUrl}/auth/v1/.well-known/jwks.json`,
     jwtIssuer: rawIssuer ?? `${supabaseUrl}/auth/v1`,
     allowedOrigins: origins,
+    storage: {
+      endpoint: s3Endpoint,
+      ...(s3PublicEndpoint === undefined ? {} : { publicEndpoint: s3PublicEndpoint }),
+      ...(s3SigningHost === undefined ? {} : { signingHost: s3SigningHost }),
+      ...(s3PublicSigningHost === undefined ? {} : { publicSigningHost: s3PublicSigningHost }),
+      region: s3Region,
+      accessKeyId: s3AccessKeyId,
+      secretAccessKey: s3SecretAccessKey,
+      bucket: s3Bucket,
+    },
   });
 }
 

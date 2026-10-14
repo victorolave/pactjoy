@@ -14,6 +14,15 @@ to tables directly and never imports server code at runtime.
    `API_DATABASE_URL=postgresql://postgres:postgres@db:5432/postgres` (the local Supabase
    defaults). The host must be the alias `db`: underscore container hostnames fail DNS in Deno.
    Then serve the function with `supabase functions serve api --env-file supabase/functions/.env`.
+   Photos need the storage keys too (ADR-0016). `supabase status -o env` prints
+   `S3_PROTOCOL_ACCESS_KEY_ID` and `S3_PROTOCOL_ACCESS_KEY_SECRET`; put them in
+   `supabase/functions/.env` as `API_STORAGE_S3_ACCESS_KEY_ID` and `API_STORAGE_S3_SECRET_ACCESS_KEY`,
+   plus `API_STORAGE_S3_REGION=local`, `API_STORAGE_BUCKET=entry-photos`,
+   `API_STORAGE_S3_ENDPOINT=http://kong:8000/storage/v1/s3` with `API_STORAGE_S3_SIGNING_HOST=kong:54321`
+   (the function reaches Storage inside the container; Kong validates the signature against `:54321`),
+   and `API_STORAGE_S3_PUBLIC_ENDPOINT=http://127.0.0.1:54321/storage/v1/s3` for the browser. Never the
+   service role key. The bucket comes from `supabase/config.toml`; `supabase start` creates it.
+   Without these the API refuses to start (`composition.failed` names the missing variable).
 3. Create `apps/web/.env.local` with `VITE_SUPABASE_URL=http://127.0.0.1:54321`,
    `VITE_API_BASE_URL=http://127.0.0.1:54321/functions/v1/api` and `VITE_SUPABASE_ANON_KEY` set to
    the anon or publishable key from `supabase status`. Never use the service role key here.
@@ -47,6 +56,13 @@ temporary Cloudflare tunnels give both origins https, with no account:
 4. Add the app tunnel origin to `ALLOWED_ORIGINS` in `supabase/functions/.env` and restart the
    function.
 5. Open the app tunnel URL in Safari, add it to the home screen and open it from the icon.
+
+Photos upload straight from the phone to Storage, so the tunnel for port 54321 also carries
+`/storage/v1/s3`. The function signs the URLs it hands out for the tunnel host and Kong checks
+`<host>:54321` (ADR-0016): in `supabase/functions/.env` set
+`API_STORAGE_S3_PUBLIC_ENDPOINT=<api-tunnel>/storage/v1/s3` and
+`API_STORAGE_S3_PUBLIC_SIGNING_HOST=<api-tunnel-host>:54321`, and for the function itself
+`API_STORAGE_S3_ENDPOINT=http://kong:8000/storage/v1/s3` with `API_STORAGE_S3_SIGNING_HOST=kong:54321`.
 
 The tunnel URLs change every time a tunnel restarts; rebuild and update `ALLOWED_ORIGINS` then.
 Push notifications will not arrive yet: they wait for the scheduled jobs (D).

@@ -18,7 +18,9 @@ export function EntrySheetHost({
   if (row === undefined) return null;
   const entry = row.entries.find((candidate) => candidate.entryId === entryId);
   if (entry !== undefined) {
-    return <EditSheet row={row} entry={entry} onSelect={select} onClose={close} />;
+    return (
+      <EditSheet row={row} entry={entry} seasonId={seasonId} onSelect={select} onClose={close} />
+    );
   }
   const pending = pendingYesterday.find((item) => item.commitmentId === row.commitmentId);
   return (

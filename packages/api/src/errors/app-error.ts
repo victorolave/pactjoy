@@ -23,6 +23,7 @@ import type {
   RemoveCommitmentError,
   RenameCircleError,
   RenameMyDisplayNameError,
+  RequestEntryPhotoUploadError,
   RequestPauseError,
   RespondToPauseError,
   ResumePauseError,
@@ -48,6 +49,7 @@ export type AppError =
   | CreateCircleError
   | RenameCircleError
   | RenameMyDisplayNameError
+  | RequestEntryPhotoUploadError
   | GenerateInviteError
   | JoinCircleError
   | PreviewInviteError

@@ -31,3 +31,15 @@ content_path = "./supabase/templates/otp.html"
 # The gateway returns no envelope and no CORS headers on a 401, so the JWT is verified in code.
 verify_jwt = false
 import_map = "./functions/api/deno.json"
+
+[storage.s3_protocol]
+# Presigned uploads to the entry-photos bucket use the S3 protocol (ADR-0016). The access keys are
+# created per environment and live in function secrets: nothing secret goes in this file.
+enabled = true
+
+[storage.buckets.entry-photos]
+# Private bucket for Entry photo evidence. The size and type limits repeat what the application
+# enforces (3 MiB, JPEG only) as defence in depth; a boundary test pins both.
+public = false
+file_size_limit = "3MiB"
+allowed_mime_types = ["image/jpeg"]

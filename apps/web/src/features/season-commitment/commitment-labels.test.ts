@@ -91,13 +91,13 @@ describe("commitment labels (design 24a, 24b)", () => {
       } as Row["measure"],
     });
     expect(cellsHint(once)).toBe(
-      "Cada celda es tu oportunidad de la semana. Toca una para ver su registro y su nota.",
+      "Cada celda es tu oportunidad de la semana. Toca una para ver su registro, su nota y su foto.",
     );
     expect(streakRule(once, null)).toBe("Una semana suma a la racha cuando cumples la 1 de 1.");
   });
 
   it("the grid hint names the week's opportunities; nothing for a weekly total", () => {
-    const tap = " Toca una para ver su registro y su nota.";
+    const tap = " Toca una para ver su registro, su nota y su foto.";
     expect(cellsHint(leerRow())).toBe(
       `Cada celda es una de tus 5 oportunidades de la semana.${tap}`,
     );

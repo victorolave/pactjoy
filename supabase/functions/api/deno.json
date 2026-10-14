@@ -5,6 +5,7 @@
     "@pactjoy/app": "../../../packages/app/src/index.ts",
     "@pactjoy/db": "../../../packages/db/src/index.ts",
     "@pactjoy/api": "../../../packages/api/src/index.ts",
+    "@pactjoy/storage": "../../../packages/storage/src/index.ts",
     "postgres": "npm:postgres@3.4.9",
     "jose": "npm:jose@6.2.12"
   }
