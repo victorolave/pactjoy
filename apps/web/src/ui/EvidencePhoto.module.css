@@ -1,0 +1,23 @@
+.photo {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  max-height: var(--evidence-photo-max-height);
+  border-radius: var(--radius-control);
+  background: var(--surface-sunken);
+  object-fit: contain;
+}
+
+.unavailable {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--photo-tile);
+  margin: 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-control);
+  background: var(--surface-sunken);
+  font: var(--font-small);
+  color: var(--text-secondary);
+  text-align: center;
+}

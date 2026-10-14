@@ -1,4 +1,9 @@
-import type { DeleteEntryError, EditEntryError, RecordEntryError } from "@pactjoy/app";
+import type {
+  DeleteEntryError,
+  EditEntryError,
+  RecordEntryError,
+  RequestEntryPhotoUploadError,
+} from "@pactjoy/app";
 import { ApiError } from "../ports/api-error.ts";
 
 /** Codes the use cases return for entries (type-only import: erased at build time). */
@@ -6,6 +11,8 @@ type AppCode =
   | RecordEntryError["kind"]
   | EditEntryError["kind"]
   | DeleteEntryError["kind"]
+  // The photo slot reservation (`POST .../photos`) shares most codes with the entry; its own is TooManyPhotoUploads.
+  | RequestEntryPhotoUploadError["kind"]
   // Returned by the API for entries but not part of those unions.
   | "CommitmentNotFound";
 
@@ -34,6 +41,10 @@ export type UiKind =
   | "conflict"
   | "quantityField"
   | "noteField"
+  // The photo cannot be used (never uploaded, expired, not a valid image): the field offers to upload it again.
+  | "photo"
+  // Too many photo slots are open: only waiting (they expire) helps.
+  | "photoLimit"
   | "generic"
   | "bug";
 
@@ -63,15 +74,16 @@ export const UI_KIND_BY_CODE = {
   CommitmentNotOwned: "generic",
   CommitmentNotFound: "generic",
   SeasonNotFound: "generic",
-  // Provisional until the photo UI (change `photo-evidence`, web units): the client checks size and
-  // type itself and never sends a photo with a missed entry, so those two are bugs; the rest mean
-  // "this photo cannot be used any more" and fall back to the generic message.
-  InvalidPhoto: "bug",
+  // Photos (change `photo-evidence`): the client checks size and type itself, so a rejection here
+  // means this particular upload is spent (expired, never arrived, released): the photo field turns to
+  // "Reintentar", which reserves a new slot. A photo on a missed entry is never offered (a bug).
+  InvalidPhoto: "photo",
+  PhotoNotFound: "photo",
+  PhotoNotUploaded: "photo",
+  PhotoUploadExpired: "photo",
+  PhotoNotAvailable: "photo",
+  TooManyPhotoUploads: "photoLimit",
   PhotoNotAllowedOnMissed: "bug",
-  PhotoNotFound: "generic",
-  PhotoNotUploaded: "generic",
-  PhotoUploadExpired: "generic",
-  PhotoNotAvailable: "generic",
   MissedNotAllowed: "bug",
   ValueKindMismatch: "bug",
   IdempotencyKeyReused: "bug",

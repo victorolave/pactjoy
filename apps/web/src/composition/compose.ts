@@ -3,7 +3,9 @@ import { BrowserConnectivity } from "../adapters/browser-connectivity.ts";
 import { BrowserHaptics } from "../adapters/browser-haptics.ts";
 import { BrowserNotificationPermission } from "../adapters/browser-notification-permission.ts";
 import { BrowserSharing } from "../adapters/browser-sharing.ts";
+import { CanvasImageProcessor } from "../adapters/canvas-image-processor.ts";
 import { CryptoIds } from "../adapters/crypto-ids.ts";
+import { FetchPhotoUploader } from "../adapters/fetch-photo-uploader.ts";
 import { GoTrueAuth, type GoTrueAuthOptions } from "../adapters/gotrue-auth.ts";
 import { HttpPactJoyApi } from "../adapters/http-pactjoy-api.ts";
 import { LocalStorageDeviceStore } from "../adapters/local-storage-device-store.ts";
@@ -46,6 +48,8 @@ export function createDependencies(config: AppConfig, env: ComposeEnvironment): 
       fetch: env.fetch,
     }),
     ids: new CryptoIds(),
+    imageProcessor: new CanvasImageProcessor(),
+    photoUploader: new FetchPhotoUploader(env.fetch),
     haptics: new BrowserHaptics(),
     connectivity: new BrowserConnectivity(),
     store,

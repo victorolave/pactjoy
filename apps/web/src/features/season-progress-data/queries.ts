@@ -74,6 +74,19 @@ export function useCommitmentProgress(seasonId: string, commitmentId: string) {
   return query;
 }
 
+/**
+ * Asks for a new read of one commitment's progress. A peer's photo link outlives the read that
+ * carried it (10 min), so the screen calls this when a link is dead and gets fresh ones.
+ */
+export function useRefreshCommitmentProgress(seasonId: string, commitmentId: string): () => void {
+  const queryClient = useQueryClient();
+  return () => {
+    void queryClient.invalidateQueries({
+      queryKey: commitmentProgressKey(seasonId, commitmentId),
+    });
+  };
+}
+
 /** `weekIndex` is 0-based (the UI shows it + 1). */
 export function useWeekSummary(seasonId: string, weekIndex: number) {
   const api = usePactJoyApi();

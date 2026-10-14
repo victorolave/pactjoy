@@ -19,6 +19,7 @@ import type {
   RecordEntryCommand,
   RecordedEntry,
   RequestPauseCommand,
+  RequestPhotoUploadCommand,
   SubmitClosureCommand,
   SubmitReviewCommand,
   UpdateHabitCommand,
@@ -30,6 +31,7 @@ import type {
   MyPauseRequests,
   PauseApprovalDto,
   PauseRequestDto,
+  PhotoUploadDto,
   ProfileSummaryDto,
   ReviewDraftDto,
   SeasonDto,
@@ -53,6 +55,7 @@ type ExistingMethod =
   | "recordEntry"
   | "editEntry"
   | "deleteEntry"
+  | "requestPhotoUpload"
   | "getMyCircle"
   | "previewInvite"
   | "createCircle"
@@ -116,6 +119,7 @@ export class FakePactJoyApi implements PactJoyApi {
     recordEntry: 0,
     editEntry: 0,
     deleteEntry: 0,
+    requestPhotoUpload: 0,
     getMyCircle: 0,
     previewInvite: 0,
     createCircle: 0,
@@ -161,6 +165,8 @@ export class FakePactJoyApi implements PactJoyApi {
   readonly recorded: RecordEntryCommand[] = [];
   readonly edited: EditEntryCommand[] = [];
   readonly deleted: string[] = [];
+  /** Every requestPhotoUpload call, including the ones that were scripted to fail. */
+  readonly photoRequests: RequestPhotoUploadCommand[] = [];
 
   readonly pactCommands: { readonly method: PactMethod; readonly args: readonly unknown[] }[] = [];
   readonly #pactResults = new Map<PactMethod, unknown>([["listHabits", []]]);
@@ -378,6 +384,24 @@ export class FakePactJoyApi implements PactJoyApi {
     this.deleteAttempts.push(entryId);
     this.#enter("deleteEntry");
     this.deleted.push(entryId);
+  }
+
+  async requestPhotoUpload(cmd: RequestPhotoUploadCommand): Promise<PhotoUploadDto> {
+    const gate = this.#takeGate("requestPhotoUpload");
+    this.photoRequests.push(cmd);
+    this.#enter("requestPhotoUpload");
+    await gate;
+    const photoId = `photo-${this.photoRequests.length}`;
+    return {
+      photoId,
+      upload: {
+        method: "PUT",
+        url: `https://storage.test/entry-photos/${photoId}`,
+        headers: { "content-type": "image/jpeg" },
+        expiresAt: "2026-10-03T12:05:00.000Z",
+      },
+      attachBy: "2026-10-03T12:30:00.000Z",
+    };
   }
 
   async getMyCircle(_signal?: AbortSignal): Promise<MyCircle> {

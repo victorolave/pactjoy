@@ -1,6 +1,8 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { ClockProvider } from "../../context/clock-context.tsx";
+import { FixedClock } from "../../testing/fixed-clock.ts";
 import { commitmentProgress, leerRow } from "../../testing/fixtures/season-progress.ts";
 import { HistoryGrid } from "./HistoryGrid.tsx";
 
@@ -133,5 +135,66 @@ describe("read-only evidence of a history cell (24a, C4)", () => {
     const items = within(screen.getByRole("dialog")).getAllByRole("listitem");
     expect(items.map((item) => item.textContent)).toEqual(["10 min", "20 minNoche"]);
     expect(within(screen.getByRole("dialog")).queryByText("Registrado posteriormente")).toBeNull();
+  });
+
+  describe("a peer's photo", () => {
+    const NOW = Date.parse("2026-10-13T12:00:00.000Z");
+    const withPhoto = (photo: { url: string; expiresAt: string } | null) => {
+      if (lateIdeal === undefined || future === undefined) throw new Error("fixture changed");
+      const [first] = lateIdeal.evidence;
+      if (first === undefined) throw new Error("fixture changed");
+      return withCells([{ ...lateIdeal, evidence: [{ ...first, photo }] }, future]);
+    };
+    const open = async (view: View, onPhotoUnavailable?: () => void) => {
+      render(
+        <ClockProvider clock={new FixedClock(NOW)}>
+          <HistoryGrid
+            view={view}
+            {...(onPhotoUnavailable === undefined ? {} : { onPhotoUnavailable })}
+          />
+        </ClockProvider>,
+      );
+      await userEvent.click(
+        screen.getByRole("button", { name: "Ideal, registrado posteriormente" }),
+      );
+      return screen.getByRole("dialog");
+    };
+
+    it("shows the picture next to the note where the payload carries one", async () => {
+      const sheet = await open(
+        withPhoto({
+          url: "https://storage.test/o/a.jpg?sig=1",
+          expiresAt: new Date(NOW + 600_000).toISOString(),
+        }),
+      );
+
+      expect(within(sheet).getByText("Capítulo 3")).toBeTruthy();
+      expect(
+        within(sheet).getByRole("img", { name: "Foto del registro" }).getAttribute("src"),
+      ).toBe("https://storage.test/o/a.jpg?sig=1");
+    });
+
+    it("an expired link shows 'Foto no disponible' and asks the screen to refetch once", async () => {
+      const onPhotoUnavailable = vi.fn();
+
+      const sheet = await open(
+        withPhoto({
+          url: "https://storage.test/o/a.jpg?sig=1",
+          expiresAt: new Date(NOW - 1).toISOString(),
+        }),
+        onPhotoUnavailable,
+      );
+
+      expect(within(sheet).getByText("Foto no disponible")).toBeTruthy();
+      expect(within(sheet).queryByRole("img")).toBeNull();
+      expect(onPhotoUnavailable).toHaveBeenCalledTimes(1);
+    });
+
+    it("no photo in the payload, no picture and no placeholder", async () => {
+      const sheet = await open(withPhoto(null));
+
+      expect(within(sheet).queryByRole("img")).toBeNull();
+      expect(within(sheet).queryByText("Foto no disponible")).toBeNull();
+    });
   });
 });

@@ -7,7 +7,9 @@ import { describe, expect, it } from "vitest";
 import { todayKey } from "../shared/query-keys.ts";
 import {
   activeTodayFixture,
+  dayRowFixture,
   endedTodayFixture,
+  entryFixture,
   pactOpenTodayFixture,
 } from "../testing/fixtures/today.ts";
 import { MemoryStorage } from "../testing/memory-storage.ts";
@@ -144,6 +146,38 @@ describe("a saved Today from before the shape changed is dropped, not rendered",
     });
     expect(reloaded.getQueryData(todayKey)).toBeUndefined();
     expect(Number(CACHE_VERSION)).toBeGreaterThan(6);
+  });
+
+  it("drops a running Today whose entries predate the photo field (version 8: no photo)", async () => {
+    const withEntry = activeTodayFixture({
+      rows: [dayRowFixture({ entries: [entryFixture({ kind: "quantity", value: "3" })] })],
+    });
+    const stale = {
+      ...withEntry,
+      rows: withEntry.rows.map((row) => ({
+        ...row,
+        entries: row.entries.map(({ photo: _photo, ...entry }) => entry),
+      })),
+    };
+
+    const { reloaded } = await restoreFrom(stale);
+
+    expect(reloaded.getQueryData(todayKey)).toBeUndefined();
+  });
+
+  it("purges version 8: the entry photo arrived with version 9", async () => {
+    const storage = new MemoryStorage();
+    seedPersistedToday(storage, activeTodayFixture());
+    const saved = JSON.parse(storage.getItem(STORAGE_KEY) ?? "null");
+    saved.buster = "8:user-1";
+    storage.setItem(STORAGE_KEY, JSON.stringify(saved));
+    const reloaded = new QueryClient();
+    await persistQueryClientRestore({
+      queryClient: reloaded,
+      ...persistOptionsFor(createTodayPersister(storage), bustFor("user-1")),
+    });
+    expect(reloaded.getQueryData(todayKey)).toBeUndefined();
+    expect(Number(CACHE_VERSION)).toBeGreaterThan(8);
   });
 
   it("keeps a current Today", async () => {

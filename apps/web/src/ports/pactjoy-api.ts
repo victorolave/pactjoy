@@ -20,6 +20,7 @@ import type {
   MyPauseRequests,
   PauseApprovalDto,
   PauseRequestDto,
+  PhotoUploadDto,
   ProfileSummaryDto,
   ReviewDraftDto,
   SeasonDto,
@@ -53,6 +54,8 @@ export interface RecordEntryCommand {
   readonly forDate?: string;
   readonly value: EntryValueInput;
   readonly note: string | null;
+  /** A photo already uploaded to its reserved slot (`requestPhotoUpload`); omitted or null for none. */
+  readonly photoId?: string | null;
   /** The idempotency key. Reuse it when retrying the same user action. */
   readonly clientRequestId: string;
 }
@@ -61,6 +64,18 @@ export interface EditEntryCommand {
   readonly entryId: string;
   readonly value: EntryValueInput;
   readonly note: string | null;
+  /**
+   * Omitted keeps the entry's photo (also what an old cached client does), `null` removes it and a
+   * new id replaces it.
+   */
+  readonly photoId?: string | null;
+}
+
+/** What the client says about the file it is about to upload; the signature pins both. */
+export interface RequestPhotoUploadCommand {
+  readonly seasonId: string;
+  readonly commitmentId: string;
+  readonly byteSize: number;
 }
 
 /** A local wire type: the API returns the whole entry, the client needs only these two fields. */
@@ -150,6 +165,8 @@ export interface PactJoyApi extends SeasonProgressApi {
   recordEntry(cmd: RecordEntryCommand): Promise<RecordedEntry>;
   editEntry(cmd: EditEntryCommand): Promise<void>;
   deleteEntry(entryId: string): Promise<void>;
+  /** Reserves a slot for one JPEG of `byteSize` bytes and signs the PUT that fills it (ADR-0016). */
+  requestPhotoUpload(cmd: RequestPhotoUploadCommand): Promise<PhotoUploadDto>;
   getMyCircle(signal?: AbortSignal): Promise<MyCircle>;
   /** Read-only: the same errors as `joinCircle`, so a preview that works predicts the join. */
   previewInvite(inviteCode: string, signal?: AbortSignal): Promise<InvitePreviewView>;

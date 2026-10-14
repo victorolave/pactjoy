@@ -1,6 +1,8 @@
 import type { CommitmentProgress } from "../../ports/wire.ts";
+import { epochMs } from "../../shared/epoch.ts";
 import { longDate } from "../../shared/format.ts";
 import { quantityText } from "../../shared/row-labels.ts";
+import { EvidencePhoto } from "../../ui/EvidencePhoto.tsx";
 import { Sheet } from "../../ui/Sheet.tsx";
 import styles from "./CommitmentScreen.module.css";
 
@@ -19,14 +21,16 @@ export interface EvidenceSheetProps {
   readonly cell: Cell;
   readonly measure: Measure;
   readonly onClose: () => void;
+  /** A photo's link expired or failed: the screen refetches the read for a fresh one (once per photo). */
+  readonly onPhotoUnavailable?: () => void;
 }
 
 /**
- * What a history cell holds, read-only (design 24a "Toca una…", photos are Lote 4): its day, each
- * registro behind it (a summed session can have several) with its note, and the late marker. The
+ * What a history cell holds, read-only (design 24a "Toca una…"): its day, each registro behind it
+ * (a summed session can have several) with its note and photo, and the late marker. The
  * server only sends authorized evidence; nothing here can edit it.
  */
-export function EvidenceSheet({ cell, measure, onClose }: EvidenceSheetProps) {
+export function EvidenceSheet({ cell, measure, onClose, onPhotoUnavailable }: EvidenceSheetProps) {
   const day = cell.date ?? cell.evidence[0]?.forDate ?? "";
   return (
     <Sheet open title={longDate(day)} onClose={onClose}>
@@ -37,6 +41,13 @@ export function EvidenceSheet({ cell, measure, onClose }: EvidenceSheetProps) {
           <li key={index} className={styles.evidenceItem}>
             <span className={styles.label}>{valueText(entry.value, measure)}</span>
             {entry.note !== null && <p className={styles.muted}>{entry.note}</p>}
+            {entry.photo !== null && (
+              <EvidencePhoto
+                url={entry.photo.url}
+                expiresAt={epochMs(entry.photo.expiresAt)}
+                {...(onPhotoUnavailable === undefined ? {} : { onUnavailable: onPhotoUnavailable })}
+              />
+            )}
           </li>
         ))}
       </ul>

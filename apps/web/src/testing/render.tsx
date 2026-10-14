@@ -17,8 +17,10 @@ import { FakeAppInstall } from "./fake-app-install.ts";
 import { FakeAuth, fakeSession } from "./fake-auth.ts";
 import { FakeConnectivity } from "./fake-connectivity.ts";
 import { FakeHaptics } from "./fake-haptics.ts";
+import { FakeImageProcessor } from "./fake-image-processor.ts";
 import { FakeNotificationPermission } from "./fake-notification-permission.ts";
 import { FakePactJoyApi } from "./fake-pactjoy-api.ts";
+import { FakePhotoUploader } from "./fake-photo-uploader.ts";
 import { FakeSharing } from "./fake-sharing.ts";
 import { FixedClock } from "./fixed-clock.ts";
 import { soloCircleFixture } from "./fixtures/circle.ts";
@@ -101,6 +103,8 @@ export interface RenderedApp extends RenderResult {
     readonly api: FakePactJoyApi;
     readonly connectivity: FakeConnectivity;
     readonly haptics: FakeHaptics;
+    readonly imageProcessor: FakeImageProcessor;
+    readonly photoUploader: FakePhotoUploader;
     readonly store: MemoryTokenStore;
     readonly device: LocalStorageDeviceStore;
     readonly sharing: FakeSharing;
@@ -155,6 +159,8 @@ function createFakeDeps({
     auth,
     api,
     ids: new SequentialIds(),
+    imageProcessor: new FakeImageProcessor(),
+    photoUploader: new FakePhotoUploader(),
     haptics: new FakeHaptics(),
     connectivity: new FakeConnectivity(online),
     store,

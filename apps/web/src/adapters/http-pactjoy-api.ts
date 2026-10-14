@@ -20,6 +20,7 @@ import type {
   RecordEntryCommand,
   RecordedEntry,
   RequestPauseCommand,
+  RequestPhotoUploadCommand,
   ScoringPreview,
   SubmitClosureCommand,
   SubmitReviewCommand,
@@ -34,6 +35,7 @@ import type {
   MyPauseRequests,
   PauseApprovalDto,
   PauseRequestDto,
+  PhotoUploadDto,
   ProfileSummaryDto,
   ReviewDraftDto,
   SeasonDto,
@@ -46,6 +48,7 @@ import type {
 } from "../ports/wire.ts";
 import { progressApiPaths } from "../shared/season-progress-routes.ts";
 import { isMyPauseRequests, isPauseApproval, isPauseRequest } from "./pause-guards.ts";
+import { isPhotoUpload } from "./photo-guards.ts";
 import { isProfileSummary } from "./profile-guards.ts";
 import {
   isCommitmentStage,
@@ -311,6 +314,16 @@ export class HttpPactJoyApi implements PactJoyApi {
 
   async deleteEntry(entryId: string): Promise<void> {
     await this.#request({ method: "DELETE", path: `/entries/${encodeURIComponent(entryId)}` });
+  }
+
+  async requestPhotoUpload(cmd: RequestPhotoUploadCommand): Promise<PhotoUploadDto> {
+    return (await this.#request({
+      method: "POST",
+      path: `${commitmentPath(cmd.seasonId, cmd.commitmentId)}/photos`,
+      // The only type a photo has: the client re-encodes every pick as JPEG before this call.
+      body: { byteSize: cmd.byteSize, contentType: "image/jpeg" },
+      valid: isPhotoUpload,
+    })) as PhotoUploadDto;
   }
 
   async getMyCircle(signal?: AbortSignal): Promise<MyCircle> {

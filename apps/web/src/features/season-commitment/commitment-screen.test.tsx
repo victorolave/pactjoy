@@ -299,3 +299,38 @@ describe("CommitmentScreen stage badge (periodic review)", () => {
     expect(app.deps.api.calls.getCommitmentStage).toBe(0);
   });
 });
+
+describe("CommitmentScreen peer photos (photo-evidence)", () => {
+  it("an expired link shows 'Foto no disponible' and refetches the read once for a fresh one", async () => {
+    const view = commitmentProgress();
+    const [week] = view.weeks;
+    const [cell] = week?.cells ?? [];
+    const [entry] = cell?.evidence ?? [];
+    if (week === undefined || cell === undefined || entry === undefined) {
+      throw new Error("fixture changed");
+    }
+    const expired = {
+      url: "https://storage.test/o/a.jpg?sig=1",
+      expiresAt: "2026-10-03T11:00:00.000Z",
+    };
+    const stale = {
+      ...view,
+      weeks: [
+        {
+          ...week,
+          cells: [{ ...cell, evidence: [{ ...entry, photo: expired }] }, ...week.cells.slice(1)],
+        },
+      ],
+    };
+    const app = showing(stale);
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Ideal, registrado posteriormente" }),
+    );
+
+    expect(await within(screen.getByRole("dialog")).findByText("Foto no disponible")).toBeTruthy();
+    await waitFor(() => expect(app.deps.api.progress.calls.getCommitmentProgress).toBe(2));
+    // Still unavailable on the second read (the fake serves the same link): it does not loop.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(app.deps.api.progress.calls.getCommitmentProgress).toBe(2);
+  });
+});

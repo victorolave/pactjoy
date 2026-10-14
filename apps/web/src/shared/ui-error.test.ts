@@ -35,14 +35,15 @@ const EXPECTED: Readonly<Record<string, UiKind>> = {
   CommitmentNotOwned: "generic",
   CommitmentNotFound: "generic",
   SeasonNotFound: "generic",
-  // Photo: the client checks size and type and never sends a photo with a missed entry (bug); the
-  // rest mean the photo cannot be used any more. Provisional until the photo UI units.
-  InvalidPhoto: "bug",
+  // Photo: the photo cannot be used (any more), so the field offers to upload it again; the client
+  // never sends a photo with a missed entry (bug); five open slots are a wait, not a retry.
+  InvalidPhoto: "photo",
+  PhotoNotFound: "photo",
+  PhotoNotUploaded: "photo",
+  PhotoUploadExpired: "photo",
+  PhotoNotAvailable: "photo",
+  TooManyPhotoUploads: "photoLimit",
   PhotoNotAllowedOnMissed: "bug",
-  PhotoNotFound: "generic",
-  PhotoNotUploaded: "generic",
-  PhotoUploadExpired: "generic",
-  PhotoNotAvailable: "generic",
   // Bug class: the client should never send these
   MissedNotAllowed: "bug",
   ValueKindMismatch: "bug",

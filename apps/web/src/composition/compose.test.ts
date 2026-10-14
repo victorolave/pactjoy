@@ -103,3 +103,26 @@ describe("createDependencies", () => {
     expect(store.load()).not.toBeNull();
   });
 });
+
+describe("createDependencies photo tools", () => {
+  it("uploads photos with the browser fetch and no API credentials", async () => {
+    const fetchStub = vi.fn<typeof fetch>(async () => new Response(null, { status: 200 }));
+    const store = new MemoryTokenStore(
+      fakeSession({ expiresAt: Math.floor(Date.now() / 1000) + 3600 }),
+    );
+    const { photoUploader, imageProcessor } = createDependencies(CONFIG, {
+      fetch: fetchStub,
+      store,
+    });
+
+    await photoUploader.put(
+      { url: "https://storage.test/o/a.jpg?sig=1", headers: { "content-type": "image/jpeg" } },
+      new Blob(["jpeg"]),
+    );
+
+    const [url, init] = fetchStub.mock.calls[0] ?? [];
+    expect(String(url)).toBe("https://storage.test/o/a.jpg?sig=1");
+    expect(new Headers(init?.headers).has("Authorization")).toBe(false);
+    expect(typeof imageProcessor.prepare).toBe("function");
+  });
+});

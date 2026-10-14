@@ -8,8 +8,10 @@ import type { Connectivity } from "../ports/connectivity.ts";
 import type { DeviceStore } from "../ports/device-store.ts";
 import type { Haptics } from "../ports/haptics.ts";
 import type { IdSource } from "../ports/ids.ts";
+import type { ImageProcessor } from "../ports/image-processor.ts";
 import type { NotificationPermissionPort } from "../ports/notification-permission.ts";
 import type { PactJoyApi } from "../ports/pactjoy-api.ts";
+import type { PhotoUploader } from "../ports/photo-uploader.ts";
 import type { Sharing } from "../ports/sharing.ts";
 import type { TokenStore } from "../ports/token-store.ts";
 
@@ -20,6 +22,10 @@ export interface AppDependencies {
   readonly clock: Clock;
   readonly api: PactJoyApi;
   readonly ids: IdSource;
+  /** Resizes and re-encodes a picked photo as a metadata-free JPEG (ADR-0016). */
+  readonly imageProcessor: ImageProcessor;
+  /** PUTs the prepared bytes to the signed storage URL; never sends API credentials. */
+  readonly photoUploader: PhotoUploader;
   readonly haptics: Haptics;
   readonly connectivity: Connectivity;
   readonly store: TokenStore;
