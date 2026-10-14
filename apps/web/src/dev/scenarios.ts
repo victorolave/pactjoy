@@ -140,6 +140,10 @@ const caminar = (overrides: Partial<WeekRow> = {}): WeekRow =>
     ...overrides,
   });
 
+/** A flat swatch as a data URL: the gallery never needs a real storage. */
+const DEV_PHOTO =
+  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='96' height='96'><rect width='96' height='96' fill='%23F5EDE6'/></svg>";
+
 const logged = (row: DayRow, entries: DayRow["entries"], earned: number): DayRow => ({
   ...row,
   opportunity: { state: "logged", graceUntil: date("2026-10-03") },
@@ -418,6 +422,36 @@ export const SCENARIOS: readonly Scenario[] = [
           ],
         }),
         21,
+      ),
+  },
+  {
+    id: "loggedWithPhoto",
+    title: "Registro con foto",
+    description: "Un registro con foto (imagen de prueba) para abrir la hoja de edición.",
+    mode: "data",
+    today: () =>
+      withSummary(
+        activeTodayFixture({
+          rows: [
+            logged(
+              meditar(),
+              [
+                entryFixture(
+                  { kind: "done" },
+                  {
+                    photo: {
+                      photoId: id("p-dev") as never,
+                      url: DEV_PHOTO,
+                      expiresAt: Number.MAX_SAFE_INTEGER as never,
+                    },
+                  },
+                ),
+              ],
+              8,
+            ),
+          ],
+        }),
+        8,
       ),
   },
   {

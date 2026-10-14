@@ -14,6 +14,10 @@ import styles from "../entry.module.css";
 import { Confirmation } from "../feedback/Confirmation.tsx";
 import { useEarnedGain } from "../feedback/use-earned-gain.ts";
 import { LimitGrid } from "../limit/LimitGrid.tsx";
+import { PhotoField } from "../photo/PhotoField.tsx";
+import { visibilityHint } from "../photo/photo-hint.ts";
+import { isPhotoBusy, photoIdToSend } from "../photo/photo-upload.ts";
+import { usePhotoUpload } from "../photo/use-photo-upload.ts";
 import { QuantityStepper } from "../quantity/QuantityStepper.tsx";
 import {
   limitMeasureOf,
@@ -29,6 +33,7 @@ import { useEntryEdit } from "./use-entry-edit.ts";
 export interface EditSheetProps {
   readonly row: TodayRow;
   readonly entry: TodayEntry;
+  readonly seasonId: string;
   readonly onSelect: (entryId: string) => void;
   readonly onClose: () => void;
 }
@@ -50,11 +55,16 @@ export function EditSheet(props: EditSheetProps) {
 function EntryEditor({
   row,
   entry,
+  seasonId,
   onSelect,
   onClose,
   onConfirming,
 }: EditSheetProps & { readonly onConfirming: (confirming: boolean) => void }) {
   const edit = useEntryEdit(entry.entryId);
+  const photo = usePhotoUpload(seasonId, row.commitmentId);
+  // The entry's current photo until the member removes it or picks another.
+  const [removedPhoto, setRemovedPhoto] = useState(false);
+  const currentPhoto = entry.photo !== null && !removedPhoto ? entry.photo : null;
   const remove = useEntryDelete(entry.entryId);
   const online = useOnline();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -78,6 +88,12 @@ function EntryEditor({
       : row.opportunity.graceUntil;
 
   useEffect(() => onConfirming(edit.saved !== null), [edit.saved, onConfirming]);
+  // The server turned the new photo down (expired, never arrived): the field offers to upload again.
+  const rejected = edit.problem?.kind === "photo";
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `reject` is stable, the problem is the trigger
+  useEffect(() => {
+    if (rejected) photo.reject();
+  }, [rejected, edit.problem]);
   // A delete closes the sheet and says so in a toast: the entry is gone, so there is nothing to edit.
   // biome-ignore lint/correctness/useExhaustiveDependencies: runs once, when the deletion lands
   useEffect(() => {
@@ -109,10 +125,14 @@ function EntryEditor({
       quantity === null
         ? ({ kind: entry.value.kind } as { kind: "done" } | { kind: "missed" })
         : { kind: "quantity" as const, value: toSend };
+    // A missed entry carries no photo: it leaves the field out (an edit to missed releases it).
+    const photoId =
+      entry.value.kind === "missed" ? undefined : photoIdToSend(photo.state, removedPhoto);
     edit.save(
       value,
       note.trim() === "" ? null : note,
       `${row.habitName} · ${amount ?? entryText(entry, row.measure)}`,
+      photoId,
     );
   };
 
@@ -155,6 +175,28 @@ function EntryEditor({
       <NoteField
         value={note}
         onChange={setNote}
+        hint={visibilityHint(row.privacy)}
+        startOpen={entry.photo !== null}
+        onClear={() => {
+          photo.remove();
+          setRemovedPhoto(entry.photo !== null);
+        }}
+        photo={
+          <PhotoField
+            state={photo.state}
+            existing={currentPhoto}
+            online={online}
+            missed={entry.value.kind === "missed"}
+            onPick={(file) => {
+              photo.pick(file);
+            }}
+            onRetry={photo.retry}
+            onRemove={() => {
+              if (photo.state.status === "idle") setRemovedPhoto(true);
+              else photo.remove();
+            }}
+          />
+        }
         {...(noteError === undefined ? {} : { error: noteError })}
       />
       {changeUntil !== null && (
@@ -165,9 +207,11 @@ function EntryEditor({
           Después del periodo de gracia, el registro queda bloqueado.
         </InlineMessage>
       )}
-      {edit.problem !== null && edit.problem.kind !== "noteField" && (
-        <InlineMessage tone="error" title={edit.problem.message} />
-      )}
+      {edit.problem !== null &&
+        edit.problem.kind !== "noteField" &&
+        edit.problem.kind !== "photo" && (
+          <InlineMessage tone="error" title={edit.problem.message} />
+        )}
       {!online && <InlineMessage tone="pending" title="Sin conexión: no se puede guardar." />}
       {remove.problem !== null && <InlineMessage tone="error" title={remove.problem.message} />}
       {confirmingDelete ? (
@@ -186,7 +230,11 @@ function EntryEditor({
         </div>
       ) : (
         <div className={styles.actions}>
-          <Button block disabled={toSend === null || edit.pending || !online} onClick={send}>
+          <Button
+            block
+            disabled={toSend === null || edit.pending || !online || isPhotoBusy(photo.state)}
+            onClick={send}
+          >
             {amount === null ? "Guardar cambios" : `Guardar ${amount}`}
           </Button>
           <Button

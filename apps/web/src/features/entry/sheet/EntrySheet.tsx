@@ -1,5 +1,5 @@
 import type { MeasureView, PendingYesterdayItem, TodayRow } from "@pactjoy/app";
-import { type ReactNode, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useOnline } from "../../../context/connectivity-context.tsx";
 import { fromScaled, toScaled } from "../../../shared/decimal.ts";
 import { pointsText } from "../../../shared/format.ts";
@@ -20,6 +20,10 @@ import { Confirmation } from "../feedback/Confirmation.tsx";
 import { useEarnedGain } from "../feedback/use-earned-gain.ts";
 import { useSavedToast } from "../feedback/use-saved-toast.ts";
 import { LimitGrid } from "../limit/LimitGrid.tsx";
+import { PhotoField } from "../photo/PhotoField.tsx";
+import { visibilityHint } from "../photo/photo-hint.ts";
+import { isPhotoBusy, photoIdToSend } from "../photo/photo-upload.ts";
+import { usePhotoUpload } from "../photo/use-photo-upload.ts";
 import { QuantityStepper } from "../quantity/QuantityStepper.tsx";
 import { useQuantityEntry } from "../quantity/use-quantity-entry.ts";
 import { type DayChoice, useDayChoice } from "./DayPicker.tsx";
@@ -118,11 +122,19 @@ function RecordShell({
 }: ShellProps) {
   const [note, setNote] = useState("");
   const entry = useQuantityEntry(row.commitmentId, seasonId, choice.forDate);
+  const photo = usePhotoUpload(seasonId, row.commitmentId);
   const online = useOnline();
   const showSaved = useSavedToast();
   const todayGain = useEarnedGain(row.points.earned);
   // The server answers with today's points only: a registro of yesterday shows none here.
   const gain = choice.yesterday ? null : todayGain;
+
+  // The server turned the photo down (expired, never arrived): the field offers to upload it again.
+  const rejected = entry.problem?.kind === "photo";
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `reject` is stable, the problem is the trigger
+  useEffect(() => {
+    if (rejected) photo.reject();
+  }, [rejected, entry.problem]);
 
   // Closing after a save leaves the toast with Deshacer behind (design 20): the sheet is gone by then.
   const closed = useRef(false);
@@ -167,22 +179,38 @@ function RecordShell({
         <NoteField
           value={note}
           onChange={setNote}
+          hint={visibilityHint(row.privacy)}
+          onClear={photo.remove}
+          photo={
+            <PhotoField
+              state={photo.state}
+              existing={null}
+              online={online}
+              missed={false}
+              onPick={photo.pick}
+              onRetry={photo.retry}
+              onRemove={photo.remove}
+            />
+          }
           {...(noteError === undefined ? {} : { error: noteError })}
         />
-        {entry.problem !== null && entry.problem.kind !== "noteField" && (
-          <InlineMessage tone="error" title={entry.problem.message} />
-        )}
+        {entry.problem !== null &&
+          entry.problem.kind !== "noteField" &&
+          entry.problem.kind !== "photo" && (
+            <InlineMessage tone="error" title={entry.problem.message} />
+          )}
         {!online && <InlineMessage tone="pending" title="Sin conexión: no se puede guardar." />}
         <div className={styles.actions}>
           <Button
             block
-            disabled={toSend === null || entry.pending || !online}
+            disabled={toSend === null || entry.pending || !online || isPhotoBusy(photo.state)}
             onClick={() =>
               toSend !== null &&
               entry.submit(
                 { kind: "quantity", value: toSend },
                 note.trim() === "" ? null : note,
                 `${row.habitName} · ${amount}${choice.yesterday ? " · ayer" : ""}`,
+                photoIdToSend(photo.state, false) ?? null,
               )
             }
           >

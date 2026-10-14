@@ -59,7 +59,7 @@ describe("submitting a quantity (EN-R3)", () => {
     const { deps } = open([weekRowFixture()], "commitment-2");
     const dialog = await dialogFor("Leer");
     await userEvent.click(within(dialog).getByRole("button", { name: "10 min" }));
-    await userEvent.click(within(dialog).getByRole("button", { name: "Añadir nota" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Añadir nota o foto" }));
     await userEvent.type(within(dialog).getByRole("textbox", { name: "Nota (opcional)" }), "x");
     await userEvent.click(within(dialog).getByRole("button", { name: "Registrar 10 min" }));
 
@@ -224,11 +224,11 @@ describe("failures (EN-R2, EN-R8)", () => {
     const { deps } = open([weekRowFixture()], "commitment-2");
     deps.api.failNext("recordEntry", new ApiError("NoteTooLong", 422, "req-3"));
     const dialog = await dialogFor("Leer");
-    await userEvent.click(within(dialog).getByRole("button", { name: "Añadir nota" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Añadir nota o foto" }));
     await userEvent.type(within(dialog).getByRole("textbox", { name: "Nota (opcional)" }), "larga");
     await userEvent.click(within(dialog).getByRole("button", { name: "Registrar 20 min" }));
     const note = await within(dialog).findByRole("textbox", { name: "Nota (opcional)" });
-    await waitFor(() => expect(note).toHaveAccessibleDescription("La nota es demasiado larga."));
+    await waitFor(() => expect(note).toHaveAccessibleDescription(/^La nota es demasiado larga\./));
     expect(note).toHaveValue("larga");
   });
 
