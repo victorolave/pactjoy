@@ -23,7 +23,7 @@ describe("read-only evidence of a history cell (24a, C4)", () => {
 
     expect(
       screen.getByText(
-        "Cada celda es una de tus 5 oportunidades de la semana. Toca una para ver su registro y su nota.",
+        "Cada celda es una de tus 5 oportunidades de la semana. Toca una para ver su registro, su nota y su foto.",
       ),
     ).toBeTruthy();
   });

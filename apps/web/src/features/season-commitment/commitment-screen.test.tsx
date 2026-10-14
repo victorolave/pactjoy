@@ -118,7 +118,7 @@ describe("CommitmentScreen (24a)", () => {
     ]);
     expect(
       screen.getByText(
-        "Cada celda es una de tus 5 oportunidades de la semana. Toca una para ver su registro y su nota.",
+        "Cada celda es una de tus 5 oportunidades de la semana. Toca una para ver su registro, su nota y su foto.",
       ),
     ).toBeTruthy();
     for (const legend of ["Ideal", "Mínimo", "No salió", "Registrado posteriormente", "Hoy"]) {
@@ -159,11 +159,11 @@ describe("CommitmentScreen (24a)", () => {
     ).toBeTruthy();
   });
 
-  it("deferred workflows leave no trace: no stage, reminder, pause action or photo", async () => {
+  it("deferred workflows leave no trace: no stage, reminder or pause action", async () => {
     showing(commitmentProgress());
 
     await screen.findByRole("heading", { level: 1, name: "Leer" });
-    for (const text of [/Recordatorio/, /Pausar/, /En desarrollo/, /Nuevo/, /foto/, /Reanudar/]) {
+    for (const text of [/Recordatorio/, /Pausar/, /En desarrollo/, /Nuevo/, /Reanudar/]) {
       expect(screen.queryByText(text)).toBeNull();
     }
     // Only the way back and the read-only history cell (C4) are controls.

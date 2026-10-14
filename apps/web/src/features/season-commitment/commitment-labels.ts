@@ -49,8 +49,8 @@ export function streakRule(
   return `${unit} suma a la racha cuando ${keeps}.`;
 }
 
-/** Design 24a's "Toca una…", without the photo (Lote 4); owner-approved wording. */
-const TAP_HINT = "Toca una para ver su registro y su nota.";
+/** Design 24a's "Toca una…", extended with the photo; owner-approved wording. */
+const TAP_HINT = "Toca una para ver su registro, su nota y su foto.";
 
 /** "Cada celda es una de tus 5 oportunidades de la semana. Toca una…"; none for a weekly total. */
 export function cellsHint(row: Row): string | null {
