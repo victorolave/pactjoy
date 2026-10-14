@@ -69,10 +69,10 @@ function operations(view: () => Store, sink: Sink): EntryPhotoRepository {
       sink.put(next, expectedVersion);
     },
 
-    async countOpen(memberId, now) {
+    async countOpen(memberId, liveSince) {
       return [...view().values()].filter(
         (photo) =>
-          photo.memberId === memberId && photo.status === "pending" && now < photo.attachBy,
+          photo.memberId === memberId && photo.status === "pending" && photo.createdAt > liveSince,
       ).length;
     },
 

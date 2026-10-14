@@ -9,7 +9,7 @@ import type { Actor } from "../shared/actor.ts";
 import { type EntryPhotoId, entryPhotoId, type SeasonId } from "../shared/ids.ts";
 import { err, ok, type Result } from "../shared/result.ts";
 import type { Clock } from "../time/clock.port.ts";
-import type { Instant } from "../time/instant.ts";
+import { type Instant, instant } from "../time/instant.ts";
 import { pendingEntryPhoto } from "./entry-photo.ts";
 import type { PhotoError } from "./errors.ts";
 import {
@@ -119,7 +119,10 @@ export async function requestEntryPhotoUpload(
       if (season.status !== "active" || season.actualStart === null) {
         return err({ kind: "SeasonNotActive" });
       }
-      if ((await repos.entryPhotos.countOpen(member.id, now)) >= MAX_OPEN_UPLOADS) {
+      // Only reservations whose upload URL is still live count: an abandoned one frees its slot after
+      // the URL TTL, long before its attach window ends.
+      const liveSince = instant(now - UPLOAD_URL_TTL_SECONDS * 1000);
+      if ((await repos.entryPhotos.countOpen(member.id, liveSince)) >= MAX_OPEN_UPLOADS) {
         return err({ kind: "TooManyPhotoUploads" });
       }
       const photo = pendingEntryPhoto({

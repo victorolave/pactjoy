@@ -125,10 +125,10 @@ export function createPgEntryPhotoRepository(exec: SqlExecutor): EntryPhotoRepos
       }
     },
 
-    async countOpen(member, now) {
+    async countOpen(member, liveSince) {
       const { rows: counted } = await exec.query<{ n: number }>(
-        "select count(*)::int as n from pactjoy.entry_photos where member_id = $1 and status = 'pending' and attach_by > $2::timestamptz",
-        [member, iso(now)],
+        "select count(*)::int as n from pactjoy.entry_photos where member_id = $1 and status = 'pending' and created_at > $2::timestamptz",
+        [member, iso(liveSince)],
       );
       return counted[0]?.n ?? 0;
     },

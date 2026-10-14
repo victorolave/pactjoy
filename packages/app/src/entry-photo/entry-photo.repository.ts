@@ -25,8 +25,12 @@ export interface EntryPhotoRepository {
    * @throws {ConcurrencyConflict} if the stored version is no longer `expectedVersion`, or the row is gone.
    */
   save(next: EntryPhoto, expectedVersion: number): Promise<void>;
-  /** How many of the member's reservations are `pending` and not yet past `attachBy` at `now` (REQ-U5, U7). */
-  countOpen(memberId: MemberId, now: Instant): Promise<number>;
+  /**
+   * How many of the member's reservations are `pending` and were created after `liveSince`, i.e. whose
+   * upload URL can still be used (REQ-U5, U7). The caller passes `now - upload URL TTL`: a reservation
+   * whose URL is dead no longer counts although its `attachBy` window is still open.
+   */
+  countOpen(memberId: MemberId, liveSince: Instant): Promise<number>;
   /**
    * Releases up to `limit` `pending` rows whose `attachBy` is at or before `now` (`memberId` null: any
    * member), oldest first, bumping their version, and returns them as released. One UPDATE ... RETURNING

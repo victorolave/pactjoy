@@ -83,7 +83,8 @@ const repository: EntryPhotoRepository = {
   getMany: (ids) => uow.read(({ entryPhotos }) => entryPhotos.getMany(ids)),
   add: (photo) => write((r) => r.add(photo)),
   save: (next, expected) => write((r) => r.save(next, expected)),
-  countOpen: (member, now) => uow.read(({ entryPhotos }) => entryPhotos.countOpen(member, now)),
+  countOpen: (member, liveSince) =>
+    uow.read(({ entryPhotos }) => entryPhotos.countOpen(member, liveSince)),
   releaseExpired: (member, now, limit) => write((r) => r.releaseExpired(member, now, limit)),
   listReleased: (member, limit) =>
     uow.read(({ entryPhotos }) => entryPhotos.listReleased(member, limit)),

@@ -9,7 +9,14 @@ import {
   localInstant,
 } from "../testing/entry-fixtures.ts";
 import { dayOf, PER_DAY_REACH } from "../testing/entry-measures.ts";
-import { ATTACH_WINDOW_MS, MAX_OPEN_UPLOADS, MAX_PHOTO_BYTES, SWEEP_BATCH } from "./limits.ts";
+import { instant } from "../time/instant.ts";
+import {
+  ATTACH_WINDOW_MS,
+  MAX_OPEN_UPLOADS,
+  MAX_PHOTO_BYTES,
+  SWEEP_BATCH,
+  UPLOAD_URL_TTL_SECONDS,
+} from "./limits.ts";
 import { OBJECT_KEY_PATTERN } from "./object-key.ts";
 import { reservePhoto } from "./photo-fixtures.ts";
 import {
@@ -154,6 +161,24 @@ describe("requestEntryPhotoUpload: the cap and the lazy cleanup", () => {
     ).toBe(true);
   });
 
+  it("W1: abandoned reservations stop counting once their upload URL is dead, long before attachBy", async () => {
+    const { app, given, input } = await setup();
+    for (let n = 0; n < MAX_OPEN_UPLOADS; n++) {
+      await reservePhoto(app, given.andrea, given, given.andreaCommitment);
+    }
+    const ttlMs = UPLOAD_URL_TTL_SECONDS * 1000;
+    // Still inside the URL TTL: the cap holds.
+    const inside = atInstant(app, instant(NOW + ttlMs - 1));
+    expect(await requestEntryPhotoUpload(inside, given.andrea, input())).toEqual({
+      ok: false,
+      error: { kind: "TooManyPhotoUploads" },
+    });
+    // Past the URL TTL but well before attachBy: the sixth succeeds.
+    const dead = atInstant(app, instant(NOW + ttlMs));
+    expect(NOW + ttlMs).toBeLessThan(NOW + ATTACH_WINDOW_MS);
+    expect((await requestEntryPhotoUpload(dead, given.andrea, input())).ok).toBe(true);
+  });
+
   it("SC-U5/U6/U7: once reservations expire they stop counting and are cleaned, objects included", async () => {
     const { app, given, input } = await setup();
     const reserved: Awaited<ReturnType<typeof reservePhoto>>[] = [];
@@ -196,7 +221,7 @@ describe("requestEntryPhotoUpload: the cap and the lazy cleanup", () => {
     const open = await app.uow.read(({ entryPhotos }) =>
       entryPhotos.countOpen(
         given.andrea ? ("member-andrea" as never) : ("" as never),
-        later.clock.now(),
+        instant(later.clock.now() - UPLOAD_URL_TTL_SECONDS * 1000),
       ),
     );
     expect(remaining).toEqual([]); // everything it released it also purged

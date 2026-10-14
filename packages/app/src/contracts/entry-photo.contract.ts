@@ -25,6 +25,8 @@ const VICTOR = memberId(uuid(0xa2));
 const COMMITMENT = commitmentId(uuid(0xc01));
 const T0 = 1_791_987_120_000; // 2026-10-14T14:12:00Z
 const NOW = instant(T0);
+/** Reservations created at or before this instant have a dead upload URL (5 min TTL) at NOW. */
+const LIVE_SINCE = instant(T0 - 300_000);
 
 const keyOf = (n: number) => `o/${n.toString(16).padStart(32, "0")}.jpg`;
 
@@ -42,7 +44,7 @@ const photo = (n: number, extra: Partial<EntryPhoto> = {}): EntryPhoto =>
   });
 
 const expired = (n: number, extra: Partial<EntryPhoto> = {}) =>
-  photo(n, { attachBy: instant(T0 - 1_000), ...extra });
+  photo(n, { createdAt: instant(T0 - 2_000_000 + n), attachBy: instant(T0 - 1_000), ...extra });
 const released = (n: number, extra: Partial<EntryPhoto> = {}) =>
   photo(n, { status: "released", version: 1, ...extra });
 const attached = (n: number, extra: Partial<EntryPhoto> = {}) =>
@@ -146,10 +148,23 @@ export function describeEntryPhotoRepositoryContract(
       await repository.add(attached(4));
       await repository.add(released(5));
       await repository.add(photo(6, { memberId: VICTOR }));
-      expect(await repository.countOpen(ANDREA, NOW)).toBe(2);
-      expect(await repository.countOpen(VICTOR, NOW)).toBe(1);
-      // attachBy itself is already expired
-      expect(await repository.countOpen(ANDREA, instant(T0 + 600_000))).toBe(0);
+      expect(await repository.countOpen(ANDREA, LIVE_SINCE)).toBe(2);
+      expect(await repository.countOpen(VICTOR, LIVE_SINCE)).toBe(1);
+      // once the upload URL TTL has passed for all of them, none counts
+      expect(await repository.countOpen(ANDREA, instant(T0 + 1))).toBe(0);
+    });
+
+    it("countOpen ignores a pending photo whose upload URL is dead although attachBy is still in the future", async () => {
+      const repository = await setup();
+      // created 6 min ago: URL (5 min) is dead, attachBy (30 min) is not
+      await repository.add(
+        photo(1, { createdAt: instant(T0 - 360_000), attachBy: instant(T0 + 1_440_000) }),
+      );
+      // created 4 min ago: URL still live
+      await repository.add(
+        photo(2, { createdAt: instant(T0 - 240_000), attachBy: instant(T0 + 1_560_000) }),
+      );
+      expect(await repository.countOpen(ANDREA, LIVE_SINCE)).toBe(1);
     });
 
     it("releaseExpired releases the member's expired pending photos and returns them, bumped", async () => {
