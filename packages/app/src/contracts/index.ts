@@ -7,6 +7,14 @@
  */
 
 export { describeCircleRepositoryContract } from "./circle.contract.ts";
+export type {
+  EncouragementContractSubject,
+  NudgeDismissalContractSubject,
+} from "./encouragement.contract.ts";
+export {
+  describeEncouragementRepositoryContract,
+  describeNudgeDismissalRepositoryContract,
+} from "./encouragement.contract.ts";
 export { describeEntryRepositoryContract } from "./entry.contract.ts";
 export type { EntryPhotoContractSubject } from "./entry-photo.contract.ts";
 export { describeEntryPhotoRepositoryContract } from "./entry-photo.contract.ts";

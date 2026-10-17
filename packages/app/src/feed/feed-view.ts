@@ -3,7 +3,7 @@ import type { Circle, Member } from "../circle/circle.ts";
 import type { CommitmentRecord } from "../commitment/commitment.ts";
 import type { Habit } from "../habit/habit.ts";
 import type { PauseReason } from "../pause/pause-request.ts";
-import type { FeedReaction } from "../reaction/feed-reaction.ts";
+import type { FeedReaction, ReactionEmoji } from "../reaction/feed-reaction.ts";
 import { emptyCounts, type Reactions, summarizeReactions } from "../reaction/reaction-counts.ts";
 import { canSeeDetail } from "../score/privacy.ts";
 import type { Season } from "../season/season.ts";
@@ -82,6 +82,12 @@ export type FeedItemView = FeedItemBase &
       }
     | { readonly kind: "seasonStarted"; readonly lengthWeeks: number }
     | { readonly kind: "seasonClosed" }
+    /** "X te envió 🙌": only the recipient is ever given this item, and it says nothing else. */
+    | {
+        readonly kind: "encouragementReceived";
+        readonly senderId: MemberId;
+        readonly emoji: ReactionEmoji;
+      }
   );
 
 export interface FeedViewInput {
@@ -107,6 +113,28 @@ function visibleCommitment(
 }
 
 /**
+ * What the commitments are about, for ONE viewer: the habit's name and icon only when the viewer
+ * may see EVERY one of them in detail; a private commitment, a missing one or a missing habit is
+ * a private subject. Shared by the feed items and the nudge, so the mask is decided once.
+ */
+export function feedSubjectOf(
+  season: Season,
+  habits: readonly Habit[],
+  viewerId: MemberId,
+  commitmentIds: readonly CommitmentId[],
+): FeedSubject {
+  const visible = commitmentIds.map((id) => visibleCommitment(season, id, viewerId));
+  const first = visible[0];
+  if (first === undefined || first === null || visible.some((c) => c === null)) {
+    return { kind: "private" };
+  }
+  const habit = habits.find((candidate) => candidate.id === first.habitId);
+  return habit === undefined
+    ? { kind: "private" }
+    : { kind: "habit", name: habit.name, icon: habit.icon };
+}
+
+/**
  * Presents the records of a page for ONE viewer (ADR-0018, F8, F9, F12). Everything a peer must
  * not see is decided here and nowhere else: a private or unknown commitment becomes a private
  * subject and loses its value and week counts; a left member's items are not reactable and show
@@ -114,19 +142,10 @@ function visibleCommitment(
  */
 export function presentFeedItems(input: FeedViewInput): FeedItemView[] {
   const { season, circle, viewer } = input;
-  const habits = new Map(input.habits.map((habit) => [habit.id, habit]));
   const activeIds = new Set(circle.members.filter((m) => m.status === "active").map((m) => m.id));
 
   function subjectOf(commitmentIds: readonly CommitmentId[]): FeedSubject {
-    const visible = commitmentIds.map((id) => visibleCommitment(season, id, viewer.id));
-    const first = visible[0];
-    if (first === undefined || first === null || visible.some((c) => c === null)) {
-      return { kind: "private" };
-    }
-    const habit = habits.get(first.habitId);
-    return habit === undefined
-      ? { kind: "private" }
-      : { kind: "habit", name: habit.name, icon: habit.icon };
+    return feedSubjectOf(season, input.habits, viewer.id, commitmentIds);
   }
 
   function reactionsOf(key: string, owner: MemberId, kind: FeedRecord["kind"]): Reactions {
@@ -231,6 +250,15 @@ export function presentFeedItems(input: FeedViewInput): FeedItemView[] {
         return { kind: "seasonStarted", key, onDate, at, lengthWeeks: record.lengthWeeks };
       case "seasonClosed":
         return { kind: "seasonClosed", key, onDate, at };
+      case "encouragementReceived":
+        return {
+          kind: "encouragementReceived",
+          key,
+          onDate,
+          at,
+          senderId: record.senderId,
+          emoji: record.emoji,
+        };
     }
   }
 

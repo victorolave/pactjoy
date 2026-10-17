@@ -1,5 +1,6 @@
 import type { CommitmentId, Fraction, MemberId } from "@pactjoy/engine";
 import type { PauseReason } from "../pause/pause-request.ts";
+import type { ReactionEmoji } from "../reaction/feed-reaction.ts";
 import type { HabitId } from "../shared/ids.ts";
 import type { Instant } from "../time/instant.ts";
 import type { LocalDate } from "../time/local-date.ts";
@@ -61,6 +62,16 @@ export type FeedRecord = FeedRecordBase &
       }
     | { readonly kind: "seasonStarted"; readonly lengthWeeks: number }
     | { readonly kind: "seasonClosed" }
+    /**
+     * Viewer-specific, unlike every other kind: an encouragement the viewer RECEIVED (ADR-0018,
+     * F14). It is added by `circleFeed`, never by `deriveFeed`, and says nothing about the week
+     * or the habit that prompted it.
+     */
+    | {
+        readonly kind: "encouragementReceived";
+        readonly senderId: MemberId;
+        readonly emoji: ReactionEmoji;
+      }
   );
 
 export type FeedRecordKind = FeedRecord["kind"];

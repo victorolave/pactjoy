@@ -82,6 +82,25 @@ export { commitmentToEngine } from "./commitment/to-engine.ts";
 export type { MeasureInput, ValidateCommitmentError } from "./commitment/validate-commitment.ts";
 export { validateCommitment } from "./commitment/validate-commitment.ts";
 export type {
+  DismissNudgeDeps,
+  DismissNudgeError,
+  DismissNudgeInput,
+} from "./encouragement/dismiss-nudge.ts";
+export { dismissNudge } from "./encouragement/dismiss-nudge.ts";
+export type { EncouragementRepository } from "./encouragement/encouragement.repository.ts";
+export type { Encouragement, NudgeDismissal } from "./encouragement/encouragement.ts";
+export type { EncouragementNotice } from "./encouragement/encouragement-notice.ts";
+export { encouragementNotice } from "./encouragement/encouragement-notice.ts";
+export type { NudgeDismissalRepository } from "./encouragement/nudge-dismissal.repository.ts";
+export type { NudgeSuggestion } from "./encouragement/nudge-for-viewer.ts";
+export type {
+  SendEncouragementDeps,
+  SendEncouragementError,
+  SendEncouragementInput,
+  SendEncouragementResult,
+} from "./encouragement/send-encouragement.ts";
+export { sendEncouragement } from "./encouragement/send-encouragement.ts";
+export type {
   DeleteEntryDeps,
   DeleteEntryError,
   DeleteEntryInput,

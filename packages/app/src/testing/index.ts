@@ -15,10 +15,12 @@ export type {
 } from "./builders.ts";
 export {
   circleFixture,
+  encouragementFixture,
   entryPhotoFixture,
   feedReactionFixture,
   habitFixture,
   memberFixture,
+  nudgeDismissalFixture,
   pauseRequestFixture,
   reviewFixture,
   seasonClosureFixture,
@@ -30,6 +32,8 @@ export type { FixedOffsetTimeZoneOptions } from "./fixed-time-zone.ts";
 export { createFixedOffsetTimeZone } from "./fixed-time-zone.ts";
 export type { InMemoryCircleRepository } from "./in-memory-circle-repository.ts";
 export { createInMemoryCircleRepository } from "./in-memory-circle-repository.ts";
+export type { InMemoryEncouragementRepository } from "./in-memory-encouragement-repository.ts";
+export { createInMemoryEncouragementRepository } from "./in-memory-encouragement-repository.ts";
 export type { InMemoryEntryPhotoRepository } from "./in-memory-entry-photo-repository.ts";
 export { createInMemoryEntryPhotoRepository } from "./in-memory-entry-photo-repository.ts";
 export type { InMemoryEntryRepository } from "./in-memory-entry-repository.ts";
@@ -43,6 +47,8 @@ export type { InMemoryFeedReactionRepository } from "./in-memory-feed-reaction-r
 export { createInMemoryFeedReactionRepository } from "./in-memory-feed-reaction-repository.ts";
 export type { InMemoryHabitRepository } from "./in-memory-habit-repository.ts";
 export { createInMemoryHabitRepository } from "./in-memory-habit-repository.ts";
+export type { InMemoryNudgeDismissalRepository } from "./in-memory-nudge-dismissal-repository.ts";
+export { createInMemoryNudgeDismissalRepository } from "./in-memory-nudge-dismissal-repository.ts";
 export type { InMemoryPauseRequestRepository } from "./in-memory-pause-request-repository.ts";
 export { createInMemoryPauseRequestRepository } from "./in-memory-pause-request-repository.ts";
 export type { InMemoryReviewRepository } from "./in-memory-review-repository.ts";

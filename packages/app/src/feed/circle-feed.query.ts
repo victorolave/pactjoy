@@ -1,5 +1,10 @@
 import type { MemberId } from "@pactjoy/engine";
 import type { Circle } from "../circle/circle.ts";
+import {
+  loadNudgeSuggestion,
+  loadReceivedRecords,
+  type NudgeSuggestion,
+} from "../encouragement/nudge-for-viewer.ts";
 import type { ScoreQueryDeps } from "../score/score-context.ts";
 import type { Actor } from "../shared/actor.ts";
 import type { SeasonId } from "../shared/ids.ts";
@@ -31,6 +36,11 @@ export interface CircleFeed {
   readonly items: readonly FeedItemView[];
   /** The cursor of the next page, or `null` on the last one. */
   readonly nextCursor: string | null;
+  /**
+   * The one encouragement the viewer may be offered now (ADR-0018, F13), on the FIRST page only;
+   * `null` on later pages and when there is none.
+   */
+  readonly nudge: NudgeSuggestion | null;
 }
 
 export type CircleFeedError = { readonly kind: "InvalidFeedCursor" };
@@ -68,14 +78,16 @@ export async function circleFeed(
     const circle = await repos.circles.findActiveByUser(actor.userId);
     const viewer = circle ? activeViewerOf(circle, actor) : undefined;
     if (!circle || !viewer) {
-      return ok({ seasonId: null, members: [], items: [], nextCursor: null });
+      return ok({ seasonId: null, members: [], items: [], nextCursor: null, nudge: null });
     }
     const members = membersOf(circle, viewer.id);
     const context = await feedContextOf(deps, repos, circle, deps.clock.now());
-    if (!context) return ok({ seasonId: null, members, items: [], nextCursor: null });
+    if (!context) return ok({ seasonId: null, members, items: [], nextCursor: null, nudge: null });
 
     const world = await loadFeedWorld(deps, repos, context);
-    const page = pageOf(sortFeed(deriveFeed(world)), position);
+    // The viewer's own received encouragements join the derived records before sorting and paging.
+    const received = await loadReceivedRecords(repos, context.season, circle, viewer);
+    const page = pageOf(sortFeed([...deriveFeed(world), ...received]), position);
     const items = presentFeedItems({
       records: page.items,
       season: context.season,
@@ -84,6 +96,15 @@ export async function circleFeed(
       viewer,
       reactions: await repos.feedReactions.listBySeason(context.season.id),
     });
-    return ok({ seasonId: context.season.id, members, items, nextCursor: page.nextCursor });
+    // The suggestion rides on the first page only; later pages are just more history.
+    const nudge =
+      position === null ? await loadNudgeSuggestion(repos, context, world, viewer) : null;
+    return ok({
+      seasonId: context.season.id,
+      members,
+      items,
+      nextCursor: page.nextCursor,
+      nudge,
+    });
   });
 }

@@ -1,4 +1,6 @@
 import type { CircleRepository } from "../circle/circle.repository.ts";
+import type { EncouragementRepository } from "../encouragement/encouragement.repository.ts";
+import type { NudgeDismissalRepository } from "../encouragement/nudge-dismissal.repository.ts";
 import type { EntryRepository } from "../entry/entry.repository.ts";
 import type { EntryPhotoRepository } from "../entry-photo/entry-photo.repository.ts";
 import type { HabitRepository } from "../habit/habit.repository.ts";
@@ -15,12 +17,16 @@ import type { SeasonRepository } from "../season/season.repository.ts";
  */
 export interface Repositories {
   readonly circles: CircleRepository;
+  /** Readable by their recipient only: use it only from `src/encouragement/` (`encouragement-guard.test.ts`). */
+  readonly encouragements: EncouragementRepository;
   readonly entries: EntryRepository;
   /** Confined to `src/entry-photo/` (`entry-photo-guard.test.ts`): a row carries the object key, which never reaches a peer. */
   readonly entryPhotos: EntryPhotoRepository;
   /** Reactions to feed items (ADR-0018). Counts are public, so no guard confines it; the sentinels cover what leaves. */
   readonly feedReactions: FeedReactionRepository;
   readonly habits: HabitRepository;
+  /** Owner-only: use it only from `src/encouragement/` (`encouragement-guard.test.ts`), never for a peer. */
+  readonly nudgeDismissals: NudgeDismissalRepository;
   /** Read it through `loadEffectivePauses`, never directly (ADR-0013). */
   readonly pauses: PauseRequestRepository;
   /** Owner-only: read it only from `src/review/` (`review-guard.test.ts`), never for a peer. */

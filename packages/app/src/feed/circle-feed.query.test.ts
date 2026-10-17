@@ -29,7 +29,7 @@ describe("circleFeed: which season it shows (F2)", () => {
     const result = await circleFeed(world.at(2), { userId: userId("stranger") }, NO_CURSOR);
     expect(result).toEqual({
       ok: true,
-      value: { seasonId: null, members: [], items: [], nextCursor: null },
+      value: { seasonId: null, members: [], items: [], nextCursor: null, nudge: null },
     });
   });
 

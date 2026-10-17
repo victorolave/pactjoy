@@ -2,6 +2,7 @@ import { fromInt, seasonDay } from "@pactjoy/engine";
 import { describe, expect, it } from "vitest";
 import { leaveCircle } from "../circle/leave-circle.ts";
 import { buildCommitment, commitmentId } from "../commitment/commitment.ts";
+import { sendEncouragement } from "../encouragement/send-encouragement.ts";
 import { seedPause } from "../pause/pause-seed.ts";
 import { reactToFeedItem } from "../reaction/react-to-feed-item.ts";
 import { givenReviewWorld, type ReviewWorld } from "../review/review-fixtures.ts";
@@ -97,7 +98,12 @@ async function givenSecretWorld(): Promise<ReviewWorld> {
     const season = await repos.seasons.get(SEASON);
     if (!season) throw new Error("no season");
     await repos.seasons.save(
-      { ...season, commitments: [...season.commitments, secret], version: season.version + 1 },
+      {
+        ...season,
+        // The private commitment is ALL Andrea tracks, so every case about her is about it.
+        commitments: [...season.commitments.filter((c) => c.memberId !== ANDREA), secret],
+        version: season.version + 1,
+      },
       season.version,
     );
     await repos.habits.save(
@@ -254,5 +260,65 @@ describe("the feed leaks nothing private to a peer (REQ-X1)", () => {
     expect(JSON.stringify(feed.value)).toContain("SENTINEL_HABIT");
     expect(JSON.stringify(feed.value)).not.toContain("SENTINEL_NOTE");
     expect(JSON.stringify(feed.value)).not.toContain("SENTINEL_PHOTO");
+  });
+});
+
+describe("the nudge and the encouragement leak nothing private either (REQ-X1, X2, N7, N8)", () => {
+  const ANDREAS_WEEK = 2;
+
+  it("offers Victor a case about Andrea's private commitment as a private subject, with no count", async () => {
+    const world = await givenSecretWorld();
+    const feed = await victorsFeed(world);
+    expect(feed.nudge).toEqual({
+      seasonId: SEASON,
+      targetId: ANDREA,
+      week: ANDREAS_WEEK,
+      subject: { kind: "private" },
+    });
+    expectClean(feed.nudge);
+    expect(Object.keys(feed.nudge ?? {}).sort()).toEqual([
+      "seasonId",
+      "subject",
+      "targetId",
+      "week",
+    ]);
+  });
+
+  it("gives Andrea only who sent what, and nobody else anything", async () => {
+    const world = await givenSecretWorld();
+    const sent = await sendEncouragement(world.at(DAY), world.victor, {
+      seasonId: SEASON,
+      recipientId: ANDREA,
+      week: ANDREAS_WEEK,
+      emoji: "heart",
+    });
+    expect(sent).toEqual({ ok: true, value: { recipientId: ANDREA, week: ANDREAS_WEEK } });
+    expectClean(sent);
+
+    const hers = await circleFeed(world.at(DAY), world.andrea, {});
+    if (!hers.ok) throw new Error("feed");
+    const received = hers.value.items.filter((i) => i.kind === "encouragementReceived");
+    expect(received).toHaveLength(1);
+    expect(Object.keys(received[0] ?? {}).sort()).toEqual([
+      "at",
+      "emoji",
+      "key",
+      "kind",
+      "onDate",
+      "senderId",
+    ]);
+    // The sender gets no echo, and sees no dismissal or encouragement of anyone's.
+    const his = await victorsFeed(world);
+    expect(his.items.some((i) => i.kind === "encouragementReceived")).toBe(false);
+    expect(his.nudge).toBeNull();
+    expectClean(his);
+  });
+
+  it("offers nothing about Andrea once she has left", async () => {
+    const world = await givenSecretWorld();
+    await leaveCircle(world.at(DAY), world.andrea, { circleId: circleId("circle-1") });
+    const feed = await victorsFeed(world);
+    expect(feed.nudge).toBeNull();
+    expectClean(feed);
   });
 });
