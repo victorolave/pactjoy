@@ -197,6 +197,91 @@ describe("dispatchNotifications: retries", () => {
     expect(push.sent).toHaveLength(5);
   });
 
+  it("W3: a morning notice that exhausts its retries rolls over to the next day with fresh attempts", async () => {
+    const { app, world, push } = await given();
+    await seed(
+      app,
+      [
+        noticeFor(world, {
+          notBefore: at("2026-10-06", 9),
+          expiresAt: at("2026-10-06", 22),
+          rolloversLeft: 1,
+        }),
+      ],
+      [device(world, 1)],
+    );
+    push.respondWith(() => ({ kind: "retry", retryAfterSeconds: null }));
+    let now: number = at("2026-10-06", 9);
+    for (let attempt = 1; attempt <= 5; attempt++) {
+      await dispatch(app, push, instant(now));
+      now = only(app).notBefore;
+    }
+    expect(only(app)).toMatchObject({
+      state: "pending",
+      attempts: 0,
+      rolloversLeft: 0,
+      notBefore: at("2026-10-07", 9),
+      expiresAt: at("2026-10-07", 22),
+    });
+    // The next day's five attempts end it for good.
+    for (let attempt = 1; attempt <= 5; attempt++) {
+      await dispatch(app, push, instant(now));
+      now = only(app).notBefore;
+    }
+    expect(only(app)).toMatchObject({ state: "failed", outcome: "exhausted" });
+  });
+
+  it("W3: a retried notice that crosses 22:00 rolls over with its attempts reset", async () => {
+    const { app, world, push } = await given();
+    await seed(
+      app,
+      [
+        noticeFor(world, {
+          notBefore: at("2026-10-06", 21, 30),
+          expiresAt: at("2026-10-06", 22),
+          rolloversLeft: 1,
+        }),
+      ],
+      [device(world, 1)],
+    );
+    push.respondWith(() => ({ kind: "retry", retryAfterSeconds: null }));
+    await dispatch(app, push, at("2026-10-06", 21, 30));
+    await dispatch(app, push, at("2026-10-06", 21, 31));
+    await dispatch(app, push, at("2026-10-06", 22, 5));
+    expect(only(app)).toMatchObject({ state: "pending", attempts: 0, rolloversLeft: 0 });
+  });
+
+  it("W4: a retry that would land past the notice's window rolls over, or drops it when none is left", async () => {
+    const { app, world, push } = await given();
+    await seed(
+      app,
+      [
+        noticeFor(world, {
+          dedupeKey: "rolls",
+          expiresAt: at("2026-10-06", 12, 10),
+          rolloversLeft: 1,
+        }),
+        noticeFor(world, { dedupeKey: "drops", expiresAt: at("2026-10-06", 12, 10) }),
+      ],
+      [device(world, 1)],
+    );
+    push.respondWith(() => ({ kind: "retry", retryAfterSeconds: 7 * 86_400 }));
+    await dispatch(app, push, NOON);
+    const rows = app.notifications.all();
+    expect(rows.find((n) => n.dedupeKey === "drops")).toMatchObject({
+      state: "dropped",
+      outcome: "expired",
+    });
+    expect(rows.find((n) => n.dedupeKey === "rolls")).toMatchObject({
+      state: "pending",
+      attempts: 0,
+      notBefore: at("2026-10-07", 9),
+    });
+    for (const row of rows) {
+      if (row.state === "pending") expect(row.notBefore).toBeLessThan(row.expiresAt);
+    }
+  });
+
   it("honours Retry-After when the push service gives one", async () => {
     const { app, world, push } = await given();
     await seed(app, [noticeFor(world)], [device(world, 1)]);

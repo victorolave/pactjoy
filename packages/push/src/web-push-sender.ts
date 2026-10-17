@@ -19,7 +19,10 @@ export type WebPushFetch = (
 
 /** How long one push service may take before the send counts as a retry. */
 const DEFAULT_TIMEOUT_MS = 10_000;
-/** A VAPID or clock problem on our side (401, 403) waits an hour instead of failing the notice. */
+/**
+ * An hour: what a VAPID or clock problem on our side (401, 403) waits instead of failing the
+ * notice, and the most a push service's Retry-After may ask for.
+ */
 const AUTH_RETRY_SECONDS = 3600;
 
 export interface WebPushSenderOptions {
@@ -66,9 +69,11 @@ async function topicFor(collapseKey: string): Promise<string> {
   return toBase64Url(new Uint8Array(digest)).slice(0, 32);
 }
 
+/** A push service's Retry-After, in seconds, capped at an hour so a notice is never parked for long. */
 function retryAfter(value: string | null): number | null {
   if (value === null || !/^\d+$/.test(value.trim())) return null;
-  return Number(value.trim());
+  const seconds = Number(value.trim());
+  return seconds > AUTH_RETRY_SECONDS ? AUTH_RETRY_SECONDS : seconds;
 }
 
 function outcomeOf(status: number, headers: { get(name: string): string | null }): PushOutcome {

@@ -133,6 +133,17 @@ describe("createWebPushSender", () => {
     });
   });
 
+  it("caps a huge Retry-After at one hour", async () => {
+    const { push } = await sender(async () => ({
+      status: 503,
+      headers: { "retry-after": "999999999" },
+    }));
+    expect(await push.send(await device(), MESSAGE, NOW)).toEqual({
+      kind: "retry",
+      retryAfterSeconds: 3600,
+    });
+  });
+
   it("never follows a redirect and gives up on a push service that hangs (as a retry)", async () => {
     const keys = await vapidKeys();
     const seen: { redirect: string | undefined; aborted: boolean }[] = [];

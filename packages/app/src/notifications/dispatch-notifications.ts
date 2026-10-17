@@ -47,6 +47,8 @@ export const MAX_ATTEMPTS = 5;
 /** Wait after attempt n (1-based) when the push service gave no Retry-After. */
 const BACKOFF_MINUTES = [1, 5, 15, 60] as const;
 const RETENTION_MS = 7 * DAY_MS;
+/** The longest a push service's Retry-After may delay a notice (the adapter caps it too). */
+const MAX_RETRY_WAIT_MS = 60 * MIN_MS;
 const PURGE_LIMIT = 200;
 /** The encoded payload stays far below what one aes128gcm record and every push service take. */
 export const MAX_PAYLOAD_BYTES = 3072;
@@ -128,9 +130,25 @@ export async function dispatchNotifications(
       });
       return state;
     };
-    const later = async (next: NoticeReschedule, as: Handled): Promise<Handled> => {
-      await write((repos) => repos.notifications.reschedule(notice.dedupeKey, fence, next));
+    const later = async (
+      next: NoticeReschedule,
+      as: Handled,
+      gone: readonly PushSubscriptionId[] = [],
+    ): Promise<Handled> => {
+      await write(async (repos) => {
+        for (const id of gone) await repos.pushSubscriptions.removeById(id);
+        await repos.notifications.reschedule(notice.dedupeKey, fence, next);
+      });
       return as;
+    };
+    /**
+     * A morning notice's one rollover: the next day's 09:00-22:00 window, with its attempts reset so
+     * that day gets a full set of retries (W3).
+     */
+    const rollOver = (gone: readonly PushSubscriptionId[] = []): Promise<Handled> => {
+      const day = deps.timeZone.localTimeAt(notice.expiresAt, notice.timeZone).date;
+      const window = morningWindow(addDays(day, 1), notice.timeZone, deps.timeZone);
+      return later({ ...window, rolloversLeft: 0, attempts: 0 }, "deferred", gone);
     };
     // A deferral gives the claim's attempt back.
     const giveBack = fence - 1;
@@ -151,10 +169,7 @@ export async function dispatchNotifications(
     if (deps.clock.now() - now >= LEASE_MS * BUDGET_SHARE) return unchanged();
 
     if (notice.expiresAt <= now) {
-      if (notice.rolloversLeft === 0) return end("dropped", "expired");
-      const day = deps.timeZone.localTimeAt(notice.expiresAt, notice.timeZone).date;
-      const window = morningWindow(addDays(day, 1), notice.timeZone, deps.timeZone);
-      return later({ ...window, rolloversLeft: 0, attempts: giveBack }, "deferred");
+      return notice.rolloversLeft === 0 ? end("dropped", "expired") : rollOver();
     }
     // Web Push is off: nothing is sent, the notice waits (or expires above).
     if (push === null) return unchanged();
@@ -196,23 +211,31 @@ export async function dispatchNotifications(
 
     const retries = outcomes.flatMap((o) => (o.outcome.kind === "retry" ? [o.outcome] : []));
     if (retries.length > 0) {
-      if (notice.attempts >= MAX_ATTEMPTS) return end("failed", "exhausted", gone);
       const hinted = retries.flatMap((r) =>
         r.retryAfterSeconds === null ? [] : [r.retryAfterSeconds],
       );
-      const waitMs =
+      const asked =
         hinted.length > 0
           ? hinted.reduce((a, b) => (a > b ? a : b)) * 1000
           : (BACKOFF_MINUTES[notice.attempts - 1] ?? 60) * MIN_MS;
-      await write(async (repos) => {
-        for (const id of gone) await repos.pushSubscriptions.removeById(id);
-        await repos.notifications.reschedule(notice.dedupeKey, fence, {
+      const waitMs = asked > MAX_RETRY_WAIT_MS ? MAX_RETRY_WAIT_MS : asked;
+      // No retry is ever scheduled past the notice's window (W4): out of attempts, or past it, a
+      // morning notice rolls over with fresh attempts (W3); otherwise it ends here.
+      const outOfAttempts = notice.attempts >= MAX_ATTEMPTS;
+      if (outOfAttempts || now + waitMs >= notice.expiresAt) {
+        if (notice.rolloversLeft === 1) return rollOver(gone);
+        return outOfAttempts ? end("failed", "exhausted", gone) : end("dropped", "expired", gone);
+      }
+      await later(
+        {
           notBefore: instant(now + waitMs),
           expiresAt: notice.expiresAt,
           rolloversLeft: notice.rolloversLeft,
           attempts: notice.attempts,
-        });
-      });
+        },
+        "retried",
+        gone,
+      );
       return "retried";
     }
     if (outcomes.some((o) => o.outcome.kind === "rejected")) return end("failed", "rejected", gone);
