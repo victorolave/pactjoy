@@ -2,6 +2,11 @@ import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { pwaOptions } from "../pwa.ts";
+import {
+  GLOB_PATTERNS,
+  NAVIGATE_FALLBACK,
+  NAVIGATE_FALLBACK_DENYLIST,
+} from "../src/sw/shell-config.ts";
 
 /** The installable shell (WF-R7): a manifest, a precached shell, and nothing of the API cached. */
 
@@ -59,34 +64,56 @@ describe("web app manifest", () => {
   });
 });
 
-describe("service worker (WF-R7)", () => {
-  const workbox = pwaOptions.workbox ?? {};
+describe("service worker (WF-R7, ADR-0017: a hand-written worker for Web Push)", () => {
+  const SW = readFileSync(join(WEB_ROOT, "src/sw.ts"), "utf8");
+  const code = SW.split("\n")
+    .filter((line) => !line.trim().startsWith("//") && !line.trim().startsWith("*"))
+    .join("\n");
 
   it("updates itself and does not register in dev", () => {
     expect(pwaOptions.registerType).toBe("autoUpdate");
     expect(pwaOptions.devOptions?.enabled).toBe(false);
+    // autoUpdate with a hand-written worker: it must take over at once itself.
+    expect(code).toContain("self.skipWaiting()");
+    expect(code).toContain("clientsClaim()");
   });
 
-  it("precaches the shell and the fonts", () => {
-    const patterns = (workbox.globPatterns ?? []).join(" ");
+  it("builds src/sw.ts with injectManifest", () => {
+    expect(pwaOptions.strategies).toBe("injectManifest");
+    expect(pwaOptions.srcDir).toBe("src");
+    expect(pwaOptions.filename).toBe("sw.ts");
+    expect(pwaOptions.workbox).toBeUndefined();
+  });
+
+  it("precaches the shell and the fonts, and falls back to index.html for navigations", () => {
+    const patterns = (pwaOptions.injectManifest?.globPatterns ?? []).join(" ");
     for (const extension of ["js", "css", "html", "woff2", "svg", "png", "webp", "webmanifest"]) {
       expect(patterns, extension).toContain(extension);
     }
-    expect(workbox.navigateFallback).toBe("/index.html");
+    expect(pwaOptions.injectManifest?.globPatterns).toEqual(GLOB_PATTERNS);
+    expect(NAVIGATE_FALLBACK).toBe("/index.html");
+    expect(code).toContain("precacheAndRoute(self.__WB_MANIFEST)");
+    expect(code).toContain("cleanupOutdatedCaches()");
+    expect(code).toMatch(/createHandlerBoundToURL\(NAVIGATE_FALLBACK\)/);
+    expect(code).toMatch(/denylist:\s*\[\.\.\.NAVIGATE_FALLBACK_DENYLIST\]/);
   });
 
-  it("never caches the API: no runtime caching, and no navigation fallback for it", () => {
-    expect(workbox.runtimeCaching).toBeUndefined();
-    const denied = (workbox.navigateFallbackDenylist ?? []).map((pattern) => pattern.source);
+  it("never caches the API: one navigation route, no runtime strategies, no fallback for it", () => {
+    expect(code).not.toMatch(/workbox-strategies|runtimeCaching|CacheFirst|NetworkFirst/);
+    expect(code.match(/registerRoute\(/g)).toHaveLength(1);
+    const denied = NAVIGATE_FALLBACK_DENYLIST.map((pattern) => pattern.source);
     expect(denied.some((source) => source.includes("functions"))).toBe(true);
     expect(denied.some((source) => source.includes("api"))).toBe(true);
     for (const path of ["/functions/v1/api/me/today", "/api/me/today"]) {
-      expect((workbox.navigateFallbackDenylist ?? []).some((pattern) => pattern.test(path))).toBe(
-        true,
-      );
+      expect(NAVIGATE_FALLBACK_DENYLIST.some((pattern) => pattern.test(path))).toBe(true);
     }
-    expect(
-      (workbox.navigateFallbackDenylist ?? []).some((pattern) => pattern.test("/season")),
-    ).toBe(false);
+    expect(NAVIGATE_FALLBACK_DENYLIST.some((pattern) => pattern.test("/season"))).toBe(false);
+  });
+
+  it("always shows a notification on push (iOS requires it) and opens the app on a tap", () => {
+    expect(code).toMatch(/addEventListener\("push"/);
+    expect(code).toMatch(/event\.waitUntil\(\s*self\.registration\.showNotification\(/);
+    expect(code).toMatch(/addEventListener\("notificationclick"/);
+    expect(code).toContain("notificationFor(");
   });
 });
