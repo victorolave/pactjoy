@@ -69,7 +69,10 @@ async function decideAll(decisions: readonly string[], confirm = true) {
 const NO_GRADUATION = ["Continuar", "Continuar", "Continuar", "Ajustar"] as const;
 
 describe("36 Resultados", () => {
-  it("shows the season's final figures, privately, before anything is decided", async () => {
+  // The test's own budget stays above the heading's 5 s wait, so the wait, not vitest, reports a miss.
+  it("shows the season's final figures, privately, before anything is decided", {
+    timeout: 15_000,
+  }, async () => {
     open();
     // The first cold render of the file (imports, route, queries) can near the 1 s default on a loaded CI.
     expect(
