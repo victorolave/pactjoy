@@ -51,6 +51,17 @@ export function syncPush(deps: PushDeviceDeps): Promise<PushStep> {
   return run;
 }
 
+/** Settles once the sync in flight for this device (if any) is over; never starts one, never rejects. */
+export function syncSettled(push: PushSubscriptionPort): Promise<void> {
+  const running = inFlight.get(push);
+  return running === undefined
+    ? Promise.resolve()
+    : running.then(
+        () => undefined,
+        () => undefined,
+      );
+}
+
 async function syncOnce(deps: PushDeviceDeps): Promise<PushStep> {
   if (!deps.push.supported()) return "unavailable";
   const { vapidPublicKey } = await deps.api.getPushConfig();

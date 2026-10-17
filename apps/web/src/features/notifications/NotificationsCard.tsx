@@ -5,7 +5,7 @@ import { Card } from "../../ui/Card.tsx";
 import { ListRow } from "../../ui/ListRow.tsx";
 import styles from "./NotificationsCard.module.css";
 import { usePushDevice } from "./PushSync.tsx";
-import { enablePush, type PushStatus, pushStatus, syncPush } from "./push-device.ts";
+import { enablePush, type PushStatus, pushStatus, syncSettled } from "./push-device.ts";
 
 const LABEL: Readonly<Record<PushStatus, string>> = {
   active: "Activadas",
@@ -36,11 +36,9 @@ export function NotificationsCard() {
 
   const refresh = useCallback(async () => {
     try {
-      // With the permission granted, the device is (re)registered first: the start-up sync may still
-      // be running, and this joins it instead of reading a half-done state.
-      if (deps.push.supported() && deps.permission.state() === "granted") {
-        await syncPush(deps).catch(() => undefined);
-      }
+      // Opening Ajustes never subscribes: only the start-up sync and the Activar tap do. It waits for
+      // a start-up sync still running, so it does not read a half-done state.
+      await syncSettled(deps.push);
       setStatus(await pushStatus({ ...deps, installed }));
     } catch {
       setStatus("unavailable");

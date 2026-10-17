@@ -17,6 +17,22 @@ describe("push device lifecycle", () => {
     expect(deps.push.subscribes).toEqual(["BFAKE-VAPID-KEY"]);
   });
 
+  it("opening Ajustes never subscribes silently: only the start-up sync or a tap does", async () => {
+    const user = userEvent.setup();
+    const { deps } = renderApp({ path: "/", myCircle: pairCircleFixture() });
+    await waitFor(() => expect(deps.api.pushDevices.size).toBe(1));
+    // The device lost its subscription after start (the browser dropped it).
+    deps.push.device = null;
+    deps.api.pushDevices.clear();
+
+    await user.click(screen.getByRole("link", { name: "Perfil" }));
+    await user.click(await screen.findByRole("button", { name: "Ajustes" }));
+
+    expect(await screen.findByText("Desactivadas")).toBeInTheDocument();
+    expect(deps.push.subscribes).toHaveLength(1);
+    expect(deps.api.pushDevices.size).toBe(0);
+  });
+
   it("a start without a session, or without the permission, registers nothing", async () => {
     const signedOut = renderApp({ path: "/login", signedIn: false });
     await screen.findByRole("heading", { name: "Entrar" });
