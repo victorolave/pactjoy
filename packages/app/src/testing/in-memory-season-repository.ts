@@ -2,6 +2,7 @@ import type { SeasonRepository } from "../season/season.repository.ts";
 import type { Season } from "../season/season.ts";
 import { ConcurrencyConflict } from "../shared/errors.ts";
 import type { CircleId, SeasonId } from "../shared/ids.ts";
+import { epochDay, type LocalDate } from "../time/local-date.ts";
 
 interface StagedWrite {
   /** `null` stages a deletion. */
@@ -59,6 +60,17 @@ function findLatestByCircle(
   return latest;
 }
 
+/** Active seasons, plus closed ones started on or after the date (`SeasonRepository.listForPlanning`). */
+function listForPlanning(store: ReadonlyMap<SeasonId, Season>, date: LocalDate): Season[] {
+  return [...store.values()].filter(
+    (s) =>
+      s.status === "active" ||
+      (s.status === "closed" &&
+        s.actualStart !== null &&
+        epochDay(s.actualStart) >= epochDay(date)),
+  );
+}
+
 /** Deterministic in-memory {@link SeasonRepository} for tests (ADR-0008). */
 export function createInMemorySeasonRepository(): InMemorySeasonRepository {
   const store = new Map<SeasonId, Season>();
@@ -74,6 +86,10 @@ export function createInMemorySeasonRepository(): InMemorySeasonRepository {
 
     async listByCircle(circleId: CircleId): Promise<readonly Season[]> {
       return listByCircle(store, circleId);
+    },
+
+    async listForPlanning(date: LocalDate): Promise<readonly Season[]> {
+      return listForPlanning(store, date);
     },
 
     async guardVersion(): Promise<void> {
@@ -125,6 +141,10 @@ export function createInMemorySeasonRepository(): InMemorySeasonRepository {
 
         async listByCircle(circleId: CircleId): Promise<readonly Season[]> {
           return listByCircle(viewMap(), circleId);
+        },
+
+        async listForPlanning(date: LocalDate): Promise<readonly Season[]> {
+          return listForPlanning(viewMap(), date);
         },
 
         async guardVersion(id: SeasonId, expectedVersion: number): Promise<void> {

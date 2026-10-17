@@ -14,6 +14,7 @@ export type EntryPhotoId = string & { readonly __brand: "EntryPhotoId" };
 export type PauseRequestId = string & { readonly __brand: "PauseRequestId" };
 export type ReviewId = string & { readonly __brand: "ReviewId" };
 export type SeasonClosureId = string & { readonly __brand: "SeasonClosureId" };
+export type PushSubscriptionId = string & { readonly __brand: "PushSubscriptionId" };
 
 function brand<Brand extends string>(
   kind: Brand,
@@ -68,4 +69,9 @@ export function seasonClosureId(value: string): SeasonClosureId {
 /** @throws {RangeError} if `value` is empty. */
 export function entryPhotoId(value: string): EntryPhotoId {
   return brand("EntryPhotoId", value) as EntryPhotoId;
+}
+
+/** @throws {RangeError} if `value` is empty. */
+export function pushSubscriptionId(value: string): PushSubscriptionId {
+  return brand("PushSubscriptionId", value) as PushSubscriptionId;
 }

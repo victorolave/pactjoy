@@ -28,9 +28,17 @@ import {
   type InMemoryHabitRepository,
 } from "./in-memory-habit-repository.ts";
 import {
+  createInMemoryNotificationOutbox,
+  type InMemoryNotificationOutbox,
+} from "./in-memory-notification-outbox.ts";
+import {
   createInMemoryPauseRequestRepository,
   type InMemoryPauseRequestRepository,
 } from "./in-memory-pause-request-repository.ts";
+import {
+  createInMemoryPushSubscriptionRepository,
+  type InMemoryPushSubscriptionRepository,
+} from "./in-memory-push-subscription-repository.ts";
 import {
   createInMemoryReviewRepository,
   type InMemoryReviewRepository,
@@ -67,7 +75,9 @@ export interface TestApp {
   /** The fake object storage; `upload` plays the browser. Expiry follows the clock the app was created with. */
   readonly evidence: InMemoryEvidenceStorage;
   readonly habits: InMemoryHabitRepository;
+  readonly notifications: InMemoryNotificationOutbox;
   readonly pauses: InMemoryPauseRequestRepository;
+  readonly pushSubscriptions: InMemoryPushSubscriptionRepository;
   readonly reviews: InMemoryReviewRepository;
   readonly seasonClosures: InMemorySeasonClosureRepository;
   readonly seasons: InMemorySeasonRepository;
@@ -90,7 +100,9 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
   const entries = createInMemoryEntryRepository();
   const entryPhotos = createInMemoryEntryPhotoRepository();
   const habits = createInMemoryHabitRepository();
+  const notifications = createInMemoryNotificationOutbox();
   const pauses = createInMemoryPauseRequestRepository();
+  const pushSubscriptions = createInMemoryPushSubscriptionRepository();
   const reviews = createInMemoryReviewRepository();
   const seasonClosures = createInMemorySeasonClosureRepository();
   const seasons = createInMemorySeasonRepository();
@@ -99,7 +111,9 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
     entries,
     entryPhotos,
     habits,
+    notifications,
     pauses,
+    pushSubscriptions,
     reviews,
     seasonClosures,
     seasons,
@@ -116,7 +130,9 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
     entries,
     entryPhotos,
     habits,
+    notifications,
     pauses,
+    pushSubscriptions,
     reviews,
     seasonClosures,
     seasons,
@@ -133,7 +149,9 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
         const entryScope = entries.beginTransaction();
         const entryPhotoScope = entryPhotos.beginTransaction();
         const habitScope = habits.beginTransaction();
+        const notificationScope = notifications.beginTransaction();
         const pauseScope = pauses.beginTransaction();
+        const pushSubscriptionScope = pushSubscriptions.beginTransaction();
         const reviewScope = reviews.beginTransaction();
         const seasonClosureScope = seasonClosures.beginTransaction();
         const seasonScope = seasons.beginTransaction();
@@ -143,7 +161,9 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
             entries: entryScope.repository,
             entryPhotos: entryPhotoScope.repository,
             habits: habitScope.repository,
+            notifications: notificationScope.repository,
             pauses: pauseScope.repository,
+            pushSubscriptions: pushSubscriptionScope.repository,
             reviews: reviewScope.repository,
             seasonClosures: seasonClosureScope.repository,
             seasons: seasonScope.repository,
@@ -153,7 +173,9 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
             entryScope.validate();
             entryPhotoScope.validate();
             habitScope.validate();
+            notificationScope.validate();
             pauseScope.validate();
+            pushSubscriptionScope.validate();
             reviewScope.validate();
             seasonClosureScope.validate();
             seasonScope.validate();
@@ -161,7 +183,9 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
             entryScope.apply();
             entryPhotoScope.apply();
             habitScope.apply();
+            notificationScope.apply();
             pauseScope.apply();
+            pushSubscriptionScope.apply();
             reviewScope.apply();
             seasonClosureScope.apply();
             seasonScope.apply();

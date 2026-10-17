@@ -2,6 +2,8 @@ import type { CircleRepository } from "../circle/circle.repository.ts";
 import type { EntryRepository } from "../entry/entry.repository.ts";
 import type { EntryPhotoRepository } from "../entry-photo/entry-photo.repository.ts";
 import type { HabitRepository } from "../habit/habit.repository.ts";
+import type { NotificationOutboxRepository } from "../notifications/notification-outbox.repository.ts";
+import type { PushSubscriptionRepository } from "../notifications/push-subscription.repository.ts";
 import type { PauseRequestRepository } from "../pause/pause-request.repository.ts";
 import type { ReviewRepository } from "../review/review.repository.ts";
 import type { SeasonClosureRepository } from "../season/closure/season-closure.repository.ts";
@@ -18,8 +20,12 @@ export interface Repositories {
   /** Confined to `src/entry-photo/` (`entry-photo-guard.test.ts`): a row carries the object key, which never reaches a peer. */
   readonly entryPhotos: EntryPhotoRepository;
   readonly habits: HabitRepository;
+  /** Confined to `src/notifications/` (`notification-guard.test.ts`): others call `enqueueNotices` (ADR-0017). */
+  readonly notifications: NotificationOutboxRepository;
   /** Read it through `loadEffectivePauses`, never directly (ADR-0013). */
   readonly pauses: PauseRequestRepository;
+  /** Confined to `src/notifications/` (`notification-guard.test.ts`): an endpoint and its keys stay there. */
+  readonly pushSubscriptions: PushSubscriptionRepository;
   /** Owner-only: read it only from `src/review/` (`review-guard.test.ts`), never for a peer. */
   readonly reviews: ReviewRepository;
   /** Decisions are owner-only: use it only from `src/season/closure/` (`closure-guard.test.ts`). */

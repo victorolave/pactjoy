@@ -157,6 +157,20 @@ export function createPgSeasonRepository(exec: SqlExecutor, mode: BindMode): Sea
       return seasons;
     },
 
+    // Across circles, for the notification planner (ADR-0017); the order is unspecified.
+    async listForPlanning(startedOnOrAfter) {
+      const { rows } = await exec.query<SeasonRow>(
+        `select ${SEASON_COLUMNS} from pactjoy.seasons where status = 'active' or (status = 'closed' and actual_start >= $1::date) order by insert_seq`,
+        [startedOnOrAfter],
+      );
+      const seasons: Season[] = [];
+      for (const row of rows) {
+        const season = await load(row);
+        if (season) seasons.push(season);
+      }
+      return seasons;
+    },
+
     /**
      * Eager read-set guard: `FOR NO KEY UPDATE`, never FOR SHARE (two guards
      * upgrading to a write deadlock) and not FOR UPDATE (it would block the KEY

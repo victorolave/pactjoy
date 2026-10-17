@@ -5,6 +5,7 @@ import {
   entryPhotoId,
   habitId,
   pauseRequestId,
+  pushSubscriptionId,
   reviewId,
   seasonId,
   userId,
@@ -56,5 +57,12 @@ describe("entryPhotoId", () => {
   it("brands a non-empty string and rejects an empty one", () => {
     expect(entryPhotoId("photo-1")).toBe("photo-1");
     expect(() => entryPhotoId("")).toThrow(RangeError);
+  });
+});
+
+describe("pushSubscriptionId", () => {
+  it("brands a non-empty string and rejects an empty one", () => {
+    expect(pushSubscriptionId("device-1")).toBe("device-1");
+    expect(() => pushSubscriptionId("")).toThrow(RangeError);
   });
 });

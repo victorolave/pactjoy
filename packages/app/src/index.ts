@@ -144,6 +144,27 @@ export type {
 } from "./habit/update-habit.ts";
 export { updateHabit } from "./habit/update-habit.ts";
 export type {
+  KindPolicy,
+  NoticeContent,
+  NotificationKind,
+  NotificationParams,
+} from "./notifications/notification-kind.ts";
+export { KIND_POLICY, NOTIFICATION_KINDS } from "./notifications/notification-kind.ts";
+export type {
+  NoticeReschedule,
+  NotificationOutboxRepository,
+} from "./notifications/notification-outbox.repository.ts";
+export type {
+  NoticeDraft,
+  NoticeOutcome,
+  NoticeState,
+  OutboxNotice,
+} from "./notifications/outbox-notice.ts";
+export type {
+  PushSubscriptionRecord,
+  PushSubscriptionRepository,
+} from "./notifications/push-subscription.repository.ts";
+export type {
   ApprovePactDeps,
   ApprovePactError,
   ApprovePactInput,
@@ -225,6 +246,12 @@ export type {
 } from "./ports/evidence-storage.ts";
 export { EvidenceStorageError } from "./ports/evidence-storage.ts";
 export type { IdGenerator } from "./ports/id-generator.ts";
+export type {
+  PushMessage,
+  PushOutcome,
+  PushSender,
+  PushTarget,
+} from "./ports/push-sender.ts";
 export type { RandomSource } from "./ports/random-source.ts";
 export type { Repositories } from "./ports/repositories.ts";
 export type { UnitOfWork } from "./ports/unit-of-work.ts";
@@ -415,6 +442,7 @@ export type {
   EntryPhotoId,
   HabitId,
   PauseRequestId,
+  PushSubscriptionId,
   ReviewId,
   SeasonClosureId,
   SeasonId,
@@ -426,6 +454,7 @@ export {
   entryPhotoId,
   habitId,
   pauseRequestId,
+  pushSubscriptionId,
   reviewId,
   seasonClosureId,
   seasonId,
@@ -440,7 +469,7 @@ export type { LocalDate } from "./time/local-date.ts";
 export { localDate } from "./time/local-date.ts";
 export type { SeasonDayResult } from "./time/season-calendar.ts";
 export { localDateOfSeasonDay, toSeasonDay } from "./time/season-calendar.ts";
-export type { TimeZone, TimeZoneId } from "./time/time-zone.port.ts";
+export type { LocalTime, TimeZone, TimeZoneId } from "./time/time-zone.port.ts";
 export { timeZoneId } from "./time/time-zone.port.ts";
 export type { PendingYesterdayItem } from "./today/pending-yesterday.ts";
 export type { SeasonPhaseName } from "./today/season-phase.ts";
