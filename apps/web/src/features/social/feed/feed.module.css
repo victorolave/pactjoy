@@ -46,6 +46,11 @@
   overflow-wrap: anywhere;
 }
 
+.time {
+  color: var(--text-secondary);
+  font-size: var(--type-small-size);
+}
+
 /* A system row (the season, a recalculation) leads with an icon on a sunken disc, not a person. */
 .systemIcon {
   display: inline-flex;

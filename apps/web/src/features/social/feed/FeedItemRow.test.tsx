@@ -23,6 +23,27 @@ describe("FeedItemRow", () => {
     expect(within(row).getByText("Andrea completó Correr · 5 km.")).toBeInTheDocument();
   });
 
+  it("says when it happened in a <time>, against the injected clock", () => {
+    const now = new Date(2026, 9, 3, 12, 0).getTime();
+    const at = new Date(now - 20 * 60_000).toISOString();
+    renderInProviders(
+      <ul>
+        <FeedItemRow item={completedItemFixture({ onDate: "2026-10-03", at })} members={members} />
+        <FeedItemRow
+          item={seasonStartedItemFixture({ onDate: "2026-08-25", at: null })}
+          members={members}
+        />
+      </ul>,
+      { now },
+    );
+    const [recent, old] = screen.getAllByRole("listitem");
+    const recentTime = within(recent as HTMLElement).getByText("hace 20 min");
+    expect(recentTime.tagName).toBe("TIME");
+    expect(recentTime).toHaveAttribute("datetime", at);
+    const oldTime = within(old as HTMLElement).getByText("25 de agosto");
+    expect(oldTime).toHaveAttribute("datetime", "2026-08-25");
+  });
+
   it("leads a system item with an icon and no avatar", () => {
     inList(<FeedItemRow item={seasonStartedItemFixture()} members={members} />);
     const row = screen.getByRole("listitem");

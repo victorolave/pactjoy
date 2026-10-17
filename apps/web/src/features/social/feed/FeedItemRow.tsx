@@ -1,3 +1,4 @@
+import { useClock } from "../../../context/clock-context.tsx";
 import type { FeedItemDto, FeedMemberDto, ReactionCode } from "../../../ports/wire.ts";
 import { Avatar } from "../../../ui/Avatar.tsx";
 import { cx } from "../../../ui/cx.ts";
@@ -5,6 +6,7 @@ import { Icon } from "../../../ui/icon/Icon.tsx";
 import { ReactionChips } from "../reactions/ReactionChips.tsx";
 import styles from "./feed.module.css";
 import { feedLine } from "./feed-copy.ts";
+import { feedTime } from "./feed-time.ts";
 
 export interface FeedItemRowProps {
   readonly item: FeedItemDto;
@@ -25,6 +27,7 @@ export interface FeedItemRowProps {
  */
 export function FeedItemRow({ item, members, onReact, reactionPending }: FeedItemRowProps) {
   const line = feedLine(item, members);
+  const when = feedTime(item, useClock().nowMs());
   return (
     <li className={cx("pj-activity", styles.row)}>
       {line.avatarName !== null ? (
@@ -38,6 +41,9 @@ export function FeedItemRow({ item, members, onReact, reactionPending }: FeedIte
       )}
       <div className={styles.rowBody}>
         <span className={cx("pj-activity__text", styles.text)}>{line.text}</span>
+        <time className={styles.time} dateTime={when.dateTime}>
+          {when.label}
+        </time>
         {onReact !== undefined && "reactions" in item && (
           <ReactionChips
             reactions={item.reactions}
