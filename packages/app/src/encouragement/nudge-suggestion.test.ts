@@ -117,6 +117,27 @@ describe("pickNudge: when a member has a case (owner rule: below half of a close
     expect(pick({ today: 7 })).toBeNull();
   });
 
+  describe("a sparse schedule does not close its week early", () => {
+    // Andrea works one scheduled day a week and missed it: the engine calls the week final on
+    // day 6 (its last day), but the week only closes with its grace, on day 8.
+    const mondaysOnly = meditar({
+      measure: {
+        ...meditar().measure,
+        schedule: { period: "perSession", frequency: { kind: "specificDays", weekdays: [0] } },
+      },
+    });
+    const sparse = (today: number) =>
+      pick({ today, entries: [], commitments: [mondaysOnly, victorRun()] });
+
+    it.each([5, 6, 7])("offers nothing on day %i", (today) => {
+      expect(sparse(today)).toBeNull();
+    });
+
+    it("offers the case from day 8", () => {
+      expect(sparse(8)).toEqual({ targetId: ANDREA, week: 1, commitmentId: MEDITAR });
+    });
+  });
+
   it("never offers a week that was fully paused (nothing counted)", () => {
     const pause = approvedPause({
       startDay: seasonDay(0),

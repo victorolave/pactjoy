@@ -163,6 +163,33 @@ describe("deriveFeed: consistent week (F5)", () => {
     const entries = fullWeek(0).slice(0, 6);
     expect(find(deriveFeed(feedWorld({ entries, today: 8 })), "consistentWeek")).toEqual([]);
   });
+
+  describe("a sparse schedule does not close its week early", () => {
+    // One scheduled day a week: the engine calls week 1 final on day 6, the week closes on day 8.
+    const mondaysOnly = () =>
+      meditar({
+        measure: {
+          ...meditar().measure,
+          schedule: { period: "perSession", frequency: { kind: "specificDays", weekdays: [0] } },
+        },
+      });
+    const worldAt = (today: number) =>
+      feedWorld({
+        commitments: [mondaysOnly()],
+        entries: [minutes(mondaysOnly(), 0, "30")],
+        today,
+      });
+
+    it.each([5, 6, 7])("has no item on day %i", (today) => {
+      expect(find(deriveFeed(worldAt(today)), "consistentWeek")).toEqual([]);
+    });
+
+    it("has the item from day 8, dated the day the week closed", () => {
+      expect(find(deriveFeed(worldAt(8)), "consistentWeek")).toMatchObject([
+        { key: `week:${MEDITAR}:1`, onDate: dateOf(8), kept: 1, counted: 1 },
+      ]);
+    });
+  });
 });
 
 describe("deriveFeed: comeback (F6)", () => {

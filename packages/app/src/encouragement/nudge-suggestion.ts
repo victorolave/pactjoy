@@ -75,8 +75,8 @@ export function pickNudge(input: NudgeInput): NudgeCase | null {
       requests: input.requests,
       today: input.today,
     });
-    const week = latestFinalWeek(series);
-    if (week === null || !isHardWeek(pooledWeek(series, week))) continue;
+    const week = latestFinalWeek(series, input.today);
+    if (week === null || !isHardWeek(pooledWeek(series, week), week, input.today)) continue;
 
     const caseWeek = week + 1;
     const answered = input.sent.some((e) => e.recipientId === target.id && e.caseWeek === caseWeek);

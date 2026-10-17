@@ -152,7 +152,7 @@ function consistentWeekItems(world: FeedWorld): FeedRecord[] {
     });
     for (const { commitmentId, weeks } of series) {
       for (const figures of weeks) {
-        if (!isConsistentWeek(figures)) continue;
+        if (!isConsistentWeek(figures, world.today)) continue;
         items.push({
           kind: "consistentWeek",
           key: weekKey(commitmentId, figures.week + 1),
