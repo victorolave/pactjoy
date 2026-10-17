@@ -14,6 +14,8 @@ export interface FeedItemRowProps {
    * Today preview): reacting happens in the circle.
    */
   readonly onReact?: (itemKey: string, code: ReactionCode | null) => void;
+  /** A reaction on this item is in flight: its chips wait. */
+  readonly reactionPending?: boolean;
 }
 
 /**
@@ -21,7 +23,7 @@ export interface FeedItemRowProps {
  * item, an icon; the Spanish line; and below it the reaction chips. It is an `<li>`: rows go
  * inside the list their group draws.
  */
-export function FeedItemRow({ item, members, onReact }: FeedItemRowProps) {
+export function FeedItemRow({ item, members, onReact, reactionPending }: FeedItemRowProps) {
   const line = feedLine(item, members);
   return (
     <li className={cx("pj-activity", styles.row)}>
@@ -37,7 +39,11 @@ export function FeedItemRow({ item, members, onReact }: FeedItemRowProps) {
       <div className={styles.rowBody}>
         <span className={cx("pj-activity__text", styles.text)}>{line.text}</span>
         {onReact !== undefined && "reactions" in item && (
-          <ReactionChips reactions={item.reactions} onReact={(code) => onReact(item.key, code)} />
+          <ReactionChips
+            reactions={item.reactions}
+            onReact={(code) => onReact(item.key, code)}
+            pending={reactionPending === true}
+          />
         )}
       </div>
     </li>

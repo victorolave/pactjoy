@@ -8,6 +8,8 @@ export interface ReactionChipsProps {
   readonly reactions: ReactionsDto;
   /** The viewer's reaction afterwards: the tapped code, or `null` when they tapped their own. */
   readonly onReact: (code: ReactionCode | null) => void;
+  /** A reaction on this item is still being sent: the chips wait so two writes never overlap. */
+  readonly pending?: boolean;
 }
 
 const nameOf = (label: string, count: number): string => (count > 0 ? `${label}, ${count}` : label);
@@ -18,7 +20,7 @@ const nameOf = (label: string, count: number): string => (count > 0 ? `${label},
  * member who left) shows no buttons, only the counts that exist, read-only. Offline the buttons
  * are disabled and say why: a reaction is a write and nothing is queued (P1).
  */
-export function ReactionChips({ reactions, onReact }: ReactionChipsProps) {
+export function ReactionChips({ reactions, onReact, pending = false }: ReactionChipsProps) {
   const online = useOnline();
   if (!reactions.reactable) {
     const present = REACTIONS.filter(({ code }) => reactions.counts[code] > 0);
@@ -53,7 +55,7 @@ export function ReactionChips({ reactions, onReact }: ReactionChipsProps) {
               className={cx("pj-tag", styles.chip)}
               aria-pressed={mine}
               aria-label={nameOf(label, count)}
-              disabled={!online}
+              disabled={!online || pending}
               onClick={() => onReact(mine ? null : code)}
             >
               <span aria-hidden="true">{glyph}</span>

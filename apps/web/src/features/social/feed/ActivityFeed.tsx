@@ -4,7 +4,7 @@ import { Button } from "../../../ui/Button.tsx";
 import { InlineMessage } from "../../../ui/InlineMessage.tsx";
 import { Skeleton } from "../../../ui/Skeleton.tsx";
 import { NudgeCard } from "../nudge/NudgeCard.tsx";
-import { useFeed, useReact } from "../queries.ts";
+import { useFeed, usePendingReactionKeys, useReact } from "../queries.ts";
 import { FeedItemRow } from "./FeedItemRow.tsx";
 import styles from "./feed.module.css";
 import { deviceDate, groupFeed } from "./feed-groups.ts";
@@ -18,6 +18,7 @@ export function ActivityFeed() {
   const clock = useClock();
   const feed = useFeed();
   const react = useReact(feed.seasonId ?? "");
+  const pendingKeys = usePendingReactionKeys();
   const today = deviceDate(clock.nowMs());
 
   let body: ReactNode;
@@ -60,6 +61,7 @@ export function ActivityFeed() {
                   item={item}
                   members={feed.members}
                   onReact={(itemKey, emoji) => react.mutate({ itemKey, emoji })}
+                  reactionPending={pendingKeys.has(item.key)}
                 />
               ))}
             </ul>

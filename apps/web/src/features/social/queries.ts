@@ -2,6 +2,7 @@ import {
   type InfiniteData,
   useInfiniteQuery,
   useMutation,
+  useMutationState,
   useQueryClient,
 } from "@tanstack/react-query";
 import { useMemo } from "react";
@@ -73,6 +74,21 @@ function reactionsIn(data: FeedData | undefined, itemKey: string): ReactionsDto 
   return undefined;
 }
 
+const REACT_KEY = ["social", "react"] as const;
+
+/**
+ * The items with a reaction still in flight. Their chips wait: two writes on one item never
+ * overlap, so a refusal can always restore what the item showed before (a snapshot per write
+ * could not). Other items stay free.
+ */
+export function usePendingReactionKeys(): ReadonlySet<string> {
+  const keys = useMutationState({
+    filters: { mutationKey: REACT_KEY, status: "pending" },
+    select: (mutation) => (mutation.state.variables as ReactCommand).itemKey,
+  });
+  return useMemo(() => new Set(keys), [keys]);
+}
+
 /**
  * React to an item, change the reaction or take it back. The chip answers at once (optimistic) and
  * goes back to what it was when the server refuses; the server's counts replace the guess when the
@@ -84,6 +100,7 @@ export function useReact(seasonId: string) {
   const api = usePactJoyApi();
   const client = useQueryClient();
   return useMutation({
+    mutationKey: REACT_KEY,
     mutationFn: ({ itemKey, emoji }: ReactCommand) =>
       emoji === null
         ? api.removeFeedReaction(seasonId, itemKey)

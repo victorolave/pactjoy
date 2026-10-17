@@ -108,6 +108,24 @@ describe("ActivityFeed", () => {
     );
   });
 
+  it("sends one reaction at a time per item: the chips wait for the pending one", async () => {
+    const { deps } = renderInProviders(<ActivityFeed />, {
+      feedPages: [feedFixture({ items: [completedItemFixture()] })],
+    });
+    const release = deps.api.hold("reactToFeedItem");
+    deps.api.failNext("reactToFeedItem", new ApiError("FeedItemNotReactable", 409, null));
+    await userEvent.click(await screen.findByRole("button", { name: "Me encanta" }));
+    await screen.findByRole("button", { name: "Me encanta, 1" });
+    const fire = screen.getByRole("button", { name: "Fuego" });
+    expect(fire).toBeDisabled();
+    await userEvent.click(fire);
+    release();
+    const heart = await screen.findByRole("button", { name: "Me encanta" });
+    expect(heart).toHaveAttribute("aria-pressed", "false");
+    await waitFor(() => expect(screen.getByRole("button", { name: "Fuego" })).toBeEnabled());
+    expect(deps.api.calls.reactToFeedItem).toBe(1);
+  });
+
   it("offers the first page's nudge above the items, and it goes away once sent", async () => {
     const { deps } = renderInProviders(<ActivityFeed />, {
       feedPages: [feedFixture({ nudge: nudgeFixture() })],

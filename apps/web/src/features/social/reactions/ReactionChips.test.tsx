@@ -84,6 +84,12 @@ describe("ReactionChips", () => {
     expect(screen.getByText("Sin conexión: vuelve a conectarte para reaccionar.")).toBeVisible();
   });
 
+  it("disables the buttons while a reaction on the item is pending", () => {
+    renderInProviders(<ReactionChips reactions={reactionsFixture()} onReact={() => {}} pending />);
+    for (const button of screen.getAllByRole("button")) expect(button).toBeDisabled();
+    expect(screen.queryByText(/Sin conexión/)).not.toBeInTheDocument();
+  });
+
   it("shows no buttons on an item that cannot be reacted to, only the counts the owner may read", () => {
     renderInProviders(
       <ReactionChips
