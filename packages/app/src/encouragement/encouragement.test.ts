@@ -8,6 +8,7 @@ import {
   logMinutes,
   type ReviewWorld,
 } from "../review/review-fixtures.ts";
+import { ConcurrencyConflict } from "../shared/errors.ts";
 import { seasonId, userId } from "../shared/ids.ts";
 import { localInstant } from "../testing/entry-fixtures.ts";
 import { raceTransactions } from "../testing/race-harness.ts";
@@ -250,8 +251,16 @@ describe("sendEncouragement (REQ-N5, N6)", () => {
         emoji: "heart",
       });
     const { winner, loser } = await raceTransactions(world.at(DAY), attempt, attempt);
-    expect(winner.status).toBe("fulfilled");
-    expect(loser.status === "fulfilled" || loser.status === "rejected").toBe(true);
+    expect(winner).toEqual({
+      status: "fulfilled",
+      value: { ok: true, value: { recipientId: ANDREA, week: 1 } },
+    });
+    // The in-memory loser reads the winner's committed row and is refused as already sent; a
+    // loser that lost at the unique key conflicts instead. Anything else is a bug.
+    expect([
+      { status: "fulfilled", value: { ok: false, error: { kind: "EncouragementAlreadySent" } } },
+      { status: "rejected", reason: new ConcurrencyConflict() },
+    ]).toContainEqual(loser);
     expect(await world.app.encouragements.listSent(SEASON, VICTOR)).toHaveLength(1);
   });
 

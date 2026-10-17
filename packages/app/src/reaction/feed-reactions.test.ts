@@ -10,6 +10,7 @@ import {
   logMinutes,
   type ReviewWorld,
 } from "../review/review-fixtures.ts";
+import { ConcurrencyConflict } from "../shared/errors.ts";
 import { circleId, seasonId, userId } from "../shared/ids.ts";
 import { raceTransactions } from "../testing/race-harness.ts";
 import { localDate } from "../time/local-date.ts";
@@ -136,8 +137,12 @@ describe("reactToFeedItem: setting, changing and removing (REQ-R1, R2, R10)", ()
       (app) =>
         reactToFeedItem(app, world.victor, { seasonId: SEASON, itemKey: SESSION, emoji: "clap" }),
     );
-    expect(winner.status).toBe("fulfilled");
-    expect(loser.status === "fulfilled" || loser.status === "rejected").toBe(true);
+    expect(winner).toMatchObject({ status: "fulfilled", value: { ok: true } });
+    // The loser either read the winner's row and changed its emoji, or lost at the unique key.
+    expect([
+      { status: "fulfilled", value: expect.objectContaining({ ok: true }) },
+      { status: "rejected", reason: new ConcurrencyConflict() },
+    ]).toContainEqual(loser);
     expect(await stored(world)).toHaveLength(1);
   });
 
