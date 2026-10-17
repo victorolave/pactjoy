@@ -94,7 +94,7 @@ const nudge: Check = shape({ seasonId: id, targetId: id, week, subject });
 export const isCircleFeed = (data: unknown): data is CircleFeedDto =>
   shape({
     seasonId: nullable(id),
-    members: list(shape({ id, displayName: text, isYou: bool, left: bool })),
+    members: list(shape({ id, displayName: nullable(text), isYou: bool, left: bool })),
     items: list(item),
     nextCursor: nullable(id),
     nudge: nullable(nudge),

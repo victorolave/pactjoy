@@ -93,8 +93,15 @@ The design wins over the spec where they differ, except where an owner decision 
 ### Negative
 
 - Every read costs a derivation, and `react` derives inside its transaction.
+  - The derivation inside the reaction and send transaction costs a full feed derivation: 6 ms measured on a 2-member season with one entry, and it grows with the entries.
 - The key format is a compatibility contract.
+  - Item keys embed commitment and habit ids, so peers can link two masked private items of the same commitment. No content is exposed; accepted.
 - Graduation becomes public: it supersedes the copy promise of ADR-0015 (addendum there).
+- A member who left keeps her items.
+  - They keep their habit names and values on visible commitments until account deletion (job E) anonymizes them.
+  - Her display name is not sent: the feed member list carries `displayName: null` for `left: true`, and the web renders "Un miembro que salió".
+- The hard week behind a nudge is pooled over ALL the target's commitments, private ones included, per owner rule #6048.2. Only the target id and the week reach the peer.
+- Removing a reaction is idempotent under a race: a stale delete conflicts, and one retry in a fresh transaction re-reads the row and answers with what is there.
 
 ### Neutral
 

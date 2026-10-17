@@ -33,7 +33,7 @@ export function NudgeCard({ nudge, members }: NudgeCardProps) {
   const [gone, setGone] = useState(false);
   const [failed, setFailed] = useState(false);
   const target = members.find((member) => member.id === nudge.targetId);
-  if (gone || target === undefined) return null;
+  if (gone || target === undefined || target.displayName === null) return null;
 
   const busy = send.isPending || dismiss.isPending;
   const settle = {

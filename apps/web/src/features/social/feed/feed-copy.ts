@@ -40,9 +40,11 @@ type Actor =
 
 function actorOf(memberId: string, members: readonly FeedMemberDto[]): Actor {
   const member = members.find((candidate) => candidate.id === memberId);
-  if (member === undefined) return { kind: "left", name: LEFT_MEMBER, avatar: "?" };
+  // A member who left arrives without a name; the same goes for one the feed does not list.
+  if (member === undefined || member.left || member.displayName === null) {
+    return { kind: "left", name: LEFT_MEMBER, avatar: "?" };
+  }
   if (member.isYou) return { kind: "you", avatar: member.displayName };
-  if (member.left) return { kind: "left", name: LEFT_MEMBER, avatar: "?" };
   return { kind: "peer", name: member.displayName, avatar: member.displayName };
 }
 

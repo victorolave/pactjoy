@@ -71,6 +71,16 @@ describe("isCircleFeed", () => {
     expect(isCircleFeed(feedFixture({ items: items as never }))).toBe(true);
   });
 
+  it("accepts a member who left without a name, and refuses a name that is not text", () => {
+    const ok = feedFixture();
+    const left = { id: "m-left", displayName: null, isYou: false, left: true };
+    expect(isCircleFeed({ ...ok, members: [...ok.members, left] })).toBe(true);
+    expect(isCircleFeed({ ...ok, members: [{ ...left, displayName: 4 }] })).toBe(false);
+    expect(isCircleFeed({ ...ok, members: [{ id: "m-left", isYou: false, left: true }] })).toBe(
+      false,
+    );
+  });
+
   it("rejects a body that is not a feed", () => {
     for (const bad of [null, "feed", [], {}, { items: [] }]) expect(isCircleFeed(bad)).toBe(false);
   });

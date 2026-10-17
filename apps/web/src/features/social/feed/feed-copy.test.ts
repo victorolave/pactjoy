@@ -181,7 +181,8 @@ describe("feedLine: the viewer's own items speak to them", () => {
 });
 
 describe("feedLine: a member who left", () => {
-  const left = members.map((m) => (m.id === ANDREA ? { ...m, left: true } : m));
+  // The API sends no name for a member who left.
+  const left = members.map((m) => (m.id === ANDREA ? { ...m, displayName: null, left: true } : m));
 
   it("is named as someone who left, never by name", () => {
     expect(text(completedItemFixture(), left)).toBe("Un miembro que salió completó Correr · 5 km.");
