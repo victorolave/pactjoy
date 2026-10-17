@@ -19,6 +19,7 @@ import type {
   MemberScoreError,
   PreviewInviteError,
   PreviewProgressError,
+  PushSubscriptionError,
   RecordEntryError,
   RemoveCommitmentError,
   RenameCircleError,
@@ -84,6 +85,7 @@ export type AppError =
   | CommitmentStageError
   | SubmitSeasonClosureError
   | SeasonResultsError
-  | CarryOverError;
+  | CarryOverError
+  | PushSubscriptionError;
 
 export type AppErrorKind = AppError["kind"];

@@ -1,4 +1,4 @@
-import { userId } from "@pactjoy/app";
+import { type PushSender, userId } from "@pactjoy/app";
 import { createTestApp } from "@pactjoy/app/testing";
 import { vi } from "vitest";
 import { createApi } from "../src/routes/index.ts";
@@ -8,8 +8,15 @@ export const ANDREA = userId("aaaaaaaa-0000-4000-8000-000000000001");
 export const VICTOR = userId("aaaaaaaa-0000-4000-8000-000000000002");
 export const UNKNOWN_CIRCLE = "bbbbbbbb-0000-4000-8000-000000000000";
 
+export interface SetupOptions {
+  /** The Web Push sender; `null` (the default) is a server without push configured. */
+  readonly push?: PushSender | null;
+  /** The jobs secret; `null` (the default) leaves the `/jobs` routes unmounted. */
+  readonly jobsSecret?: string | null;
+}
+
 /** `createApi` over the in-memory app with spies on the unit of work (token `andrea` / `victor`). */
-export function setup() {
+export function setup(options: SetupOptions = {}) {
   const app = createTestApp();
   const transaction = vi.fn(app.uow.transaction.bind(app.uow));
   const read = vi.fn(app.uow.read.bind(app.uow));
@@ -27,6 +34,8 @@ export function setup() {
       ids: createDeterministicUuidGenerator(),
       random: app.random,
       evidence: app.evidence,
+      push: options.push ?? null,
+      jobsSecret: options.jobsSecret ?? null,
       tokenVerifier: createFakeTokenVerifier({ andrea: ANDREA, victor: VICTOR }),
       logger: { info: () => undefined, warn: () => undefined, error: () => undefined },
     },
@@ -58,5 +67,5 @@ export function setup() {
     // biome-ignore lint/suspicious/noExplicitAny: test helper over an untyped JSON envelope
     return { status: response.status, json: (await response.json()) as any };
   };
-  return { app, call, callRaw, transaction, read, setNow };
+  return { app, call, callRaw, transaction, read, setNow, handler };
 }

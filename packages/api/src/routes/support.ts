@@ -3,6 +3,7 @@ import type {
   Clock,
   EvidenceStorage,
   IdGenerator,
+  PushSender,
   RandomSource,
   Repositories,
   Result,
@@ -27,6 +28,10 @@ export interface ApiDeps {
   readonly random: RandomSource;
   /** Object storage for photo evidence (ADR-0016); only touched when a request carries or removes a photo. */
   readonly evidence: EvidenceStorage;
+  /** Web Push (ADR-0017); `null` when it is not configured: dispatch sends nothing, devices cannot subscribe. */
+  readonly push: PushSender | null;
+  /** The shared secret of the job routes; `null` leaves `/jobs` unmounted (every job path is 404). */
+  readonly jobsSecret: string | null;
   readonly tokenVerifier: TokenVerifier;
   readonly logger: Logger;
   /** Millisecond clock for request durations; defaults to Date.now. */

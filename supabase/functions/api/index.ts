@@ -15,6 +15,7 @@ import {
   createUuidV7IdGenerator,
 } from "@pactjoy/app";
 import { createPostgresUnitOfWork, isDatabaseUnavailable } from "@pactjoy/db";
+import { createWebPushSender } from "@pactjoy/push";
 import { createS3EvidenceStorage } from "@pactjoy/storage";
 
 const logger = createConsoleLogger();
@@ -33,6 +34,9 @@ const build = () => {
       random: createCryptoRandomSource(),
       // Photo evidence (ADR-0016): the storage-scoped S3 key pair from the validated env.
       evidence: createS3EvidenceStorage(env.storage),
+      // Web Push and the job routes (ADR-0017): each off when its variables are unset.
+      push: env.push === null ? null : createWebPushSender(env.push),
+      jobsSecret: env.jobsSecret,
       tokenVerifier: createJwksTokenVerifier({ jwksUrl: env.jwksUrl, issuer: env.jwtIssuer }),
       logger,
       isUnavailable: isDatabaseUnavailable,

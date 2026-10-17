@@ -14,9 +14,10 @@ const codeLines = (text: string) =>
   text.split("\n").filter((line) => line.trim() !== "" && !line.trim().startsWith("//"));
 
 describe("Deno shell (supabase/functions/api)", () => {
-  it("DE-S2: the entry is composition only: no routing, no Response, at most 40 code lines", () => {
+  it("DE-S2: the entry is composition only: no routing, no Response, at most 45 code lines", () => {
     const text = read(ENTRY);
-    expect(codeLines(text).length).toBeLessThanOrEqual(40);
+    // 40 until ADR-0017 added two adapters (Web Push and the jobs secret) to the composition.
+    expect(codeLines(text).length).toBeLessThanOrEqual(45);
     const code = codeLines(text).join("\n");
     expect(code).not.toMatch(/\bswitch\b|\bpathname\b|new Response\b/);
     expect(code).toContain("Deno.serve(");
@@ -27,6 +28,13 @@ describe("Deno shell (supabase/functions/api)", () => {
     expect(code).toContain("createS3EvidenceStorage(env.storage)");
     expect(code).toMatch(/evidence:\s*createS3EvidenceStorage/);
     expect(code).not.toMatch(/https?:\/\//);
+  });
+
+  it("ADR-0017: the entry composes Web Push and the jobs secret from the validated env only", () => {
+    const code = codeLines(read(ENTRY)).join("\n");
+    expect(code).toContain("createWebPushSender(env.push)");
+    expect(code).toMatch(/jobsSecret:\s*env\.jobsSecret/);
+    expect(code).not.toMatch(/API_JOBS_SECRET|API_PUSH_VAPID|service[_-]?role/i);
   });
 
   it("DE-S3: the entry imports only @pactjoy/* packages (vendors go through the import map)", () => {
@@ -49,6 +57,7 @@ describe("Deno shell (supabase/functions/api)", () => {
       "@pactjoy/app",
       "@pactjoy/db",
       "@pactjoy/engine",
+      "@pactjoy/push",
       "@pactjoy/storage",
     ]);
     for (const [, target] of local) {

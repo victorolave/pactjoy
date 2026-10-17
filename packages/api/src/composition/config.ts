@@ -19,6 +19,19 @@ export interface StorageEnv {
   readonly bucket: string;
 }
 
+/**
+ * The VAPID key pair and contact for Web Push (ADR-0017). Its shape is what the push adapter
+ * takes. `privateKey` is a secret: never log it.
+ */
+export interface PushEnv {
+  /** base64url uncompressed P-256 point (87 characters). */
+  readonly publicKey: string;
+  /** base64url scalar `d` (43 characters). */
+  readonly privateKey: string;
+  /** `mailto:` or `https:` contact for push service operators. */
+  readonly subject: string;
+}
+
 /** Validated production configuration (ADR-0011). `databaseUrl` is a secret: never log it. */
 export interface ApiEnv {
   readonly databaseUrl: string;
@@ -29,7 +42,17 @@ export interface ApiEnv {
   /** Exact origins; empty allows no browser origin (Q5 default). */
   readonly allowedOrigins: readonly string[];
   readonly storage: StorageEnv;
+  /** `API_JOBS_SECRET` (32+ characters); `null` leaves the job routes unmounted. A secret. */
+  readonly jobsSecret: string | null;
+  /** `API_PUSH_VAPID_*`, all three or none; `null` turns Web Push off. */
+  readonly push: PushEnv | null;
 }
+
+const MIN_JOBS_SECRET_LENGTH = 32;
+const VAPID_PUBLIC_KEY = /^B[A-Za-z0-9_-]{86}$/;
+const VAPID_PRIVATE_KEY = /^[A-Za-z0-9_-]{43}$/;
+const isVapidSubject = (value: string): boolean =>
+  /^mailto:\S+@\S+$/.test(value) || (isHttpUrl(value) && value.startsWith("https://"));
 
 /** Variable NAMES only: a value never appears in an error (AC-R5). */
 export interface ApiEnvError {
@@ -144,6 +167,27 @@ export function loadApiEnv(get: (name: string) => string | undefined): Result<Ap
   const s3SecretAccessKey = required("API_STORAGE_S3_SECRET_ACCESS_KEY");
   const s3Bucket = required("API_STORAGE_BUCKET", isBucketName);
 
+  const jobsSecret = read("API_JOBS_SECRET");
+  if (jobsSecret !== undefined && jobsSecret.length < MIN_JOBS_SECRET_LENGTH) {
+    invalid.push("API_JOBS_SECRET");
+  }
+
+  // The VAPID group: all three or none. Each variable is read once.
+  const pushGroup = [
+    ["API_PUSH_VAPID_PUBLIC_KEY", (v: string) => VAPID_PUBLIC_KEY.test(v)],
+    ["API_PUSH_VAPID_PRIVATE_KEY", (v: string) => VAPID_PRIVATE_KEY.test(v)],
+    ["API_PUSH_VAPID_SUBJECT", isVapidSubject],
+  ] as const;
+  const pushRaw = pushGroup.map(([name]) => read(name));
+  const anyPush = pushRaw.some((value) => value !== undefined);
+  const [vapidPublicKey, vapidPrivateKey, vapidSubject] = pushGroup.map(([name, isValid], i) => {
+    const raw = pushRaw[i];
+    if (!anyPush) return undefined;
+    if (raw === undefined) missing.push(name);
+    else if (!isValid(raw)) invalid.push(name);
+    return raw;
+  });
+
   if (
     missing.length > 0 ||
     invalid.length > 0 ||
@@ -173,6 +217,11 @@ export function loadApiEnv(get: (name: string) => string | undefined): Result<Ap
       secretAccessKey: s3SecretAccessKey,
       bucket: s3Bucket,
     },
+    jobsSecret: jobsSecret ?? null,
+    push:
+      vapidPublicKey !== undefined && vapidPrivateKey !== undefined && vapidSubject !== undefined
+        ? { publicKey: vapidPublicKey, privateKey: vapidPrivateKey, subject: vapidSubject }
+        : null,
   });
 }
 

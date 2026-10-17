@@ -42,6 +42,8 @@ function composition() {
         ids: createDeterministicUuidGenerator(),
         random: app.random,
         evidence: app.evidence,
+        push: null,
+        jobsSecret: null,
         tokenVerifier: {
           verify: (token) => {
             verify(token);

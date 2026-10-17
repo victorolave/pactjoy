@@ -6,7 +6,7 @@ import type { AppError, AppErrorKind } from "./app-error.ts";
  * kind AND an extra stale key a compile error.
  */
 export const APP_ERROR_STATUS = {
-  // 422 (47)
+  // 422 (48)
   AutomaticityIncomplete: 422,
   CategoryTooLong: 422,
   ClosureIncomplete: 422,
@@ -31,6 +31,7 @@ export const APP_ERROR_STATUS = {
   PhotoNotAllowedOnMissed: 422,
   InvalidPauseScope: 422,
   InvalidPreviewValues: 422,
+  InvalidPushSubscription: 422,
   InvalidNote: 422,
   InvalidPrecision: 422,
   InvalidQuantity: 422,
@@ -72,7 +73,7 @@ export const APP_ERROR_STATUS = {
   PhotoNotFound: 404,
   ReviewPeriodNotFound: 404,
   SeasonNotFound: 404,
-  // 409 (34)
+  // 409 (35)
   AlreadyInActiveCircle: 409,
   BeforeSeasonStart: 409,
   CircleArchived: 409,
@@ -97,6 +98,7 @@ export const APP_ERROR_STATUS = {
   PhotoNotAvailable: 409,
   PhotoNotUploaded: 409,
   PhotoUploadExpired: 409,
+  PushNotConfigured: 409,
   ReviewAlreadySubmitted: 409,
   ReviewNotDue: 409,
   ReviewNotSkippable: 409,
