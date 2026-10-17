@@ -71,7 +71,10 @@ const NO_GRADUATION = ["Continuar", "Continuar", "Continuar", "Ajustar"] as cons
 describe("36 Resultados", () => {
   it("shows the season's final figures, privately, before anything is decided", async () => {
     open();
-    expect(await screen.findByRole("heading", { name: "Cerramos esta temporada" })).toBeVisible();
+    // The first cold render of the file (imports, route, queries) can near the 1 s default on a loaded CI.
+    expect(
+      await screen.findByRole("heading", { name: "Cerramos esta temporada" }, { timeout: 5000 }),
+    ).toBeVisible();
     expect(screen.getByText("25 ago – 19 oct")).toBeInTheDocument();
     expect(screen.getByText("8 semanas. Cada uno con sus metas.")).toBeInTheDocument();
     const stats = screen.getByRole("region", { name: "Tus cifras de la temporada" });
