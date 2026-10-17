@@ -11,7 +11,7 @@ import { createSessionEvents, SessionManager } from "../features/auth/index.ts";
 import type { ApiError } from "../ports/api-error.ts";
 import type { NotificationPermissionState } from "../ports/notification-permission.ts";
 import type { MyCircle } from "../ports/pactjoy-api.ts";
-import type { CommitmentStageDto, ReviewDraftDto } from "../ports/wire.ts";
+import type { CircleFeedDto, CommitmentStageDto, ReviewDraftDto } from "../ports/wire.ts";
 import { AppRoutes } from "../shell/routes.tsx";
 import { FakeAppInstall } from "./fake-app-install.ts";
 import { FakeAuth, fakeSession } from "./fake-auth.ts";
@@ -73,6 +73,8 @@ export interface RenderAppOptions {
   readonly stages?: readonly CommitmentStageDto[];
   /** `getCommitmentStage` rejects with these, one per call, before it answers a stage. */
   readonly stageFailures?: readonly ApiError[];
+  /** The circle feed pages `feed` serves (the first without a cursor, then by cursor). Empty by default. */
+  readonly feedPages?: readonly CircleFeedDto[];
   /** `getReview` rejects with these, one per call, before it answers a draft. */
   readonly reviewFailures?: readonly ApiError[];
   /** The review drafts `getReview` answers, by season and period (0 is the baseline). */
@@ -133,6 +135,7 @@ function createFakeDeps({
   todayFailures = [],
   reviews = [],
   reviewFailures = [],
+  feedPages,
   stages = [],
   stageFailures = [],
   online = true,
@@ -152,6 +155,7 @@ function createFakeDeps({
   for (const failure of todayFailures) api.failNext("getToday", failure);
   for (const stage of stages) api.setStage(stage);
   for (const failure of stageFailures) api.failNext("getCommitmentStage", failure);
+  if (feedPages !== undefined) api.setFeedPages(feedPages);
   for (const failure of reviewFailures) api.failNext("getReview", failure);
   for (const { seasonId, periodIndex, draft } of reviews)
     api.setReview(seasonId, periodIndex, draft);

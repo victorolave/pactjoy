@@ -14,6 +14,7 @@ import type {
 import type { SeasonProgressApi } from "./season-progress-api.ts";
 import type {
   CarryOverDto,
+  CircleFeedDto,
   ClosureDecisionEntryDto,
   CommitmentStageDto,
   HabitDto,
@@ -22,6 +23,8 @@ import type {
   PauseRequestDto,
   PhotoUploadDto,
   ProfileSummaryDto,
+  ReactionCode,
+  ReactionsDto,
   ReviewDraftDto,
   SeasonDto,
   SeasonHistoryDto,
@@ -143,6 +146,18 @@ export interface SubmitClosureCommand {
   readonly decisions: readonly ClosureDecisionEntryDto[];
 }
 
+export interface SendEncouragementCommand {
+  readonly recipientId: string;
+  /** The nudge's 1-based case week. */
+  readonly week: number;
+  readonly emoji: ReactionCode;
+}
+
+export interface DismissNudgeCommand {
+  readonly targetId: string;
+  readonly week: number;
+}
+
 /** Everything the screens know about the backend. Adapters throw `ApiError`. */
 export interface PactJoyApi extends SeasonProgressApi {
   listHabits(signal?: AbortSignal): Promise<readonly HabitDto[]>;
@@ -220,4 +235,18 @@ export interface PactJoyApi extends SeasonProgressApi {
    * stage (Perfil). Owner-only and total: no circle is zeros, never an error (ADR-0011 Q23).
    */
   getProfileSummary(signal?: AbortSignal): Promise<ProfileSummaryDto>;
+  /**
+   * The circle activity feed as the viewer may see it (ADR-0018), newest first, 20 items a page.
+   * Omit `cursor` for the first page, which also carries the encouragement nudge; pass the previous
+   * page's `nextCursor` for the next one. Total: no circle or no started season is an empty feed.
+   */
+  feed(cursor?: string | null, signal?: AbortSignal): Promise<CircleFeedDto>;
+  /** One reaction per member per item; a different emoji changes it. Idempotent. Counts only come back. */
+  reactToFeedItem(seasonId: string, itemKey: string, emoji: ReactionCode): Promise<ReactionsDto>;
+  /** Takes the viewer's reaction back. Idempotent. */
+  removeFeedReaction(seasonId: string, itemKey: string): Promise<ReactionsDto>;
+  /** Sends the nudge's encouragement; `EncouragementAlreadySent` (409) when this case already got one. */
+  sendEncouragement(seasonId: string, cmd: SendEncouragementCommand): Promise<void>;
+  /** "Ahora no": the nudge is not offered again for this case. Idempotent. */
+  dismissNudge(seasonId: string, cmd: DismissNudgeCommand): Promise<void>;
 }

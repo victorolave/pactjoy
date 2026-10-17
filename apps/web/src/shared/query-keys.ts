@@ -54,3 +54,10 @@ export const seasonHistoryKey = [...seasonCloseKey, "history"] as const;
  * Never persisted offline (only `["today"]` is), so the persisted cache version does not change.
  */
 export const profileSummaryKey = [...progressKey, "profile"] as const;
+/**
+ * The social layer (ADR-0018): the circle activity feed, an infinite query whose first page also
+ * carries the encouragement nudge. Its own root, NOT persisted offline (a stale feed would offer
+ * a nudge already answered), so the persisted Today shape and its cache version do not change.
+ */
+export const socialKey = ["social"] as const;
+export const feedKey = [...socialKey, "feed"] as const;

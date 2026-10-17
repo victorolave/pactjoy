@@ -5,6 +5,7 @@ import { Badge } from "../../../ui/Badge.tsx";
 import { Button } from "../../../ui/Button.tsx";
 import { Card } from "../../../ui/Card.tsx";
 import { PauseApprovalList, RequestPauseSheet } from "../../pause/index.ts";
+import { ActivityFeed } from "../../social/index.ts";
 import styles from "./CircleScreen.module.css";
 import { SeasonAction } from "./SeasonAction.tsx";
 import { seasonStatus } from "./season-status.ts";
@@ -14,7 +15,9 @@ type Circle = NonNullable<MyCircle["circle"]>;
 /**
  * The circle with people in it (design 31a-lite): who is in, the season and pact state, and the way
  * to invite, and, while the season runs, the pause requests waiting for an answer and the way to
- * ask for one (screens 26 and 28). No habit summaries, feed, reactions or nudges (Q7): those are A3.
+ * ask for one (screens 26 and 28), then "Actividad del círculo": the feed with its reactions and
+ * the encouragement nudge (screens 31a and 31b, ADR-0018). A member's habit summaries are still
+ * not shown here (a follow-up of 31a).
  */
 export function MembersView({
   circle,
@@ -30,7 +33,7 @@ export function MembersView({
     <>
       {running && <PauseApprovalList />}
       <Card>
-        <ul className={styles.members}>
+        <ul className={styles.members} aria-label="Miembros">
           {circle.members.map((member) => (
             <li key={member.id} className={styles.member}>
               <Avatar name={member.displayName} size="xl" />
@@ -61,6 +64,7 @@ export function MembersView({
       ) : (
         <SeasonAction season={season} />
       )}
+      <ActivityFeed />
     </>
   );
 }
