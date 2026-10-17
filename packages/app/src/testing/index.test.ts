@@ -35,7 +35,8 @@ const EXPECTED_RUNTIME_EXPORTS = [
 ].sort();
 
 describe("@pactjoy/app testing subpath", () => {
-  it("exposes exactly the expected runtime exports", async () => {
+  // A cold import of the whole subpath: under a full `turbo run test` it can exceed the 5 s default.
+  it("exposes exactly the expected runtime exports", { timeout: 30_000 }, async () => {
     const testing = await import("./index.ts");
     expect(Object.keys(testing).sort()).toEqual(EXPECTED_RUNTIME_EXPORTS);
   });

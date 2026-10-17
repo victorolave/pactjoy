@@ -35,7 +35,10 @@ const testDoubleImports = (text: string) => [
 ];
 
 describe("package boundary", () => {
-  it("the public surface is exactly the design's runtime exports (ADR-0011)", async () => {
+  // A cold import of the whole package: under a full `turbo run test` it can exceed the 5 s default.
+  it("the public surface is exactly the design's runtime exports (ADR-0011)", {
+    timeout: 30_000,
+  }, async () => {
     const index = await import("../src/index.ts");
     expect(Object.keys(index).sort()).toEqual([
       "createApi",
