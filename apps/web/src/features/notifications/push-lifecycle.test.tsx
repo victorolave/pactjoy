@@ -40,4 +40,17 @@ describe("push device lifecycle", () => {
     expect(deps.api.pushDevices.size).toBe(0);
     expect(deps.push.device).toBeNull();
   });
+
+  it("signing out never hangs on a service worker that does not answer", async () => {
+    const { deps } = renderApp({ path: "/profile/settings", myCircle: pairCircleFixture() });
+    await waitFor(() => expect(deps.api.pushDevices.size).toBe(1));
+    deps.push.current = () => new Promise(() => {});
+
+    await userEvent.click(await screen.findByRole("button", { name: "Cerrar sesión" }));
+
+    expect(
+      await screen.findByRole("heading", { name: "Entrar" }, { timeout: 5_000 }),
+    ).toBeInTheDocument();
+    expect(deps.store.load()).toBeNull();
+  }, 10_000);
 });

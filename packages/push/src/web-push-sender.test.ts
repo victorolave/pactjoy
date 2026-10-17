@@ -115,7 +115,10 @@ describe("createWebPushSender", () => {
     [500, { kind: "retry", retryAfterSeconds: null }],
     [503, { kind: "retry", retryAfterSeconds: null }],
     [400, { kind: "rejected", status: 400 }],
-    [403, { kind: "rejected", status: 403 }],
+    // A VAPID or clock problem on our side: retried after an hour, not burnt.
+    [401, { kind: "retry", retryAfterSeconds: 3600 }],
+    [403, { kind: "retry", retryAfterSeconds: 3600 }],
+    [301, { kind: "rejected", status: 301 }],
     [413, { kind: "rejected", status: 413 }],
   ])("maps status %i to %j", async (status, outcome) => {
     const { push } = await sender(async () => ({ status }));
@@ -128,6 +131,29 @@ describe("createWebPushSender", () => {
       kind: "retry",
       retryAfterSeconds: 120,
     });
+  });
+
+  it("never follows a redirect and gives up on a push service that hangs (as a retry)", async () => {
+    const keys = await vapidKeys();
+    const seen: { redirect: string | undefined; aborted: boolean }[] = [];
+    const push = createWebPushSender({
+      ...keys,
+      subject: "mailto:ops@example.com",
+      timeoutMs: 20,
+      fetch: (_url, init) =>
+        new Promise((_resolve, reject) => {
+          seen.push({ redirect: init.redirect, aborted: false });
+          init.signal.addEventListener("abort", () => {
+            seen[0] = { redirect: init.redirect, aborted: true };
+            reject(new DOMException("timed out", "TimeoutError"));
+          });
+        }),
+    });
+    expect(await push.send(await device(), MESSAGE, NOW)).toEqual({
+      kind: "retry",
+      retryAfterSeconds: null,
+    });
+    expect(seen).toEqual([{ redirect: "manual", aborted: true }]);
   });
 
   it("turns a network failure into a retry, never a throw", async () => {

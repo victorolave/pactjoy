@@ -97,14 +97,33 @@ describe("dispatchNotifications: delivery", () => {
     expect(only(app)).toMatchObject({ state: "sent", outcome: "delivered", finishedAt: NOON });
   });
 
-  it("SC-W4: without a push sender nothing is claimed and the rows stay as they are", async () => {
+  it("SC-W4: without a push sender nothing is sent; live notices wait, expired ones are dropped", async () => {
     const { app, world } = await given();
-    await seed(app, [noticeFor(world)], [device(world, 1)]);
+    await seed(
+      app,
+      [
+        noticeFor(world),
+        noticeFor(world, {
+          dedupeKey: "old",
+          notBefore: at("2026-10-05", 9),
+          expiresAt: at("2026-10-05", 22),
+        }),
+      ],
+      [device(world, 1)],
+    );
     expect(await dispatch(app, null, NOON)).toEqual({
       ok: true,
-      value: { claimed: 0, sent: 0, dropped: 0, retried: 0, failed: 0, deferred: 0 },
+      value: { claimed: 2, sent: 0, dropped: 1, retried: 0, failed: 0, deferred: 1 },
     });
-    expect(only(app)).toMatchObject({ state: "pending", attempts: 0 });
+    const rows = app.notifications.all();
+    expect(rows.find((n) => n.dedupeKey === "old")).toMatchObject({
+      state: "dropped",
+      outcome: "expired",
+    });
+    expect(rows.find((n) => n.dedupeKey !== "old")).toMatchObject({
+      state: "pending",
+      attempts: 0,
+    });
   });
 
   it("REQ-O10: a recipient with no device drops the notice (no retry, no later replay)", async () => {
@@ -184,6 +203,48 @@ describe("dispatchNotifications: retries", () => {
     push.respondWith(() => ({ kind: "retry", retryAfterSeconds: 600 }));
     await dispatch(app, push, NOON);
     expect(only(app)).toMatchObject({ state: "pending", notBefore: instant(NOON + 10 * MIN) });
+  });
+});
+
+describe("dispatchNotifications: failures and time budget", () => {
+  it("a notice whose handling keeps throwing ends failed as exhausted, not reclaimed forever", async () => {
+    const { app, world } = await given();
+    await seed(app, [noticeFor(world, { expiresAt: at("2026-10-07", 22) })], [device(world, 1)]);
+    const throwing = createRecordingPushSender();
+    throwing.send = async () => {
+      throw new Error("adapter bug");
+    };
+    for (let run = 0; run < 8; run++) {
+      await dispatchNotifications(
+        { ...atInstant(app, instant(NOON + run * 6 * MIN)), push: throwing },
+        {},
+      );
+    }
+    expect(only(app)).toMatchObject({ state: "failed", outcome: "exhausted" });
+  });
+
+  it("stops taking notices once most of the lease has passed; the rest go back to pending", async () => {
+    const { app, world, push } = await given();
+    await seed(
+      app,
+      [
+        noticeFor(world),
+        noticeFor(world, { dedupeKey: "b" }),
+        noticeFor(world, { dedupeKey: "c" }),
+      ],
+      [device(world, 1)],
+    );
+    let calls = 0;
+    // The run starts at NOON; any later reading is four minutes on (past 60% of the 5-minute lease).
+    const clock = { now: () => instant(calls++ === 0 ? NOON : NOON + 4 * MIN) };
+    const result = await dispatchNotifications({ ...app, clock, push }, {});
+    expect(result.ok && result.value).toMatchObject({ claimed: 3, sent: 0, deferred: 3 });
+    expect(push.sent).toEqual([]);
+    expect(app.notifications.all().map((n) => [n.state, n.attempts])).toEqual([
+      ["pending", 0],
+      ["pending", 0],
+      ["pending", 0],
+    ]);
   });
 });
 

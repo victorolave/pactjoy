@@ -29,6 +29,18 @@ export interface SessionApi {
 
 const SessionContext = createContext<SessionApi | null>(null);
 
+/** How long a sign-out waits for `beforeSignOut` before it goes on anyway. */
+const SIGN_OUT_GRACE_MS = 2_000;
+
+/** Settles when `work` does or after the grace period, whichever is first; never rejects. */
+function withinGrace(work: Promise<void>): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const grace = new Promise<void>((resolve) => {
+    timer = setTimeout(resolve, SIGN_OUT_GRACE_MS);
+  });
+  return Promise.race([work.catch(() => undefined), grace]).finally(() => clearTimeout(timer));
+}
+
 export interface SessionProviderProps {
   readonly auth: AuthPort;
   readonly store: TokenStore;
@@ -39,7 +51,8 @@ export interface SessionProviderProps {
   readonly expired?: SessionEvents;
   /**
    * Runs at the start of a sign-out, while the session can still call the API (the device's push
-   * registration is removed here, ADR-0017). Best effort: a rejection never blocks the sign-out.
+   * registration is removed here, ADR-0017). Best effort: a rejection never blocks the sign-out,
+   * and the sign-out goes on after two seconds whatever it is still waiting for.
    */
   readonly beforeSignOut?: () => Promise<void>;
   readonly children: ReactNode;
@@ -94,7 +107,7 @@ export function SessionProvider({
         setSession(next);
       },
       async signOut() {
-        await beforeSignOut?.().catch(() => undefined);
+        if (beforeSignOut) await withinGrace(beforeSignOut());
         await manager.signOut();
         setNotice(null);
         setSession(null);

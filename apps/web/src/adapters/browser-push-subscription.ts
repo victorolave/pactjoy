@@ -60,9 +60,18 @@ function deviceOf(subscription: PushSubscriptionLike): DevicePushSubscription {
  */
 export class BrowserPushSubscription implements PushSubscriptionPort {
   readonly #container: ServiceWorkerContainerLike | undefined;
+  readonly #readyTimeoutMs: number;
 
-  constructor(container: ServiceWorkerContainerLike | undefined = defaultContainer()) {
+  /**
+   * `readyTimeoutMs` bounds the wait for an active worker: `serviceWorker.ready` never settles when
+   * none is active (dev, a failed registration), and nothing here may hang the app (sign-out).
+   */
+  constructor(
+    container: ServiceWorkerContainerLike | undefined = defaultContainer(),
+    readyTimeoutMs = 3_000,
+  ) {
     this.#container = container;
+    this.#readyTimeoutMs = readyTimeoutMs;
   }
 
   supported(): boolean {
@@ -100,6 +109,14 @@ export class BrowserPushSubscription implements PushSubscriptionPort {
 
   async #manager(): Promise<PushManagerLike> {
     if (this.#container === undefined) throw new Error("push is not supported");
-    return (await this.#container.ready).pushManager;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<never>((_resolve, reject) => {
+      timer = setTimeout(() => reject(new Error("no active service worker")), this.#readyTimeoutMs);
+    });
+    try {
+      return (await Promise.race([this.#container.ready, timeout])).pushManager;
+    } finally {
+      clearTimeout(timer);
+    }
   }
 }

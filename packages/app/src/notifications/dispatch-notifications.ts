@@ -15,7 +15,7 @@ export interface DispatchNotificationsDeps {
   readonly uow: UnitOfWork<Repositories>;
   readonly clock: Clock;
   readonly timeZone: TimeZone;
-  /** `null` when Web Push is not configured: the job then claims nothing and sends nothing. */
+  /** `null` when Web Push is not configured: nothing is sent; notices wait, and expire as usual. */
   readonly push: PushSender | null;
 }
 
@@ -51,6 +51,8 @@ const PURGE_LIMIT = 200;
 /** The encoded payload stays far below what one aes128gcm record and every push service take. */
 export const MAX_PAYLOAD_BYTES = 3072;
 const CONCURRENCY = 4;
+/** A run stops taking notices once this share of the lease has passed. */
+const BUDGET_SHARE = 0.6;
 
 /** UTF-8 length of `text`, without `TextEncoder` (not in this package's standard library). */
 function utf8Length(text: string): number {
@@ -80,8 +82,10 @@ function secondsUntil(now: Instant, until: Instant): number {
 
 /**
  * Sends what is due (ADR-0017, design J8 and J13). For each claimed notice, in this order:
+ * 0. claimed more than {@link MAX_ATTEMPTS} times (an earlier run kept throwing on it): `failed`;
+ *    once 60% of the lease has passed, the run takes no more notices and puts them back;
  * 1. past its window: a morning notice with a rollover left moves to the next day's 09:00-22:00
- *    window, anything else is dropped as `expired`;
+ *    window, anything else is dropped as `expired`; with Web Push off, a live notice waits;
  * 2. inside quiet hours (22:00-08:00 season-local): back to `pending` until 08:00;
  * 3. no longer relevant, or the recipient left: dropped;
  * 4. no device: dropped (`noSubscription`); otherwise sent to every device the sender accepts.
@@ -98,8 +102,7 @@ export async function dispatchNotifications(
   input: DispatchNotificationsInput,
 ): Promise<Result<DispatchNotificationsResult, never>> {
   const counts = { claimed: 0, sent: 0, dropped: 0, retried: 0, failed: 0, deferred: 0 };
-  if (deps.push === null) return ok(counts);
-  const push: PushSender = deps.push;
+  const push: PushSender | null = deps.push;
   const now = deps.clock.now();
 
   const write = <T>(work: (repos: Repositories) => Promise<T>) =>
@@ -131,6 +134,21 @@ export async function dispatchNotifications(
     };
     // A deferral gives the claim's attempt back.
     const giveBack = fence - 1;
+    const unchanged = (): Promise<Handled> =>
+      later(
+        {
+          notBefore: notice.notBefore,
+          expiresAt: notice.expiresAt,
+          rolloversLeft: notice.rolloversLeft,
+          attempts: giveBack,
+        },
+        "deferred",
+      );
+
+    // Claimed more often than allowed: an earlier run kept throwing on it (it stayed `sending`).
+    if (notice.attempts > MAX_ATTEMPTS) return end("failed", "exhausted");
+    // Past most of the lease, a run takes no more notices: another dispatcher could reclaim them.
+    if (deps.clock.now() - now >= LEASE_MS * BUDGET_SHARE) return unchanged();
 
     if (notice.expiresAt <= now) {
       if (notice.rolloversLeft === 0) return end("dropped", "expired");
@@ -138,6 +156,8 @@ export async function dispatchNotifications(
       const window = morningWindow(addDays(day, 1), notice.timeZone, deps.timeZone);
       return later({ ...window, rolloversLeft: 0, attempts: giveBack }, "deferred");
     }
+    // Web Push is off: nothing is sent, the notice waits (or expires above).
+    if (push === null) return unchanged();
     const quietUntil = quietHoursEnd(now, notice.timeZone, deps.timeZone);
     if (quietUntil !== null) {
       return later(

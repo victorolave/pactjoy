@@ -6,8 +6,21 @@ import { importVapidKeys, type VapidKeys, vapidAuthorization } from "./vapid.ts"
 /** The slice of `fetch` the sender needs, so tests and runtimes can inject their own. */
 export type WebPushFetch = (
   url: string,
-  init: { method: "POST"; headers: Record<string, string>; body: Uint8Array },
+  init: {
+    method: "POST";
+    headers: Record<string, string>;
+    body: Uint8Array;
+    /** Never follow a redirect: the host allowlist is checked on the endpoint only. */
+    redirect: "manual";
+    /** Aborts a push service that does not answer in time. */
+    signal: AbortSignal;
+  },
 ) => Promise<{ status: number; headers: { get(name: string): string | null } }>;
+
+/** How long one push service may take before the send counts as a retry. */
+const DEFAULT_TIMEOUT_MS = 10_000;
+/** A VAPID or clock problem on our side (401, 403) waits an hour instead of failing the notice. */
+const AUTH_RETRY_SECONDS = 3600;
 
 export interface WebPushSenderOptions {
   /** `API_PUSH_VAPID_PUBLIC_KEY`: base64url uncompressed P-256 point. */
@@ -18,6 +31,8 @@ export interface WebPushSenderOptions {
   readonly subject: string;
   /** Defaults to the global `fetch`. */
   readonly fetch?: WebPushFetch;
+  /** Per-send timeout; 10 s by default, so a hung push service cannot outlive the dispatch lease. */
+  readonly timeoutMs?: number;
 }
 
 /**
@@ -59,6 +74,9 @@ function retryAfter(value: string | null): number | null {
 function outcomeOf(status: number, headers: { get(name: string): string | null }): PushOutcome {
   if (status >= 200 && status < 300) return { kind: "delivered" };
   if (status === 404 || status === 410) return { kind: "gone" };
+  if (status === 401 || status === 403) {
+    return { kind: "retry", retryAfterSeconds: AUTH_RETRY_SECONDS };
+  }
   if (status === 429 || status >= 500) {
     return { kind: "retry", retryAfterSeconds: retryAfter(headers.get("retry-after")) };
   }
@@ -110,6 +128,8 @@ export function createWebPushSender(options: WebPushSenderOptions): PushSender {
       try {
         const response = await send(target.endpoint, {
           method: "POST",
+          redirect: "manual",
+          signal: AbortSignal.timeout(options.timeoutMs ?? DEFAULT_TIMEOUT_MS),
           headers: {
             TTL: String(message.ttlSeconds),
             Urgency: message.urgency,

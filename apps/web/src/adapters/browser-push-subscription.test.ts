@@ -85,6 +85,12 @@ describe("BrowserPushSubscription", () => {
     expect(await manager().adapter.unsubscribe()).toBeNull();
   });
 
+  it("current gives up on a service worker that never becomes ready", async () => {
+    const adapter = new BrowserPushSubscription({ ready: new Promise(() => {}) }, 10);
+    expect(await adapter.current()).toBeNull();
+    await expect(adapter.unsubscribe()).rejects.toThrow();
+  });
+
   it("current never rejects: a broken worker reads as no subscription", async () => {
     const adapter = new BrowserPushSubscription({ ready: Promise.reject(new Error("no sw")) });
     expect(await adapter.current()).toBeNull();
