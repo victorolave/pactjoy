@@ -11,8 +11,10 @@ const SOURCES = import.meta.glob("./**/*.ts", {
  * So `src/feed/` must not reach reviews and SRBAI answers (ADR-0014), season-closure decisions
  * (ADR-0015, `closure-guard.test.ts`), the photo ledger (ADR-0016) or the free-text evidence of an
  * entry: not the stores, not their types, not their modules, not the `note` and `photoId`
- * properties, nor the privacy helpers that read them. Graduation comes from `Habit.graduatedAt`,
- * which is why none of the closure code is needed. Only the production sources are scanned: a test
+ * properties, nor the privacy helpers that read them. Graduation comes from the closure module's
+ * one public helper, `seasonGraduations` (the season's own `graduate` decisions and nothing else
+ * of a closure): never `Habit.graduatedAt`, which says nothing about WHICH circle's close
+ * graduated a reused habit. The feed calls the helper and never touches the closure store. Only the production sources are scanned: a test
  * may build an entry with a note precisely to prove it never leaks.
  *
  * The names are assembled from parts on purpose. The review, closure and photo guards scan every
@@ -46,8 +48,8 @@ const FORBIDDEN: readonly { readonly name: string; readonly pattern: RegExp }[] 
     pattern: /from\s+["']\.\.\/(review|entry-photo)\//,
   },
   {
-    name: "import of the closure module (only its calendar is allowed)",
-    pattern: /from\s+["']\.\.\/season\/closure\/(?!season-calendar\.ts)/,
+    name: "import of the closure module (only its calendar and graduations are allowed)",
+    pattern: /from\s+["']\.\.\/season\/closure\/(?!season-calendar\.ts|season-graduations\.ts)/,
   },
   { name: "entry note", pattern: /\.\s*note\b/ },
   { name: "entry photo id", pattern: /\.\s*photoId\b/ },
@@ -93,8 +95,12 @@ describe("the feed never reaches private material", () => {
     ["import of the review or photo modules", 'import { x } from "../review/period-summary.ts";'],
     ["import of the review or photo modules", "import { y } from '../entry-photo/photo-views.ts';"],
     [
-      "import of the closure module (only its calendar is allowed)",
+      "import of the closure module (only its calendar and graduations are allowed)",
       'import { z } from "../season/closure/finalize.ts";',
+    ],
+    [
+      "import of the closure module (only its calendar and graduations are allowed)",
+      'import { z } from "../season/closure/season-closure.ts";',
     ],
     ["entry note", "const text = entry.note;"],
     ["entry photo id", "const id = entry\n  .photoId;"],
@@ -107,7 +113,8 @@ describe("the feed never reaches private material", () => {
   it("does not flag what the feed legitimately uses", () => {
     for (const source of [
       'import { closeDatesOf } from "../season/closure/season-calendar.ts";',
-      "const graduated = habit.graduatedAt;",
+      'import { seasonGraduations } from "../season/closure/season-graduations.ts";',
+      "const graduations = await seasonGraduations(repos, season.id);",
       "const note = 'a word in a comment';",
       "photo: null",
       "const { entries } = world;",

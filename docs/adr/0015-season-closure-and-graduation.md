@@ -133,7 +133,7 @@ Two additive migrations: `season_closures` and `season_closure_decisions` (RLS o
 
 ## Addendum: graduation is announced in the circle feed (2026-10-17, change `social-reactions`, ADR-0018)
 
-A graduation is no longer private. The circle feed derives a "graduó" item from `Habit.graduatedAt` (never from the closure decisions, so `closure-guard` still holds), and peers read "{Nombre} graduó {hábito}" in "Actividad del círculo". This supersedes two statements above:
+A graduation is no longer private. The circle feed derives a "graduó" item from the season's own graduate decisions, read through a closure-module helper (`seasonGraduations`) that exposes graduate decisions only (revised 2026-10-17 after review: `Habit.graduatedAt` cannot say which circle's close graduated a habit reused across circles; the port and `closure-guard` are unchanged), and peers read "{Nombre} graduó {hábito}" in "Actividad del círculo". This supersedes two statements above:
 
 - **REQ-V7 and "Strict privacy"** (Context): what a member decides about each commitment stays private, and so does the `leave`, `adjust` and `pause` choice; only the graduation, the outcome the design always meant to celebrate, is announced.
 - **The screen 38b deviation** (Web behaviour): "Solo tú ves esta decisión." and "there is no activity feed until A3" no longer hold. Screen 38b now says what the circle will read, as the design does: "Andrea verá “Victor graduó Leer” en la actividad del círculo." (several peers are named with commas and "y"; "Tu círculo" when no name is known).

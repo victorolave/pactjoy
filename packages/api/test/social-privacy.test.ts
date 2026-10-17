@@ -1,7 +1,7 @@
-import type { SignedRequest } from "@pactjoy/app";
+import { instant, type SignedRequest } from "@pactjoy/app";
 import { describe, expect, it } from "vitest";
 import { createCircleBody, joinCircleBody } from "../src/testing/index.ts";
-import { MINUTES } from "./entries-fixture.ts";
+import { DONE, givenTwoMemberSeason, MINUTES } from "./entries-fixture.ts";
 import { ANDREA, CARLA, setup, VICTOR } from "./harness.ts";
 
 // Privacy by construction (ADR-0011 Q25, ADR-0018): the social routes serve existence, names of
@@ -354,6 +354,40 @@ describe("the social routes never carry Andrea's private facts or the social int
       assertClean(`${who} send after leave`, send.json, w, ["Creator"]);
     }
   });
+
+  it.each([
+    ["private", { kind: "private" }],
+    ["visible", { kind: "habit", name: "Run andrea", icon: null }],
+  ] as const)(
+    "SO-P4: a real closure that graduates a %s habit reaches a peer as that subject only",
+    async (privacy, subject) => {
+      const { call, setNow, seasonId, commitmentIds } = await givenTwoMemberSeason(DONE, {
+        andrea: privacy,
+      });
+      setNow(instant(Date.UTC(2023, 11, 12, 17)));
+      const review = await call("POST", `/seasons/${seasonId}/reviews/4`, "andrea", {
+        reflection: { helped: null, hard: null },
+        automaticity: [{ commitmentId: commitmentIds.andrea, items: [4, 4, 5, 5] }],
+      });
+      expect(review.status).toBe(201);
+      setNow(instant(Date.UTC(2023, 11, 13, 17, 41, 13, 777)));
+      const closed = await call("POST", `/seasons/${seasonId}/closure`, "andrea", {
+        decisions: [{ commitmentId: commitmentIds.andrea, decision: "graduate" }],
+      });
+      expect(closed.status).toBe(201);
+
+      const feed = await call("GET", "/me/feed", "victor");
+      const graduated = feed.json.data.items.filter(
+        (i: { kind: string }) => i.kind === "graduated",
+      );
+      expect(graduated).toHaveLength(1);
+      expect(graduated[0]).toMatchObject({ kind: "graduated", subject });
+      // The wire carries the item and its subject, never the closure behind it.
+      const text = JSON.stringify(feed.json);
+      expect(text).not.toContain("decision");
+      expect(text.includes("Run andrea")).toBe(privacy === "visible");
+    },
+  );
 
   it("SO-P3: errors never echo the private facts either (unknown item, wrong season)", async () => {
     const w = await world();

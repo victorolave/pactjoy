@@ -24,7 +24,6 @@ import {
   seasonClosureFixture,
 } from "../testing/builders.ts";
 import { localInstant } from "../testing/entry-fixtures.ts";
-import { instant } from "../time/instant.ts";
 import { circleFeed } from "./circle-feed.query.ts";
 import { ANDREA, dateOf, minutes } from "./feed-fixtures.ts";
 
@@ -153,7 +152,7 @@ async function givenSecretWorld(): Promise<ReviewWorld> {
       seasonId: SEASON,
       memberId: secret.memberId,
       decisions: [{ commitmentId: SECRET, decision: "graduate" }],
-      decidedAt: instant(1),
+      decidedAt: localInstant(dateOf(16)),
     }),
   );
   return world;

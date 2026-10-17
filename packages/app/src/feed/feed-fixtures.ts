@@ -188,6 +188,8 @@ export interface FeedWorldOptions {
   readonly entries?: readonly EntryRecord[];
   readonly requests?: readonly EffectivePauseRequest[];
   readonly habits?: readonly Habit[];
+  /** The season's own graduate decisions (the closure helper's output). */
+  readonly graduations?: FeedWorld["graduations"];
   /** 0-based "today" of the engine. */
   readonly today?: number;
   readonly lengthWeeks?: Season["lengthWeeks"];
@@ -212,6 +214,7 @@ export function feedWorld(options: FeedWorldOptions = {}): FeedWorld {
     entries: options.entries ?? [],
     requests: options.requests ?? [],
     habits: options.habits ?? HABITS,
+    graduations: options.graduations ?? [],
     timeZone: fixtureTimeZone,
   };
 }

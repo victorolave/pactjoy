@@ -3,6 +3,10 @@ import type { Circle, Member } from "../circle/circle.ts";
 import { loadEffectiveRequests } from "../pause/effective-pauses.ts";
 import type { Repositories } from "../ports/repositories.ts";
 import type { ScoreQueryDeps } from "../score/score-context.ts";
+import {
+  type SeasonGraduationSource,
+  seasonGraduations,
+} from "../season/closure/season-graduations.ts";
 import type { Season } from "../season/season.ts";
 import type { Actor } from "../shared/actor.ts";
 import type { Instant } from "../time/instant.ts";
@@ -57,18 +61,20 @@ export function activeViewerOf(circle: Circle, actor: Actor): Member | undefined
 /**
  * Loads what `deriveFeed` reads for a feed season: the live entries, the pauses through their
  * choke point (the effective decision at the read's instant, ADR-0013) and the habits of the
- * season's commitments. Reads only; nothing private (reviews, closures, photos) is touched.
+ * season's commitments, plus the season's graduate decisions through the closure module's one
+ * public helper. Reads only; nothing else private (reviews, closure decisions, photos) is touched.
  */
 export async function loadFeedWorld(
   deps: FeedDeps,
-  repos: Pick<Repositories, "entries" | "pauses" | "habits">,
+  repos: Pick<Repositories, "entries" | "pauses" | "habits"> & SeasonGraduationSource,
   context: FeedContext,
 ): Promise<FeedWorld> {
   const { season, circle, now } = context;
-  const [entries, requests, habits] = await Promise.all([
+  const [entries, requests, habits, graduations] = await Promise.all([
     repos.entries.listBySeason(season.id),
     loadEffectiveRequests(repos, { season, circle, now, timeZone: deps.timeZone }),
     repos.habits.getMany(season.commitments.map((commitment) => commitment.habitId)),
+    seasonGraduations(repos, season.id),
   ]);
   return {
     season,
@@ -77,6 +83,7 @@ export async function loadFeedWorld(
     entries,
     requests,
     habits,
+    graduations,
     timeZone: deps.timeZone,
   };
 }

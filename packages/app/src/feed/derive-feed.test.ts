@@ -302,12 +302,11 @@ describe("deriveFeed: pauses (F7)", () => {
 
 describe("deriveFeed: graduation (F8)", () => {
   const graduatedAt = localInstant(dateOf(10), 22 * 3_600_000);
-  const graduated = HABITS.map((habit) =>
-    habit.id === "habit-leer" ? habitFixture({ ...habit, graduatedAt }) : habit,
-  );
+  const decision = { memberId: ANDREA, commitmentId: LEER, decidedAt: graduatedAt };
+  const graduated = { graduations: [decision] };
 
-  it("a habit of the season with graduatedAt yields one item at that instant", () => {
-    expect(find(deriveFeed(feedWorld({ habits: graduated })), "graduated")).toEqual([
+  it("a graduate decision of the season yields one item at the closure's instant", () => {
+    expect(find(deriveFeed(feedWorld(graduated)), "graduated")).toEqual([
       {
         kind: "graduated",
         key: "graduation:habit-leer",
@@ -322,18 +321,25 @@ describe("deriveFeed: graduation (F8)", () => {
 
   it("is one item per habit even when two commitments work it", () => {
     const second = buildCommitment({ ...leer(), id: commitmentId("commitment-leer-2") });
-    const world = feedWorld({ commitments: [meditar(), leer(), second], habits: graduated });
-    const [item] = find(deriveFeed(world), "graduated");
-    expect(item?.commitmentIds).toEqual([LEER, "commitment-leer-2"]);
+    const world = feedWorld({
+      commitments: [meditar(), leer(), second],
+      graduations: [decision, { ...decision, commitmentId: second.id }],
+    });
+    const items = find(deriveFeed(world), "graduated");
+    expect(items).toHaveLength(1);
+    expect(items[0]?.commitmentIds).toEqual([LEER, "commitment-leer-2"]);
   });
 
-  it("a graduated habit that is not in the season's commitments yields nothing", () => {
-    const world = feedWorld({ commitments: [meditar(), correr()], habits: graduated });
+  it("a decision about a commitment that is not in the season yields nothing", () => {
+    const world = feedWorld({ commitments: [meditar(), correr()], ...graduated });
     expect(find(deriveFeed(world), "graduated")).toEqual([]);
   });
 
-  it("a habit that cannot be found yields nothing (it cannot be known as graduated)", () => {
-    expect(find(deriveFeed(feedWorld({ habits: [] })), "graduated")).toEqual([]);
+  it("Habit.graduatedAt alone yields nothing: the habit may have graduated in another circle", () => {
+    const habits = HABITS.map((habit) =>
+      habit.id === "habit-leer" ? habitFixture({ ...habit, graduatedAt }) : habit,
+    );
+    expect(find(deriveFeed(feedWorld({ habits })), "graduated")).toEqual([]);
   });
 });
 

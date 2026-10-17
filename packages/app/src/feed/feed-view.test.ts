@@ -220,19 +220,19 @@ describe("presentFeedItems: pauses (F7)", () => {
 });
 
 describe("presentFeedItems: graduation (F8)", () => {
-  const graduatedHabits = HABITS.map((h) =>
-    h.id === "habit-leer" ? habitFixture({ ...h, graduatedAt: localInstant(dateOf(10)) }) : h,
-  );
+  const graduations = [
+    { memberId: ANDREA, commitmentId: LEER, decidedAt: localInstant(dateOf(10)) },
+  ];
 
   it("names a visible habit and masks a private one for peers", () => {
-    const visible = feedWorld({ habits: graduatedHabits });
+    const visible = feedWorld({ graduations });
     expect(
       present(deriveFeed(visible), { world: visible }).find((i) => i.kind === "graduated"),
     ).toMatchObject({ memberId: ANDREA, subject: { kind: "habit", name: "Leer" } });
 
     const hidden = feedWorld({
       commitments: [meditar(), leer({ privacy: "private" })],
-      habits: graduatedHabits,
+      graduations,
     });
     expect(
       present(deriveFeed(hidden), { world: hidden }).find((i) => i.kind === "graduated"),

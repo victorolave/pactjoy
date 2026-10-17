@@ -17,8 +17,10 @@ import type { EffectivePauseRequest } from "../pause/effective-pauses.ts";
 import type { PauseRequestRecord } from "../pause/pause-request.ts";
 import { toEnginePauses } from "../pause/to-engine.ts";
 import { closeDatesOf } from "../season/closure/season-calendar.ts";
+import type { SeasonGraduation } from "../season/closure/season-graduations.ts";
 import type { Season } from "../season/season.ts";
 import type { HabitId } from "../shared/ids.ts";
+import type { Instant } from "../time/instant.ts";
 import type { LocalDate } from "../time/local-date.ts";
 import { localDateOfSeasonDay } from "../time/season-calendar.ts";
 import type { TimeZone } from "../time/time-zone.port.ts";
@@ -52,7 +54,12 @@ export interface FeedWorld {
   readonly requests: readonly EffectivePauseRequest[];
   /** At least the habits of the season's commitments; a missing one is tolerated by the view. */
   readonly habits: readonly Habit[];
-  /** Turns the instant a habit was graduated into the season's civil day. */
+  /**
+   * The graduate decisions of THIS season's closures, nothing else of them (F8). Never derived
+   * from `Habit.graduatedAt`: a habit can be reused and graduated in another circle.
+   */
+  readonly graduations: readonly SeasonGraduation[];
+  /** Turns the instant a closure graduated a habit into the season's civil day. */
   readonly timeZone: TimeZone;
 }
 
@@ -249,22 +256,32 @@ function pauseItems(world: FeedWorld): FeedRecord[] {
   return items;
 }
 
-/** One item per graduated habit of the season's commitments; closure decisions are never read (F8). */
+/**
+ * One item per habit this season's members graduated at its close (F8). The fact comes from the
+ * season's own graduate decisions, never from `Habit.graduatedAt`: the habit may be reused in
+ * another circle and graduated there. The privacy is the feed season's commitment's.
+ */
 function graduationItems(world: FeedWorld): FeedRecord[] {
-  const byHabit = new Map<HabitId, CommitmentRecord[]>();
-  for (const commitment of world.season.commitments) {
-    byHabit.set(commitment.habitId, [...(byHabit.get(commitment.habitId) ?? []), commitment]);
+  const byHabit = new Map<HabitId, { commitments: CommitmentRecord[]; decidedAt: Instant }>();
+  for (const { commitmentId, decidedAt } of world.graduations) {
+    const commitment = world.season.commitments.find((c) => c.id === commitmentId);
+    if (commitment === undefined || byHabit.has(commitment.habitId)) continue;
+    byHabit.set(commitment.habitId, {
+      commitments: world.season.commitments.filter(
+        (c) => c.habitId === commitment.habitId && c.memberId === commitment.memberId,
+      ),
+      decidedAt,
+    });
   }
   const items: FeedRecord[] = [];
-  for (const [habitId, commitments] of byHabit) {
-    const habit = world.habits.find((candidate) => candidate.id === habitId);
+  for (const [habitId, { commitments, decidedAt }] of byHabit) {
     const first = commitments[0];
-    if (habit === undefined || habit.graduatedAt === null || first === undefined) continue;
+    if (first === undefined) continue;
     items.push({
       kind: "graduated",
       key: graduationKey(habitId),
-      onDate: world.timeZone.localDateAt(habit.graduatedAt, world.season.timeZone),
-      at: habit.graduatedAt,
+      onDate: world.timeZone.localDateAt(decidedAt, world.season.timeZone),
+      at: decidedAt,
       memberId: first.memberId,
       habitId,
       commitmentIds: commitments.map((commitment) => commitment.id),
@@ -275,7 +292,7 @@ function graduationItems(world: FeedWorld): FeedRecord[] {
 
 /**
  * The circle's activity of one started season, derived from its entries, effective pauses,
- * `Habit.graduatedAt` and dates (ADR-0018, F1). Pure and unordered: the query sorts and pages it,
+ * the season's own graduate decisions and dates (ADR-0018, F1). Pure and unordered: the query sorts and pages it,
  * and `feed-view.ts` shows it to a viewer. Entries stay the source of truth, so an edit, a delete
  * or a pause changes the feed on the next read with no sync step.
  */
