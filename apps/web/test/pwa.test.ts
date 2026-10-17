@@ -116,4 +116,11 @@ describe("service worker (WF-R7, ADR-0017: a hand-written worker for Web Push)",
     expect(code).toMatch(/addEventListener\("notificationclick"/);
     expect(code).toContain("notificationFor(");
   });
+
+  it("a tap does not reload a window already on the destination, and opens one if navigating fails", () => {
+    expect(code).toMatch(/if \(here === path\) return;/);
+    expect(code).toMatch(
+      /try \{\s*await open\.navigate\(path\);\s*return;\s*\} catch \{[\s\S]*?\}\s*\}\s*await self\.clients\.openWindow\(path\)/,
+    );
+  });
 });

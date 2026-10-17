@@ -69,8 +69,16 @@ self.addEventListener("notificationclick", (event) => {
       const open = windows.find((client) => new URL(client.url).origin === self.location.origin);
       if (open) {
         await open.focus();
-        await open.navigate(path);
-        return;
+        const at = new URL(open.url);
+        const here = at.pathname + at.search;
+        // Already there: focusing is enough (navigating would reload the whole app).
+        if (here === path) return;
+        try {
+          await open.navigate(path);
+          return;
+        } catch {
+          // Some WebKit states refuse to navigate a client: open the destination instead.
+        }
       }
       await self.clients.openWindow(path);
     })(),
