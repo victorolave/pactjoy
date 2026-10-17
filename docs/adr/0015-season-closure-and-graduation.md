@@ -131,6 +131,15 @@ Two additive migrations: `season_closures` and `season_closure_decisions` (RLS o
 - **The stale threshold** is `L*7 + 8` (seven full days after the last season day); the owner has still to confirm it against `L*7 + 7`.
 - **Pre-existing gap.** `addCommitment` does not check that the habit belongs to the caller; this change only adds the graduated check.
 
+## Addendum: graduation is announced in the circle feed (2026-10-17, change `social-reactions`, ADR-0018)
+
+A graduation is no longer private. The circle feed derives a "graduó" item from `Habit.graduatedAt` (never from the closure decisions, so `closure-guard` still holds), and peers read "{Nombre} graduó {hábito}" in "Actividad del círculo". This supersedes two statements above:
+
+- **REQ-V7 and "Strict privacy"** (Context): what a member decides about each commitment stays private, and so does the `leave`, `adjust` and `pause` choice; only the graduation, the outcome the design always meant to celebrate, is announced.
+- **The screen 38b deviation** (Web behaviour): "Solo tú ves esta decisión." and "there is no activity feed until A3" no longer hold. Screen 38b now says what the circle will read, as the design does: "Andrea verá “Victor graduó Leer” en la actividad del círculo." (several peers are named with commas and "y"; "Tu círculo" when no name is known).
+
+Private habits are masked: the feed and the 38b line say "un objetivo privado" ("Tu círculo verá que graduaste un objetivo privado."), never the name. `SC-G4` still covers every route that existed before A3; the new `GET /me/feed` has its own privacy test (`social-privacy.test.ts`). Nothing is exposed retroactively: there are no hosted users.
+
 ## References
 
 - [ADR-0008](0008-use-case-and-port-conventions.md), [ADR-0010](0010-postgres-adapter.md), [ADR-0011](0011-api-layer.md) (Q22), [ADR-0013](0013-pause-lifecycle-and-lazy-settlement.md), [ADR-0014](0014-periodic-review-and-derived-habit-stage.md)
