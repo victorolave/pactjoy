@@ -52,7 +52,8 @@ const KINDS: Readonly<
     needs: ["seasonId", "pauseRequestId", "lastDate"],
     view: () => ({
       title: "Tu pausa termina mañana",
-      body: "Mañana retomas tus compromisos.",
+      // Sent the day BEFORE the last paused day (Today's "ends tomorrow"): tomorrow is still paused.
+      body: "Mañana es el último día de tu pausa.",
       url: "/",
     }),
   },

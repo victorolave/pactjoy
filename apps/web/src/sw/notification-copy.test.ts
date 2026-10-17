@@ -42,6 +42,14 @@ describe("notificationFor", () => {
     expect(notice.body.length).toBeGreaterThan(0);
   });
 
+  it("pauseEndsTomorrow says tomorrow is the LAST paused day (it fires the day before it, like Today)", () => {
+    const notice = show(
+      payload("pauseEndsTomorrow", { seasonId: S, pauseRequestId: P, lastDate: "2026-10-20" }),
+    );
+    expect(notice.body).toBe("Mañana es el último día de tu pausa.");
+    expect(notice.body).not.toMatch(/retomas/);
+  });
+
   it("tags a notice by kind and subject, so a repeat replaces it on the device", () => {
     expect(show(payload("reviewDue", { seasonId: S, periodIndex: 2 })).tag).toBe(
       "reviewDue:season-1:2",
