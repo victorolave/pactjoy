@@ -16,6 +16,7 @@ export type {
 export {
   circleFixture,
   entryPhotoFixture,
+  feedReactionFixture,
   habitFixture,
   memberFixture,
   pauseRequestFixture,
@@ -38,6 +39,8 @@ export type {
   InMemoryEvidenceStorageOptions,
 } from "./in-memory-evidence-storage.ts";
 export { createInMemoryEvidenceStorage } from "./in-memory-evidence-storage.ts";
+export type { InMemoryFeedReactionRepository } from "./in-memory-feed-reaction-repository.ts";
+export { createInMemoryFeedReactionRepository } from "./in-memory-feed-reaction-repository.ts";
 export type { InMemoryHabitRepository } from "./in-memory-habit-repository.ts";
 export { createInMemoryHabitRepository } from "./in-memory-habit-repository.ts";
 export type { InMemoryPauseRequestRepository } from "./in-memory-pause-request-repository.ts";

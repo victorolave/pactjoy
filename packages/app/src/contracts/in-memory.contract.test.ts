@@ -2,6 +2,7 @@ import { createTestApp } from "../testing/app-harness.ts";
 import { createFixedClock } from "../testing/fixed-clock.ts";
 import { createInMemoryEntryPhotoRepository } from "../testing/in-memory-entry-photo-repository.ts";
 import { createInMemoryEvidenceStorage } from "../testing/in-memory-evidence-storage.ts";
+import { createInMemoryFeedReactionRepository } from "../testing/in-memory-feed-reaction-repository.ts";
 import { createInMemoryReviewRepository } from "../testing/in-memory-review-repository.ts";
 import { createInMemorySeasonClosureRepository } from "../testing/in-memory-season-closure-repository.ts";
 import { instant } from "../time/instant.ts";
@@ -9,6 +10,7 @@ import { describeCircleRepositoryContract } from "./circle.contract.ts";
 import { describeEntryRepositoryContract } from "./entry.contract.ts";
 import { describeEntryPhotoRepositoryContract } from "./entry-photo.contract.ts";
 import { describeEvidenceStorageContract } from "./evidence-storage.contract.ts";
+import { describeFeedReactionRepositoryContract } from "./feed-reaction.contract.ts";
 import {
   describeCircleGuardContract,
   describeSeasonGuardContract,
@@ -34,6 +36,9 @@ describeSeasonRepositoryContract("in-memory", inMemory);
 describePauseRequestRepositoryContract("in-memory", inMemory);
 describeReviewRepositoryContract("in-memory", async () => ({
   repository: createInMemoryReviewRepository(),
+}));
+describeFeedReactionRepositoryContract("in-memory", async () => ({
+  repository: createInMemoryFeedReactionRepository(),
 }));
 describeSeasonClosureRepositoryContract("in-memory", async () => ({
   repository: createInMemorySeasonClosureRepository(),

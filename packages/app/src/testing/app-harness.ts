@@ -24,6 +24,10 @@ import {
   type InMemoryEvidenceStorage,
 } from "./in-memory-evidence-storage.ts";
 import {
+  createInMemoryFeedReactionRepository,
+  type InMemoryFeedReactionRepository,
+} from "./in-memory-feed-reaction-repository.ts";
+import {
   createInMemoryHabitRepository,
   type InMemoryHabitRepository,
 } from "./in-memory-habit-repository.ts";
@@ -66,6 +70,7 @@ export interface TestApp {
   readonly entryPhotos: InMemoryEntryPhotoRepository;
   /** The fake object storage; `upload` plays the browser. Expiry follows the clock the app was created with. */
   readonly evidence: InMemoryEvidenceStorage;
+  readonly feedReactions: InMemoryFeedReactionRepository;
   readonly habits: InMemoryHabitRepository;
   readonly pauses: InMemoryPauseRequestRepository;
   readonly reviews: InMemoryReviewRepository;
@@ -89,6 +94,7 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
   const circles = createInMemoryCircleRepository();
   const entries = createInMemoryEntryRepository();
   const entryPhotos = createInMemoryEntryPhotoRepository();
+  const feedReactions = createInMemoryFeedReactionRepository();
   const habits = createInMemoryHabitRepository();
   const pauses = createInMemoryPauseRequestRepository();
   const reviews = createInMemoryReviewRepository();
@@ -98,6 +104,7 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
     circles,
     entries,
     entryPhotos,
+    feedReactions,
     habits,
     pauses,
     reviews,
@@ -115,6 +122,7 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
     circles,
     entries,
     entryPhotos,
+    feedReactions,
     habits,
     pauses,
     reviews,
@@ -132,6 +140,7 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
         const circleScope = circles.beginTransaction();
         const entryScope = entries.beginTransaction();
         const entryPhotoScope = entryPhotos.beginTransaction();
+        const feedReactionScope = feedReactions.beginTransaction();
         const habitScope = habits.beginTransaction();
         const pauseScope = pauses.beginTransaction();
         const reviewScope = reviews.beginTransaction();
@@ -142,6 +151,7 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
             circles: circleScope.repository,
             entries: entryScope.repository,
             entryPhotos: entryPhotoScope.repository,
+            feedReactions: feedReactionScope.repository,
             habits: habitScope.repository,
             pauses: pauseScope.repository,
             reviews: reviewScope.repository,
@@ -152,6 +162,7 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
             circleScope.validate();
             entryScope.validate();
             entryPhotoScope.validate();
+            feedReactionScope.validate();
             habitScope.validate();
             pauseScope.validate();
             reviewScope.validate();
@@ -160,6 +171,7 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
             circleScope.apply();
             entryScope.apply();
             entryPhotoScope.apply();
+            feedReactionScope.apply();
             habitScope.apply();
             pauseScope.apply();
             reviewScope.apply();

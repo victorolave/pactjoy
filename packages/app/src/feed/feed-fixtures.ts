@@ -12,7 +12,13 @@ import type { EffectivePauseRequest } from "../pause/effective-pauses.ts";
 import { AUTO_APPROVE_AFTER_MS, type PauseRequestRecord } from "../pause/pause-request.ts";
 import type { Season } from "../season/season.ts";
 import { circleId, entryId, habitId, pauseRequestId, seasonId, userId } from "../shared/ids.ts";
-import { habitFixture, pauseRequestFixture, seasonFixture } from "../testing/builders.ts";
+import {
+  circleFixture,
+  habitFixture,
+  memberFixture,
+  pauseRequestFixture,
+  seasonFixture,
+} from "../testing/builders.ts";
 import { fixtureTimeZone, localInstant, SEASON_START } from "../testing/entry-fixtures.ts";
 import { PER_DAY_REACH, TIMES_PER_WEEK, WEEKLY_TOTAL } from "../testing/entry-measures.ts";
 import { type Instant, instant } from "../time/instant.ts";
@@ -70,7 +76,12 @@ export function correr(overrides: Partial<CommitmentRecord> = {}): CommitmentRec
 }
 
 export const HABITS: readonly Habit[] = [
-  habitFixture({ id: habitId("habit-meditar"), ownerId: userId("user-andrea"), name: "Meditar" }),
+  habitFixture({
+    id: habitId("habit-meditar"),
+    ownerId: userId("user-andrea"),
+    name: "Meditar",
+    icon: "leaf",
+  }),
   habitFixture({ id: habitId("habit-leer"), ownerId: userId("user-andrea"), name: "Leer" }),
   habitFixture({ id: habitId("habit-correr"), ownerId: userId("user-victor"), name: "Correr" }),
 ];
@@ -146,6 +157,30 @@ export function approvedPause(
     ...overrides,
   });
   return { record, decision: { status: "approved", decidedAt, decidedOn } };
+}
+
+export const ANDREA_USER = userId("user-andrea");
+export const VICTOR_USER = userId("user-victor");
+
+/** Andrea and Victor in one circle; either may have left. */
+export function feedCircle(left: { readonly andrea?: boolean; readonly victor?: boolean } = {}) {
+  return circleFixture({
+    id: circleId("circle-1"),
+    members: [
+      memberFixture({
+        id: ANDREA,
+        userId: ANDREA_USER,
+        displayName: "Andrea",
+        status: left.andrea ? "left" : "active",
+      }),
+      memberFixture({
+        id: VICTOR,
+        userId: VICTOR_USER,
+        displayName: "Victor",
+        status: left.victor ? "left" : "active",
+      }),
+    ],
+  });
 }
 
 export interface FeedWorldOptions {

@@ -12,6 +12,8 @@ export type { EntryPhotoContractSubject } from "./entry-photo.contract.ts";
 export { describeEntryPhotoRepositoryContract } from "./entry-photo.contract.ts";
 export type { EvidenceStorageContractSubject } from "./evidence-storage.contract.ts";
 export { describeEvidenceStorageContract } from "./evidence-storage.contract.ts";
+export type { FeedReactionContractSubject } from "./feed-reaction.contract.ts";
+export { describeFeedReactionRepositoryContract } from "./feed-reaction.contract.ts";
 export type { ContractSubject } from "./fixtures.ts";
 export {
   describeCircleGuardContract,

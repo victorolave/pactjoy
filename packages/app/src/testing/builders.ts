@@ -4,6 +4,7 @@ import { type CommitmentRecord, commitmentId } from "../commitment/commitment.ts
 import type { EntryPhoto } from "../entry-photo/entry-photo.ts";
 import type { Habit } from "../habit/habit.ts";
 import { AUTO_APPROVE_AFTER_MS, type PauseRequestRecord } from "../pause/pause-request.ts";
+import type { FeedReaction } from "../reaction/feed-reaction.ts";
 import type { ReviewRecord } from "../review/review.ts";
 import type { SeasonClosure } from "../season/closure/season-closure.ts";
 import type {
@@ -16,6 +17,7 @@ import type {
 import {
   type CircleId,
   entryPhotoId,
+  feedReactionId,
   type HabitId,
   pauseRequestId,
   reviewId,
@@ -208,6 +210,23 @@ export function seasonClosureFixture(overrides: Partial<SeasonClosure> = {}): Se
     memberId: "member-victor" as MemberId,
     decisions: [],
     decidedAt: DEFAULT_INSTANT,
+    version: 0,
+    ...overrides,
+  };
+}
+
+/**
+ * Builds a {@link FeedReaction} for GIVEN-state setup: Victor's heart on a session of the first
+ * day. Every field is overridable.
+ */
+export function feedReactionFixture(overrides: Partial<FeedReaction> = {}): FeedReaction {
+  return {
+    id: feedReactionId("reaction-1"),
+    seasonId: seasonId("season-1"),
+    itemKey: "session:commitment-1:1",
+    memberId: "member-victor" as MemberId,
+    emoji: "heart",
+    reactedAt: DEFAULT_INSTANT,
     version: 0,
     ...overrides,
   };

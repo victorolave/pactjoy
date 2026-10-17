@@ -128,6 +128,17 @@ export type {
 } from "./entry-photo/sweep-entry-photos.ts";
 export { sweepEntryPhotos } from "./entry-photo/sweep-entry-photos.ts";
 export type {
+  CircleFeed,
+  CircleFeedDeps,
+  CircleFeedError,
+  CircleFeedInput,
+  FeedMember,
+} from "./feed/circle-feed.query.ts";
+export { circleFeed } from "./feed/circle-feed.query.ts";
+export { MAX_FEED_CURSOR_LENGTH } from "./feed/feed-cursor.ts";
+export { MAX_FEED_KEY_LENGTH } from "./feed/feed-key.ts";
+export type { FeedItemView, FeedSubject, FeedValue } from "./feed/feed-view.ts";
+export type {
   CreateHabitDeps,
   CreateHabitError,
   CreateHabitInput,
@@ -266,6 +277,22 @@ export type {
   WeekSummaryInput,
 } from "./progress/week-summary.query.ts";
 export { weekSummary } from "./progress/week-summary.query.ts";
+export type { FeedReactionRepository } from "./reaction/feed-reaction.repository.ts";
+export type { FeedReaction, ReactionEmoji } from "./reaction/feed-reaction.ts";
+export { isReactionEmoji, REACTION_EMOJIS } from "./reaction/feed-reaction.ts";
+export type {
+  ReactToFeedItemDeps,
+  ReactToFeedItemInput,
+} from "./reaction/react-to-feed-item.ts";
+export { reactToFeedItem } from "./reaction/react-to-feed-item.ts";
+export type { ReactionError } from "./reaction/reactable-item.ts";
+export type { ReactionCounts, Reactions } from "./reaction/reaction-counts.ts";
+export type {
+  RemoveFeedReactionDeps,
+  RemoveFeedReactionError,
+  RemoveFeedReactionInput,
+} from "./reaction/remove-feed-reaction.ts";
+export { removeFeedReaction } from "./reaction/remove-feed-reaction.ts";
 export type {
   CommitmentStageDeps,
   CommitmentStageError,
@@ -411,8 +438,10 @@ export { toDecimalString } from "./shared/decimal.ts";
 export { ConcurrencyConflict, InviteCodeGenerationFailed } from "./shared/errors.ts";
 export type {
   CircleId,
+  EncouragementId,
   EntryId,
   EntryPhotoId,
+  FeedReactionId,
   HabitId,
   PauseRequestId,
   ReviewId,
@@ -422,8 +451,10 @@ export type {
 } from "./shared/ids.ts";
 export {
   circleId,
+  encouragementId,
   entryId,
   entryPhotoId,
+  feedReactionId,
   habitId,
   pauseRequestId,
   reviewId,
