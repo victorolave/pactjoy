@@ -44,6 +44,11 @@ const { spies, USE_CASE_NAMES } = vi.hoisted(() => ({
     "carryOver",
     "seasonHistory",
     "profileSummary",
+    "circleFeed",
+    "reactToFeedItem",
+    "removeFeedReaction",
+    "sendEncouragement",
+    "dismissNudge",
   ] as string[],
 }));
 
@@ -59,6 +64,8 @@ vi.mock("@pactjoy/app", async (importOriginal) => {
 
 const ID = "aaaaaaaa-0000-4000-8000-0000000000aa";
 const ID2 = "bbbbbbbb-0000-4000-8000-0000000000bb";
+/** The key as a client sends it: `encodeURIComponent` turns every `:` into `%3A`. */
+const ITEM_KEY = encodeURIComponent(`session:${ID2}:3`);
 const MEASURE = { unit: "done", frequency: { kind: "timesPerWeek", times: 3 } };
 
 type Row = [useCase: string, method: string, path: string, body?: unknown];
@@ -145,13 +152,25 @@ const TABLE: Row[] = [
   ["carryOver", "GET", `/seasons/${ID}/carry-over`],
   ["seasonHistory", "GET", "/me/seasons"],
   ["profileSummary", "GET", "/me/profile"],
+  ["circleFeed", "GET", "/me/feed"],
+  ["circleFeed", "GET", "/me/feed/after/eyJ0IjoxfQ"],
+  ["reactToFeedItem", "PUT", `/seasons/${ID}/feed/${ITEM_KEY}/reaction`, { emoji: "fire" }],
+  ["removeFeedReaction", "DELETE", `/seasons/${ID}/feed/${ITEM_KEY}/reaction`],
+  [
+    "sendEncouragement",
+    "POST",
+    `/seasons/${ID}/encouragements`,
+    { recipientId: ID2, week: 2, emoji: "raisedHands" },
+  ],
+  ["dismissNudge", "POST", `/seasons/${ID}/nudge-dismissals`, { targetId: ID2, week: 2 }],
 ];
 
 describe("route table completeness (RT-S4)", () => {
-  it("has 39 routes over exactly the 38 use cases, the score one routed twice", () => {
-    expect(TABLE).toHaveLength(39);
+  it("has 45 routes over exactly the 43 use cases, the score and feed ones routed twice", () => {
+    expect(TABLE).toHaveLength(45);
     expect(new Set(TABLE.map(([name]) => name))).toEqual(new Set(USE_CASE_NAMES));
     expect(TABLE.filter(([name]) => name === "memberScore")).toHaveLength(2);
+    expect(TABLE.filter(([name]) => name === "circleFeed")).toHaveLength(2);
   });
 
   it.each(TABLE)(
@@ -220,6 +239,23 @@ describe("route to use case wiring (AC-S8)", () => {
       if (name === "seasonResults") expect(args[2]).toEqual({ seasonId: ID });
       if (name === "carryOver") expect(args[2]).toEqual({ seasonId: ID });
       if (name === "seasonHistory" || name === "profileSummary") expect(args).toHaveLength(2);
+      if (name === "circleFeed") {
+        if (path === "/me/feed") expect(args).toHaveLength(2);
+        else expect(args[2]).toEqual({ cursor: "eyJ0IjoxfQ" });
+      }
+      if (name === "reactToFeedItem") {
+        // The percent-encoded colons reach the use case decoded.
+        expect(args[2]).toEqual({ seasonId: ID, itemKey: `session:${ID2}:3`, emoji: "fire" });
+      }
+      if (name === "removeFeedReaction") {
+        expect(args[2]).toEqual({ seasonId: ID, itemKey: `session:${ID2}:3` });
+      }
+      if (name === "sendEncouragement") {
+        expect(args[2]).toEqual({ seasonId: ID, recipientId: ID2, week: 2, emoji: "raisedHands" });
+      }
+      if (name === "dismissNudge") {
+        expect(args[2]).toEqual({ seasonId: ID, targetId: ID2, week: 2 });
+      }
       if (name === "submitSeasonClosure") {
         expect(args[2]).toEqual({
           seasonId: ID,

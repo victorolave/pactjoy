@@ -6,6 +6,8 @@ import { createDeterministicUuidGenerator, createFakeTokenVerifier } from "../sr
 
 export const ANDREA = userId("aaaaaaaa-0000-4000-8000-000000000001");
 export const VICTOR = userId("aaaaaaaa-0000-4000-8000-000000000002");
+/** A third member for the tests that need a peer who is neither the owner nor the actor (token `carla`). */
+export const CARLA = userId("aaaaaaaa-0000-4000-8000-000000000003");
 export const UNKNOWN_CIRCLE = "bbbbbbbb-0000-4000-8000-000000000000";
 
 /** `createApi` over the in-memory app with spies on the unit of work (token `andrea` / `victor`). */
@@ -27,7 +29,7 @@ export function setup() {
       ids: createDeterministicUuidGenerator(),
       random: app.random,
       evidence: app.evidence,
-      tokenVerifier: createFakeTokenVerifier({ andrea: ANDREA, victor: VICTOR }),
+      tokenVerifier: createFakeTokenVerifier({ andrea: ANDREA, victor: VICTOR, carla: CARLA }),
       logger: { info: () => undefined, warn: () => undefined, error: () => undefined },
     },
     { basePath: "/api", allowedOrigins: [] },

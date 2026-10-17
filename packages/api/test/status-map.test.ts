@@ -50,9 +50,9 @@ function errorCoverageGaps(index: string, source: string) {
 }
 
 describe("app error status map", () => {
-  it("EM-S1..S5: 98 kinds, 47x422 6x403 10x404 34x409 1x410", () => {
-    expect(KINDS).toHaveLength(98);
-    expect(kindsWith(422)).toHaveLength(47);
+  it("EM-S1..S5: 104 kinds, 49x422 6x403 11x404 37x409 1x410", () => {
+    expect(KINDS).toHaveLength(104);
+    expect(kindsWith(422)).toHaveLength(49);
     expect(kindsWith(403)).toEqual([
       "CannotRespondToOwnPause",
       "CommitmentNotOwned",
@@ -65,6 +65,7 @@ describe("app error status map", () => {
       "CircleNotFound",
       "CommitmentNotFound",
       "EntryNotFound",
+      "FeedItemNotFound",
       "HabitNotFound",
       "InviteNotFound",
       "MemberNotFound",
@@ -73,7 +74,7 @@ describe("app error status map", () => {
       "ReviewPeriodNotFound",
       "SeasonNotFound",
     ]);
-    expect(kindsWith(409)).toHaveLength(34);
+    expect(kindsWith(409)).toHaveLength(37);
     expect(kindsWith(410)).toEqual(["InviteExpired"]);
   });
 
@@ -151,6 +152,20 @@ describe("app error status map", () => {
     }
   });
 
+  it("SO: the social kinds map to 404 / 409 / 422 (ADR-0011 Q25)", () => {
+    expect(APP_ERROR_STATUS.FeedItemNotFound).toBe(404);
+    for (const k of [
+      "FeedItemNotReactable",
+      "NudgeNotAvailable",
+      "EncouragementAlreadySent",
+    ] as const) {
+      expect(APP_ERROR_STATUS[k]).toBe(409);
+    }
+    for (const k of ["InvalidReaction", "InvalidFeedCursor"] as const) {
+      expect(APP_ERROR_STATUS[k]).toBe(422);
+    }
+  });
+
   it("StaleSeason (approval precondition) is 409", () => {
     expect(APP_ERROR_STATUS.StaleSeason).toBe(409);
   });
@@ -192,7 +207,7 @@ describe("app error status map", () => {
     const index = readFileSync(resolve(import.meta.dirname, "../../app/src/index.ts"), "utf8");
     const source = readFileSync(resolve(import.meta.dirname, "../src/errors/app-error.ts"), "utf8");
     expect(errorCoverageGaps(index, source)).toEqual({ imports: [], union: [] });
-    expect(exportedErrorNames(index).length).toBe(43);
+    expect(exportedErrorNames(index).length).toBe(48);
   });
 
   it("EM-S16: the scan compares exact names, so a new CircleError is detected", () => {
