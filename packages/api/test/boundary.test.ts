@@ -35,7 +35,11 @@ const testDoubleImports = (text: string) => [
 ];
 
 describe("package boundary", () => {
-  it("the public surface is exactly the design's runtime exports (ADR-0011)", async () => {
+  // The import transforms the whole api, app and engine graph on a cold run; under a full
+  // `turbo run test` it can pass the 5 s default, so it gets the db package's 30 s budget.
+  it("the public surface is exactly the design's runtime exports (ADR-0011)", {
+    timeout: 30_000,
+  }, async () => {
     const index = await import("../src/index.ts");
     expect(Object.keys(index).sort()).toEqual([
       "createApi",
