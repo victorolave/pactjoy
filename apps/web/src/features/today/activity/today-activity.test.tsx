@@ -7,6 +7,7 @@ import {
   consistentWeekItemFixture,
   emptyFeedFixture,
   feedFixture,
+  feedMembersFixture,
   seasonStartedItemFixture,
 } from "../../../testing/fixtures/social.ts";
 import { renderApp } from "../../../testing/render.tsx";
@@ -57,6 +58,27 @@ describe("Today: the circle's recent activity (ADR-0018)", () => {
 
   it("is not there when the circle has no activity", async () => {
     const { deps } = renderApp({ feedPages: [emptyFeedFixture()] });
+    await screen.findByRole("heading", { name: "Para hoy" });
+    await waitFor(() => expect(deps.api.calls.feed).toBeGreaterThan(0));
+    expect(screen.queryByRole("region", { name: "Actividad del círculo" })).not.toBeInTheDocument();
+  });
+
+  it("is not there for a solo member: the preview needs a peer, as the Circle tab does", async () => {
+    const [, viewer] = feedMembersFixture();
+    const { deps } = renderApp({
+      feedPages: [feedFixture({ members: viewer === undefined ? [] : [viewer], items: FOUR })],
+    });
+    await screen.findByRole("heading", { name: "Para hoy" });
+    await waitFor(() => expect(deps.api.calls.feed).toBeGreaterThan(0));
+    expect(screen.queryByRole("region", { name: "Actividad del círculo" })).not.toBeInTheDocument();
+  });
+
+  it("is not there once the only peer has left", async () => {
+    const [peer, viewer] = feedMembersFixture();
+    if (peer === undefined || viewer === undefined) throw new Error("the fixture has a pair");
+    const { deps } = renderApp({
+      feedPages: [feedFixture({ members: [{ ...peer, displayName: null, left: true }, viewer] })],
+    });
     await screen.findByRole("heading", { name: "Para hoy" });
     await waitFor(() => expect(deps.api.calls.feed).toBeGreaterThan(0));
     expect(screen.queryByRole("region", { name: "Actividad del círculo" })).not.toBeInTheDocument();

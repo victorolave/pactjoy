@@ -14,7 +14,10 @@ const PREVIEW_ITEMS = 3;
 export function TodayActivity() {
   const feed = useFeed();
   const items = feed.items.slice(0, PREVIEW_ITEMS);
-  if (items.length === 0) return null;
+  // Alone in the circle (or the last one left), the feed is the member's own items and the Circle
+  // tab shows the waiting room: no preview, as there is no one to share it with.
+  const withPeer = feed.members.filter((member) => !member.left).length >= 2;
+  if (items.length === 0 || !withPeer) return null;
   return (
     <section className={styles.section} aria-label="Actividad del círculo">
       <h2 className={styles.title}>Actividad del círculo</h2>
