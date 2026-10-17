@@ -123,10 +123,12 @@ describe("circleFeed: members and items for the viewer", () => {
       return { ok: true as const, value: undefined };
     });
     const feed = await feedAt(world, 2);
+    // A member who left is not named in the feed any more (ADR-0018).
     expect(feed.members).toEqual([
-      expect.objectContaining({ displayName: "Andrea", isYou: false, left: true }),
+      { id: expect.anything(), displayName: null, isYou: false, left: true },
       expect.objectContaining({ displayName: "Victor", isYou: true, left: false }),
     ]);
+    expect(JSON.stringify(feed.members)).not.toContain("Andrea");
   });
 
   it("shows a peer's kept session, newest first, with the value of a visible commitment", async () => {

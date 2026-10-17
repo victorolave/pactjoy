@@ -24,7 +24,8 @@ export interface CircleFeedInput {
 /** A member of the circle as the feed names them. `userId` never appears. */
 export interface FeedMember {
   readonly id: MemberId;
-  readonly displayName: string;
+  /** `null` for a member who left: her name is not sent. */
+  readonly displayName: string | null;
   readonly isYou: boolean;
   readonly left: boolean;
 }
@@ -48,7 +49,8 @@ export type CircleFeedError = { readonly kind: "InvalidFeedCursor" };
 function membersOf(circle: Circle, viewerId: MemberId | undefined): FeedMember[] {
   return circle.members.map((member) => ({
     id: member.id,
-    displayName: member.displayName,
+    // A member who left is no longer named to the circle; the client says "a member who left".
+    displayName: member.status === "left" ? null : member.displayName,
     isYou: member.id === viewerId,
     left: member.status === "left",
   }));

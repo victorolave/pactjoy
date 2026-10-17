@@ -141,6 +141,38 @@ describe("reactToFeedItem: setting, changing and removing (REQ-R1, R2, R10)", ()
     expect(await stored(world)).toHaveLength(1);
   });
 
+  it("two racing removes both succeed: the loser finds the row gone and reports the current counts", async () => {
+    const world = await given();
+    await react(world, "victor", SESSION, "fire");
+    const removeAs = (app: Parameters<typeof removeFeedReaction>[0]) =>
+      removeFeedReaction(app, world.victor, { seasonId: SEASON, itemKey: SESSION });
+    const { winner, loser } = await raceTransactions(
+      world.at(3),
+      removeAs,
+      removeAs,
+      "feedReactions",
+    );
+    const gone = { ok: true, value: { counts: EMPTY, mine: null, reactable: true } };
+    expect(winner).toEqual({ status: "fulfilled", value: gone });
+    expect(loser).toEqual({ status: "fulfilled", value: gone });
+    expect(await stored(world)).toEqual([]);
+  });
+
+  it("a remove that loses to a concurrent change of emoji is retried against the new row", async () => {
+    const world = await given();
+    await react(world, "victor", SESSION, "fire");
+    const { winner, loser } = await raceTransactions(
+      world.at(3),
+      (app) =>
+        reactToFeedItem(app, world.victor, { seasonId: SEASON, itemKey: SESSION, emoji: "clap" }),
+      (app) => removeFeedReaction(app, world.victor, { seasonId: SEASON, itemKey: SESSION }),
+      "feedReactions",
+    );
+    expect(winner.status).toBe("fulfilled");
+    expect(loser.status).toBe("fulfilled");
+    expect(await stored(world)).toEqual([]);
+  });
+
   it("changes no entry, season or point (reactions never score)", async () => {
     const world = await given();
     const entries = await world.app.entries.listBySeason(SEASON);

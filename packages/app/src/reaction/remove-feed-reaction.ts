@@ -2,6 +2,7 @@ import type { FeedDeps } from "../feed/feed-context.ts";
 import type { Repositories } from "../ports/repositories.ts";
 import type { UnitOfWork } from "../ports/unit-of-work.ts";
 import type { Actor } from "../shared/actor.ts";
+import { ConcurrencyConflict } from "../shared/errors.ts";
 import type { SeasonId } from "../shared/ids.ts";
 import { ok, type Result } from "../shared/result.ts";
 import { loadReactableItem, type ReactionError, reactionsOf } from "./reactable-item.ts";
@@ -24,9 +25,24 @@ export type RemoveFeedReactionError = Exclude<ReactionError, { readonly kind: "I
  * Removes the actor's reaction to a feed item (ADR-0018, F12; REQ-R2, R10). It asks the same of the
  * item as setting one does (it must exist, be reactable and not be the actor's), so the two
  * share one resolver. Idempotent: removing a reaction that is not there succeeds and changes
- * nothing. A concurrent change of the same reaction surfaces as `ConcurrencyConflict`.
+ * nothing, and so is a second remove racing the first: the loser's stale delete conflicts, and one
+ * retry in a fresh transaction re-reads the row, finds it gone (or changed by a concurrent set)
+ * and answers with what is there now. A conflict on the retry is a real one and propagates.
  */
 export async function removeFeedReaction(
+  deps: RemoveFeedReactionDeps,
+  actor: Actor,
+  input: RemoveFeedReactionInput,
+): Promise<Result<Reactions, RemoveFeedReactionError>> {
+  try {
+    return await removeOnce(deps, actor, input);
+  } catch (error) {
+    if (!(error instanceof ConcurrencyConflict)) throw error;
+    return removeOnce(deps, actor, input);
+  }
+}
+
+function removeOnce(
   deps: RemoveFeedReactionDeps,
   actor: Actor,
   input: RemoveFeedReactionInput,

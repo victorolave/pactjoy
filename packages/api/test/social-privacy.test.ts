@@ -172,9 +172,10 @@ async function world() {
 type World = Awaited<ReturnType<typeof world>>;
 
 /** Everything that identifies or describes Andrea's private facts, or the internals of the social tables. */
-function assertClean(label: string, json: unknown, w: World) {
+function assertClean(label: string, json: unknown, w: World, alsoAbsent: readonly string[] = []) {
   const text = JSON.stringify(json);
   for (const secret of [
+    ...alsoAbsent,
     SENTINEL_HABIT,
     SENTINEL_NOTE,
     SENTINEL_PAUSE_NOTE,
@@ -322,10 +323,11 @@ describe("the social routes never carry Andrea's private facts or the social int
     for (const who of ["victor", "carla"]) {
       const first = await call("GET", "/me/feed", who);
       expect(first.status).toBe(200);
-      assertClean(`${who} GET /me/feed after leave`, first.json, w);
+      // Her real name is absent from every social response once she has left (ADR-0018).
+      assertClean(`${who} GET /me/feed after leave`, first.json, w, ["Creator"]);
       expect(first.json.data.members.find((m: { id: string }) => m.id === w.ids.andrea)).toEqual({
         id: w.ids.andrea,
-        displayName: "Creator",
+        displayName: null,
         isYou: false,
         left: true,
       });
@@ -333,7 +335,7 @@ describe("the social routes never carry Andrea's private facts or the social int
       expect(first.json.data.nudge).toBeNull();
       const cursor: string = first.json.data.nextCursor;
       const second = await call("GET", `/me/feed/after/${cursor}`, who);
-      assertClean(`${who} GET after`, second.json, w);
+      assertClean(`${who} GET after`, second.json, w, ["Creator"]);
 
       const item = [...first.json.data.items, ...second.json.data.items].find(
         (i: { key: string }) => i.key === `session:${w.secret.commitmentId}:1`,
@@ -342,14 +344,14 @@ describe("the social routes never carry Andrea's private facts or the social int
       expect(item.reactions.counts).toEqual({ heart: 0, raisedHands: 0, fire: 0, clap: 0 });
       const react = await call("PUT", w.reactionPath(item.key), who, { emoji: "fire" });
       expect([react.status, react.json.error.code]).toEqual([409, "FeedItemNotReactable"]);
-      assertClean(`${who} PUT after leave`, react.json, w);
+      assertClean(`${who} PUT after leave`, react.json, w, ["Creator"]);
       const send = await call("POST", `/seasons/${w.seasonId}/encouragements`, who, {
         recipientId: w.ids.andrea,
         week: 1,
         emoji: "fire",
       });
       expect([send.status, send.json.error.code]).toEqual([409, "NudgeNotAvailable"]);
-      assertClean(`${who} send after leave`, send.json, w);
+      assertClean(`${who} send after leave`, send.json, w, ["Creator"]);
     }
   });
 
