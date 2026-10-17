@@ -6,6 +6,7 @@ import { seasonId, userId } from "../shared/ids.ts";
 import { ok } from "../shared/result.ts";
 import { createTestApp } from "../testing/app-harness.ts";
 import { createCircleInput, joinCircleInput } from "../testing/circle-inputs.ts";
+import { createFixedOffsetTimeZone } from "../testing/fixed-time-zone.ts";
 import { givenOpenPactWithOneApproval } from "../testing/pact-fixtures.ts";
 import { instant } from "../time/instant.ts";
 import { localDate } from "../time/local-date.ts";
@@ -199,6 +200,7 @@ describe("editSeasonParams", () => {
     // day too, but this fake makes the one-day shift exact and independent
     // of DST/tz-database specifics.
     const twoZoneTimeZone: TimeZone = {
+      ...createFixedOffsetTimeZone({ offsetMinutes: 0 }),
       localDateAt(_at, zone) {
         return zone === "zone-early" ? localDate("2025-09-27") : localDate("2025-09-28");
       },
