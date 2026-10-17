@@ -37,6 +37,11 @@ export interface SessionProviderProps {
   readonly onSessionEnd?: () => void;
   /** Lets code outside React (the API adapter) expire the session. */
   readonly expired?: SessionEvents;
+  /**
+   * Runs at the start of a sign-out, while the session can still call the API (the device's push
+   * registration is removed here, ADR-0017). Best effort: a rejection never blocks the sign-out.
+   */
+  readonly beforeSignOut?: () => Promise<void>;
   readonly children: ReactNode;
 }
 
@@ -46,6 +51,7 @@ export function SessionProvider({
   manager,
   onSessionEnd,
   expired,
+  beforeSignOut,
   children,
 }: SessionProviderProps) {
   const [session, setSession] = useState<Session | null>(() => store.load());
@@ -88,6 +94,7 @@ export function SessionProvider({
         setSession(next);
       },
       async signOut() {
+        await beforeSignOut?.().catch(() => undefined);
         await manager.signOut();
         setNotice(null);
         setSession(null);
@@ -95,7 +102,7 @@ export function SessionProvider({
       },
       expire,
     }),
-    [auth, store, manager, onSessionEnd, expire, session, notice],
+    [auth, store, manager, onSessionEnd, beforeSignOut, expire, session, notice],
   );
 
   return <SessionContext.Provider value={api}>{children}</SessionContext.Provider>;

@@ -8,13 +8,15 @@ import { renderApp } from "../../../testing/render.tsx";
 const SETTINGS = "/profile/settings";
 
 describe("Ajustes (design 40, Q6)", () => {
-  it("has only the email, leaving the circle and signing out (PS-R4)", async () => {
+  it("has the email, leaving the circle, signing out and the notifications row (PS-R4, ADR-0017)", async () => {
     renderApp({ path: SETTINGS, myCircle: pairCircleFixture() });
     expect(await screen.findByRole("heading", { name: "Ajustes" })).toBeInTheDocument();
     expect(screen.getByText("andrea@example.com")).toBeInTheDocument();
     expect(await screen.findByRole("button", { name: "Salir del círculo" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Cerrar sesión" })).toBeInTheDocument();
-    for (const deferred of ["Apariencia", "Notificaciones", "Eliminar cuenta"]) {
+    expect(screen.getByRole("heading", { name: "Avisos" })).toBeInTheDocument();
+    expect(screen.getByText("Notificaciones")).toBeInTheDocument();
+    for (const deferred of ["Apariencia", "Eliminar cuenta"]) {
       expect(screen.queryByText(deferred)).not.toBeInTheDocument();
     }
     expect(screen.queryByRole("switch")).not.toBeInTheDocument();
@@ -30,6 +32,69 @@ describe("Ajustes (design 40, Q6)", () => {
     await screen.findByRole("heading", { name: "Ajustes" });
     expect(screen.queryByRole("button", { name: "Salir del círculo" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Cerrar sesión" })).toBeInTheDocument();
+  });
+});
+
+describe("the notifications row (REQ-N1..N4, ADR-0017)", () => {
+  const row = () => within(screen.getByRole("region", { name: "Avisos" }));
+
+  it("SC-N1: granted and registered reads Activadas, with no action", async () => {
+    renderApp({ path: SETTINGS, standalone: true });
+    expect(await row().findByText("Activadas")).toBeInTheDocument();
+    expect(row().queryByRole("button", { name: "Activar notificaciones" })).not.toBeInTheDocument();
+  });
+
+  it("SC-N1: not asked yet reads Desactivadas; Activar asks from the tap and registers", async () => {
+    const user = userEvent.setup();
+    const { deps } = renderApp({
+      path: SETTINGS,
+      standalone: true,
+      notificationPermission: "default",
+      notificationStepDone: true,
+    });
+    expect(await row().findByText("Desactivadas")).toBeInTheDocument();
+    await user.click(row().getByRole("button", { name: "Activar notificaciones" }));
+    expect(deps.notifications.requests).toBe(1);
+    expect(await row().findByText("Activadas")).toBeInTheDocument();
+    expect(deps.api.pushDevices.size).toBe(1);
+  });
+
+  it("SC-N2: denied reads Bloqueadas and points to the phone's settings, with no Activar", async () => {
+    renderApp({ path: SETTINGS, standalone: true, notificationPermission: "denied" });
+    expect(await row().findByText("Bloqueadas")).toBeInTheDocument();
+    expect(row().getByText("Actívalas en los ajustes del iPhone.")).toBeInTheDocument();
+    expect(row().queryByRole("button", { name: "Activar notificaciones" })).not.toBeInTheDocument();
+  });
+
+  it("SC-N3: in a browser tab without push it asks to install the app, and never asks permission", async () => {
+    const { deps } = renderApp({
+      path: SETTINGS,
+      standalone: false,
+      pushSupported: false,
+      notificationPermission: "default",
+    });
+    expect(await row().findByText("No disponibles")).toBeInTheDocument();
+    expect(
+      row().getByText("Instala PactJoy en tu pantalla de inicio para recibir avisos."),
+    ).toBeInTheDocument();
+    expect(deps.notifications.requests).toBe(0);
+  });
+
+  it("a server without push reads No disponibles", async () => {
+    renderApp({ path: SETTINGS, standalone: true, pushServer: false });
+    expect(await row().findByText("No disponibles")).toBeInTheDocument();
+  });
+
+  it("REQ-N4: offline, Activar is disabled and says why", async () => {
+    renderApp({
+      path: SETTINGS,
+      standalone: true,
+      notificationPermission: "default",
+      notificationStepDone: true,
+      online: false,
+    });
+    expect(await row().findByRole("button", { name: "Activar notificaciones" })).toBeDisabled();
+    expect(row().getByText("Sin conexión.")).toBeInTheDocument();
   });
 });
 

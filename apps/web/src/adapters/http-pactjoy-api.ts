@@ -17,6 +17,7 @@ import type {
   PactJoyApi,
   PauseDecision,
   PreviewScoringCommand,
+  PushConfigDto,
   RecordEntryCommand,
   RecordedEntry,
   RequestPauseCommand,
@@ -26,6 +27,7 @@ import type {
   SubmitReviewCommand,
   UpdateHabitCommand,
 } from "../ports/pactjoy-api.ts";
+import type { DevicePushSubscription } from "../ports/push-subscription.ts";
 import type {
   CarryOverDto,
   CommitmentProgress,
@@ -68,6 +70,14 @@ import {
   isSeasonProgress,
   isWeekSummary,
 } from "./season-progress-guards.ts";
+
+/** `{vapidPublicKey: string | null}` and nothing else (ADR-0017). */
+const isPushConfig = (data: unknown): data is PushConfigDto =>
+  typeof data === "object" &&
+  data !== null &&
+  Object.keys(data).length === 1 &&
+  "vapidPublicKey" in data &&
+  (data.vapidPublicKey === null || typeof data.vapidPublicKey === "string");
 
 export interface HttpPactJoyApiOptions {
   readonly baseUrl: string;
@@ -492,6 +502,22 @@ export class HttpPactJoyApi implements PactJoyApi {
 
   async getProfileSummary(signal?: AbortSignal): Promise<ProfileSummaryDto> {
     return this.#read("/me/profile", isProfileSummary, signal);
+  }
+
+  async getPushConfig(signal?: AbortSignal): Promise<PushConfigDto> {
+    return this.#read("/me/push-config", isPushConfig, signal);
+  }
+
+  async savePushSubscription(subscription: DevicePushSubscription): Promise<void> {
+    await this.#request({ method: "PUT", path: "/me/push-subscription", body: subscription });
+  }
+
+  async removePushSubscription(endpoint: string): Promise<void> {
+    await this.#request({
+      method: "POST",
+      path: "/me/push-subscription/remove",
+      body: { endpoint },
+    });
   }
 
   async getSeasonProgress(seasonId: string, signal?: AbortSignal): Promise<SeasonProgress> {

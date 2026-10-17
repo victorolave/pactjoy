@@ -21,6 +21,7 @@ import { FakeImageProcessor } from "./fake-image-processor.ts";
 import { FakeNotificationPermission } from "./fake-notification-permission.ts";
 import { FakePactJoyApi } from "./fake-pactjoy-api.ts";
 import { FakePhotoUploader } from "./fake-photo-uploader.ts";
+import { FakePushSubscription } from "./fake-push-subscription.ts";
 import { FakeSharing } from "./fake-sharing.ts";
 import { FixedClock } from "./fixed-clock.ts";
 import { soloCircleFixture } from "./fixtures/circle.ts";
@@ -63,6 +64,10 @@ export interface RenderAppOptions {
   readonly notificationPermission?: NotificationPermissionState;
   /** The permission step was already done or skipped on this device. */
   readonly notificationStepDone?: boolean;
+  /** Whether this browser can subscribe to Web Push. Defaults to true. */
+  readonly pushSupported?: boolean;
+  /** Whether the server has Web Push configured (a public VAPID key). Defaults to true. */
+  readonly pushServer?: boolean;
   /** Where the device flags live. A fresh in-memory one by default; pass a throwing one to test blocked storage. */
   readonly deviceStorage?: Storage;
   /** A name draft already on the device (the name step was done). */
@@ -110,6 +115,7 @@ export interface RenderedApp extends RenderResult {
     readonly sharing: FakeSharing;
     readonly appInstall: FakeAppInstall;
     readonly notifications: FakeNotificationPermission;
+    readonly push: FakePushSubscription;
     readonly clock: FixedClock;
   };
 }
@@ -125,6 +131,8 @@ function createFakeDeps({
   installDone = true,
   notificationPermission = "granted",
   notificationStepDone = false,
+  pushSupported = true,
+  pushServer = true,
   deviceStorage = new MemoryStorage(),
   welcomeSeen = true,
   now = DEFAULT_NOW_MS,
@@ -155,6 +163,9 @@ function createFakeDeps({
   for (const failure of reviewFailures) api.failNext("getReview", failure);
   for (const { seasonId, periodIndex, draft } of reviews)
     api.setReview(seasonId, periodIndex, draft);
+  if (!pushServer) api.vapidPublicKey = null;
+  const push = new FakePushSubscription();
+  push.isSupported = pushSupported;
   return {
     auth,
     api,
@@ -168,6 +179,7 @@ function createFakeDeps({
     sharing: new FakeSharing(canShare),
     appInstall: new FakeAppInstall({ standalone, platform, canPrompt }),
     notifications: new FakeNotificationPermission(notificationPermission),
+    push,
     clock,
     sessions: new SessionManager(auth, store, new FixedClock(0)),
     sessionEvents: createSessionEvents(),

@@ -92,9 +92,38 @@ describe("the permission step in an installed app (OB-R4)", () => {
     expect(app.deps.device.get("notificationStep")).not.toBeNull();
   });
 
-  it("does not promise notifications", async () => {
+  it("says what the notices are for (Notion: pact, pauses and reviews), with no pressure", async () => {
     renderApp(newUser);
-    expect(await screen.findByText("Por ahora no enviamos ninguna.")).toBeInTheDocument();
+    const note = await screen.findByText(/pacto/);
+    expect(note).toHaveTextContent("Te avisamos cuando tu pacto o una pausa esperan tu respuesta");
+    expect(screen.queryByText("Por ahora no enviamos ninguna.")).not.toBeInTheDocument();
+  });
+
+  it("SC-X1: a grant subscribes this device and registers it with the server (ADR-0017)", async () => {
+    const user = userEvent.setup();
+    const app = renderApp(newUser);
+    await user.click(await screen.findByRole("button", { name: "Activar" }));
+    await screen.findByRole("heading", NAME_STEP);
+    await waitFor(() => expect(app.deps.api.pushDevices.size).toBe(1));
+    expect(app.deps.push.subscribes).toEqual(["BFAKE-VAPID-KEY"]);
+  });
+
+  it("SC-X4: a denial registers nothing and still moves on", async () => {
+    const user = userEvent.setup();
+    const app = renderApp(newUser);
+    app.deps.notifications.answer = "denied";
+    await user.click(await screen.findByRole("button", { name: "Activar" }));
+    expect(await screen.findByRole("heading", NAME_STEP)).toBeInTheDocument();
+    expect(app.deps.push.subscribes).toEqual([]);
+    expect(app.deps.api.calls.savePushSubscription).toBe(0);
+  });
+
+  it("a failing subscription does not block the flow", async () => {
+    const user = userEvent.setup();
+    const app = renderApp(newUser);
+    app.deps.push.refuse = new Error("AbortError");
+    await user.click(await screen.findByRole("button", { name: "Activar" }));
+    expect(await screen.findByRole("heading", NAME_STEP)).toBeInTheDocument();
   });
 });
 

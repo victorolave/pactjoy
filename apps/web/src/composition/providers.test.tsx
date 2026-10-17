@@ -14,6 +14,7 @@ import { FakeImageProcessor } from "../testing/fake-image-processor.ts";
 import { FakeNotificationPermission } from "../testing/fake-notification-permission.ts";
 import { FakePactJoyApi } from "../testing/fake-pactjoy-api.ts";
 import { FakePhotoUploader } from "../testing/fake-photo-uploader.ts";
+import { FakePushSubscription } from "../testing/fake-push-subscription.ts";
 import { FakeSharing } from "../testing/fake-sharing.ts";
 import { FixedClock } from "../testing/fixed-clock.ts";
 import { noCircleTodayFixture } from "../testing/fixtures/today.ts";
@@ -40,6 +41,7 @@ function deps(overrides: Partial<AppDependencies> = {}): AppDependencies {
     sharing: new FakeSharing(),
     appInstall: new FakeAppInstall(),
     notifications: new FakeNotificationPermission(),
+    push: new FakePushSubscription(),
     clock: new FixedClock(0),
     sessions: new SessionManager(auth, store, new FixedClock(0)),
     sessionEvents: createSessionEvents(),
