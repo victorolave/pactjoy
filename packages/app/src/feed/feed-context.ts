@@ -59,6 +59,25 @@ export function activeViewerOf(circle: Circle, actor: Actor): Member | undefined
 }
 
 /**
+ * The read-set guard of a social WRITE (a reaction, an encouragement, a dismissal), like the one
+ * `recordEntry` takes (D5): the membership and the season state it decided from must still be the
+ * stored ones at commit, so a concurrent leave or season close makes the write fail with
+ * `ConcurrencyConflict` instead of storing something about people or a season that no longer
+ * qualify. Circle first, then season (the lock order of `recordEntry`). Call it right after
+ * resolving the actor and BEFORE loading the feed world or the social history the eligibility
+ * rules read: in Postgres the guard is a `FOR NO KEY UPDATE` lock held to commit, so two writers
+ * of the same circle are serialized and the second one's later reads see the first one's rows.
+ */
+export async function guardSocialWrite(
+  repos: Pick<Repositories, "circles" | "seasons">,
+  circle: Circle,
+  season: Season,
+): Promise<void> {
+  await repos.circles.guardVersion(circle.id, circle.version);
+  await repos.seasons.guardVersion(season.id, season.version);
+}
+
+/**
  * Loads what `deriveFeed` reads for a feed season: the live entries, the pauses through their
  * choke point (the effective decision at the read's instant, ADR-0013) and the habits of the
  * season's commitments, plus the season's graduate decisions through the closure module's one

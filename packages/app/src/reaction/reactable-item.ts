@@ -4,6 +4,7 @@ import {
   activeViewerOf,
   type FeedDeps,
   feedContextOf,
+  guardSocialWrite,
   loadFeedWorld,
 } from "../feed/feed-context.ts";
 import { parseFeedItemKey } from "../feed/feed-key.ts";
@@ -60,6 +61,11 @@ export async function loadReactableItem(
   const circle = await repos.circles.get(season.circleId);
   const viewer = circle ? activeViewerOf(circle, actor) : undefined;
   if (!circle || !viewer) return err({ kind: "NotAMember" });
+
+  // Guarded for every set and remove, including the ones that turn out to change nothing: a
+  // conflict only means a leave or a season change really committed in between, and the client
+  // refetches. Taken before the feed is derived, so the derivation reads what the lock protects.
+  await guardSocialWrite(repos, circle, season);
 
   if (parseFeedItemKey(input.itemKey) === null) return err({ kind: "FeedItemNotFound" });
   const now = deps.clock.now();

@@ -1,5 +1,10 @@
 import type { MemberId } from "@pactjoy/engine";
-import { type FeedDeps, feedContextOf, loadFeedWorld } from "../feed/feed-context.ts";
+import {
+  type FeedDeps,
+  feedContextOf,
+  guardSocialWrite,
+  loadFeedWorld,
+} from "../feed/feed-context.ts";
 import type { IdGenerator } from "../ports/id-generator.ts";
 import type { Repositories } from "../ports/repositories.ts";
 import type { UnitOfWork } from "../ports/unit-of-work.ts";
@@ -65,6 +70,12 @@ export async function sendEncouragement(
       if (sent.some((e) => e.recipientId === input.recipientId && e.caseWeek === input.week)) {
         return err({ kind: "EncouragementAlreadySent" });
       }
+
+      // The refusal above writes nothing, so like a `recordEntry` replay it is not guarded. From
+      // here the send is, before the case is recomputed: a concurrent leave or season close fails
+      // it with `ConcurrencyConflict`, and a concurrent send or dismissal of the same case is
+      // serialized, so the case below is read after the other one's rows are visible.
+      await guardSocialWrite(repos, circle, season);
 
       const now = deps.clock.now();
       const context = await feedContextOf(deps, repos, circle, now);

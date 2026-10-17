@@ -1,5 +1,10 @@
 import type { MemberId } from "@pactjoy/engine";
-import { type FeedDeps, feedContextOf, loadFeedWorld } from "../feed/feed-context.ts";
+import {
+  type FeedDeps,
+  feedContextOf,
+  guardSocialWrite,
+  loadFeedWorld,
+} from "../feed/feed-context.ts";
 import type { Repositories } from "../ports/repositories.ts";
 import type { UnitOfWork } from "../ports/unit-of-work.ts";
 import type { Actor } from "../shared/actor.ts";
@@ -42,6 +47,11 @@ export async function dismissNudge(
     if (mine.some((d) => d.targetId === input.targetId && d.caseWeek === input.week)) {
       return ok(undefined);
     }
+
+    // The idempotent answer above writes nothing, so like a `recordEntry` replay it is not guarded
+    // (a repeat must never turn into a conflict). A real dismissal is, before the case is
+    // recomputed: see `sendEncouragement`.
+    await guardSocialWrite(repos, circle, season);
 
     const now = deps.clock.now();
     const context = await feedContextOf(deps, repos, circle, now);
