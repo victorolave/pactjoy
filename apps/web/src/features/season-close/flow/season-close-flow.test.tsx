@@ -98,6 +98,12 @@ describe("36 Resultados", () => {
     expect(screen.queryByText(/Puesto 2 de 2/)).not.toBeInTheDocument();
   });
 
+  it("reads nothing about the graduation audience before a habit is graduated", async () => {
+    const app = open();
+    await screen.findByRole("heading", { name: "Cerramos esta temporada" });
+    expect(app.deps.api.calls.getSeason).toBe(0);
+  });
+
   it("has no standings and no talk of the others for a solo circle", async () => {
     open(resultsFixture({ standings: { rank: 1, memberCount: 1, gap: null } }));
     await screen.findByRole("heading", { name: "Cerramos esta temporada" });
