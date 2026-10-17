@@ -7,7 +7,7 @@ import {
 import { useMemo } from "react";
 import { usePactJoyApi } from "../../context/api-context.tsx";
 import type { DismissNudgeCommand, SendEncouragementCommand } from "../../ports/pactjoy-api.ts";
-import type { CircleFeedDto, ReactionCode } from "../../ports/wire.ts";
+import type { CircleFeedDto, ReactionCode, ReactionsDto } from "../../ports/wire.ts";
 import { feedKey } from "../../shared/query-keys.ts";
 import { applyReaction } from "./reactions/apply-reaction.ts";
 
@@ -43,29 +43,42 @@ export interface ReactCommand {
   readonly emoji: ReactionCode | null;
 }
 
-/** The cached pages with one item's reactions replaced by `next`; every other item is untouched. */
-function withReactions(
-  data: InfiniteData<CircleFeedDto, string | null>,
+type FeedData = InfiniteData<CircleFeedDto, string | null>;
+
+/** The cached pages with one item's reactions rewritten by `change`; every other item is untouched. */
+function mapReactions(
+  data: FeedData,
   itemKey: string,
-  code: ReactionCode | null,
-): InfiniteData<CircleFeedDto, string | null> {
+  change: (reactions: ReactionsDto) => ReactionsDto,
+): FeedData {
   return {
     ...data,
     pages: data.pages.map((page) => ({
       ...page,
       items: page.items.map((item) =>
         item.key === itemKey && "reactions" in item
-          ? { ...item, reactions: applyReaction(item.reactions, code) }
+          ? { ...item, reactions: change(item.reactions) }
           : item,
       ) as CircleFeedDto["items"],
     })),
   };
 }
 
+/** What one item's reactions were in the cache, or `undefined` when it has none (or is not there). */
+function reactionsIn(data: FeedData | undefined, itemKey: string): ReactionsDto | undefined {
+  for (const page of data?.pages ?? []) {
+    const item = page.items.find((candidate) => candidate.key === itemKey);
+    if (item !== undefined && "reactions" in item) return item.reactions;
+  }
+  return undefined;
+}
+
 /**
  * React to an item, change the reaction or take it back. The chip answers at once (optimistic) and
  * goes back to what it was when the server refuses; the server's counts replace the guess when the
- * feed is refetched after the mutation settles. Nothing else in the cache is touched.
+ * feed is refetched after the mutation settles. Nothing else in the cache is touched, on the way
+ * in or on the way back: a refusal restores THAT item only, so another reaction made meanwhile
+ * keeps its optimistic state.
  */
 export function useReact(seasonId: string) {
   const api = usePactJoyApi();
@@ -77,13 +90,23 @@ export function useReact(seasonId: string) {
         : api.reactToFeedItem(seasonId, itemKey, emoji),
     onMutate: async ({ itemKey, emoji }) => {
       await client.cancelQueries({ queryKey: feedKey });
-      const previous = client.getQueryData<InfiniteData<CircleFeedDto, string | null>>(feedKey);
-      if (previous !== undefined)
-        client.setQueryData(feedKey, withReactions(previous, itemKey, emoji));
+      const cached = client.getQueryData<FeedData>(feedKey);
+      const previous = reactionsIn(cached, itemKey);
+      if (cached !== undefined)
+        client.setQueryData(
+          feedKey,
+          mapReactions(cached, itemKey, (reactions) => applyReaction(reactions, emoji)),
+        );
       return { previous };
     },
-    onError: (_error, _command, context) => {
-      if (context?.previous !== undefined) client.setQueryData(feedKey, context.previous);
+    onError: (_error, { itemKey }, context) => {
+      const current = client.getQueryData<FeedData>(feedKey);
+      const previous = context?.previous;
+      if (current !== undefined && previous !== undefined)
+        client.setQueryData(
+          feedKey,
+          mapReactions(current, itemKey, () => previous),
+        );
     },
   });
 }

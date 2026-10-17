@@ -590,7 +590,9 @@ export class FakePactJoyApi implements PactJoyApi {
   }
 
   async feed(cursor?: string | null, _signal?: AbortSignal): Promise<CircleFeedDto> {
+    const gate = this.#takeGate("feed");
     this.#enter("feed");
+    await gate;
     if (cursor === undefined || cursor === null) return this.#feedPages[0] ?? emptyFeedFixture();
     const index = /^page-(\d+)$/.test(cursor) ? Number(cursor.slice("page-".length)) : -1;
     const page = index >= 1 ? this.#feedPages[index] : undefined;
