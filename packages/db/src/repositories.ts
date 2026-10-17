@@ -1,10 +1,13 @@
 import type { Repositories } from "@pactjoy/app";
 import { createPgCircleRepository } from "./circle/pg-circle-repository.ts";
 import type { BindMode, SqlExecutor } from "./client.ts";
+import { createPgEncouragementRepository } from "./encouragement/pg-encouragement-repository.ts";
+import { createPgNudgeDismissalRepository } from "./encouragement/pg-nudge-dismissal-repository.ts";
 import { createPgEntryRepository } from "./entry/pg-entry-repository.ts";
 import { createPgEntryPhotoRepository } from "./entry-photo/pg-entry-photo-repository.ts";
 import { createPgHabitRepository } from "./habit/pg-habit-repository.ts";
 import { createPgPauseRequestRepository } from "./pause/pg-pause-request-repository.ts";
+import { createPgFeedReactionRepository } from "./reaction/pg-feed-reaction-repository.ts";
 import { createPgReviewRepository } from "./review/pg-review-repository.ts";
 import { createPgSeasonClosureRepository } from "./season/pg-season-closure-repository.ts";
 import { createPgSeasonRepository } from "./season/pg-season-repository.ts";
@@ -26,5 +29,8 @@ export function bindRepositories(exec: SqlExecutor, mode: BindMode): PgRepositor
     pauses: createPgPauseRequestRepository(exec),
     reviews: createPgReviewRepository(exec),
     seasonClosures: createPgSeasonClosureRepository(exec),
+    feedReactions: createPgFeedReactionRepository(exec),
+    encouragements: createPgEncouragementRepository(exec),
+    nudgeDismissals: createPgNudgeDismissalRepository(exec),
   };
 }
