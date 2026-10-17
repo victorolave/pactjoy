@@ -55,5 +55,11 @@ export { createInMemorySeasonRepository } from "./in-memory-season-repository.ts
 export type { InMemoryUnitOfWorkOptions } from "./in-memory-unit-of-work.ts";
 export { createInMemoryUnitOfWork } from "./in-memory-unit-of-work.ts";
 export { outboxNoticeFixture, pushSubscriptionFixture } from "./notification-fixtures.ts";
+export type {
+  RecordedPush,
+  RecordingPushSender,
+  RecordingPushSenderOptions,
+} from "./recording-push-sender.ts";
+export { createRecordingPushSender } from "./recording-push-sender.ts";
 export { createSeededRandomSource } from "./seeded-random.ts";
 export { createSequentialIdGenerator } from "./sequential-ids.ts";

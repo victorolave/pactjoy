@@ -96,7 +96,7 @@ export function createWebPushSender(options: WebPushSenderOptions): PushSender {
         body = await encryptPayload({
           uaPublic: fromBase64Url(target.p256dh),
           authSecret: fromBase64Url(target.auth),
-          plaintext: message.payload,
+          plaintext: new TextEncoder().encode(message.payload),
         });
       } catch {
         return { kind: "rejected", status: 0 };

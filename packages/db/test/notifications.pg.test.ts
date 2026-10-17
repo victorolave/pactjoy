@@ -1,10 +1,15 @@
 import {
   circleId,
+  createIntlTimeZone,
+  dispatchNotifications,
   instant,
+  localDate,
   memberId,
   NOTIFICATION_KINDS,
   type OutboxNotice,
   ok,
+  type PushSender,
+  pushSubscriptionId,
   seasonId,
   timeZoneId,
   userId,
@@ -158,6 +163,109 @@ describe("pactjoy.notification_outbox constraints", () => {
     const keysB = b.ok ? b.value.map((n) => n.dedupeKey) : [];
     expect(keysA.filter((key) => keysB.includes(key))).toEqual([]);
     expect([...keysA, ...keysB].sort()).toEqual(rows.map((n) => n.dedupeKey));
+  });
+});
+
+describe("dispatchNotifications on Postgres", () => {
+  it("claims, sends outside the transaction, records the outcome and removes a gone device", async () => {
+    const sent: string[] = [];
+    const push: PushSender = {
+      applicationServerKey: `B${"A".repeat(86)}`,
+      accepts: () => true,
+      async send(target, message) {
+        sent.push(`${target.endpoint} ${message.payload}`);
+        return target.endpoint.endsWith("gone") ? { kind: "gone" } : { kind: "delivered" };
+      },
+    };
+    // The recipient is the circle's only active member and the season exists, so the notice is
+    // still relevant; `seasonClosed` needs nothing else.
+    const season = outboxNotice("seasonClosed:s:m", T0);
+    await uow.transaction(async ({ circles, seasons, notifications, pushSubscriptions }) => {
+      await circles.save(
+        {
+          id: season.circleId,
+          name: "C",
+          members: [
+            {
+              id: season.recipientMemberId,
+              userId: season.recipientUserId,
+              displayName: "Victor",
+              status: "active",
+              joinedAt: instant(T0),
+              leftAt: null,
+            },
+          ],
+          invite: null,
+          createdAt: instant(T0),
+          archivedAt: null,
+          version: 0,
+        },
+        null,
+      );
+      await seasons.save(
+        {
+          id: season.seasonId as NonNullable<OutboxNotice["seasonId"]>,
+          circleId: season.circleId,
+          timeZone: timeZoneId("UTC"),
+          nominalStart: localDate("2026-09-01"),
+          actualStart: localDate("2026-09-01"),
+          lengthWeeks: 4,
+          reviewCadenceWeeks: 2,
+          status: "closed",
+          commitments: [],
+          approvals: [],
+          pactClosedAt: null,
+          pactRevision: 0,
+          createdAt: instant(T0),
+          version: 0,
+        },
+        null,
+      );
+      await notifications.enqueue([
+        { ...season, kind: "seasonClosed", params: { seasonId: season.seasonId } } as OutboxNotice,
+      ]);
+      for (const [n, endpoint] of [
+        "https://push.example/ok",
+        "https://push.example/gone",
+      ].entries()) {
+        await pushSubscriptions.upsert({
+          id: pushSubscriptionId(uuid(0x600 + n)),
+          userId: season.recipientUserId,
+          endpoint,
+          p256dh: `B${"A".repeat(86)}`,
+          auth: "A".repeat(22),
+          createdAt: instant(T0 + n),
+          lastSeenAt: instant(T0 + n),
+        });
+      }
+      return ok(undefined);
+    });
+
+    // An hour after the notice is due: 10:12 in its zone (Bogota), outside the quiet hours.
+    const now = instant(T0 + 3_600_000);
+    const result = await dispatchNotifications(
+      { uow, clock: { now: () => now }, timeZone: createIntlTimeZone(), push },
+      {},
+    );
+
+    expect(result).toEqual({
+      ok: true,
+      value: { claimed: 1, sent: 1, dropped: 0, retried: 0, failed: 0, deferred: 0 },
+    });
+    expect(sent.sort()).toEqual([
+      `https://push.example/gone {"v":1,"kind":"seasonClosed","params":{"seasonId":"${season.seasonId}"}}`,
+      `https://push.example/ok {"v":1,"kind":"seasonClosed","params":{"seasonId":"${season.seasonId}"}}`,
+    ]);
+    const [row] =
+      await admin`select state, outcome, attempts, lease_until from pactjoy.notification_outbox`;
+    expect(row).toMatchObject({
+      state: "sent",
+      outcome: "delivered",
+      attempts: 1,
+      lease_until: null,
+    });
+    const devices = await admin`select endpoint from pactjoy.push_subscriptions`;
+    expect(devices.map((d) => d.endpoint)).toEqual(["https://push.example/ok"]);
   });
 });
 

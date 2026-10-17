@@ -14,8 +14,8 @@ export interface PushTarget {
 }
 
 export interface PushMessage {
-  /** The plaintext the service worker receives; the adapter encrypts it for the device. */
-  readonly payload: Uint8Array;
+  /** The JSON text the service worker receives; the adapter encodes it as UTF-8 and encrypts it. */
+  readonly payload: string;
   /** How long the push service may hold it for an offline device. */
   readonly ttlSeconds: number;
   readonly urgency: "low" | "normal" | "high";

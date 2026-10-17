@@ -19,6 +19,7 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "createInMemorySeasonClosureRepository",
   "createInMemorySeasonRepository",
   "createInMemoryUnitOfWork",
+  "createRecordingPushSender",
   "createSeededRandomSource",
   "createSequentialIdGenerator",
   "createTestApp",

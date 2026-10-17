@@ -144,6 +144,12 @@ export type {
 } from "./habit/update-habit.ts";
 export { updateHabit } from "./habit/update-habit.ts";
 export type {
+  DispatchNotificationsDeps,
+  DispatchNotificationsInput,
+  DispatchNotificationsResult,
+} from "./notifications/dispatch-notifications.ts";
+export { dispatchNotifications } from "./notifications/dispatch-notifications.ts";
+export type {
   KindPolicy,
   NoticeContent,
   NotificationKind,
@@ -161,9 +167,27 @@ export type {
   OutboxNotice,
 } from "./notifications/outbox-notice.ts";
 export type {
+  PlanNotificationsDeps,
+  PlanNotificationsInput,
+  PlanNotificationsResult,
+} from "./notifications/plan-notifications.ts";
+export { planNotifications } from "./notifications/plan-notifications.ts";
+export type {
   PushSubscriptionRecord,
   PushSubscriptionRepository,
 } from "./notifications/push-subscription.repository.ts";
+export type {
+  PushConfig,
+  PushSubscriptionDeps,
+  PushSubscriptionError,
+  RemovePushSubscriptionInput,
+  SavePushSubscriptionInput,
+} from "./notifications/push-subscriptions.ts";
+export {
+  pushConfig,
+  removePushSubscription,
+  savePushSubscription,
+} from "./notifications/push-subscriptions.ts";
 export type {
   ApprovePactDeps,
   ApprovePactError,

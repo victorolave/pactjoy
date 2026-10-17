@@ -27,7 +27,7 @@ async function device(endpoint = "https://web.push.apple.com/QGuQyavXut"): Promi
 }
 
 const MESSAGE: PushMessage = {
-  payload: new TextEncoder().encode('{"v":1,"kind":"seasonStarted","params":{"seasonId":"s"}}'),
+  payload: '{"v":1,"kind":"seasonStarted","params":{"seasonId":"s"}}',
   ttlSeconds: 3600,
   urgency: "normal",
   collapseKey: "seasonStarted:season-1:member-1",
