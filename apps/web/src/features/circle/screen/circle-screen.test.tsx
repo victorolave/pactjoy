@@ -9,7 +9,11 @@ import {
   soloCircleFixture,
 } from "../../../testing/fixtures/circle.ts";
 import { myPauseRequestsFixture, pauseApprovalFixture } from "../../../testing/fixtures/pause.ts";
-import { completedItemFixture, feedFixture } from "../../../testing/fixtures/social.ts";
+import {
+  completedItemFixture,
+  feedFixture,
+  nudgeFixture,
+} from "../../../testing/fixtures/social.ts";
 import { renderApp } from "../../../testing/render.tsx";
 
 const ACTIVE = {
@@ -272,6 +276,19 @@ describe("Circle tab with people (31a-lite)", () => {
     // Out of scope for A3: a member's habits are not summarised in the member rows (31a follow-up).
     const members = within(screen.getByRole("list", { name: "Miembros" }));
     expect(members.queryByText(/Correr/)).not.toBeInTheDocument();
+  });
+
+  it("offers the encouragement nudge in the feed", async () => {
+    renderApp({
+      path: "/circle",
+      myCircle: pairCircleFixture(ACTIVE),
+      feedPages: [feedFixture({ items: [completedItemFixture()], nudge: nudgeFixture() })],
+    });
+    expect(
+      await screen.findByText("A Andrea le está costando más Correr estas semanas."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("¿Quieres enviarle ánimo?")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Ahora no" })).toBeInTheDocument();
   });
 
   it("says the circle starts here while no season has started", async () => {

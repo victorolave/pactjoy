@@ -2,6 +2,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { ApiError } from "../../../ports/api-error.ts";
+import type { SeasonDto } from "../../../ports/wire.ts";
 import { pairCircleFixture } from "../../../testing/fixtures/circle.ts";
 import { pendingReviewFixture } from "../../../testing/fixtures/review.ts";
 import {
@@ -303,10 +304,59 @@ describe("38a and 38b, graduating", () => {
         "8 semanas, 88 % de consistencia y ya no necesitas llevar la cuenta. Ahora es parte de tu rutina.",
       ),
     ).toBeInTheDocument();
-    expect(screen.getByText("Solo tú ves esta decisión.")).toBeInTheDocument();
-    expect(screen.queryByText(/verá/)).not.toBeInTheDocument();
+    expect(screen.queryByText("Solo tú ves esta decisión.")).not.toBeInTheDocument();
     await click("Continuar");
     expect(await screen.findByRole("heading", { name: "Decisiones guardadas." })).toBeVisible();
+  });
+
+  describe("tells the member what the circle will read about the graduation (ADR-0018)", () => {
+    const seasonWith = (privacy: "visible" | "private") =>
+      ({
+        id: "season-1",
+        commitments: [
+          {
+            kind: "detail",
+            id: LEER,
+            memberId: "member-victor",
+            habitId: "habit-leer",
+            weightPercent: 25,
+            privacy,
+          },
+        ],
+      }) as unknown as SeasonDto;
+
+    const graduateLeer = async (privacy: "visible" | "private" | null) => {
+      const app = open(resultsFixture(), { myCircle: pairCircleFixture() });
+      if (privacy !== null) app.deps.api.setPactResponse("getSeason", seasonWith(privacy));
+      app.deps.api.setClosureResult(
+        submittedClosureFixture({ seasonClosed: false, graduatedHabitIds: ["habit-leer"] }),
+      );
+      await decideAll(["Graduar 🎓", "Continuar", "Continuar", "Ajustar"]);
+      await screen.findByRole("heading", { name: "Graduaste Leer" });
+      return app;
+    };
+
+    it("names the peer and what they will read, as the design does", async () => {
+      await graduateLeer("visible");
+      expect(
+        await screen.findByText("Andrea verá “Victor graduó Leer” en la actividad del círculo."),
+      ).toBeInTheDocument();
+    });
+
+    it("never names a private habit", async () => {
+      await graduateLeer("private");
+      expect(
+        await screen.findByText("Tu círculo verá que graduaste un objetivo privado."),
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/graduó Leer/)).not.toBeInTheDocument();
+    });
+
+    it("does not name the habit while it cannot tell whether it is private", async () => {
+      await graduateLeer(null);
+      expect(
+        await screen.findByText("Tu círculo verá que graduaste un objetivo privado."),
+      ).toBeInTheDocument();
+    });
   });
 
   it("celebrates each graduated habit in order, with 'Siguiente hábito' between them", async () => {

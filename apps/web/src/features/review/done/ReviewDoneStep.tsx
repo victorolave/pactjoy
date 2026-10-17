@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { type ReactNode, useId } from "react";
 import { longDate, weekdayShortDate } from "../../../shared/format.ts";
 import { AutomaticityBar } from "../../../ui/AutomaticityBar.tsx";
 import { Button } from "../../../ui/Button.tsx";
@@ -26,6 +26,11 @@ export interface ReviewDoneStepProps {
    * rest of the day (the results screen would only say they are not ready).
    */
   readonly resultsOpenOn?: string | null;
+  /**
+   * The encouragement nudge (ADR-0018), placed by the flow. It is part of this screen, not a step:
+   * the step bars do not change, and putting it away never affects the saved review.
+   */
+  readonly nudge?: ReactNode;
   readonly onFinish: () => void;
 }
 
@@ -35,6 +40,7 @@ export function ReviewDoneStep({
   names,
   closing = false,
   resultsOpenOn = null,
+  nudge,
   onFinish,
 }: ReviewDoneStepProps) {
   const improvements = result?.improvements ?? [];
@@ -91,6 +97,7 @@ export function ReviewDoneStep({
             Tus resultados estarán listos el {longDate(resultsOpenOn, false)}.
           </p>
         )}
+        {nudge}
       </div>
     </FlowScreen>
   );

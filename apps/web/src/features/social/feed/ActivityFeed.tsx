@@ -3,6 +3,7 @@ import { useClock } from "../../../context/clock-context.tsx";
 import { Button } from "../../../ui/Button.tsx";
 import { InlineMessage } from "../../../ui/InlineMessage.tsx";
 import { Skeleton } from "../../../ui/Skeleton.tsx";
+import { NudgeCard } from "../nudge/NudgeCard.tsx";
 import { useFeed, useReact } from "../queries.ts";
 import { FeedItemRow } from "./FeedItemRow.tsx";
 import styles from "./feed.module.css";
@@ -48,6 +49,7 @@ export function ActivityFeed() {
   } else {
     body = (
       <>
+        {feed.nudge !== null && <NudgeCard nudge={feed.nudge} members={feed.members} />}
         {groupFeed(feed.items, today).map((group) => (
           <div key={group.title} className={styles.group}>
             <h3 className={styles.groupTitle}>{group.title}</h3>

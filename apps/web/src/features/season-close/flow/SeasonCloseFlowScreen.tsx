@@ -8,8 +8,10 @@ import { Skeleton } from "../../../ui/Skeleton.tsx";
 import { StepBars } from "../../../ui/StepBars.tsx";
 import { type CloseFailure, closeFailure, loadFailure } from "../close-messages.ts";
 import { failureCopy, resultsCopy } from "../copy.ts";
+import { graduationNote } from "../graduation-note.ts";
 import {
   useCanOpenNextSeason,
+  useGraduationAudience,
   useRefetchResults,
   useSeasonCloseOffer,
   useSeasonResults,
@@ -60,6 +62,7 @@ function CloseFlow({ seasonId, results, reviewTarget, onLeave }: FlowProps) {
   const [blocked, setBlocked] = useState<CloseFailure | null>(null);
   const [closedNow, setClosedNow] = useState(false);
   const canPrepare = useCanOpenNextSeason(closedNow);
+  const audience = useGraduationAudience(seasonId);
 
   const toReview = () => void navigate(reviewTarget ?? TODAY, { replace: true });
   if (blocked !== null) {
@@ -134,6 +137,12 @@ function CloseFlow({ seasonId, results, reviewTarget, onLeave }: FlowProps) {
         habitName={row.habitName}
         weeks={results.lengthWeeks}
         consistencyPercent={row.consistencyPercent}
+        note={graduationNote({
+          habit: row.habitName,
+          viewerName: audience.viewerName,
+          peers: audience.peers,
+          isPrivate: audience.isPrivate(row.commitmentId),
+        })}
         hasNext={state.celebration + 1 < ids.length}
         onNext={() => dispatch({ type: "nextCelebration" })}
       />

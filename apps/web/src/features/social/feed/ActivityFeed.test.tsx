@@ -8,6 +8,7 @@ import {
   emptyFeedFixture,
   encouragementReceivedItemFixture,
   feedFixture,
+  nudgeFixture,
   seasonStartedItemFixture,
 } from "../../../testing/fixtures/social.ts";
 import { renderInProviders } from "../../../testing/render.tsx";
@@ -105,6 +106,24 @@ describe("ActivityFeed", () => {
       "aria-pressed",
       "false",
     );
+  });
+
+  it("offers the first page's nudge above the items, and it goes away once sent", async () => {
+    const { deps } = renderInProviders(<ActivityFeed />, {
+      feedPages: [feedFixture({ nudge: nudgeFixture() })],
+    });
+    expect(
+      await screen.findByText("A Andrea le está costando más Correr estas semanas."),
+    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Enviar Fuego" }));
+    await waitFor(() => expect(screen.queryByText(/le está costando más/)).not.toBeInTheDocument());
+    expect(deps.api.socialCommands).toHaveLength(1);
+  });
+
+  it("offers no nudge when the feed has none", async () => {
+    renderInProviders(<ActivityFeed />, { feedPages: [feedFixture()] });
+    await screen.findByText("Andrea completó Correr · 5 km.");
+    expect(screen.queryByText(/le está costando más/)).not.toBeInTheDocument();
   });
 
   it("shows a received encouragement as a line with no chips", async () => {
