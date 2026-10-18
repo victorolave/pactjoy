@@ -9,7 +9,8 @@ import { type PauseRequestId, pauseRequestId, type SeasonId } from "../shared/id
 import { type Instant, instant } from "../time/instant.ts";
 
 interface StagedWrite {
-  readonly record: PauseRequestRecord;
+  /** `null` stages a deletion. */
+  readonly record: PauseRequestRecord | null;
   readonly expectedVersion: number | null;
 }
 
@@ -69,6 +70,12 @@ export function createInMemoryPauseRequestRepository(): InMemoryPauseRequestRepo
       store.set(record.id, record);
     },
 
+    async deleteBySeasons(seasonIds) {
+      for (const [id, record] of store) {
+        if (seasonIds.includes(record.seasonId)) store.delete(id);
+      }
+    },
+
     seed(seasonId, pause) {
       seeded += 1;
       const decision = pause.decision;
@@ -106,13 +113,16 @@ export function createInMemoryPauseRequestRepository(): InMemoryPauseRequestRepo
 
       function view(): Map<PauseRequestId, PauseRequestRecord> {
         const merged = new Map(store);
-        for (const [id, { record }] of staged) merged.set(id, record);
+        for (const [id, { record }] of staged) {
+          if (record) merged.set(id, record);
+          else merged.delete(id);
+        }
         return merged;
       }
 
       const repository: PauseRequestRepository = {
         async get(id) {
-          return staged.get(id)?.record ?? store.get(id) ?? null;
+          return view().get(id) ?? null;
         },
         async listBySeason(seasonId) {
           return [...view().values()].filter((r) => r.seasonId === seasonId);
@@ -121,16 +131,26 @@ export function createInMemoryPauseRequestRepository(): InMemoryPauseRequestRepo
           return listDue(view(), now);
         },
         async save(record, expectedVersion) {
-          const current = staged.get(record.id)?.record ?? store.get(record.id);
+          const earlier = staged.get(record.id);
+          const current = earlier ? earlier.record : store.get(record.id);
           if ((current ? current.version : null) !== expectedVersion) {
             throw new ConcurrencyConflict();
           }
           // Keep the version the LIVE store must still have at commit (null for a row inserted here).
-          const earlier = staged.get(record.id);
           staged.set(record.id, {
             record,
             expectedVersion: earlier ? earlier.expectedVersion : expectedVersion,
           });
+        },
+        async deleteBySeasons(seasonIds) {
+          for (const [id, record] of view()) {
+            if (!seasonIds.includes(record.seasonId)) continue;
+            const earlier = staged.get(id);
+            staged.set(id, {
+              record: null,
+              expectedVersion: earlier ? earlier.expectedVersion : record.version,
+            });
+          }
         },
       };
 
@@ -145,7 +165,10 @@ export function createInMemoryPauseRequestRepository(): InMemoryPauseRequestRepo
           }
         },
         apply(): void {
-          for (const [id, { record }] of staged) store.set(id, record);
+          for (const [id, { record }] of staged) {
+            if (record) store.set(id, record);
+            else store.delete(id);
+          }
         },
       };
     },

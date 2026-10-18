@@ -31,6 +31,8 @@ const REPOSITORY_TYPE_HOMES = [
 const FORBIDDEN: readonly { readonly name: string; readonly pattern: RegExp }[] = [
   { name: "list call", pattern: /\bpauses\s*\.\s*(listBySeason|listDue)\b/ },
   { name: "direct get", pattern: /\.\s*pauses\s*\.\s*get\s*\(/ },
+  // Erasure goes through `pause/erase.ts` (`dropSeasonPauses`), never a bare repository call.
+  { name: "season delete", pattern: /\bpauses\s*\.\s*deleteBySeasons\b/ },
   { name: "repository handle", pattern: /\b(repos|tx|uow)\s*\.\s*pauses\b/ },
   { name: "alias of pauses", pattern: /=\s*[\w.?]*\.pauses\s*[;,)\n]/ },
   {
@@ -73,6 +75,7 @@ describe("pauses are read through the choke point only", () => {
     ["list call", "await repos.pauses.listBySeason(season.id)"],
     ["list call", "pauses\n  .listDue(now)"],
     ["direct get", "const stored = await app.pauses.get(id);"],
+    ["season delete", "await repos.pauses.deleteBySeasons(seasonIds);"],
     ["repository handle", "const rows = await repos.pauses;"],
     ["alias of pauses", "const p = repos.pauses;\np.listBySeason(id);"],
     ["destructured pauses", "const { pauses } = repos;"],

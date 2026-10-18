@@ -172,6 +172,14 @@ export function createPgPauseRequestRepository(exec: SqlExecutor): PauseRequestR
         [iso(now)],
       ),
 
+    // The commitments and responses cascade from the request (their foreign keys).
+    async deleteBySeasons(seasonIds) {
+      if (seasonIds.length === 0) return;
+      await exec.query("delete from pactjoy.pause_requests where season_id = any($1::uuid[])", [
+        seasonIds,
+      ]);
+    },
+
     async save(record, expectedVersion) {
       const values = [
         record.reason,

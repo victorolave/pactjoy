@@ -5,7 +5,7 @@ import { commitmentId } from "../commitment/commitment.ts";
 import type { PauseRequestRecord } from "../pause/pause-request.ts";
 import type { Repositories } from "../ports/repositories.ts";
 import { ConcurrencyConflict } from "../shared/errors.ts";
-import { pauseRequestId } from "../shared/ids.ts";
+import { pauseRequestId, seasonId } from "../shared/ids.ts";
 import { ok } from "../shared/result.ts";
 import { pauseRequestFixture } from "../testing/builders.ts";
 import { instant } from "../time/instant.ts";
@@ -173,6 +173,60 @@ export function describePauseRequestRepositoryContract(
       // The decided request is past its own deadline too, but is no longer pending.
       expect(await at(decided.autoApproveAt + HOUR)).toEqual([due]);
       expect(await at(notYet.autoApproveAt)).toEqual([due, notYet]);
+    });
+
+    describe("deleteBySeasons", () => {
+      const full = (n: number) =>
+        record(n, {
+          note: "SENTINEL-rodilla",
+          responses: [
+            { memberId: APPROVER, response: "approve", respondedAt: instant(NOW + HOUR) },
+          ],
+        });
+      const drop = (uow: Uow, seasons: (typeof SEASON.id)[]) =>
+        uow.transaction(async ({ pauses }) => {
+          await pauses.deleteBySeasons(seasons);
+          return ok(undefined);
+        });
+
+      it("deletes every request of the seasons, children included, and nothing for other seasons", async () => {
+        const uow = await setup();
+        const [a, b] = [full(1), full(2)];
+        await save(uow, a, null);
+        await save(uow, b, null);
+        await drop(uow, []);
+        await drop(uow, [seasonId(uuid(0xe99))]);
+        expect(await read(uow, a)).toEqual(a);
+        await drop(uow, [SEASON.id]);
+        await drop(uow, [SEASON.id]);
+        expect(await read(uow, a)).toBeNull();
+        expect(await read(uow, b)).toBeNull();
+        expect(await uow.read(({ pauses }) => pauses.listBySeason(SEASON.id))).toEqual([]);
+        expect(await uow.read(({ pauses }) => pauses.listDue(instant(NOW + 100 * HOUR)))).toEqual(
+          [],
+        );
+      });
+
+      it("is seen inside its own transaction, undone by a rollback, and the id is free again", async () => {
+        const uow = await setup();
+        const a = full(1);
+        await save(uow, a, null);
+        await expect(
+          uow.transaction(async ({ pauses }) => {
+            await pauses.deleteBySeasons([SEASON.id]);
+            throw new Error("boom");
+          }),
+        ).rejects.toThrow("boom");
+        expect(await read(uow, a)).toEqual(a);
+        const seen = await uow.transaction(async ({ pauses }) => {
+          await pauses.deleteBySeasons([SEASON.id]);
+          return ok(await pauses.get(a.id));
+        });
+        expect((seen as { value: unknown }).value).toBeNull();
+        expect(await read(uow, a)).toBeNull();
+        await save(uow, a, null);
+        expect(await read(uow, a)).toEqual(a);
+      });
     });
   });
 }
