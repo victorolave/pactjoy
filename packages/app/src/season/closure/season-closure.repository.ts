@@ -25,4 +25,8 @@ export interface SeasonClosureRepository {
    * for an insert, the id or the `(seasonId, memberId)` key already exists.
    */
   save(closure: SeasonClosure, expectedVersion: number | null): Promise<void>;
+  /** Account erasure: delete private closures and child decisions; caller holds circle/season guards. */
+  deleteByMembers(memberIds: readonly MemberId[]): Promise<void>;
+  /** Full-circle erasure; child decisions cascade. Empty input is a no-op. */
+  deleteBySeasons(seasonIds: readonly SeasonId[]): Promise<void>;
 }

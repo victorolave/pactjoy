@@ -67,7 +67,13 @@ describe("closures are read inside the season/closure module only", () => {
   it("the port exposes no season-wide read of decisions (ids only)", () => {
     const port = String(SOURCES[PORT] ?? "");
     const methods = [...port.matchAll(/^\s{2}(\w+)\(/gm)].map((match) => match[1]);
-    expect(methods).toEqual(["getMine", "closedMemberIds", "save"]);
+    expect(methods).toEqual([
+      "getMine",
+      "closedMemberIds",
+      "save",
+      "deleteByMembers",
+      "deleteBySeasons",
+    ]);
     expect(port).toMatch(/closedMemberIds\(seasonId: SeasonId\): Promise<readonly MemberId\[\]>/);
   });
 

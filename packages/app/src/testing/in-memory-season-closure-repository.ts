@@ -9,7 +9,7 @@ function keyOf(closure: SeasonClosure): string {
 }
 
 interface StagedWrite {
-  readonly closure: SeasonClosure;
+  readonly closure: SeasonClosure | null;
   readonly expectedVersion: number | null;
 }
 
@@ -61,6 +61,16 @@ export function createInMemorySeasonClosureRepository(): InMemorySeasonClosureRe
   const store = new Map<SeasonClosureId, SeasonClosure>();
 
   return {
+    async deleteByMembers(memberIds) {
+      for (const [id, closure] of store) {
+        if (memberIds.includes(closure.memberId)) store.delete(id);
+      }
+    },
+    async deleteBySeasons(seasonIds) {
+      for (const [id, closure] of store) {
+        if (seasonIds.includes(closure.seasonId)) store.delete(id);
+      }
+    },
     async getMine(seasonId, memberId) {
       return getMine(store, seasonId, memberId);
     },
@@ -81,11 +91,31 @@ export function createInMemorySeasonClosureRepository(): InMemorySeasonClosureRe
 
       function view(): Map<SeasonClosureId, SeasonClosure> {
         const merged = new Map(store);
-        for (const [id, { closure }] of staged) merged.set(id, closure);
+        for (const [id, { closure }] of staged) {
+          if (closure) merged.set(id, closure);
+          else merged.delete(id);
+        }
         return merged;
       }
 
+      function removeWhere(matches: (closure: SeasonClosure) => boolean): void {
+        for (const [id, closure] of view()) {
+          if (!matches(closure)) continue;
+          const earlier = staged.get(id);
+          staged.set(id, {
+            closure: null,
+            expectedVersion: earlier ? earlier.expectedVersion : closure.version,
+          });
+        }
+      }
+
       const repository: SeasonClosureRepository = {
+        async deleteByMembers(memberIds) {
+          removeWhere((closure) => memberIds.includes(closure.memberId));
+        },
+        async deleteBySeasons(seasonIds) {
+          removeWhere((closure) => seasonIds.includes(closure.seasonId));
+        },
         async getMine(seasonId, memberId) {
           return getMine(view(), seasonId, memberId);
         },
@@ -93,12 +123,12 @@ export function createInMemorySeasonClosureRepository(): InMemorySeasonClosureRe
           return closedMemberIds(view(), seasonId);
         },
         async save(closure, expectedVersion) {
-          const current = staged.get(closure.id)?.closure ?? store.get(closure.id);
+          const earlier = staged.get(closure.id);
+          const current = earlier ? earlier.closure : store.get(closure.id);
           if ((current ? current.version : null) !== expectedVersion) {
             throw new ConcurrencyConflict();
           }
           if (keyTaken(view(), closure)) throw new ConcurrencyConflict();
-          const earlier = staged.get(closure.id);
           staged.set(closure.id, {
             closure,
             expectedVersion: earlier ? earlier.expectedVersion : expectedVersion,
@@ -114,11 +144,14 @@ export function createInMemorySeasonClosureRepository(): InMemorySeasonClosureRe
             if ((existing ? existing.version : null) !== expectedVersion) {
               throw new ConcurrencyConflict();
             }
-            if (keyTaken(store, closure)) throw new ConcurrencyConflict();
+            if (closure && keyTaken(store, closure)) throw new ConcurrencyConflict();
           }
         },
         apply(): void {
-          for (const [id, { closure }] of staged) store.set(id, closure);
+          for (const [id, { closure }] of staged) {
+            if (closure) store.set(id, closure);
+            else store.delete(id);
+          }
         },
       };
     },
