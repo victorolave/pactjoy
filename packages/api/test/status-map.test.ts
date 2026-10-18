@@ -50,8 +50,8 @@ function errorCoverageGaps(index: string, source: string) {
 }
 
 describe("app error status map", () => {
-  it("EM-S1..S5: 110 kinds, 52x422 6x403 11x404 39x409 1x410 1x503", () => {
-    expect(KINDS).toHaveLength(110);
+  it("EM-S1..S5: 111 kinds, 52x422 6x403 11x404 39x409 1x410 1x429 1x503", () => {
+    expect(KINDS).toHaveLength(111);
     expect(kindsWith(422)).toHaveLength(52);
     expect(kindsWith(503)).toEqual(["IdentityUnavailable"]);
     expect(kindsWith(403)).toEqual([
@@ -192,9 +192,18 @@ describe("app error status map", () => {
     });
   });
 
+  it("RL: too many join attempts is a 429 with Retry-After and no details (ADR-0020)", () => {
+    expect(kindsWith(429)).toEqual(["TooManyJoinAttempts"]);
+    expect(appErrorResult({ kind: "TooManyJoinAttempts", retryAfterSeconds: 42 })).toEqual({
+      status: 429,
+      error: { code: "TooManyJoinAttempts", message: "TooManyJoinAttempts" },
+      headers: { "Retry-After": "42" },
+    });
+  });
+
   it("every status is a valid error code and every kind is a PascalCase identifier", () => {
     for (const k of KINDS) {
-      expect([403, 404, 409, 410, 422, 503]).toContain(APP_ERROR_STATUS[k]);
+      expect([403, 404, 409, 410, 422, 429, 503]).toContain(APP_ERROR_STATUS[k]);
       expect(k).toMatch(/^[A-Z][A-Za-z]+$/);
     }
   });
@@ -221,7 +230,7 @@ describe("app error status map", () => {
     const index = readFileSync(resolve(import.meta.dirname, "../../app/src/index.ts"), "utf8");
     const source = readFileSync(resolve(import.meta.dirname, "../src/errors/app-error.ts"), "utf8");
     expect(errorCoverageGaps(index, source)).toEqual({ imports: [], union: [] });
-    expect(exportedErrorNames(index).length).toBe(52);
+    expect(exportedErrorNames(index).length).toBe(53);
   });
 
   it("EM-S16: the scan compares exact names, so a new CircleError is detected", () => {
