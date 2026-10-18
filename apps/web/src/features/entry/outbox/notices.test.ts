@@ -149,7 +149,9 @@ describe("copy", () => {
   it("explains every reason in Spanish (design: Reasons)", () => {
     expect(reasonText("closedWindow")).toBe("el plazo para registrarlo ya terminó");
     expect(reasonText("paused")).toBe("el compromiso está en pausa");
-    expect(reasonText("onHold")).toBe("hay una pausa pendiente de respuesta");
+    expect(reasonText("onHold")).toBe(
+      "hay una pausa pendiente de respuesta; puedes volver a registrarlo si la pausa se rechaza",
+    );
     expect(reasonText("entryGone")).toBe("ese registro ya no existe");
     expect(reasonText("generic")).toBe("ya no se puede registrar en esta temporada");
     expect(reasonText("unconfirmed")).toBe(

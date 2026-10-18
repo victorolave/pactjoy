@@ -110,7 +110,7 @@ describe("changes waiting on the phone (OE-R7, design 15g)", () => {
 
   it("a pending delete says it was deleted on the phone", () => {
     render(<TodayRowCard row={dayRowFixture()} pending="delete" />);
-    expect(screen.getByText("Borrado en este teléfono")).toBeInTheDocument();
+    expect(screen.getByText("Borrado pendiente de enviar")).toBeInTheDocument();
     expect(screen.getByText("Pendiente de sincronizar")).toBeInTheDocument();
   });
 

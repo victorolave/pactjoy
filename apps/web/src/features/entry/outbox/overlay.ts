@@ -25,7 +25,7 @@ export const PENDING_FOOTNOTE = "Puntos y clasificación se actualizan al sincro
 const PENDING_LINE: Record<PendingKind, string> = {
   record: "Registrado en este teléfono",
   edit: "Cambio guardado en este teléfono",
-  delete: "Borrado en este teléfono",
+  delete: "Borrado pendiente de enviar",
 };
 export const pendingLine = (kind: PendingKind): string => PENDING_LINE[kind];
 

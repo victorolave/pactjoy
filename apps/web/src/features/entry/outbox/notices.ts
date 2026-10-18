@@ -54,7 +54,8 @@ export function reasonText(reason: OutboxNotice["reason"]): string {
     case "paused":
       return "el compromiso está en pausa";
     case "onHold":
-      return "hay una pausa pendiente de respuesta";
+      // The grace may still be open: if the pause is rejected, the day can be recorded again.
+      return "hay una pausa pendiente de respuesta; puedes volver a registrarlo si la pausa se rechaza";
     case "entryGone":
       return "ese registro ya no existe";
     case "generic":

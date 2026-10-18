@@ -110,7 +110,7 @@ describe("Today shows what is waiting on the phone (OE-R7, design 15g)", () => {
     const dialog = await screen.findByRole("dialog", { name: "Leer" });
     await userEvent.click(within(dialog).getByRole("button", { name: "Borrar registro" }));
     await userEvent.click(within(dialog).getByRole("button", { name: "Borrar" }));
-    expect(await screen.findByText("Borrado en este teléfono")).toBeInTheDocument();
+    expect(await screen.findByText("Borrado pendiente de enviar")).toBeInTheDocument();
     expect(screen.getByText(BADGE)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Editar registro de Leer" })).toBeNull();
   });
