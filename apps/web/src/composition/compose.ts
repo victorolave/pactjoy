@@ -16,6 +16,7 @@ import { LocalStorageOutboxStore } from "../adapters/local-storage-outbox-store.
 import { LocalStorageTokenStore } from "../adapters/local-storage-token-store.ts";
 import { createTodayPersister } from "../adapters/query-persister.ts";
 import { SystemClock } from "../adapters/system-clock.ts";
+import { WebLocks } from "../adapters/web-locks.ts";
 import type { AppConfig } from "../config.ts";
 import { createSessionEvents, SessionManager } from "../features/auth/index.ts";
 import type { TokenStore } from "../ports/token-store.ts";
@@ -65,6 +66,7 @@ export function createDependencies(config: AppConfig, env: ComposeEnvironment): 
     reminderNames: new CacheReminderNames(),
     outboxStore: new LocalStorageOutboxStore(),
     visibility: new BrowserVisibility(),
+    locks: new WebLocks(),
     sessions,
     sessionEvents,
     queryClient: createQueryClient(),

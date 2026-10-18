@@ -6,6 +6,7 @@ import type { AuthPort } from "../ports/auth.ts";
 import type { Clock } from "../ports/clock.ts";
 import type { Connectivity } from "../ports/connectivity.ts";
 import type { DeviceStore } from "../ports/device-store.ts";
+import type { ExclusiveLock } from "../ports/exclusive-lock.ts";
 import type { Haptics } from "../ports/haptics.ts";
 import type { IdSource } from "../ports/ids.ts";
 import type { ImageProcessor } from "../ports/image-processor.ts";
@@ -48,6 +49,8 @@ export interface AppDependencies {
   readonly outboxStore: OutboxStore;
   /** Whether the app is on screen; coming back to it retries what the outbox could not send. */
   readonly visibility: Visibility;
+  /** A lock every tab respects: one outbox replay at a time (Web Locks, ADR-0012 addendum). */
+  readonly locks: ExclusiveLock;
   readonly sessions: SessionManager;
   /** The API adapter's `onUnauthorized` calls `sessionEvents.expire`. */
   readonly sessionEvents: SessionEvents;

@@ -5,6 +5,7 @@ import type { RecordEntryCommand } from "../../../ports/pactjoy-api.ts";
 import { tick } from "../../../shared/ordering.ts";
 import { FakePactJoyApi } from "../../../testing/fake-pactjoy-api.ts";
 import { noCircleTodayFixture } from "../../../testing/fixtures/today.ts";
+import { MemoryLock } from "../../../testing/memory-lock.ts";
 import { MemoryOutboxStore } from "../../../testing/memory-outbox-store.ts";
 import { SequentialIds } from "../../../testing/sequential-ids.ts";
 import { Outbox } from "./outbox.ts";
@@ -490,6 +491,79 @@ describe("Outbox: two tabs of the same user share one store (OE-R3.S4)", () => {
     await done;
     expect(api.recorded.map((cmd) => cmd.clientRequestId)).toEqual(["req-a", "req-c"]);
     expect(tabA.snapshot().items).toEqual([]);
+  });
+
+  // W2: the storage event of another tab arrives later than its write. Every change starts from what
+  // is stored, never from this tab's copy, so a write made meanwhile is not overwritten.
+  it("keeps an item another tab saved before its storage event arrived", async () => {
+    const { api, store, tabA } = twoTabs(seeded(recordInput("a")));
+    const release = api.hold("recordEntry");
+    const done = tabA.drain();
+    await vi.waitFor(() => expect(api.recordAttempts).toHaveLength(1));
+    // Saved by the other tab; this tab has not heard of it yet (no event delivered).
+    store.save(USER, seeded(recordInput("a"), { attempt: "a" }, recordInput("c")));
+    release();
+    await done;
+    expect(api.recorded.map((cmd) => cmd.clientRequestId)).toEqual(["req-a", "req-c"]);
+    expect(store.load(USER).items).toEqual([]);
+  });
+
+  it("replays one tab at a time under a lock named for the user", async () => {
+    const api = new FakePactJoyApi(noCircleTodayFixture());
+    const store = new MemoryOutboxStore();
+    const lock = new MemoryLock();
+    store.save(USER, seeded(editInput("e1", "entry-7")));
+    const make = () => {
+      const outbox = new Outbox({
+        api,
+        store,
+        userId: USER,
+        ids: new SequentialIds(),
+        onReplayed: () => undefined,
+        lock,
+      });
+      outbox.activate();
+      return outbox;
+    };
+    const tabA = make();
+    const tabB = make();
+    // Tab A replaces the queued edit in place; tab B has not heard of it (its event is late).
+    const newer = { ...editInput("e2", "entry-7"), value: { kind: "quantity", value: "70" } };
+    tabA.enqueue(newer as EnqueueInput);
+    const release = api.hold("editEntry");
+    const first = tabA.drain();
+    const second = tabB.drain();
+    await vi.waitFor(() => expect(lock.requested).toHaveLength(2));
+    release();
+    await Promise.all([first, second]);
+    // One request, with the newer value: tab B waited, then found nothing left to send.
+    expect(api.edited.map((cmd) => cmd.value)).toEqual([{ kind: "quantity", value: "70" }]);
+    expect(lock.requested).toEqual(["pactjoy.outbox:user-1", "pactjoy.outbox:user-1"]);
+  });
+});
+
+describe("Outbox: the signed-in user changed under it (S1)", () => {
+  it("stops before the next send when another user is signed in", async () => {
+    const api = new FakePactJoyApi(noCircleTodayFixture());
+    const store = new MemoryOutboxStore();
+    store.save(USER, seeded(recordInput("a"), recordInput("b")));
+    let current: string | null = USER;
+    const outbox = new Outbox({
+      api,
+      store,
+      userId: USER,
+      ids: new SequentialIds(),
+      onReplayed: () => undefined,
+      currentUserId: () => current,
+    });
+    outbox.activate();
+    const release = api.hold("recordEntry");
+    const done = outbox.drain();
+    await vi.waitFor(() => expect(api.recordAttempts).toHaveLength(1));
+    current = "user-2";
+    release();
+    await expect(done).resolves.toBe("session");
+    expect(api.recordAttempts.map((cmd) => cmd.clientRequestId)).toEqual(["req-a"]);
   });
 });
 

@@ -29,6 +29,7 @@ import { FakeSharing } from "../testing/fake-sharing.ts";
 import { FakeVisibility } from "../testing/fake-visibility.ts";
 import { FixedClock } from "../testing/fixed-clock.ts";
 import { noCircleTodayFixture } from "../testing/fixtures/today.ts";
+import { MemoryLock } from "../testing/memory-lock.ts";
 import { MemoryOutboxStore } from "../testing/memory-outbox-store.ts";
 import { MemoryStorage } from "../testing/memory-storage.ts";
 import { MemoryTokenStore } from "../testing/memory-token-store.ts";
@@ -58,6 +59,7 @@ function deps(overrides: Partial<AppDependencies> = {}): AppDependencies {
     reminderNames: new FakeReminderNames(),
     outboxStore: new MemoryOutboxStore(),
     visibility: new FakeVisibility(),
+    locks: new MemoryLock(),
     clock: new FixedClock(0),
     sessions: new SessionManager(auth, store, new FixedClock(0)),
     sessionEvents: createSessionEvents(),
@@ -294,6 +296,48 @@ describe("AppProviders", () => {
         ),
       );
       expect(outboxStore.load("user-1").items).toEqual([]);
+    });
+
+    it("replays under a lock named for the user, so two tabs take turns (W2)", async () => {
+      const outboxStore = new MemoryOutboxStore();
+      outboxStore.save("user-1", queuedRecord());
+      const locks = new MemoryLock();
+      const base = deps({ outboxStore, locks });
+      render(
+        <AppProviders deps={base}>
+          <Who />
+        </AppProviders>,
+      );
+      await waitFor(() => expect(outboxStore.load("user-1").items).toEqual([]));
+      expect(locks.requested).toContain("pactjoy.outbox:user-1");
+    });
+
+    it("stops before the next send once the stored session belongs to another user (S1)", async () => {
+      const outboxStore = new MemoryOutboxStore();
+      const two = queuedRecord();
+      const [first] = two.items;
+      if (first?.kind !== "record") throw new Error("record fixture");
+      const second = {
+        ...first,
+        localId: "b",
+        command: { ...first.command, clientRequestId: "req-b" },
+      };
+      outboxStore.save("user-1", { ...two, items: [first, second] });
+      const store = new MemoryTokenStore(fakeSession());
+      const base = deps({ outboxStore, store });
+      const api = base.api as FakePactJoyApi;
+      const release = api.hold("recordEntry");
+      render(
+        <AppProviders deps={base}>
+          <Who />
+        </AppProviders>,
+      );
+      await waitFor(() => expect(api.recordAttempts).toHaveLength(1));
+      // Another tab signed in someone else; this tab's React state has not caught up yet.
+      store.save(fakeSession({ userId: "user-2" }));
+      release();
+      await act(async () => {});
+      expect(api.recordAttempts.map((cmd) => cmd.clientRequestId)).toEqual(["req-a"]);
     });
 
     it("never replays another user's items with this user's token (OE-R3.S2)", async () => {

@@ -131,8 +131,10 @@ function SessionOutbox({
   readonly registry: MutableRefObject<Outbox | null>;
   readonly children: ReactNode;
 }) {
-  const { queryClient, api, outboxStore, ids, connectivity, visibility } = deps;
+  const { queryClient, api, outboxStore, ids, connectivity, visibility, locks, store } = deps;
   const userId = useSession().session?.userId ?? null;
+  // The stored session, not React's: another tab can switch the user before this tree catches up.
+  const currentUserId = useCallback(() => store.load()?.userId ?? null, [store]);
   const onReplayed = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: todayKey });
     void queryClient.invalidateQueries({ queryKey: progressKey });
@@ -147,6 +149,8 @@ function SessionOutbox({
       connectivity={connectivity}
       visibility={visibility}
       onReplayed={onReplayed}
+      lock={locks}
+      currentUserId={currentUserId}
     >
       <OutboxRegistrar registry={registry} />
       {children}

@@ -29,6 +29,7 @@ import { FakeVisibility } from "./fake-visibility.ts";
 import { FixedClock } from "./fixed-clock.ts";
 import { soloCircleFixture } from "./fixtures/circle.ts";
 import { activeTodayFixture } from "./fixtures/today.ts";
+import { MemoryLock } from "./memory-lock.ts";
 import { MemoryOutboxStore } from "./memory-outbox-store.ts";
 import { MemoryStorage } from "./memory-storage.ts";
 import { MemoryTokenStore } from "./memory-token-store.ts";
@@ -199,6 +200,7 @@ function createFakeDeps({
     reminderNames: new FakeReminderNames(),
     outboxStore,
     visibility: new FakeVisibility(),
+    locks: new MemoryLock(),
     clock,
     sessions: new SessionManager(auth, store, new FixedClock(0)),
     sessionEvents: createSessionEvents(),

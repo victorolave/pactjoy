@@ -9,6 +9,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import type { Connectivity } from "../../../ports/connectivity.ts";
+import type { ExclusiveLock } from "../../../ports/exclusive-lock.ts";
 import type { IdSource } from "../../../ports/ids.ts";
 import {
   EMPTY_OUTBOX,
@@ -33,6 +34,10 @@ export interface OutboxProviderProps {
   readonly visibility: Visibility;
   /** Called after a replay that changed anything; keep its identity stable. */
   readonly onReplayed: () => void;
+  /** Two tabs of the user take turns replaying (see `OutboxDeps.lock`). */
+  readonly lock: ExclusiveLock;
+  /** Who is signed in right now (see `OutboxDeps.currentUserId`); keep its identity stable. */
+  readonly currentUserId: () => string | null;
   readonly children: ReactNode;
 }
 
@@ -48,11 +53,16 @@ export function OutboxProvider({
   connectivity,
   visibility,
   onReplayed,
+  lock,
+  currentUserId,
   children,
 }: OutboxProviderProps) {
   const outbox = useMemo(
-    () => (userId === null ? null : new Outbox({ api, store, userId, ids, onReplayed })),
-    [userId, api, store, ids, onReplayed],
+    () =>
+      userId === null
+        ? null
+        : new Outbox({ api, store, userId, ids, onReplayed, lock, currentUserId }),
+    [userId, api, store, ids, onReplayed, lock, currentUserId],
   );
   useEffect(() => {
     if (outbox === null) return;

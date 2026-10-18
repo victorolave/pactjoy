@@ -22,6 +22,7 @@ import { FakeReminderNames } from "../testing/fake-reminder-names.ts";
 import { FakeSharing } from "../testing/fake-sharing.ts";
 import { FakeVisibility } from "../testing/fake-visibility.ts";
 import { FixedClock } from "../testing/fixed-clock.ts";
+import { MemoryLock } from "../testing/memory-lock.ts";
 import { MemoryOutboxStore } from "../testing/memory-outbox-store.ts";
 import { MemoryStorage } from "../testing/memory-storage.ts";
 import { MemoryTokenStore } from "../testing/memory-token-store.ts";
@@ -58,6 +59,7 @@ function dependenciesFor(scenario: Scenario): AppDependencies {
     reminderNames: new FakeReminderNames(),
     outboxStore: new MemoryOutboxStore(),
     visibility: new FakeVisibility(),
+    locks: new MemoryLock(),
     clock: new FixedClock(0),
     sessions: new SessionManager(auth, store, new FixedClock(0)),
     sessionEvents: createSessionEvents(),

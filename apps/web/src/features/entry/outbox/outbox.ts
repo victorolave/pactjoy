@@ -1,4 +1,5 @@
 import { ApiError } from "../../../ports/api-error.ts";
+import type { ExclusiveLock } from "../../../ports/exclusive-lock.ts";
 import type { IdSource } from "../../../ports/ids.ts";
 import type {
   OutboxItem,
@@ -38,6 +39,13 @@ export interface OutboxDeps {
   readonly ids: IdSource;
   /** Called once after a replay that changed anything, so the server's truth is read again. */
   readonly onReplayed: () => void;
+  /** Keeps two tabs of the user from replaying at once (W2). Without it, the replay just runs. */
+  readonly lock?: ExclusiveLock;
+  /**
+   * Who is signed in right now, read before every send. Another tab can switch the user before this
+   * outbox is disposed; it then stops instead of sending with the new user's token (S1).
+   */
+  readonly currentUserId?: () => string | null;
 }
 
 /**
@@ -47,10 +55,12 @@ export interface OutboxDeps {
 export type DrainStatus = "done" | "retry" | "session";
 
 /**
- * The per-user queue of entry writes made without a connection (OE-R1..R6). It keeps the state in
- * memory, saves every change through the `OutboxStore` before it acts on it, and replays the queue
- * one item at a time in order. The server decides: nothing here computes points or overrides an
- * answer, and a rejected item becomes a notice that stays until the member dismisses it.
+ * The per-user queue of entry writes made without a connection (OE-R1..R6). It keeps a copy of the
+ * state for the screen, but every change starts from what the `OutboxStore` holds (another tab may
+ * have written it, and its event may not have arrived yet) and is saved before it is acted on. It
+ * replays the queue one item at a time in order, one tab at a time. The server decides: nothing here
+ * computes points or overrides an answer, and a rejected item becomes a notice that stays until the
+ * member dismisses it.
  */
 export class Outbox {
   readonly #deps: OutboxDeps;
@@ -147,7 +157,7 @@ export class Outbox {
   }
 
   enqueue(input: EnqueueInput): EnqueueResult {
-    const result = enqueue(this.#state, input);
+    const result = enqueue(this.#stored(), input);
     if (!result.ok) return result;
     this.#commit(result.state);
     for (const listener of [...this.#enqueueListeners]) listener();
@@ -155,13 +165,20 @@ export class Outbox {
   }
 
   dismissNotices(): void {
-    this.#commit(dismissNotices(this.#state));
+    this.#commit(dismissNotices(this.#stored()));
   }
 
-  /** Sends the queue in order. A second call while one runs joins it (one replay at a time). */
+  /**
+   * Sends the queue in order. A second call while one runs joins it, and another tab's replay is
+   * waited for under the user's lock: it may already have sent what this tab still holds.
+   */
   drain(): Promise<DrainStatus> {
     if (this.#running !== null) return this.#running;
-    const run = this.#replay().finally(() => {
+    const { lock, userId } = this.#deps;
+    const replay = () => this.#replay();
+    const run = (
+      lock === undefined ? replay() : lock.run(`pactjoy.outbox:${userId}`, replay)
+    ).finally(() => {
       this.#running = null;
     });
     this.#running = run;
@@ -173,25 +190,25 @@ export class Outbox {
     let status: DrainStatus = "done";
     try {
       for (;;) {
-        if (this.#disposed) {
+        if (this.#ended()) {
           status = "session";
           break;
         }
-        const item = this.#state.items[0];
+        const item = this.#stored().items[0];
         if (item === undefined) break;
         this.#setReplaying(true);
         const id = itemId(item);
         // A record that may reach the server can no longer be rewritten: save that first.
         if (item.kind === "record" && !item.attempted) {
-          this.#commit(markAttempted(this.#state, item.localId));
+          this.#commit(markAttempted(this.#stored(), item.localId));
         }
         try {
           const entryId = await this.#send(item);
-          if (!this.#disposed) this.#remember(item, entryId);
+          if (!this.#ended()) this.#remember(item, entryId);
           this.#commit(
             item.kind === "record" && entryId !== null
-              ? resolveRecord(this.#state, item.localId, entryId)
-              : removeItem(this.#state, id),
+              ? resolveRecord(this.#stored(), item.localId, entryId)
+              : removeItem(this.#stored(), id),
           );
           this.#conflicts.delete(id);
           changed = true;
@@ -199,7 +216,7 @@ export class Outbox {
           const outcome = classify(item, error, {
             dependentDelete:
               item.kind === "record" &&
-              dependantsOf(this.#state, item).some((dependant) => dependant.kind === "delete"),
+              dependantsOf(this.#stored(), item).some((dependant) => dependant.kind === "delete"),
           });
           if (outcome === "retryable") {
             status = "retry";
@@ -219,8 +236,8 @@ export class Outbox {
           }
           if (outcome === "sent") {
             if (item.kind === "delete") this.#remember(item, null);
-            this.#commit(removeItem(this.#state, id));
-          } else if (outcome === "sentAll") this.#commit(rejectItem(this.#state, id).state);
+            this.#commit(removeItem(this.#stored(), id));
+          } else if (outcome === "sentAll") this.#commit(rejectItem(this.#stored(), id).state);
           else this.#reject(id, error);
           this.#conflicts.delete(id);
           changed = true;
@@ -300,12 +317,27 @@ export class Outbox {
   }
 
   #reject(id: string, error: unknown): void {
-    this.#commit(rejectWithNotice(this.#state, id, error, this.#deps.ids.newId()).state);
+    this.#commit(rejectWithNotice(this.#stored(), id, error, this.#deps.ids.newId()).state);
+  }
+
+  /**
+   * What the store holds now: the base of every change (read-modify-write in one synchronous step,
+   * so nothing can write in between). An ended outbox only has its own copy left.
+   */
+  #stored(): OutboxState {
+    return this.#ended() ? this.#state : this.#deps.store.load(this.#deps.userId);
+  }
+
+  /** Disposed, or another user is signed in now: this outbox's session is over. */
+  #ended(): boolean {
+    if (this.#disposed) return true;
+    const current = this.#deps.currentUserId;
+    return current !== undefined && current() !== this.#deps.userId;
   }
 
   #commit(next: OutboxState): void {
-    // A disposed outbox belongs to a session that ended: it must not write that session's state back.
-    if (this.#disposed || next === this.#state) return;
+    // An ended outbox belongs to a session that is over: it must not write that session's state back.
+    if (this.#ended() || next === this.#state) return;
     this.#deps.store.save(this.#deps.userId, next);
     this.#state = next;
     this.#notify();
