@@ -2,6 +2,7 @@ import type { MemberId } from "@pactjoy/engine";
 import { type Circle, findActiveMember } from "../circle/circle.ts";
 import { eraseInviteOf, eraseMember } from "../circle/erase-member.ts";
 import { leaveCircleCore } from "../circle/leave-circle.ts";
+import type { Measure } from "../commitment/commitment.ts";
 import { eraseMemberEncouragements } from "../encouragement/erase.ts";
 import type { EntryPhoto } from "../entry-photo/entry-photo.ts";
 import { releaseMemberPhotos } from "../entry-photo/erase.ts";
@@ -117,8 +118,9 @@ export async function eraseAccount(
 }
 
 /**
- * Makes the members' commitments private by a normal version-checked save (E4): privacy is not a
- * scoring input, so points stay byte-identical, and every peer read model already renders a private
+ * Makes the members' commitments private by a normal version-checked save (E4) and drops the one
+ * free-text field of a measure, the custom unit label a person typed. Privacy and the label are not
+ * scoring inputs, so points stay byte-identical, and every peer read model already renders a private
  * commitment as hidden. `pactRevision` is unchanged: the pact itself did not change.
  */
 async function hideCommitments(
@@ -126,18 +128,26 @@ async function hideCommitments(
   season: Season,
   memberIds: readonly MemberId[],
 ): Promise<void> {
-  const visible = season.commitments.some(
-    (c) => memberIds.includes(c.memberId) && c.privacy !== "private",
+  const pending = season.commitments.some(
+    (c) => memberIds.includes(c.memberId) && (c.privacy !== "private" || hasLabel(c.measure)),
   );
-  if (!visible) return;
+  if (!pending) return;
   await repos.seasons.save(
     {
       ...season,
       commitments: season.commitments.map((c) =>
-        memberIds.includes(c.memberId) ? { ...c, privacy: "private" as const } : c,
+        memberIds.includes(c.memberId)
+          ? { ...c, privacy: "private" as const, measure: withoutLabel(c.measure) }
+          : c,
       ),
       version: season.version + 1,
     },
     season.version,
   );
 }
+
+const hasLabel = (measure: Measure): boolean =>
+  measure.unit !== "done" && measure.customLabel !== null;
+
+const withoutLabel = (measure: Measure): Measure =>
+  measure.unit === "done" ? measure : { ...measure, customLabel: null };

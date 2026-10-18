@@ -1,5 +1,7 @@
+import { fromInt } from "@pactjoy/engine";
 import { describe, expect, it } from "vitest";
 import { leaveCircle } from "../circle/leave-circle.ts";
+import { buildCommitment, commitmentId, type Measure } from "../commitment/commitment.ts";
 import { storedSocial } from "../encouragement/encouragement-seed.ts";
 import { ERASED_REQUEST_FINGERPRINT } from "../entry/entry.repository.ts";
 import { storedPhoto } from "../entry-photo/photo-seed.ts";
@@ -10,8 +12,9 @@ import { storedReviews } from "../review/review-seed.ts";
 import { memberScore } from "../score/member-score.query.ts";
 import { standings } from "../score/standings.query.ts";
 import { storedClosure } from "../season/closure/closure-seed.ts";
-import { encouragementId } from "../shared/ids.ts";
+import { encouragementId, habitId } from "../shared/ids.ts";
 import { ok } from "../shared/result.ts";
+import { PER_DAY_REACH } from "../testing/entry-measures.ts";
 import { type AccountWorld, givenAccountWorld, OLD_SEASON_ID } from "./account-world.ts";
 import { deleteAccount } from "./delete-account.ts";
 
@@ -76,6 +79,49 @@ describe("erasing Andrea from a circle that goes on (active season)", () => {
       expect(after?.approvals).toEqual(before.approvals);
       expect(after?.version).toBeGreaterThan(before.version);
     }
+  });
+
+  it("blanks the free-text unit label of her hidden commitments and leaves the rest of the measure and Victor's label alone", async () => {
+    const world = await givenAccountWorld();
+    const cups = (customLabel: string | null): Measure => ({
+      unit: "custom",
+      customLabel,
+      precision: "decimal",
+      target: { direction: "reach", minimum: fromInt(10), ideal: fromInt(30) },
+      schedule: PER_DAY_REACH.schedule,
+    });
+    const victorCups = buildCommitment({
+      id: commitmentId("victor-cups"),
+      memberId: world.victorId,
+      habitId: habitId("habit-victor"),
+      weightPercent: 1,
+      privacy: "visible",
+      measure: cups("victor-cups"),
+    });
+    await world.app.uow.transaction(async (repos) => {
+      // Andrea's commitment is the only quantity one in the season: give it a label, and give Victor one.
+      await repos.seasons.save(
+        {
+          ...world.season,
+          commitments: [
+            ...world.season.commitments.map((c) =>
+              c.id === world.andreaCommitment ? { ...c, measure: cups("SENTINEL-cups") } : c,
+            ),
+            victorCups,
+          ],
+          version: world.season.version + 1,
+        },
+        world.season.version,
+      );
+      return ok(undefined);
+    });
+    await andreaDeletes(world);
+
+    const after = await world.app.seasons.get(world.season.id);
+    const measureOf = (id: typeof world.andreaCommitment) =>
+      after?.commitments.find((c) => c.id === id)?.measure;
+    expect(measureOf(world.andreaCommitment)).toEqual(cups(null));
+    expect(measureOf(commitmentId("victor-cups"))).toEqual(cups("victor-cups"));
   });
 
   it("keeps her entries' values and days but drops note, photo and the idempotency material", async () => {
