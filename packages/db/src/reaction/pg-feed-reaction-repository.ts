@@ -93,5 +93,12 @@ export function createPgFeedReactionRepository(exec: SqlExecutor): FeedReactionR
       );
       if (rowCount === 0) throw new ConcurrencyConflict();
     },
+
+    async deleteBySeasons(seasonIds) {
+      if (seasonIds.length === 0) return;
+      await exec.query("delete from pactjoy.feed_reactions where season_id = any($1::uuid[])", [
+        seasonIds,
+      ]);
+    },
   };
 }

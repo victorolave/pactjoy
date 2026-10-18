@@ -42,7 +42,25 @@ function conflicts(store: Store, e: Encouragement): boolean {
   return false;
 }
 
-function read(store: Store): Omit<EncouragementRepository, "add"> {
+/** Calls `drop` for every stored row that `deleteByRecipients` / `deleteBySeasons` removes. */
+function erasures(
+  view: () => Store,
+  drop: (id: EncouragementId) => void,
+): Pick<EncouragementRepository, "deleteByRecipients" | "deleteBySeasons"> {
+  const dropWhere = (matches: (e: Encouragement) => boolean) => {
+    for (const [id, e] of view()) if (matches(e)) drop(id);
+  };
+  return {
+    async deleteByRecipients(memberIds) {
+      dropWhere((e) => memberIds.includes(e.recipientId));
+    },
+    async deleteBySeasons(seasonIds) {
+      dropWhere((e) => seasonIds.includes(e.seasonId));
+    },
+  };
+}
+
+function read(store: Store): Pick<EncouragementRepository, "listSent" | "listReceived" | "get"> {
   return {
     async listSent(seasonId, senderId) {
       return [...store.values()]
@@ -71,6 +89,10 @@ export function createInMemoryEncouragementRepository(): InMemoryEncouragementRe
 
   return {
     ...reads,
+    ...erasures(
+      () => store,
+      (id) => void store.delete(id),
+    ),
 
     async add(encouragement) {
       if (conflicts(store, encouragement)) throw new ConcurrencyConflict();
@@ -79,12 +101,19 @@ export function createInMemoryEncouragementRepository(): InMemoryEncouragementRe
 
     beginTransaction(): EncouragementTransactionScope {
       const staged = new Map<EncouragementId, Encouragement>();
+      const dropped = new Set<EncouragementId>();
 
       function view(): Map<EncouragementId, Encouragement> {
-        return new Map([...store, ...staged]);
+        const merged = new Map([...store, ...staged]);
+        for (const id of dropped) merged.delete(id);
+        return merged;
       }
 
       const repository: EncouragementRepository = {
+        ...erasures(view, (id) => {
+          staged.delete(id);
+          dropped.add(id);
+        }),
         listSent: (seasonId, senderId) => read(view()).listSent(seasonId, senderId),
         listReceived: (seasonId, recipientId) => read(view()).listReceived(seasonId, recipientId),
         get: (id) => read(view()).get(id),
@@ -98,11 +127,14 @@ export function createInMemoryEncouragementRepository(): InMemoryEncouragementRe
         repository,
         validate(): void {
           // A staged row must not meet a row committed meanwhile (id or either unique key).
+          const live = new Map(store);
+          for (const id of dropped) live.delete(id);
           for (const encouragement of staged.values()) {
-            if (conflicts(store, encouragement)) throw new ConcurrencyConflict();
+            if (conflicts(live, encouragement)) throw new ConcurrencyConflict();
           }
         },
         apply(): void {
+          for (const id of dropped) store.delete(id);
           for (const [id, encouragement] of staged) store.set(id, encouragement);
         },
       };

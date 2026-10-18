@@ -160,6 +160,49 @@ export function describeEncouragementRepositoryContract(
         repository.add({ ...first, recipientId: CARLA, caseWeek: 9 }),
       ).rejects.toBeInstanceOf(ConcurrencyConflict);
     });
+
+    it("deleteByRecipients deletes what the members received and keeps what they sent", async () => {
+      const repository = await setup();
+      const toAndrea = sent(1);
+      const toCarla = sent(2, { recipientId: CARLA });
+      const fromAndrea = sent(3, { senderId: ANDREA, recipientId: VICTOR });
+      for (const row of [toAndrea, toCarla, fromAndrea]) await repository.add(row);
+      await repository.deleteByRecipients([]);
+      expect(await repository.listReceived(SEASON.id, ANDREA)).toEqual([toAndrea]);
+      await repository.deleteByRecipients([ANDREA]);
+      await repository.deleteByRecipients([ANDREA]);
+      expect(await repository.listReceived(SEASON.id, ANDREA)).toEqual([]);
+      expect(await repository.get(toAndrea.id)).toBeNull();
+      expect(await repository.listSent(SEASON.id, ANDREA)).toEqual([fromAndrea]);
+      expect(await repository.listReceived(SEASON.id, CARLA)).toEqual([toCarla]);
+    });
+
+    it("deleteByRecipients drops a row sent by an erased member only when its recipient is erased too", async () => {
+      const repository = await setup();
+      const fromAndrea = sent(1, { senderId: ANDREA, recipientId: VICTOR });
+      await repository.add(fromAndrea);
+      await repository.deleteByRecipients([ANDREA]);
+      expect(await repository.get(fromAndrea.id)).toEqual(fromAndrea);
+      await repository.deleteByRecipients([ANDREA, VICTOR]);
+      expect(await repository.get(fromAndrea.id)).toBeNull();
+    });
+
+    it("deleteBySeasons deletes every row of those seasons only, and frees the keys", async () => {
+      const repository = await setup();
+      const one = sent(1);
+      const two = sent(2, { senderId: CARLA });
+      await repository.add(one);
+      await repository.add(two);
+      await repository.deleteBySeasons([]);
+      await repository.deleteBySeasons([seasonId(uuid(0xe99))]);
+      expect(await repository.listReceived(SEASON.id, ANDREA)).toEqual([one, two]);
+      await repository.deleteBySeasons([SEASON.id]);
+      await repository.deleteBySeasons([SEASON.id]);
+      expect(await repository.listReceived(SEASON.id, ANDREA)).toEqual([]);
+      expect(await repository.listSent(SEASON.id, VICTOR)).toEqual([]);
+      await repository.add(one);
+      expect(await repository.get(one.id)).toEqual(one);
+    });
   });
 }
 
@@ -242,6 +285,39 @@ export function describeNudgeDismissalRepositoryContract(
       await repository.add(dismissal(2, { caseWeek: 4 }));
       await repository.add(dismissal(3, { targetId: CARLA }));
       expect(await repository.listMine(SEASON.id, VICTOR)).toHaveLength(3);
+    });
+
+    it("deleteByMembers deletes the dismissals the members made and those aimed at them", async () => {
+      const repository = await setup();
+      const toAndrea = dismissal(1);
+      const toCarla = dismissal(2, { targetId: CARLA });
+      const byAndrea = dismissal(3, { viewerId: ANDREA, targetId: CARLA });
+      const carlaToVictor = dismissal(4, { viewerId: CARLA, targetId: VICTOR });
+      for (const row of [toAndrea, toCarla, byAndrea, carlaToVictor]) await repository.add(row);
+      await repository.deleteByMembers([]);
+      expect(await repository.listMine(SEASON.id, VICTOR)).toEqual([toAndrea, toCarla]);
+      await repository.deleteByMembers([ANDREA]);
+      await repository.deleteByMembers([ANDREA]);
+      expect(await repository.listMine(SEASON.id, VICTOR)).toEqual([toCarla]);
+      expect(await repository.listMine(SEASON.id, ANDREA)).toEqual([]);
+      expect(await repository.listMine(SEASON.id, CARLA)).toEqual([carlaToVictor]);
+    });
+
+    it("deleteBySeasons deletes every dismissal of those seasons only, and frees the keys", async () => {
+      const repository = await setup();
+      const first = dismissal(1);
+      await repository.add(first);
+      await repository.add(dismissal(2, { viewerId: CARLA }));
+      await repository.deleteBySeasons([]);
+      await repository.deleteBySeasons([seasonId(uuid(0xe99))]);
+      expect(await repository.listMine(SEASON.id, VICTOR)).toEqual([first]);
+      await repository.deleteBySeasons([SEASON.id]);
+      await repository.deleteBySeasons([SEASON.id]);
+      expect(await repository.listMine(SEASON.id, VICTOR)).toEqual([]);
+      expect(await repository.listMine(SEASON.id, CARLA)).toEqual([]);
+      const again = dismissal(5, { dismissedOn: localDate("2026-10-20") });
+      await repository.add(again);
+      expect(await repository.listMine(SEASON.id, VICTOR)).toEqual([again]);
     });
   });
 }

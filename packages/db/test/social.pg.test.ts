@@ -87,6 +87,12 @@ const feedReactions: FeedReactionRepository = {
       return ok(undefined);
     });
   },
+  deleteBySeasons: async (seasonIds) => {
+    await uow.transaction(async ({ feedReactions: r }) => {
+      await r.deleteBySeasons(seasonIds);
+      return ok(undefined);
+    });
+  },
 };
 const encouragements: EncouragementRepository = {
   listSent: (season, sender) => uow.read(({ encouragements: r }) => r.listSent(season, sender)),
@@ -99,12 +105,36 @@ const encouragements: EncouragementRepository = {
       return ok(undefined);
     });
   },
+  deleteByRecipients: async (memberIds) => {
+    await uow.transaction(async ({ encouragements: r }) => {
+      await r.deleteByRecipients(memberIds);
+      return ok(undefined);
+    });
+  },
+  deleteBySeasons: async (seasonIds) => {
+    await uow.transaction(async ({ encouragements: r }) => {
+      await r.deleteBySeasons(seasonIds);
+      return ok(undefined);
+    });
+  },
 };
 const nudgeDismissals: NudgeDismissalRepository = {
   listMine: (season, viewer) => uow.read(({ nudgeDismissals: r }) => r.listMine(season, viewer)),
   add: async (dismissal) => {
     await uow.transaction(async ({ nudgeDismissals: r }) => {
       await r.add(dismissal);
+      return ok(undefined);
+    });
+  },
+  deleteByMembers: async (memberIds) => {
+    await uow.transaction(async ({ nudgeDismissals: r }) => {
+      await r.deleteByMembers(memberIds);
+      return ok(undefined);
+    });
+  },
+  deleteBySeasons: async (seasonIds) => {
+    await uow.transaction(async ({ nudgeDismissals: r }) => {
+      await r.deleteBySeasons(seasonIds);
       return ok(undefined);
     });
   },

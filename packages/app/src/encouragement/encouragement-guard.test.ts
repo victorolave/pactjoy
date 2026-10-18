@@ -81,16 +81,24 @@ describe("encouragements and dismissals are read inside the encouragement module
   });
 
   it("the encouragement port exposes no season-wide read (a peer read cannot be expressed)", () => {
+    // Erasure (ADR-0019) only adds deletes: they read nothing back.
     expect(methodsOf("./encouragement.repository.ts")).toEqual([
       "listSent",
       "listReceived",
       "get",
       "add",
+      "deleteByRecipients",
+      "deleteBySeasons",
     ]);
   });
 
   it("the dismissal port exposes only the viewer's own reads", () => {
-    expect(methodsOf("./nudge-dismissal.repository.ts")).toEqual(["listMine", "add"]);
+    expect(methodsOf("./nudge-dismissal.repository.ts")).toEqual([
+      "listMine",
+      "add",
+      "deleteByMembers",
+      "deleteBySeasons",
+    ]);
   });
 
   it.each([

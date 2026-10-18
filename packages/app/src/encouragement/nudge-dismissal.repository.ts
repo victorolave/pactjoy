@@ -17,4 +17,11 @@ export interface NudgeDismissalRepository {
    * insert-once row: `ON CONFLICT DO NOTHING` on a database), so a double tap is not an error.
    */
   add(dismissal: NudgeDismissal): Promise<void>;
+  /**
+   * Account erasure (ADR-0019): deletes every dismissal whose viewer OR target is in `memberIds`.
+   * Reads nothing back. `[]` is a no-op.
+   */
+  deleteByMembers(memberIds: readonly MemberId[]): Promise<void>;
+  /** Full-circle erasure: deletes every dismissal of `seasonIds`. `[]` is a no-op. */
+  deleteBySeasons(seasonIds: readonly SeasonId[]): Promise<void>;
 }

@@ -55,9 +55,21 @@ function keyTaken(store: Store, reaction: FeedReaction): boolean {
   return false;
 }
 
-/** The store after a set of staged writes (a `null` reaction removes the row). */
-function applied(store: Store, staged: ReadonlyMap<FeedReactionId, StagedWrite>) {
-  const merged = new Map(store);
+/** The store without the rows of those seasons (`deleteBySeasons`). */
+function withoutSeasons(
+  store: Store,
+  seasons: ReadonlySet<string>,
+): Map<FeedReactionId, FeedReaction> {
+  return new Map([...store].filter(([, reaction]) => !seasons.has(reaction.seasonId)));
+}
+
+/** The store after the dropped seasons and a set of staged writes (a `null` reaction removes the row). */
+function applied(
+  store: Store,
+  staged: ReadonlyMap<FeedReactionId, StagedWrite>,
+  dropped: ReadonlySet<string> = new Set(),
+) {
+  const merged = withoutSeasons(store, dropped);
   for (const [id, { reaction }] of staged) {
     if (reaction === null) merged.delete(id);
     else merged.set(id, reaction);
@@ -95,26 +107,40 @@ export function createInMemoryFeedReactionRepository(): InMemoryFeedReactionRepo
       store.delete(id);
     },
 
+    async deleteBySeasons(seasonIds) {
+      for (const [id, reaction] of [...store]) {
+        if (seasonIds.includes(reaction.seasonId)) store.delete(id);
+      }
+    },
+
     beginTransaction(): FeedReactionTransactionScope {
       const staged = new Map<FeedReactionId, StagedWrite>();
+      const dropped = new Set<string>();
 
       /** What this scope sees of one id: its own staged write over the live store. */
       function current(id: FeedReactionId): FeedReaction | undefined {
         const write = staged.get(id);
-        return write ? (write.reaction ?? undefined) : store.get(id);
+        if (write) return write.reaction ?? undefined;
+        return applied(store, staged, dropped).get(id);
       }
 
       const repository: FeedReactionRepository = {
         async listBySeason(seasonId) {
-          return listBySeason(applied(store, staged), seasonId);
+          return listBySeason(applied(store, staged, dropped), seasonId);
         },
         async find(seasonId, itemKey, memberId) {
-          return find(applied(store, staged), seasonId, itemKey, memberId);
+          return find(applied(store, staged, dropped), seasonId, itemKey, memberId);
+        },
+        async deleteBySeasons(seasonIds) {
+          for (const season of seasonIds) dropped.add(season);
+          for (const [id, { reaction }] of [...staged]) {
+            if (reaction && seasonIds.includes(reaction.seasonId)) staged.delete(id);
+          }
         },
         async save(reaction, expectedVersion) {
           const seen = current(reaction.id);
           if ((seen ? seen.version : null) !== expectedVersion) throw new ConcurrencyConflict();
-          if (keyTaken(applied(store, staged), reaction)) throw new ConcurrencyConflict();
+          if (keyTaken(applied(store, staged, dropped), reaction)) throw new ConcurrencyConflict();
           const earlier = staged.get(reaction.id);
           staged.set(reaction.id, {
             reaction,
@@ -138,7 +164,7 @@ export function createInMemoryFeedReactionRepository(): InMemoryFeedReactionRepo
       return {
         repository,
         validate(): void {
-          const after = applied(store, staged);
+          const after = applied(store, staged, dropped);
           for (const [id, { reaction, expectedVersion }] of staged) {
             const existing = store.get(id);
             if ((existing ? existing.version : null) !== expectedVersion) {
@@ -148,6 +174,9 @@ export function createInMemoryFeedReactionRepository(): InMemoryFeedReactionRepo
           }
         },
         apply(): void {
+          for (const [id, reaction] of [...store]) {
+            if (dropped.has(reaction.seasonId)) store.delete(id);
+          }
           for (const [id, { reaction }] of staged) {
             if (reaction === null) store.delete(id);
             else store.set(id, reaction);

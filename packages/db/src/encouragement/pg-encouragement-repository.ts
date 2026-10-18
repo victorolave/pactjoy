@@ -86,5 +86,20 @@ export function createPgEncouragementRepository(exec: SqlExecutor): Encouragemen
         ],
       );
     },
+
+    async deleteByRecipients(memberIds) {
+      if (memberIds.length === 0) return;
+      await exec.query(
+        "delete from pactjoy.encouragements where recipient_member_id = any($1::uuid[])",
+        [memberIds],
+      );
+    },
+
+    async deleteBySeasons(seasonIds) {
+      if (seasonIds.length === 0) return;
+      await exec.query("delete from pactjoy.encouragements where season_id = any($1::uuid[])", [
+        seasonIds,
+      ]);
+    },
   };
 }

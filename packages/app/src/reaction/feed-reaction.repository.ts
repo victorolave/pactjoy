@@ -30,4 +30,10 @@ export interface FeedReactionRepository {
    * reaction is already gone.
    */
   remove(id: FeedReactionId, expectedVersion: number): Promise<void>;
+  /**
+   * Full-circle erasure (ADR-0019): deletes every reaction of `seasonIds`, whoever made it. `[]`
+   * is a no-op. There is no per-member delete: an erased member's own reactions to peers' items
+   * stay, pseudonymous, and graduation reactions go with their season closure.
+   */
+  deleteBySeasons(seasonIds: readonly SeasonId[]): Promise<void>;
 }
