@@ -6,7 +6,10 @@ import { describe, expect, it } from "vitest";
  * runtime and can't appear here.
  */
 const EXPECTED_RUNTIME_EXPORTS = [
+  "ACCOUNT_DELETION_CONFIRMATION",
   "AUTO_APPROVE_AFTER_MS",
+  "ERASED_DISPLAY_NAME",
+  "deleteAccount",
   "PAUSE_REASONS",
   "addCommitment",
   "approvePact",
