@@ -46,6 +46,9 @@ export class LocalStorageOutboxStore implements OutboxStore {
   }
 
   load(userId: string): OutboxState {
+    // A memory copy exists only because the last write failed: it is newer than what is stored.
+    const newer = this.#memory.get(userId);
+    if (newer !== undefined) return newer;
     try {
       const raw = this.#storage?.getItem(PREFIX + userId) ?? null;
       if (raw !== null) {
@@ -55,7 +58,7 @@ export class LocalStorageOutboxStore implements OutboxStore {
     } catch {
       // Unreadable or corrupt: fall through to the in-memory copy, if any.
     }
-    return this.#memory.get(userId) ?? EMPTY_OUTBOX;
+    return EMPTY_OUTBOX;
   }
 
   save(userId: string, state: OutboxState): void {
@@ -97,7 +100,11 @@ export class LocalStorageOutboxStore implements OutboxStore {
     // `key` is null when another tab called `storage.clear()`.
     const listener = (event: Event) => {
       const { key } = event as StorageEvent;
-      if (key === null || key.startsWith(PREFIX)) onChange();
+      if (key !== null && !key.startsWith(PREFIX)) return;
+      // Another tab wrote (or cleared) the stored state: it is newer than a copy kept in memory.
+      if (key === null) this.#memory.clear();
+      else this.#memory.delete(key.slice(PREFIX.length));
+      onChange();
     };
     events?.addEventListener("storage", listener);
     return () => {

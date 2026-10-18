@@ -76,6 +76,56 @@ describe("LocalStorageOutboxStore", () => {
     expect(store.load("user-1")).toEqual(EMPTY_OUTBOX);
   });
 
+  it("prefers the newer memory copy over the stale stored one after a write failed", () => {
+    const storage = new MemoryStorage();
+    let full = false;
+    const flaky = {
+      get length() {
+        return storage.length;
+      },
+      key: (index: number) => storage.key(index),
+      getItem: (key: string) => storage.getItem(key),
+      removeItem: (key: string) => storage.removeItem(key),
+      setItem: (key: string, value: string) => {
+        if (full) throw new Error("QuotaExceededError");
+        storage.setItem(key, value);
+      },
+    } as unknown as Storage;
+    const store = new LocalStorageOutboxStore(flaky, null);
+    store.save("user-1", sampleOutbox());
+    full = true;
+    const newer = { ...sampleOutbox(), notices: [] };
+    const bigger = { ...newer, items: [...newer.items, ...newer.items] };
+    store.save("user-1", bigger);
+    expect(store.load("user-1")).toEqual(bigger);
+  });
+
+  it("drops the memory copy when another tab writes the key, so its state is read", () => {
+    const events = fakeEvents();
+    const storage = new MemoryStorage();
+    let full = true;
+    const flaky = {
+      get length() {
+        return storage.length;
+      },
+      key: (index: number) => storage.key(index),
+      getItem: (key: string) => storage.getItem(key),
+      removeItem: (key: string) => storage.removeItem(key),
+      setItem: (key: string, value: string) => {
+        if (full) throw new Error("QuotaExceededError");
+        storage.setItem(key, value);
+      },
+    } as unknown as Storage;
+    const store = new LocalStorageOutboxStore(flaky, events);
+    store.subscribe(() => undefined);
+    store.save("user-1", sampleOutbox());
+    expect(store.load("user-1")).toEqual(sampleOutbox());
+    full = false;
+    storage.removeItem("pactjoy.outbox.v1:user-1"); // another tab cleared it
+    events.fire("pactjoy.outbox.v1:user-1");
+    expect(store.load("user-1")).toEqual(EMPTY_OUTBOX);
+  });
+
   it("works with no storage at all", () => {
     const store = new LocalStorageOutboxStore(null);
     store.save("user-1", sampleOutbox());
