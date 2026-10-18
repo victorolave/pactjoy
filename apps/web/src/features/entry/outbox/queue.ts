@@ -34,6 +34,8 @@ export type EnqueueInput =
       readonly localId: string;
       readonly habitName: string;
       readonly command: RecordEntryCommand;
+      /** True when a direct send was cut off: the request may already be on the server. */
+      readonly attempted?: boolean;
     }
   | QueuedEdit
   | QueuedDelete;
@@ -92,7 +94,7 @@ function enqueueRecord(
   const record: QueuedRecord = {
     kind: "record",
     localId: input.localId,
-    attempted: false,
+    attempted: input.attempted === true,
     habitName: input.habitName,
     command: { ...command, forDate: command.forDate },
   };

@@ -72,20 +72,27 @@ export function useRecordEntry(
       if (outbox === null || command.forDate === undefined || (command.photoId ?? null) !== null) {
         return api.recordEntry(command);
       }
-      const queue = (): RecordResult | null => {
+      const queue = (attempted: boolean): RecordResult | null => {
         const localId = ids.newId();
-        const added = outbox.enqueue({ kind: "record", localId, habitName, command });
+        const added = outbox.enqueue({
+          kind: "record",
+          localId,
+          habitName,
+          command,
+          ...(attempted ? { attempted } : {}),
+        });
         return added.ok ? { entryId: localRef(localId), replayed: false, queued: true } : null;
       };
       if (mustQueue(outbox)) {
-        const queued = queue();
+        const queued = queue(false);
         if (queued !== null) return queued;
       }
       try {
         return await api.recordEntry(command);
       } catch (error) {
         if (isNetworkError(error)) {
-          const queued = queue();
+          // The request left the phone: it may be on the server, so it can no longer be rewritten.
+          const queued = queue(true);
           if (queued !== null) return queued;
         }
         throw error;

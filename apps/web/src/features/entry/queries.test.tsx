@@ -120,6 +120,21 @@ describe("sending a record (OE-R1)", () => {
     await waitFor(() => expect(queue()).toBe(""));
   });
 
+  it("a record cut off mid-send is queued as attempted: a later edit or delete waits behind it", async () => {
+    const app = renderInProviders(<Probe target="local:id-1" />);
+    // The request leaves, the connection drops in the same tick and the answer never arrives.
+    app.deps.api.recordEntry = async () => {
+      app.deps.connectivity.setOnline(false);
+      throw network();
+    };
+    await click("record");
+    await waitFor(() => expect(queue()).toBe("record:id-1:true:done"));
+    await click("edit");
+    await waitFor(() => expect(queue()).toBe("record:id-1:true:done,edit:local:id-1"));
+    await click("delete");
+    await waitFor(() => expect(queue()).toBe("record:id-1:true:done,delete:local:id-1"));
+  });
+
   it("appends to a non-empty outbox instead of sending directly (OE-R1.S3)", async () => {
     const app = renderInProviders(<Probe />, { online: false });
     await click("record");

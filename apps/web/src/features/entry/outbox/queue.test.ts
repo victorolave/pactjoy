@@ -77,6 +77,17 @@ const recordOf = (state: OutboxState, localId: string) =>
   );
 
 describe("enqueue", () => {
+  it("stores a record whose send was cut off as attempted: it may be on the server", () => {
+    const state = queueOf({ ...recordInput("a"), attempted: true } as EnqueueInput);
+    expect(recordOf(state, "a")?.attempted).toBe(true);
+    // So an edit waits behind it instead of rewriting its fingerprint, and a delete is queued.
+    const edited = applyAll(state, editInput("e1", localRef("a"), "45"));
+    expect(recordOf(edited, "a")?.command.value).toEqual({ kind: "done" });
+    expect(ids(edited)).toEqual(["a", "e1"]);
+    const deleted = applyAll(state, deleteInput("d1", localRef("a")));
+    expect(ids(deleted)).toEqual(["a", "d1"]);
+  });
+
   it("stores a record with its forDate and clientRequestId, not attempted (OE-R1.S1)", () => {
     const state = queueOf(recordInput("a"));
     expect(state.items).toEqual([
