@@ -42,7 +42,7 @@ export interface CoverageGaps {
 }
 
 /** A uuid column that names a person. */
-const PERSON_COLUMN =
+export const PERSON_COLUMN =
   /(^|_)(member|user|owner|recipient|sender|actor|reactor|viewer|target|requester|approver|creator)(_id)?$|^created_by$/;
 const FREE_TEXT_TYPES = new Set(["text", "varchar", "jsonb"]);
 
