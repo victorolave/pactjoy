@@ -317,6 +317,8 @@ export type {
   WeekSummaryInput,
 } from "./progress/week-summary.query.ts";
 export { weekSummary } from "./progress/week-summary.query.ts";
+export type { CommitmentReminderRepository } from "./reminders/commitment-reminder.repository.ts";
+export type { CommitmentReminder } from "./reminders/commitment-reminder.ts";
 export type {
   CommitmentStageDeps,
   CommitmentStageError,

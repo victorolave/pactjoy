@@ -12,6 +12,10 @@ import {
   type InMemoryCircleRepository,
 } from "./in-memory-circle-repository.ts";
 import {
+  createInMemoryCommitmentReminderRepository,
+  type InMemoryCommitmentReminderRepository,
+} from "./in-memory-commitment-reminder-repository.ts";
+import {
   createInMemoryEntryPhotoRepository,
   type InMemoryEntryPhotoRepository,
 } from "./in-memory-entry-photo-repository.ts";
@@ -78,6 +82,7 @@ export interface TestApp {
   readonly notifications: InMemoryNotificationOutbox;
   readonly pauses: InMemoryPauseRequestRepository;
   readonly pushSubscriptions: InMemoryPushSubscriptionRepository;
+  readonly reminders: InMemoryCommitmentReminderRepository;
   readonly reviews: InMemoryReviewRepository;
   readonly seasonClosures: InMemorySeasonClosureRepository;
   readonly seasons: InMemorySeasonRepository;
@@ -103,6 +108,7 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
   const notifications = createInMemoryNotificationOutbox();
   const pauses = createInMemoryPauseRequestRepository();
   const pushSubscriptions = createInMemoryPushSubscriptionRepository();
+  const reminders = createInMemoryCommitmentReminderRepository();
   const reviews = createInMemoryReviewRepository();
   const seasonClosures = createInMemorySeasonClosureRepository();
   const seasons = createInMemorySeasonRepository();
@@ -114,6 +120,7 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
     notifications,
     pauses,
     pushSubscriptions,
+    reminders,
     reviews,
     seasonClosures,
     seasons,
@@ -133,6 +140,7 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
     notifications,
     pauses,
     pushSubscriptions,
+    reminders,
     reviews,
     seasonClosures,
     seasons,
@@ -152,6 +160,7 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
         const notificationScope = notifications.beginTransaction();
         const pauseScope = pauses.beginTransaction();
         const pushSubscriptionScope = pushSubscriptions.beginTransaction();
+        const reminderScope = reminders.beginTransaction();
         const reviewScope = reviews.beginTransaction();
         const seasonClosureScope = seasonClosures.beginTransaction();
         const seasonScope = seasons.beginTransaction();
@@ -164,6 +173,7 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
             notifications: notificationScope.repository,
             pauses: pauseScope.repository,
             pushSubscriptions: pushSubscriptionScope.repository,
+            reminders: reminderScope.repository,
             reviews: reviewScope.repository,
             seasonClosures: seasonClosureScope.repository,
             seasons: seasonScope.repository,
@@ -176,6 +186,7 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
             notificationScope.validate();
             pauseScope.validate();
             pushSubscriptionScope.validate();
+            reminderScope.validate();
             reviewScope.validate();
             seasonClosureScope.validate();
             seasonScope.validate();
@@ -186,6 +197,7 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
             notificationScope.apply();
             pauseScope.apply();
             pushSubscriptionScope.apply();
+            reminderScope.apply();
             reviewScope.apply();
             seasonClosureScope.apply();
             seasonScope.apply();

@@ -15,6 +15,7 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "createInMemoryNotificationOutbox",
   "createInMemoryPauseRequestRepository",
   "createInMemoryPushSubscriptionRepository",
+  "createInMemoryCommitmentReminderRepository",
   "createInMemoryReviewRepository",
   "createInMemorySeasonClosureRepository",
   "createInMemorySeasonRepository",

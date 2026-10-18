@@ -1,6 +1,7 @@
 import {
   describeCircleGuardContract,
   describeCircleRepositoryContract,
+  describeCommitmentReminderContract,
   describeEntryRepositoryContract,
   describeHabitRepositoryContract,
   describeNotificationOutboxContract,
@@ -39,5 +40,6 @@ describeHabitRepositoryContract("postgres", postgres);
 describePauseRequestRepositoryContract("postgres", postgres);
 describeNotificationOutboxContract("postgres", postgres);
 describePushSubscriptionContract("postgres", postgres);
+describeCommitmentReminderContract("postgres", postgres);
 describeSeasonRepositoryContract("postgres", postgres);
 describeUnitOfWorkContract("postgres", postgres);

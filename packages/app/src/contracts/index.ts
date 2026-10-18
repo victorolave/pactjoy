@@ -7,6 +7,7 @@
  */
 
 export { describeCircleRepositoryContract } from "./circle.contract.ts";
+export { describeCommitmentReminderContract } from "./commitment-reminder.contract.ts";
 export { describeEntryRepositoryContract } from "./entry.contract.ts";
 export type { EntryPhotoContractSubject } from "./entry-photo.contract.ts";
 export { describeEntryPhotoRepositoryContract } from "./entry-photo.contract.ts";
