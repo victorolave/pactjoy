@@ -52,6 +52,19 @@ describe("signing out with entries still on the phone (OE-R6.S2, OE-R6.S3)", () 
     expect(screen.queryByText("Tienes registros sin enviar")).not.toBeInTheDocument();
   });
 
+  it("waits no longer than the sign-out grace (2 s) for a send that hangs, then asks", async () => {
+    const { deps } = renderApp({ path: SETTINGS, outbox: queued("a", "b"), online: false });
+    await signOut();
+    const release = deps.api.hold("recordEntry");
+    act(() => deps.connectivity.setOnline(true));
+    await waitFor(() => expect(deps.api.recordAttempts).toHaveLength(1));
+    const started = Date.now();
+    await userEvent.click(await signOut());
+    await screen.findByRole("dialog", { name: "Tienes registros sin enviar" }, { timeout: 3500 });
+    expect(Date.now() - started).toBeLessThan(3000);
+    release();
+  }, 10_000);
+
   it("asks first when the entries cannot be sent, naming how many are kept (OE-R6.S2)", async () => {
     const { deps } = renderApp({ path: SETTINGS, outbox: queued("a", "b"), online: false });
     await userEvent.click(await signOut());

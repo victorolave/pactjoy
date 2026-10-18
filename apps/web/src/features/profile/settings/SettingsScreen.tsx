@@ -6,7 +6,7 @@ import { Card } from "../../../ui/Card.tsx";
 import { FlowScreen } from "../../../ui/FlowScreen.tsx";
 import { ListRow } from "../../../ui/ListRow.tsx";
 import { Sheet } from "../../../ui/Sheet.tsx";
-import { useSession } from "../../auth/index.ts";
+import { SIGN_OUT_GRACE_MS, useSession } from "../../auth/index.ts";
 import { LeaveCircleSheet, useMyCircle } from "../../circle/index.ts";
 import { type Outbox, useOutbox, useOutboxState } from "../../entry/index.ts";
 import { NotificationsCard } from "../../notifications/index.ts";
@@ -15,8 +15,11 @@ import styles from "./SettingsScreen.module.css";
 
 const PROFILE_PATH = "/profile";
 
-/** How long "Cerrar sesión" waits for the queued entries to be sent before it asks. */
-const SEND_BEFORE_SIGN_OUT_MS = 5_000;
+/**
+ * How long "Cerrar sesión" waits for the queued entries to be sent before it asks: the one
+ * sign-out grace (OE-R6), not a second window on top of it.
+ */
+const SEND_BEFORE_SIGN_OUT_MS = SIGN_OUT_GRACE_MS;
 
 /** Settles when the replay does or after `ms`, whichever is first; never rejects. */
 async function sendWithin(outbox: Outbox, ms: number): Promise<void> {

@@ -40,7 +40,7 @@ export interface SessionApi {
 const SessionContext = createContext<SessionApi | null>(null);
 
 /** How long a sign-out waits for `beforeSignOut` before it goes on anyway. */
-const SIGN_OUT_GRACE_MS = 2_000;
+export const SIGN_OUT_GRACE_MS = 2_000;
 
 /** Settles when `work` does or after the grace period, whichever is first; never rejects. */
 function withinGrace(work: Promise<void>): Promise<void> {
