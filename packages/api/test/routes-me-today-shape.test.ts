@@ -129,6 +129,7 @@ const SEASON_CLOSE = ["nextSeasonFrom", "nextSeasonOpen", "resultsFrom", "step"]
   (k) => `seasonClose.${k}`,
 );
 const SCORED = [
+  "firstFullWeek",
   "pendingYesterday",
   "seasonClose",
   ...under("rows", []).concat(ROW_KEYS.map((k) => `rows[].${k}`)),

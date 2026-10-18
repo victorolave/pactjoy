@@ -11,6 +11,7 @@ import {
 import type { MemberScoreView } from "../score/member-score.query.ts";
 import { memberScoreView } from "../score/member-score.query.ts";
 import { type ScoreQueryDeps, scoreContextOf } from "../score/score-context.ts";
+import { toScoreInput } from "../score/score-input.ts";
 import type { StandingsView } from "../score/standings.query.ts";
 import { standingsView } from "../score/standings.query.ts";
 import { type SeasonCloseView, seasonCloseOf } from "../season/closure/season-close-of.ts";
@@ -19,6 +20,7 @@ import type { Actor } from "../shared/actor.ts";
 import type { CircleId, SeasonId } from "../shared/ids.ts";
 import type { LocalDate } from "../time/local-date.ts";
 import type { TimeZoneId } from "../time/time-zone.port.ts";
+import { firstFullWeek } from "./first-full-week.ts";
 import { type PendingYesterdayItem, pendingYesterday } from "./pending-yesterday.ts";
 import { seasonPhase, weekOf } from "./season-phase.ts";
 import { type TodayRow, todayRows } from "./today-rows.ts";
@@ -93,6 +95,8 @@ export type TodayView =
     } & TodayBase)
   | ({
       readonly state: "active" | "ended";
+      /** Earliest qualifying 0-based week, or null. Absent only in legacy cached payloads. */
+      readonly firstFullWeek?: number | null;
       readonly summary: TodaySummary;
       /** One per commitment of the viewer, in season order. */
       readonly rows: readonly TodayRow[];
@@ -243,6 +247,9 @@ export async function today(deps: TodayDeps, actor: Actor): Promise<TodayView> {
     })) as typeof pureRows;
     return {
       state: ended ? "ended" : "active",
+      firstFullWeek: firstFullWeek(
+        toScoreInput({ season, actualStart, memberId: viewer.id, ...data, today: day }),
+      ),
       ...base,
       rows,
       pendingYesterday: pendingYesterday(rowsInput),
