@@ -1,19 +1,22 @@
 import { describe, expect, it } from "vitest";
 import { createCircle } from "../circle/create-circle.ts";
 import { generateInvite } from "../circle/generate-invite.ts";
+import { joinCircle } from "../circle/join-circle.ts";
 import { leaveCircle } from "../circle/leave-circle.ts";
+import { addCommitment } from "../commitment/add-commitment.ts";
 import { uploadedPhoto } from "../entry-photo/photo-fixtures.ts";
 import { releaseStoredPhoto, storedPhoto } from "../entry-photo/photo-seed.ts";
 import { seedNotifications } from "../notifications/notification-seed.ts";
 import { storedPause } from "../pause/pause-seed.ts";
 import type { Repositories } from "../ports/repositories.ts";
 import type { UnitOfWork } from "../ports/unit-of-work.ts";
+import { seasonView } from "../season/season-view.query.ts";
 import { ConcurrencyConflict } from "../shared/errors.ts";
 import { habitId, pushSubscriptionId, userId } from "../shared/ids.ts";
 import { err, ok } from "../shared/result.ts";
 import { createTestApp, type TestApp } from "../testing/app-harness.ts";
 import { habitFixture } from "../testing/builders.ts";
-import { createCircleInput } from "../testing/circle-inputs.ts";
+import { createCircleInput, joinCircleInput } from "../testing/circle-inputs.ts";
 import { pushSubscriptionFixture } from "../testing/notification-fixtures.ts";
 import {
   givenOpenPactWithOneApproval,
@@ -21,6 +24,7 @@ import {
   storedSeason,
 } from "../testing/pact-fixtures.ts";
 import { instant } from "../time/instant.ts";
+import { today } from "../today/today.query.ts";
 import { type AccountWorld, givenAccountWorld } from "./account-world.ts";
 import { ACCOUNT_DELETION_CONFIRMATION, deleteAccount } from "./delete-account.ts";
 
@@ -348,6 +352,121 @@ describe("deleteAccount after the data transaction", () => {
     expect(again).toEqual(ok(undefined));
     expect(await snapshotOf(world)).toEqual(snapshot);
     expect(world.app.identity.deleted).toEqual([world.andrea.userId, world.andrea.userId]);
+  });
+});
+
+describe("deleteAccount while the old token keeps working until the identity is gone", () => {
+  const CAROL = { userId: userId("user-carol") };
+
+  /** An identity admin whose deletion first lets the still-valid token do `late`. */
+  function lateWriter(app: TestApp, late: () => Promise<void>) {
+    return {
+      ...deps(app),
+      identity: {
+        async deleteUser(id: typeof CAROL.userId) {
+          await late();
+          await app.identity.deleteUser(id);
+        },
+      },
+    };
+  }
+
+  it("erases a circle the token creates in the window", async () => {
+    const app = createTestApp({ now: BEFORE_PACT_SEASON });
+    let lateCircle: string | null = null;
+
+    const result = await deleteAccount(
+      lateWriter(app, async () => {
+        const created = await createCircle(app, CAROL, createCircleInput("Late", "Carol"));
+        if (!created.ok) throw new Error("setup: createCircle refused");
+        lateCircle = created.value.id;
+      }),
+      CAROL,
+      CONFIRM,
+    );
+
+    expect(result).toEqual(ok(undefined));
+    expect(lateCircle).not.toBeNull();
+    expect(await app.circles.listByUser(CAROL.userId)).toEqual([]);
+    expect(await app.circles.findActiveByUser(CAROL.userId)).toBeNull();
+    expect(app.identity.deleted).toEqual([CAROL.userId]);
+  });
+
+  it("tombstones a peer's circle the token joins and drops a commitment it adds on a new habit", async () => {
+    const app = createTestApp({ now: BEFORE_PACT_SEASON });
+    const { circle, season, victor } = await givenOpenPactWithOneApproval(app);
+    const invite = await generateInvite(app, victor, { circleId: circle.id });
+    if (!invite.ok) throw new Error("setup: generateInvite refused");
+    // The pact fixture names Victor's habit without storing it; his reads need it to exist.
+    await app.uow.transaction(async ({ habits }) => {
+      await habits.save(
+        habitFixture({ id: habitId("habit-user-victor"), ownerId: victor.userId }),
+        null,
+      );
+      return ok(undefined);
+    });
+    const lateHabit = habitId("habit-late");
+
+    const result = await deleteAccount(
+      lateWriter(app, async () => {
+        const joined = await joinCircle(app, CAROL, joinCircleInput(invite.value.code, "Carol"));
+        if (!joined.ok) throw new Error("setup: joinCircle refused");
+        await app.uow.transaction(async ({ habits }) => {
+          await habits.save(habitFixture({ id: lateHabit, ownerId: CAROL.userId }), null);
+          return ok(undefined);
+        });
+        const added = await addCommitment(app, CAROL, {
+          seasonId: season.id,
+          habitId: lateHabit,
+          weightPercent: 100,
+          privacy: "visible",
+          measure: { unit: "done", frequency: { kind: "timesPerWeek", times: 3 } },
+        });
+        if (!added.ok) throw new Error("setup: addCommitment refused");
+      }),
+      CAROL,
+      CONFIRM,
+    );
+
+    expect(result).toEqual(ok(undefined));
+    const after = await app.circles.get(circle.id);
+    const carolMembers = after?.members.filter((m) => m.displayName === "Carol") ?? [];
+    expect(carolMembers).toEqual([]);
+    expect(after?.members.filter((m) => m.userId === CAROL.userId)).toEqual([]);
+    expect(after?.members.filter((m) => m.status === "active" && m.erasedAt === null)).toHaveLength(
+      2,
+    );
+    expect(await app.circles.listByUser(CAROL.userId)).toEqual([]);
+    expect(await app.habits.listByOwner(CAROL.userId)).toEqual([]);
+    // The open pact discards a leaver's commitments, so none is left pointing at the deleted habit.
+    const stored = await storedSeason(app, season.id);
+    expect(stored.commitments.filter((c) => c.habitId === lateHabit)).toEqual([]);
+    expect(stored.commitments).toHaveLength(2);
+    // A peer's reads must not trip over the commitment whose habit is gone.
+    const view = await seasonView(app, victor, { seasonId: season.id });
+    expect(view.ok).toBe(true);
+    expect((await today(app, victor)).state).not.toBe("noCircle");
+  });
+
+  it("stays idempotent when the window left something behind and the call is repeated", async () => {
+    const app = createTestApp({ now: BEFORE_PACT_SEASON });
+    const { circle, victor } = await givenOpenPactWithOneApproval(app);
+    const invite = await generateInvite(app, victor, { circleId: circle.id });
+    if (!invite.ok) throw new Error("setup: generateInvite refused");
+    await deleteAccount(
+      lateWriter(app, async () => {
+        await joinCircle(app, CAROL, joinCircleInput(invite.value.code, "Carol"));
+      }),
+      CAROL,
+      CONFIRM,
+    );
+    const snapshot = await app.circles.get(circle.id);
+
+    const again = await deleteAccount(deps(app), CAROL, CONFIRM);
+
+    expect(again).toEqual(ok(undefined));
+    expect(await app.circles.get(circle.id)).toEqual(snapshot);
+    expect(app.identity.deleted).toEqual([CAROL.userId, CAROL.userId]);
   });
 });
 

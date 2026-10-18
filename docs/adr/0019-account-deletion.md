@@ -39,9 +39,12 @@ the circle), then the member-wide helpers. Each helper lives inside its
 owning module, so the existing guards stay intact. Entries are erased before
 photos are released (`entries.photo_id` is RESTRICT). After commit,
 `IdentityAdmin.deleteUser(originalUserId)` runs first; once it succeeds, a
-second small transaction repeats the user-level deletes (devices, habits,
-outbox rows by the original user id), so nothing the still-valid access token
-wrote in between survives. Then the member's released photos (including ones
+second transaction runs the whole erasure again by the original user id
+(`eraseAccount`, not only the user-level deletes), so nothing the still-valid
+access token wrote in between survives: devices, habits, outbox rows, and also
+a circle it created or joined once the first transaction left it without a
+membership. Its released and dropped photo rows are purged like the first
+one's. Then the member's released photos (including ones
 released before the deletion) are purged in bounded batches and the objects
 of dropped rows deleted, best effort and never thrown; leftovers stay
 `released` for the global sweep job.

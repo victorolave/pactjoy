@@ -118,10 +118,9 @@ export async function eraseAccount(
 
 /**
  * The user-level deletes, keyed by the ORIGINAL user id: notices addressed to the person (and to
- * their members, when given), their devices and their habits. `deleteAccount` repeats it with no
- * members once the identity is gone, to sweep what the still-valid token wrote in between.
+ * their members, when given), their devices and their habits.
  */
-export async function eraseUserOwned(
+async function eraseUserOwned(
   repos: Repositories,
   userId: UserId,
   memberIds: readonly MemberId[] = [],
