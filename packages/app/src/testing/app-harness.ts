@@ -60,6 +60,10 @@ import {
   type InMemoryPushSubscriptionRepository,
 } from "./in-memory-push-subscription-repository.ts";
 import {
+  createInMemoryRateLimitRepository,
+  type InMemoryRateLimitRepository,
+} from "./in-memory-rate-limit-repository.ts";
+import {
   createInMemoryReviewRepository,
   type InMemoryReviewRepository,
 } from "./in-memory-review-repository.ts";
@@ -102,6 +106,7 @@ export interface TestApp {
   readonly nudgeDismissals: InMemoryNudgeDismissalRepository;
   readonly pauses: InMemoryPauseRequestRepository;
   readonly pushSubscriptions: InMemoryPushSubscriptionRepository;
+  readonly rateLimits: InMemoryRateLimitRepository;
   readonly reminders: InMemoryCommitmentReminderRepository;
   readonly reviews: InMemoryReviewRepository;
   readonly seasonClosures: InMemorySeasonClosureRepository;
@@ -132,6 +137,7 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
   const nudgeDismissals = createInMemoryNudgeDismissalRepository();
   const pauses = createInMemoryPauseRequestRepository();
   const pushSubscriptions = createInMemoryPushSubscriptionRepository();
+  const rateLimits = createInMemoryRateLimitRepository();
   const reminders = createInMemoryCommitmentReminderRepository();
   const reviews = createInMemoryReviewRepository();
   const seasonClosures = createInMemorySeasonClosureRepository();
@@ -147,6 +153,7 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
     nudgeDismissals,
     pauses,
     pushSubscriptions,
+    rateLimits,
     reminders,
     reviews,
     seasonClosures,
@@ -171,6 +178,7 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
     nudgeDismissals,
     pauses,
     pushSubscriptions,
+    rateLimits,
     reminders,
     reviews,
     seasonClosures,
@@ -194,6 +202,7 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
         const nudgeDismissalScope = nudgeDismissals.beginTransaction();
         const pauseScope = pauses.beginTransaction();
         const pushSubscriptionScope = pushSubscriptions.beginTransaction();
+        const rateLimitScope = rateLimits.beginTransaction();
         const reminderScope = reminders.beginTransaction();
         const reviewScope = reviews.beginTransaction();
         const seasonClosureScope = seasonClosures.beginTransaction();
@@ -210,6 +219,7 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
             nudgeDismissals: nudgeDismissalScope.repository,
             pauses: pauseScope.repository,
             pushSubscriptions: pushSubscriptionScope.repository,
+            rateLimits: rateLimitScope.repository,
             reminders: reminderScope.repository,
             reviews: reviewScope.repository,
             seasonClosures: seasonClosureScope.repository,
@@ -226,6 +236,7 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
             nudgeDismissalScope.validate();
             pauseScope.validate();
             pushSubscriptionScope.validate();
+            rateLimitScope.validate();
             reminderScope.validate();
             reviewScope.validate();
             seasonClosureScope.validate();
@@ -240,6 +251,7 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
             nudgeDismissalScope.apply();
             pauseScope.apply();
             pushSubscriptionScope.apply();
+            rateLimitScope.apply();
             reminderScope.apply();
             reviewScope.apply();
             seasonClosureScope.apply();

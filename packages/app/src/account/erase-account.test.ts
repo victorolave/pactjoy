@@ -8,6 +8,7 @@ import { ERASED_REQUEST_FINGERPRINT } from "../entry/entry.repository.ts";
 import { storedPhoto } from "../entry-photo/photo-seed.ts";
 import { storedPause } from "../pause/pause-seed.ts";
 import { respondToPause } from "../pause/respond-to-pause.ts";
+import { admitJoinAttempt } from "../rate-limit/join-attempts.ts";
 import { storedReminder } from "../reminders/reminder-seed.ts";
 import { givenReviewWorld, type ReviewWorld } from "../review/review-fixtures.ts";
 import { storedReviews } from "../review/review-seed.ts";
@@ -18,6 +19,7 @@ import { storedClosure } from "../season/closure/closure-seed.ts";
 import { circleId, encouragementId, habitId, seasonId } from "../shared/ids.ts";
 import { ok } from "../shared/result.ts";
 import { PER_DAY_REACH } from "../testing/entry-measures.ts";
+import { instant } from "../time/instant.ts";
 import { type AccountWorld, givenAccountWorld, OLD_SEASON_ID } from "./account-world.ts";
 import { deleteAccount } from "./delete-account.ts";
 
@@ -254,6 +256,29 @@ describe("erasing Andrea from a circle that goes on (active season)", () => {
     const hers = await storedSocial(app, season.id, world.andreaId);
     expect(hers.received).toEqual([]);
     expect(hers.dismissed).toEqual([]);
+  });
+
+  it("deletes her join-attempt counters and keeps Victor's (ADR-0020)", async () => {
+    const world = await givenAccountWorld();
+    const { app } = world;
+    const attempt = (actor: typeof world.andrea) =>
+      admitJoinAttempt({ uow: app.uow, clock: app.clock }, actor, { networkKey: null });
+    await attempt(world.andrea);
+    await attempt(world.victor);
+
+    await andreaDeletes(world);
+
+    const now = app.clock.now();
+    const minute = (actor: typeof world.andrea) => ({
+      action: "joinCircle" as const,
+      subject: `user:${actor.userId}`,
+      windowStart: instant(now - (now % 60_000)),
+      windowSeconds: 60,
+    });
+    const counts = await app.uow.transaction(async ({ rateLimits }) =>
+      ok(await rateLimits.hit([minute(world.andrea), minute(world.victor)])),
+    );
+    expect(counts).toEqual(ok([1, 2]));
   });
 
   it("keeps what she sent (anonymous) and every peer-owned row, and her own reactions", async () => {
