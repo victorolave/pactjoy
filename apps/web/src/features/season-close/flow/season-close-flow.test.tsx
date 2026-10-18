@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { ApiError } from "../../../ports/api-error.ts";
@@ -361,6 +361,25 @@ describe("38a and 38b, graduating", () => {
         await screen.findByText("Tu círculo verá que graduaste un objetivo privado."),
       ).toBeInTheDocument();
       expect(screen.queryByText(/graduó Leer/)).not.toBeInTheDocument();
+    });
+
+    it("says neither line while it is still reading whether the habit is private", async () => {
+      const app = open(resultsFixture(), { myCircle: pairCircleFixture() });
+      app.deps.api.setPactResponse("getSeason", seasonWith("visible"));
+      const release = app.deps.api.hold("getSeason");
+      app.deps.api.setClosureResult(
+        submittedClosureFixture({ seasonClosed: false, graduatedHabitIds: ["habit-leer"] }),
+      );
+      await decideAll(["Graduar 🎓", "Continuar", "Continuar", "Ajustar"]);
+      await screen.findByRole("heading", { name: "Graduaste Leer" });
+      await waitFor(() => expect(app.deps.api.calls.getSeason).toBe(1));
+      expect(screen.queryByText(/objetivo privado/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/graduó Leer/)).not.toBeInTheDocument();
+      await act(async () => release());
+      expect(
+        await screen.findByText("Andrea verá “Victor graduó Leer” en la actividad del círculo."),
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/objetivo privado/)).not.toBeInTheDocument();
     });
 
     it("does not name the habit while it cannot tell whether it is private", async () => {

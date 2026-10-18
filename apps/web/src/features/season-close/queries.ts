@@ -86,10 +86,12 @@ export function useCanOpenNextSeason(seasonClosedNow: boolean): boolean {
 /**
  * Who will read a graduation in the circle's activity, and whether a habit is private (38b,
  * ADR-0018). Read through the circle and season queries the other screens use, never their
- * features. While either has not answered, a commitment counts as private: the copy then promises
- * less (it never claims the habit is named).
+ * features. `loading` holds while either is still on its first read, so the note can wait instead
+ * of flashing a line it would replace. When a read fails, a commitment counts as private: the copy
+ * then promises less (it never claims the habit is named).
  */
 export function useGraduationAudience(seasonId: string): {
+  readonly loading: boolean;
   readonly viewerName: string | null;
   readonly peers: readonly string[];
   readonly isPrivate: (commitmentId: string) => boolean;
@@ -106,6 +108,7 @@ export function useGraduationAudience(seasonId: string): {
   const members = circle.data?.circle?.members ?? [];
   const known = season.data?.commitments;
   return {
+    loading: circle.isLoading || season.isLoading,
     viewerName: members.find((member) => member.isYou)?.displayName ?? null,
     peers: members.filter((member) => !member.isYou).map((member) => member.displayName),
     isPrivate: (commitmentId) => {

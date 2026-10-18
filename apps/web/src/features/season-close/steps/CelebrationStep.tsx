@@ -16,8 +16,11 @@ export interface CelebrationStepProps {
   readonly habitName: string;
   readonly weeks: number;
   readonly consistencyPercent: number | null;
-  /** What the circle will read about this graduation (see `graduationNote`). */
-  readonly note: string;
+  /**
+   * What the circle will read about this graduation (see `graduationNote`); `null` while it is
+   * not yet known whether the habit is private, when the line stays blank but keeps its height.
+   */
+  readonly note: string | null;
   /** More graduated habits follow: "Siguiente hábito"; otherwise "Continuar". */
   readonly hasNext: boolean;
   readonly onNext: () => void;
@@ -53,7 +56,13 @@ export function CelebrationStep({
         </span>
         <h1 className={styles.celebrateTitle}>{celebrationCopy.title(habitName)}</h1>
         <p className={styles.celebrateLead}>{graduationLead(weeks, consistencyPercent)}</p>
-        <p className={styles.celebrateNote}>{note}</p>
+        {note === null ? (
+          <p className={styles.celebrateNote} aria-hidden="true">
+            {" "}
+          </p>
+        ) : (
+          <p className={styles.celebrateNote}>{note}</p>
+        )}
       </div>
       <div className={styles.celebrateFooter}>
         <Button block variant="inverse" onClick={onNext}>

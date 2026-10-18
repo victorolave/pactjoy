@@ -65,12 +65,16 @@ function Celebration({ seasonId, row, weeks, hasNext, onNext }: CelebrationProps
       habitName={row.habitName}
       weeks={weeks}
       consistencyPercent={row.consistencyPercent}
-      note={graduationNote({
-        habit: row.habitName,
-        viewerName: audience.viewerName,
-        peers: audience.peers,
-        isPrivate: audience.isPrivate(row.commitmentId),
-      })}
+      note={
+        audience.loading
+          ? null
+          : graduationNote({
+              habit: row.habitName,
+              viewerName: audience.viewerName,
+              peers: audience.peers,
+              isPrivate: audience.isPrivate(row.commitmentId),
+            })
+      }
       hasNext={hasNext}
       onNext={onNext}
     />
