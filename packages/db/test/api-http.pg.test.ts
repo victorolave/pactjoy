@@ -109,4 +109,40 @@ describe("HTTP over Postgres: the real handler on the migrated database", () => 
       "InvalidRequest",
     ]);
   });
+
+  it("ADR-0020: the 11th join attempt in a minute is a 429, and the network is stored only as a keyed hash", async () => {
+    const { call } = api;
+    const forwarded = { "x-forwarded-for": "81.2.69.160" };
+    for (let i = 0; i < 10; i += 1) {
+      const preview = await call(
+        "POST",
+        "/circles/join/preview",
+        "u2",
+        { inviteCode: "AAAAAA" },
+        forwarded,
+      );
+      expect(preview.status).toBe(404);
+    }
+    const refused = await call(
+      "POST",
+      "/circles/join",
+      "u2",
+      { inviteCode: "AAAAAA", displayName: "U2" },
+      forwarded,
+    );
+    expect([refused.status, refused.json.error.code]).toEqual([429, "TooManyJoinAttempts"]);
+
+    const rows = await admin.unsafe<{ subject: string; hits: number }[]>(
+      "select subject, hits from pactjoy.rate_limit_counters order by subject, window_seconds",
+    );
+    expect(rows.map((r) => r.hits)).toEqual([11, 11, 11, 11]);
+    expect(rows.map((r) => r.subject.split(":")[0])).toEqual([
+      "network",
+      "network",
+      "user",
+      "user",
+    ]);
+    expect(rows[0]?.subject).toMatch(/^network:[A-Za-z0-9_-]{22}$/);
+    expect(JSON.stringify(rows)).not.toContain("81.2.69");
+  });
 });

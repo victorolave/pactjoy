@@ -631,6 +631,19 @@ async function seedShared(world: World): Promise<void> {
         endpoint: "https://web.push.apple.com/carla",
       }),
     );
+    // Join-attempt counters (ADR-0020): hers and Victor's by user, and one network's keyed hash.
+    const attempts = (subject: string, windowSeconds: number) => ({
+      action: "joinCircle" as const,
+      subject,
+      windowStart: late,
+      windowSeconds,
+    });
+    await repos.rateLimits.hit([
+      attempts(`user:${ANDREA}`, 60),
+      attempts(`user:${ANDREA}`, 3600),
+      attempts(`user:${VICTOR}`, 60),
+      attempts("network:c2VudGluZWwtbmV0d29yaw", 60),
+    ]);
 
     // The solo and past circles: entries (one tombstone), photos, pauses.
     const entry = (
@@ -971,6 +984,8 @@ describe("account deletion on Postgres: Andrea (sentinel)", () => {
     expect(after.reviews?.some((row) => row.includes(M.victor))).toBe(true);
     expect(after.commitment_reminders?.some((row) => row.includes(M.victor))).toBe(true);
     expect(after.push_subscriptions?.some((row) => row.includes(VICTOR))).toBe(true);
+    expect(after.rate_limit_counters?.some((row) => row.includes(VICTOR))).toBe(true);
+    expect(after.rate_limit_counters?.some((row) => row.includes("network:"))).toBe(true);
     expect(after.notification_outbox?.some((row) => row.includes("to-victor"))).toBe(true);
   });
 

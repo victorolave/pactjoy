@@ -355,6 +355,17 @@ export type {
   WeekSummaryInput,
 } from "./progress/week-summary.query.ts";
 export { weekSummary } from "./progress/week-summary.query.ts";
+export type {
+  AdmitJoinAttemptDeps,
+  JoinAttemptError,
+  JoinAttemptInput,
+} from "./rate-limit/join-attempts.ts";
+export { admitJoinAttempt, JOIN_ATTEMPT_LIMITS } from "./rate-limit/join-attempts.ts";
+export type {
+  RateLimitAction,
+  RateLimitCounter,
+  RateLimitRepository,
+} from "./rate-limit/rate-limit.repository.ts";
 export type { FeedReactionRepository } from "./reaction/feed-reaction.repository.ts";
 export type { FeedReaction, ReactionEmoji } from "./reaction/feed-reaction.ts";
 export { isReactionEmoji, REACTION_EMOJIS } from "./reaction/feed-reaction.ts";

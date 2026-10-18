@@ -31,6 +31,14 @@ describe("circleFailure", () => {
     );
   });
 
+  it("answers too many join attempts calmly, for the whole form and with no retry (ADR-0020)", () => {
+    expect(circleFailure(new ApiError("TooManyJoinAttempts", 429, null))).toEqual({
+      message: "Hiciste muchos intentos seguidos. Espera unos minutos y vuelve a intentarlo.",
+      field: null,
+      retryable: false,
+    });
+  });
+
   it("falls back to the generic message for unknown codes and non-API errors", () => {
     expect(fail("Whatever")).toEqual({ message: "Algo salió mal.", field: null, retryable: false });
     expect(circleFailure(new TypeError("x")).message).toBe("Algo salió mal.");

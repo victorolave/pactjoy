@@ -218,6 +218,54 @@ describe("join a circle: errors (design 6b)", () => {
     }
   });
 
+  it("too many attempts on preview: a calm message for the form, not the code, and no retry (ADR-0020)", async () => {
+    const { deps } = renderJoin();
+    deps.api.failNext("previewInvite", new ApiError("TooManyJoinAttempts", 429, null));
+    await typeCode();
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Hiciste muchos intentos seguidos. Espera unos minutos y vuelve a intentarlo.",
+    );
+    expect(await codeField()).not.toHaveAttribute("aria-invalid", "true");
+    expect(screen.queryByRole("button", { name: "Reintentar" })).not.toBeInTheDocument();
+    expect(joinButton()).toBeDisabled();
+  });
+
+  it.each([
+    // Back from the messages app to check the code (TanStack's focus manager listens on the window).
+    ["focus", () => window.dispatchEvent(new Event("visibilitychange"))],
+    [
+      "reconnect",
+      () => {
+        window.dispatchEvent(new Event("offline"));
+        window.dispatchEvent(new Event("online"));
+      },
+    ],
+  ])(
+    "never previews again on %s: each preview spends a join attempt (ADR-0020)",
+    async (_, event) => {
+      const { deps } = renderJoin();
+      deps.api.failNext("previewInvite", new ApiError("InviteNotFound", 404, null));
+      await typeCode();
+      await screen.findByRole("alert");
+      expect(deps.api.calls.previewInvite).toBe(1);
+
+      event();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(deps.api.calls.previewInvite).toBe(1);
+    },
+  );
+
+  it("too many attempts on join: says so and stays on the screen (ADR-0020)", async () => {
+    const { deps, location } = renderJoin();
+    deps.api.failNext("joinCircle", new ApiError("TooManyJoinAttempts", 429, null));
+    await typeCode();
+    await myName();
+    await userEvent.click(joinButton());
+    expect(await screen.findByRole("alert")).toHaveTextContent("Hiciste muchos intentos seguidos.");
+    expect(location()).toBe("/circle/join");
+  });
+
   it("shows a join that fails with a code error under the boxes, keeping the preview", async () => {
     const { deps, location } = renderJoin();
     deps.api.failNext("joinCircle", new ApiError("CircleFull", 409, null));

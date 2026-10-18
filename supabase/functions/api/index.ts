@@ -46,6 +46,8 @@ const build = () => {
               authUrl: env.authAdmin.authUrl,
               adminKey: env.authAdmin.key,
             }),
+      // Join rate limiting (ADR-0020): per user always, per client network only with its key.
+      rateLimitKey: env.rateLimitKey,
       tokenVerifier: createJwksTokenVerifier({ jwksUrl: env.jwksUrl, issuer: env.jwtIssuer }),
       logger,
       isUnavailable: isDatabaseUnavailable,

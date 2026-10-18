@@ -1,4 +1,6 @@
 import {
+  type Actor,
+  admitJoinAttempt,
   circleId,
   createCircle,
   generateInvite,
@@ -8,6 +10,10 @@ import {
   renameCircle,
   renameMyDisplayName,
 } from "@pactjoy/app";
+import { appErrorResult } from "../errors/status-map.ts";
+import { createNetworkKeyer } from "../http/network-key.ts";
+import type { RequestContext } from "../http/pipeline.ts";
+import type { ApiResult } from "../http/types.ts";
 import { presentCircle, presentInvite, presentInvitePreview } from "../presenters/circle.ts";
 import { inviteCode, uuid } from "../validation/formats.ts";
 import { object, string } from "../validation/schema.ts";
@@ -23,6 +29,22 @@ const previewBody = object({ inviteCode: string });
 const joinBody = object({ inviteCode, displayName: string });
 
 export function circleRoutes(deps: ApiDeps): Route[] {
+  const networkKey = deps.rateLimitKey === null ? null : createNetworkKeyer(deps.rateLimitKey);
+  /**
+   * Counts a well-formed join attempt before the use case runs (ADR-0020): `null` lets it go on,
+   * otherwise the 429 to answer. The code plays no part, so a refusal never hints whether it
+   * exists. A malformed body is a 422 before this point: it tells nothing about any code, so it is
+   * not counted and never touches the store. The network is passed on only as its keyed hash.
+   */
+  const throttle = async (ctx: RequestContext<Actor>): Promise<ApiResult | null> => {
+    const network =
+      networkKey === null || ctx.clientNetwork === null
+        ? null
+        : await networkKey(ctx.clientNetwork);
+    const admitted = await admitJoinAttempt(deps, ctx.actor, { networkKey: network });
+    return admitted.ok ? null : appErrorResult(admitted.error);
+  };
+
   return [
     {
       method: "POST",
@@ -82,6 +104,8 @@ export function circleRoutes(deps: ApiDeps): Route[] {
       async handle(ctx) {
         const input = validate(ctx, { params: none, body: joinBody });
         if (!input.ok) return input.result;
+        const refused = await throttle(ctx);
+        if (refused !== null) return refused;
         // The raw code is passed on: the app normalizes it. It lives in the body, never the URL.
         const result = await joinCircle(deps, ctx.actor, {
           inviteCode: input.body.inviteCode,
@@ -96,6 +120,8 @@ export function circleRoutes(deps: ApiDeps): Route[] {
       async handle(ctx) {
         const input = validate(ctx, { params: none, body: previewBody });
         if (!input.ok) return input.result;
+        const refused = await throttle(ctx);
+        if (refused !== null) return refused;
         // Read-only; the code lives in the body, never the URL, so it stays out of logs.
         const result = await previewInvite(deps, ctx.actor, { inviteCode: input.body.inviteCode });
         return toResult(result, 200, presentInvitePreview);

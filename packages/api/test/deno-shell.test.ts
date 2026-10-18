@@ -47,6 +47,12 @@ describe("Deno shell (supabase/functions/api)", () => {
     expect(code).not.toMatch(/API_AUTH_ADMIN_KEY|sb_secret_|https?:\/\//);
   });
 
+  it("ADR-0020: the entry passes the rate-limit key from the validated env only", () => {
+    const code = codeLines(read(ENTRY)).join("\n");
+    expect(code).toMatch(/rateLimitKey:\s*env\.rateLimitKey/);
+    expect(code).not.toMatch(/API_RATE_LIMIT_KEY|x-forwarded-for/i);
+  });
+
   it("DE-S3: the entry imports only @pactjoy/* packages (vendors go through the import map)", () => {
     // static `from "x"`, side-effect `import "x"` and dynamic `import("x")`
     const code = codeLines(read(ENTRY)).join("\n");

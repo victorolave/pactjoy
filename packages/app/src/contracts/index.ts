@@ -32,6 +32,7 @@ export { describeHabitRepositoryContract } from "./habit.contract.ts";
 export { describeNotificationOutboxContract } from "./notification-outbox.contract.ts";
 export { describePauseRequestRepositoryContract } from "./pause.contract.ts";
 export { describePushSubscriptionContract } from "./push-subscription.contract.ts";
+export { describeRateLimitContract } from "./rate-limit.contract.ts";
 export type { ReviewContractSubject } from "./review.contract.ts";
 export { describeReviewRepositoryContract } from "./review.contract.ts";
 export { describeSeasonRepositoryContract } from "./season.contract.ts";

@@ -9,6 +9,7 @@ import { createPgHabitRepository } from "./habit/pg-habit-repository.ts";
 import { createPgNotificationOutboxRepository } from "./notifications/pg-notification-outbox-repository.ts";
 import { createPgPushSubscriptionRepository } from "./notifications/pg-push-subscription-repository.ts";
 import { createPgPauseRequestRepository } from "./pause/pg-pause-request-repository.ts";
+import { createPgRateLimitRepository } from "./rate-limit/pg-rate-limit-repository.ts";
 import { createPgFeedReactionRepository } from "./reaction/pg-feed-reaction-repository.ts";
 import { createPgCommitmentReminderRepository } from "./reminders/pg-commitment-reminder-repository.ts";
 import { createPgReviewRepository } from "./review/pg-review-repository.ts";
@@ -32,6 +33,7 @@ export function bindRepositories(exec: SqlExecutor, mode: BindMode): PgRepositor
     notifications: createPgNotificationOutboxRepository(exec),
     pauses: createPgPauseRequestRepository(exec),
     pushSubscriptions: createPgPushSubscriptionRepository(exec),
+    rateLimits: createPgRateLimitRepository(exec),
     reminders: createPgCommitmentReminderRepository(exec),
     reviews: createPgReviewRepository(exec),
     seasonClosures: createPgSeasonClosureRepository(exec),

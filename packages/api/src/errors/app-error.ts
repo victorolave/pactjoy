@@ -17,6 +17,7 @@ import type {
   EditEntryError,
   EditSeasonParamsError,
   GenerateInviteError,
+  JoinAttemptError,
   JoinCircleError,
   LeaveCircleError,
   MemberProgressError,
@@ -60,6 +61,7 @@ export type AppError =
   | RenameMyDisplayNameError
   | RequestEntryPhotoUploadError
   | GenerateInviteError
+  | JoinAttemptError
   | JoinCircleError
   | PreviewInviteError
   | PreviewProgressError

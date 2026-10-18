@@ -7,6 +7,7 @@ import type { HabitRepository } from "../habit/habit.repository.ts";
 import type { NotificationOutboxRepository } from "../notifications/notification-outbox.repository.ts";
 import type { PushSubscriptionRepository } from "../notifications/push-subscription.repository.ts";
 import type { PauseRequestRepository } from "../pause/pause-request.repository.ts";
+import type { RateLimitRepository } from "../rate-limit/rate-limit.repository.ts";
 import type { FeedReactionRepository } from "../reaction/feed-reaction.repository.ts";
 import type { CommitmentReminderRepository } from "../reminders/commitment-reminder.repository.ts";
 import type { ReviewRepository } from "../review/review.repository.ts";
@@ -36,6 +37,8 @@ export interface Repositories {
   readonly pauses: PauseRequestRepository;
   /** Confined to `src/notifications/` (`notification-guard.test.ts`): an endpoint and its keys stay there. */
   readonly pushSubscriptions: PushSubscriptionRepository;
+  /** Join-attempt counters (ADR-0020): written by `src/rate-limit/` only, read by nobody else. */
+  readonly rateLimits: RateLimitRepository;
   /** Owner-only: confined to `src/reminders/` (`reminder-guard.test.ts`), ADR-0017 addendum (D2). */
   readonly reminders: CommitmentReminderRepository;
   /** Owner-only: read it only from `src/review/` (`review-guard.test.ts`), never for a peer. */
