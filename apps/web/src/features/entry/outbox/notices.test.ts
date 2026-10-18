@@ -4,6 +4,7 @@ import {
   EMPTY_OUTBOX,
   type OutboxNotice,
   type OutboxState,
+  type QueuedDelete,
   type QueuedEdit,
   type QueuedRecord,
 } from "../../../ports/outbox-store.ts";
@@ -63,6 +64,20 @@ describe("rejectWithNotice", () => {
         reason: "closedWindow",
       },
     ]);
+  });
+
+  it("gives no notice for a rejected record the member then deleted: nothing was lost", () => {
+    const remove: QueuedDelete = {
+      kind: "delete",
+      id: "d1",
+      target: localRef("a"),
+      habitName: "Leer",
+      forDate: "2026-10-13",
+    };
+    const { state, removed } = rejectWithNotice(stateOf(record("a"), remove), "a", closed, "n1");
+    expect(state.items).toEqual([]);
+    expect(state.notices).toEqual([]);
+    expect(removed).toHaveLength(2);
   });
 
   it("folds the dependants into the same notice without a notice of their own (OE-R4.S6)", () => {

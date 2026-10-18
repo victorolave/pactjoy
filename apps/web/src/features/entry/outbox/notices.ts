@@ -25,6 +25,10 @@ export function rejectWithNotice(
   const rejected = rejectItem(state, id);
   const root = rejected.removed.find((item) => itemId(item) === id);
   if (root === undefined) return rejected;
+  // The member deleted it themselves: it is gone as they wanted, so there is nothing to tell.
+  if (root.kind === "record" && rejected.removed.some((item) => item.kind === "delete")) {
+    return rejected;
+  }
   const notice: OutboxNotice = {
     id: noticeId,
     habitName: root.habitName,
