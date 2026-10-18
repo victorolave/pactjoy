@@ -1,11 +1,6 @@
 import { ApiError } from "../../../ports/api-error.ts";
 import type { IdSource } from "../../../ports/ids.ts";
-import {
-  EMPTY_OUTBOX,
-  type OutboxItem,
-  type OutboxState,
-  type OutboxStore,
-} from "../../../ports/outbox-store.ts";
+import type { OutboxItem, OutboxState, OutboxStore } from "../../../ports/outbox-store.ts";
 import type { PactJoyApi } from "../../../ports/pactjoy-api.ts";
 import { classify } from "./classify.ts";
 import { dismissNotices, rejectWithNotice } from "./notices.ts";
@@ -61,9 +56,14 @@ export class Outbox {
   readonly #resolved = new Map<string, string>();
   #replaying = false;
 
+  #disposed = false;
+
   constructor(deps: OutboxDeps) {
     this.#deps = deps;
     this.#state = deps.store.load(deps.userId);
+    // For its whole life, subscribers or not: a replay that nobody watches must still hear that
+    // the session ended or that another tab queued something (OE-R3.S4, OE-R6).
+    this.#followStore();
   }
 
   /** Stable between changes, so it can back `useSyncExternalStore`. */
@@ -71,14 +71,31 @@ export class Outbox {
     return this.#state;
   }
 
-  /** Follows this tab's changes and, while anyone listens, the other tabs' (OE-R3.S4). */
+  /** Tells `listener` when the queue, the notices or the replaying flag change. */
   subscribe(listener: () => void): () => void {
-    if (this.#listeners.size === 0) this.#followStore();
     this.#listeners.add(listener);
     return () => {
       this.#listeners.delete(listener);
-      if (this.#listeners.size === 0) this.#unfollowStore();
     };
+  }
+
+  /**
+   * Ends this outbox: it stops following the store, stops replaying and never writes again. Its
+   * owner (the signed-in user) is gone. Safe to call twice; `activate()` brings it back.
+   */
+  dispose(): void {
+    if (this.#disposed) return;
+    this.#disposed = true;
+    this.#unfollowStore();
+    this.#conflicts.clear();
+    this.#resolved.clear();
+  }
+
+  /** Undoes `dispose()` (an effect cleanup that React runs and then re-runs, as in StrictMode). */
+  activate(): void {
+    if (!this.#disposed) return;
+    this.#disposed = false;
+    this.#followStore();
   }
 
   /** Whether a replay with items to send is running (the "syncing" banner). Changes tell subscribers. */
@@ -113,13 +130,6 @@ export class Outbox {
     this.#commit(dismissNotices(this.#state));
   }
 
-  /** Forgets everything in memory and in storage (the session ended). */
-  clear(): void {
-    this.#conflicts.clear();
-    this.#resolved.clear();
-    this.#commit(EMPTY_OUTBOX);
-  }
-
   /** Sends the queue in order. A second call while one runs joins it (one replay at a time). */
   drain(): Promise<DrainStatus> {
     if (this.#running !== null) return this.#running;
@@ -135,6 +145,10 @@ export class Outbox {
     let status: DrainStatus = "done";
     try {
       for (;;) {
+        if (this.#disposed) {
+          status = "session";
+          break;
+        }
         const item = this.#state.items[0];
         if (item === undefined) break;
         this.#setReplaying(true);
@@ -145,7 +159,7 @@ export class Outbox {
         }
         try {
           const entryId = await this.#send(item);
-          if (item.kind === "record" && entryId !== null) {
+          if (item.kind === "record" && entryId !== null && !this.#disposed) {
             this.#resolved.set(localRef(item.localId), entryId);
           }
           this.#commit(
@@ -229,7 +243,8 @@ export class Outbox {
   }
 
   #commit(next: OutboxState): void {
-    if (next === this.#state) return;
+    // A disposed outbox belongs to a session that ended: it must not write that session's state back.
+    if (this.#disposed || next === this.#state) return;
     this.#deps.store.save(this.#deps.userId, next);
     this.#state = next;
     this.#notify();
@@ -240,7 +255,7 @@ export class Outbox {
   }
 
   #followStore(): void {
-    // The stored state may have moved while nobody listened.
+    // The stored state may have moved while it was not followed.
     this.#state = this.#deps.store.load(this.#deps.userId);
     this.#unsubscribeStore = this.#deps.store.subscribe(() => {
       this.#state = this.#deps.store.load(this.#deps.userId);

@@ -6,7 +6,12 @@ import { createTodayPersister } from "../adapters/query-persister.ts";
 import { useIds } from "../context/ids-context.tsx";
 import { useToasts } from "../context/toast-context.tsx";
 import { createSessionEvents, SessionManager, useSession } from "../features/auth/index.ts";
-import { type Outbox, useOutbox } from "../features/entry/index.ts";
+import {
+  type Outbox,
+  useOutbox,
+  useOutboxReplaying,
+  useOutboxState,
+} from "../features/entry/index.ts";
 import { ApiError } from "../ports/api-error.ts";
 import type { OutboxState } from "../ports/outbox-store.ts";
 import { progressKey, socialKey, todayKey } from "../shared/query-keys.ts";
@@ -332,6 +337,62 @@ describe("AppProviders", () => {
       act(() => store.emitExternal(fakeSession({ userId: "user-3" })));
       expect(seen.at(-1)).not.toBeNull();
       expect(seen.at(-1)).not.toBe(first);
+    });
+
+    it("does not resubscribe to the outbox on every render", () => {
+      const base = deps({ store: new MemoryTokenStore(fakeSession({ userId: "user-2" })) });
+      let outbox: Outbox | null = null;
+      function Probe() {
+        outbox = useOutbox();
+        useOutboxState();
+        useOutboxReplaying();
+        return null;
+      }
+      const view = render(
+        <AppProviders deps={base}>
+          <Probe />
+        </AppProviders>,
+      );
+      const subscribe = vi.spyOn(outbox as unknown as Outbox, "subscribe");
+      view.rerender(
+        <AppProviders deps={base}>
+          <Probe />
+        </AppProviders>,
+      );
+      view.rerender(
+        <AppProviders deps={base}>
+          <Probe />
+        </AppProviders>,
+      );
+      expect(subscribe).not.toHaveBeenCalled();
+    });
+
+    it("disposes the outbox of the user who left, and the last one on unmount", () => {
+      const outboxStore = new MemoryOutboxStore();
+      const store = new MemoryTokenStore(fakeSession({ userId: "user-2" }));
+      const base = deps({ outboxStore, store });
+      const seen: (Outbox | null)[] = [];
+      function Probe() {
+        seen.push(useOutbox());
+        return null;
+      }
+      const view = render(
+        <AppProviders deps={base}>
+          <Probe />
+        </AppProviders>,
+      );
+      const first = seen.at(-1) as Outbox;
+      act(() => store.emitExternal(fakeSession({ userId: "user-3" })));
+      const second = seen.at(-1) as Outbox;
+      expect(second).not.toBe(first);
+      // A disposed outbox no longer follows the store.
+      act(() => outboxStore.emitExternal("user-2", queuedRecord()));
+      expect(first.snapshot().items).toEqual([]);
+      act(() => outboxStore.emitExternal("user-3", queuedRecord()));
+      expect(second.snapshot().items).toHaveLength(1);
+      view.unmount();
+      act(() => outboxStore.emitExternal("user-3", { v: 1, items: [], notices: [] }));
+      expect(second.snapshot().items).toHaveLength(1);
     });
   });
 

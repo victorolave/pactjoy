@@ -518,16 +518,64 @@ describe("Outbox state: notices, listeners, erasure", () => {
     const { api, store, outbox, queue } = setup();
     queue(recordInput("a"));
     queue(recordInput("b"));
-    outbox.subscribe(() => undefined);
+    // No subscriber: the user is on a screen that does not show the queue.
     const release = api.hold("recordEntry");
     const done = outbox.drain();
     await vi.waitFor(() => expect(api.recordAttempts).toHaveLength(1));
     store.clearAll();
+    expect(outbox.snapshot()).toEqual(EMPTY_OUTBOX);
     release();
     await done;
     expect(api.recordAttempts).toHaveLength(1);
     expect(store.load(USER)).toEqual(EMPTY_OUTBOX);
     expect(outbox.snapshot()).toEqual(EMPTY_OUTBOX);
+  });
+
+  it("follows the store with no subscribers at all", () => {
+    const { store, outbox } = setup();
+    store.emitExternal(USER, seeded(recordInput("x")));
+    expect(queuedIds(outbox)).toEqual(["x"]);
+  });
+
+  it("an idle outbox's enqueue survives the commit of another one on the same store", async () => {
+    const { api, store, outbox, queue } = setup();
+    const idle = new Outbox({
+      api,
+      store,
+      userId: USER,
+      ids: new SequentialIds(),
+      onReplayed: vi.fn(),
+    });
+    queue(recordInput("a"));
+    store.emitExternal(USER, store.load(USER));
+    const release = api.hold("recordEntry");
+    const done = outbox.drain();
+    await vi.waitFor(() => expect(api.recordAttempts).toHaveLength(1));
+    // Another tab records while this one is sending, and the browser tells this tab.
+    idle.enqueue(recordInput("b"));
+    store.emitExternal(USER, idle.snapshot());
+    release();
+    await done;
+    expect(store.load(USER)).toEqual(EMPTY_OUTBOX);
+    expect(api.recorded.map((cmd) => cmd.clientRequestId)).toEqual(["req-a", "req-b"]);
+  });
+
+  it("dispose() stops it for good: no write back, no following, no stale references", async () => {
+    const { api, store, outbox, queue } = setup();
+    queue(recordInput("a"));
+    queue(recordInput("b"));
+    const release = api.hold("recordEntry");
+    const done = outbox.drain();
+    await vi.waitFor(() => expect(api.recordAttempts).toHaveLength(1));
+    const before = store.load(USER);
+    outbox.dispose();
+    release();
+    await done;
+    expect(api.recordAttempts).toHaveLength(1);
+    expect(store.load(USER)).toBe(before);
+    store.emitExternal(USER, seeded(recordInput("x")));
+    expect(queuedIds(outbox)).not.toContain("x");
+    expect(outbox.resolve(localRef("a"))).toBe(localRef("a"));
   });
 
   it("resolve() maps the local reference of a record that was sent to its server entry", async () => {
@@ -542,22 +590,11 @@ describe("Outbox state: notices, listeners, erasure", () => {
     expect(outbox.resolve(localRef("ghost"))).toBe(localRef("ghost"));
   });
 
-  it("resolve() forgets the mapping when the session ends", async () => {
+  it("resolve() forgets the mapping when the outbox is disposed", async () => {
     const { outbox, queue } = setup();
     queue(recordInput("a"));
     await outbox.drain();
-    outbox.clear();
+    outbox.dispose();
     expect(outbox.resolve(localRef("a"))).toBe(localRef("a"));
-  });
-
-  it("clear() forgets the items and notices in memory and in storage (OE-R6)", () => {
-    const { store, outbox, queue } = setup();
-    queue(recordInput("a"));
-    const listener = vi.fn();
-    outbox.subscribe(listener);
-    outbox.clear();
-    expect(outbox.snapshot()).toEqual(EMPTY_OUTBOX);
-    expect(store.load(USER)).toEqual(EMPTY_OUTBOX);
-    expect(listener).toHaveBeenCalled();
   });
 });

@@ -1,6 +1,7 @@
 import {
   createContext,
   type ReactNode,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -48,7 +49,14 @@ export function OutboxProvider({
   );
   useEffect(() => {
     if (outbox === null) return;
-    return startReplayTriggers({ outbox, connectivity, visibility });
+    // Re-armed first: React may run this effect again on the same outbox (StrictMode).
+    outbox.activate();
+    const stop = startReplayTriggers({ outbox, connectivity, visibility });
+    return () => {
+      stop();
+      // The user left or the tree went away: this outbox must never write again.
+      outbox.dispose();
+    };
   }, [outbox, connectivity, visibility]);
   return <OutboxContext.Provider value={outbox}>{children}</OutboxContext.Provider>;
 }
@@ -60,20 +68,22 @@ export function useOutbox(): Outbox | null {
 
 const NO_SUBSCRIPTION = () => () => undefined;
 
+/** A `subscribe` whose identity only changes with the outbox: a new one makes React resubscribe. */
+function useSubscribe(outbox: Outbox | null): (notify: () => void) => () => void {
+  return useCallback(
+    (notify) => (outbox === null ? NO_SUBSCRIPTION() : outbox.subscribe(notify)),
+    [outbox],
+  );
+}
+
 /** Whether a replay is sending queued items right now (the "syncing" line); false while signed out. */
 export function useOutboxReplaying(): boolean {
   const outbox = useOutbox();
-  return useSyncExternalStore(
-    outbox === null ? NO_SUBSCRIPTION : (notify) => outbox.subscribe(notify),
-    () => outbox?.replaying() ?? false,
-  );
+  return useSyncExternalStore(useSubscribe(outbox), () => outbox?.replaying() ?? false);
 }
 
 /** The outbox's items and notices, re-rendering when they change; empty while signed out. */
 export function useOutboxState(): OutboxState {
   const outbox = useOutbox();
-  return useSyncExternalStore(
-    outbox === null ? NO_SUBSCRIPTION : (notify) => outbox.subscribe(notify),
-    () => outbox?.snapshot() ?? EMPTY_OUTBOX,
-  );
+  return useSyncExternalStore(useSubscribe(outbox), () => outbox?.snapshot() ?? EMPTY_OUTBOX);
 }
