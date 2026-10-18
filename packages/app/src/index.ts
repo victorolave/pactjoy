@@ -300,6 +300,7 @@ export type {
 } from "./ports/evidence-storage.ts";
 export { EvidenceStorageError } from "./ports/evidence-storage.ts";
 export type { IdGenerator } from "./ports/id-generator.ts";
+export { type IdentityAdmin, IdentityAdminError } from "./ports/identity-admin.ts";
 export type {
   PushMessage,
   PushOutcome,

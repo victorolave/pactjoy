@@ -36,6 +36,10 @@ import {
   type InMemoryHabitRepository,
 } from "./in-memory-habit-repository.ts";
 import {
+  createInMemoryIdentityAdmin,
+  type InMemoryIdentityAdmin,
+} from "./in-memory-identity-admin.ts";
+import {
   createInMemoryNotificationOutbox,
   type InMemoryNotificationOutbox,
 } from "./in-memory-notification-outbox.ts";
@@ -89,6 +93,7 @@ export interface TestApp {
   readonly evidence: InMemoryEvidenceStorage;
   readonly feedReactions: InMemoryFeedReactionRepository;
   readonly habits: InMemoryHabitRepository;
+  readonly identity: InMemoryIdentityAdmin;
   readonly notifications: InMemoryNotificationOutbox;
   readonly nudgeDismissals: InMemoryNudgeDismissalRepository;
   readonly pauses: InMemoryPauseRequestRepository;
@@ -117,6 +122,7 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
   const entryPhotos = createInMemoryEntryPhotoRepository();
   const feedReactions = createInMemoryFeedReactionRepository();
   const habits = createInMemoryHabitRepository();
+  const identity = createInMemoryIdentityAdmin();
   const notifications = createInMemoryNotificationOutbox();
   const nudgeDismissals = createInMemoryNudgeDismissalRepository();
   const pauses = createInMemoryPauseRequestRepository();
@@ -146,6 +152,7 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
     evidence: createInMemoryEvidenceStorage({ clock }),
     ids: createSequentialIdGenerator(options.idPrefix),
     random: createSeededRandomSource(options.randomSeed ?? DEFAULT_RANDOM_SEED),
+    identity,
     timeZone: options.timeZone ?? createIntlTimeZone(),
     circles,
     encouragements,
