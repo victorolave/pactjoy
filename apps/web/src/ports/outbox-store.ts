@@ -11,8 +11,6 @@ export interface QueuedRecord {
   readonly kind: "record";
   readonly localId: string;
   readonly attempted: boolean;
-  /** The server entry once the record was sent; null before. */
-  readonly entryId: string | null;
   readonly habitName: string;
   /** Always carries `forDate`: the day the member saw, kept across midnight. */
   readonly command: RecordEntryCommand & { readonly forDate: string };

@@ -10,7 +10,6 @@ export function sampleOutbox(): OutboxState {
         kind: "record",
         localId: "r1",
         attempted: false,
-        entryId: null,
         habitName: "Dibujar",
         command: {
           seasonId: "s1",
