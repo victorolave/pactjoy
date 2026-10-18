@@ -18,6 +18,8 @@ function setup(
     { method: "POST", pattern: "/habits", handle },
     { method: "GET", pattern: "/seasons/:seasonId/standings", handle },
     { method: "PATCH", pattern: "/habits/:habitId", handle },
+    { method: "DELETE", pattern: "/me", allowsDeleteBody: true, handle },
+    { method: "DELETE", pattern: "/habits/:habitId", handle },
   ];
   const authenticate = vi.fn(
     overrides.authenticate ??
@@ -63,6 +65,23 @@ describe("createPipeline", () => {
     expect(await res.json()).toEqual({ data: { actor: "u1", params: {}, body: { n: 1 } } });
     expect(res.headers.get("access-control-allow-origin")).toBe(ORIGIN);
     expect(res.headers.get("x-request-id")).toMatch(/^[0-9a-f-]{36}$/);
+  });
+
+  it("a DELETE body reaches only the route that opted in; every other DELETE still rejects it", async () => {
+    const { handler, handle } = setup();
+    const optedIn = await call(handler, "DELETE", "/api/me", { headers: GOOD, body: '{"n":1}' });
+    expect(optedIn.status).toBe(200);
+    expect(await optedIn.json()).toEqual({ data: { actor: "u1", params: {}, body: { n: 1 } } });
+    handle.mockClear();
+    const other = await call(handler, "DELETE", "/api/habits/h1", {
+      headers: GOOD,
+      body: '{"n":1}',
+    });
+    expect(other.status).toBe(422);
+    expect(await other.json()).toMatchObject({
+      error: { code: "InvalidRequest", details: { reason: "bodyNotAllowed" } },
+    });
+    expect(handle).not.toHaveBeenCalled();
   });
 
   it("RT-S5: outside the base path is 404 RouteNotFound", async () => {

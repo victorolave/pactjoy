@@ -4,6 +4,8 @@ import type { HttpMethod } from "./types.ts";
 export interface RouteSpec {
   readonly method: HttpMethod;
   readonly pattern: string;
+  /** Meaningful only on a DELETE route: its body is read instead of rejected (ADR-0019). */
+  readonly allowsDeleteBody?: true;
 }
 
 export type RouteMatch<R extends RouteSpec> =

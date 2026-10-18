@@ -122,7 +122,9 @@ export function createPipeline<A>(deps: {
       route = match.route.pattern;
       const auth = await authenticate(request, { requestId, route: match.route });
       if (!auth.ok) return finish(auth.result, auth.headers);
-      const body = await readJsonBody(request, maxBytes);
+      const body = await readJsonBody(request, maxBytes, {
+        deleteBody: match.route.allowsDeleteBody === true,
+      });
       if (!body.ok) return finish(body.result);
       return finish(
         await match.route.handle({
