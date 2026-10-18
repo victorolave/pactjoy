@@ -1,5 +1,5 @@
 import type { TodayView } from "@pactjoy/app";
-import type { OutboxItem } from "../../../ports/outbox-store.ts";
+import type { OutboxItem, SentRecord } from "../../../ports/outbox-store.ts";
 import { addDays } from "../../../shared/date.ts";
 import { isLocalRef, localRef } from "./queue.ts";
 
@@ -43,11 +43,20 @@ const RANK: Record<PendingKind, number> = { record: 3, edit: 2, delete: 1 };
 export function overlayToday(
   view: TodayView,
   items: readonly OutboxItem[],
+  sent: readonly SentRecord[] = [],
 ): { readonly view: TodayView; readonly marks: PendingMarks } {
-  if (items.length === 0) return { view, marks: NO_MARKS };
   if (view.state !== "active" && view.state !== "ended") {
-    return { view, marks: { ...NO_MARKS, count: items.length } };
+    return items.length === 0
+      ? { view, marks: NO_MARKS }
+      : { view, marks: { ...NO_MARKS, count: items.length } };
   }
+  // Sent, but the Today on screen was fetched before: it still has to show them, or the row looks
+  // open and a second tap would record the same day again.
+  const awaiting = sent.filter(
+    (record) =>
+      !view.rows.some((row) => row.entries.some((entry) => entry.entryId === record.entryId)),
+  );
+  if (items.length === 0 && awaiting.length === 0) return { view, marks: NO_MARKS };
   let rows: readonly Row[] = view.rows;
   let pendingYesterday = view.pendingYesterday;
   const rowMarks = new Map<string, PendingKind>();
@@ -71,30 +80,35 @@ export function overlayToday(
   const holds = (entryId: string) => (row: Row) =>
     row.entries.some((entry) => entry.entryId === entryId);
 
+  const addRecord = (record: Pick<SentRecord, "command">, entryId: string): void => {
+    const { command } = record;
+    if (command.seasonId !== view.season.id) return;
+    if (!rows.some((row) => row.commitmentId === command.commitmentId)) return;
+    const entry: Entry = {
+      entryId: entryId as Entry["entryId"],
+      forDate: command.forDate as Entry["forDate"],
+      value: command.value,
+      note: command.note,
+      photo: null,
+    };
+    change(
+      (row) => row.commitmentId === command.commitmentId,
+      (row) => ({ ...row, entries: [...row.entries, entry] }),
+    );
+    entryMarks.set(entry.entryId, "record");
+    markRow(command.commitmentId);
+    // Pending is not "still open": the open item for that day gives way to the queued record.
+    if (command.forDate === yesterday && pendingYesterday !== undefined) {
+      pendingYesterday = pendingYesterday.filter(
+        (open) => open.commitmentId !== command.commitmentId,
+      );
+    }
+  };
+
+  for (const record of awaiting) addRecord(record, record.entryId);
   for (const item of items) {
     if (item.kind === "record") {
-      const { command } = item;
-      if (command.seasonId !== view.season.id) continue;
-      if (!rows.some((row) => row.commitmentId === command.commitmentId)) continue;
-      const entry: Entry = {
-        entryId: localRef(item.localId) as Entry["entryId"],
-        forDate: command.forDate as Entry["forDate"],
-        value: command.value,
-        note: command.note,
-        photo: null,
-      };
-      change(
-        (row) => row.commitmentId === command.commitmentId,
-        (row) => ({ ...row, entries: [...row.entries, entry] }),
-      );
-      entryMarks.set(entry.entryId, "record");
-      markRow(command.commitmentId);
-      // Pending is not "still open": the open item for that day gives way to the queued record.
-      if (command.forDate === yesterday && pendingYesterday !== undefined) {
-        pendingYesterday = pendingYesterday.filter(
-          (open) => open.commitmentId !== command.commitmentId,
-        );
-      }
+      addRecord(item, localRef(item.localId));
     } else if (item.kind === "edit") {
       const owner = rows.find(holds(item.target));
       if (owner === undefined) continue;
@@ -123,6 +137,6 @@ export function overlayToday(
   }
   return {
     view: { ...view, rows, ...(pendingYesterday === undefined ? {} : { pendingYesterday }) },
-    marks: { rows: rowMarks, entries: entryMarks, count: items.length },
+    marks: { rows: rowMarks, entries: entryMarks, count: items.length + awaiting.length },
   };
 }

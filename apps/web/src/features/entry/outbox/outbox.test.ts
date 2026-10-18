@@ -590,6 +590,28 @@ describe("Outbox state: notices, listeners, erasure", () => {
     expect(outbox.resolve(localRef("ghost"))).toBe(localRef("ghost"));
   });
 
+  it("keeps a sent record until a fetched Today holds it; a sent edit changes it, a sent delete drops it", async () => {
+    const { outbox, queue } = setup();
+    queue(recordInput("a"));
+    queue(recordInput("b"));
+    queue(recordInput("c"));
+    await outbox.drain();
+    expect(outbox.sentRecords().map((record) => record.entryId)).toEqual([
+      "entry-1",
+      "entry-2",
+      "entry-3",
+    ]);
+    queue(editInput("e1", "entry-1"));
+    queue(deleteInput("d1", "entry-2"));
+    await outbox.drain();
+    expect(outbox.sentRecords().map((record) => record.entryId)).toEqual(["entry-1", "entry-3"]);
+    expect(outbox.sentRecords()[0]?.command.value).toEqual({ kind: "quantity", value: "45" });
+    outbox.acknowledge(new Set(["entry-1"]));
+    expect(outbox.sentRecords().map((record) => record.entryId)).toEqual(["entry-3"]);
+    outbox.dispose();
+    expect(outbox.sentRecords()).toEqual([]);
+  });
+
   it("resolve() forgets the mapping when the outbox is disposed", async () => {
     const { outbox, queue } = setup();
     queue(recordInput("a"));

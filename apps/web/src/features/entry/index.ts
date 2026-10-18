@@ -21,6 +21,7 @@ export {
   useOutbox,
   useOutboxReplaying,
   useOutboxState,
+  useOverlayToday,
 } from "./outbox/use-outbox.tsx";
 export { EntrySheetHost } from "./sheet/EntrySheetHost.tsx";
 export { limitMeasureOf, quantityMeasureOf } from "./sheet/entry-form.ts";

@@ -87,6 +87,43 @@ describe("overlayToday: nothing pending (OE-R7)", () => {
   });
 });
 
+describe("overlayToday: a record sent but not yet in the fetched Today", () => {
+  const sent = (entryId: string, commitmentId = "commitment-1") => ({
+    entryId,
+    habitName: "Meditar",
+    command: {
+      seasonId: "season-1",
+      commitmentId,
+      forDate: "2026-10-02",
+      value: { kind: "done" as const },
+      note: null,
+      clientRequestId: `req-${entryId}`,
+    },
+  });
+
+  it("keeps the row filled and marked with the server's entry id until the fetch has it", () => {
+    const { view: shown, marks } = overlayToday(running, [], [sent("entry-7")]);
+    if (shown.state !== "active") throw new Error("expected an active view");
+    expect(shown.rows[0]?.entries.map((entry) => entry.entryId)).toEqual(["entry-7"]);
+    expect(marks.rows.get("commitment-1")).toBe("record");
+    expect(marks.entries.get("entry-7")).toBe("record");
+    expect(marks.count).toBe(1);
+  });
+
+  it("shows nothing extra once the fetched Today already holds the entry", () => {
+    const fetched = activeTodayFixture({
+      rows: [
+        dayRowFixture({
+          entries: [entryFixture({ kind: "done" }, { entryId: "entry-7" as never })],
+        }),
+      ],
+    });
+    const result = overlayToday(fetched, [], [sent("entry-7")]);
+    expect(result.view).toBe(fetched);
+    expect(result.marks).toBe(NO_MARKS);
+  });
+});
+
 describe("overlayToday: a pending record (OE-R7.S1)", () => {
   it("adds a local entry to its row and marks the row and the entry, without touching points", () => {
     const view = activeTodayFixture({ rows: [dayRowFixture(), weekRowFixture()] });

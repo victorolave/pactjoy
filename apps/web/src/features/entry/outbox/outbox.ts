@@ -1,6 +1,11 @@
 import { ApiError } from "../../../ports/api-error.ts";
 import type { IdSource } from "../../../ports/ids.ts";
-import type { OutboxItem, OutboxState, OutboxStore } from "../../../ports/outbox-store.ts";
+import type {
+  OutboxItem,
+  OutboxState,
+  OutboxStore,
+  SentRecord,
+} from "../../../ports/outbox-store.ts";
 import type { PactJoyApi } from "../../../ports/pactjoy-api.ts";
 import { classify } from "./classify.ts";
 import { dismissNotices, rejectWithNotice } from "./notices.ts";
@@ -57,6 +62,8 @@ export class Outbox {
   #replaying = false;
 
   #disposed = false;
+  /** Records the server accepted whose entry the fetched Today does not show yet (memory only). */
+  #sent: readonly SentRecord[] = [];
 
   constructor(deps: OutboxDeps) {
     this.#deps = deps;
@@ -79,6 +86,16 @@ export class Outbox {
     };
   }
 
+  /** Stable between changes (it backs `useSyncExternalStore`). */
+  sentRecords(): readonly SentRecord[] {
+    return this.#sent;
+  }
+
+  /** The fetched Today holds these entries now: they no longer need to be laid over it. */
+  acknowledge(entryIds: ReadonlySet<string>): void {
+    this.#setSent(this.#sent.filter((record) => !entryIds.has(record.entryId)));
+  }
+
   /**
    * Ends this outbox: it stops following the store, stops replaying and never writes again. Its
    * owner (the signed-in user) is gone. Safe to call twice; `activate()` brings it back.
@@ -89,6 +106,7 @@ export class Outbox {
     this.#unfollowStore();
     this.#conflicts.clear();
     this.#resolved.clear();
+    this.#sent = [];
   }
 
   /** Undoes `dispose()` (an effect cleanup that React runs and then re-runs, as in StrictMode). */
@@ -159,9 +177,7 @@ export class Outbox {
         }
         try {
           const entryId = await this.#send(item);
-          if (item.kind === "record" && entryId !== null && !this.#disposed) {
-            this.#resolved.set(localRef(item.localId), entryId);
-          }
+          if (!this.#disposed) this.#remember(item, entryId);
           this.#commit(
             item.kind === "record" && entryId !== null
               ? resolveRecord(this.#state, item.localId, entryId)
@@ -188,8 +204,10 @@ export class Outbox {
             this.#conflicts.set(id, retries);
             if (retries <= MAX_CONFLICT_RETRIES) continue;
           }
-          if (outcome === "sent") this.#commit(removeItem(this.#state, id));
-          else if (outcome === "sentAll") this.#commit(rejectItem(this.#state, id).state);
+          if (outcome === "sent") {
+            if (item.kind === "delete") this.#remember(item, null);
+            this.#commit(removeItem(this.#state, id));
+          } else if (outcome === "sentAll") this.#commit(rejectItem(this.#state, id).state);
           else this.#reject(id, error);
           this.#conflicts.delete(id);
           changed = true;
@@ -200,6 +218,36 @@ export class Outbox {
       if (changed) this.#deps.onReplayed();
     }
     return status;
+  }
+
+  /**
+   * What the server accepted, until the Today fetched afterwards shows it: a sent record's local
+   * reference and its row (W2); an edit changes what that row shows, a delete removes it.
+   */
+  #remember(item: OutboxItem, entryId: string | null): void {
+    if (item.kind === "record") {
+      if (entryId === null) return;
+      this.#resolved.set(localRef(item.localId), entryId);
+      const { habitName, command } = item;
+      this.#setSent([...this.#sent, { entryId, habitName, command }]);
+    } else if (item.kind === "edit") {
+      this.#setSent(
+        this.#sent.map((record) =>
+          record.entryId === item.target
+            ? { ...record, command: { ...record.command, value: item.value, note: item.note } }
+            : record,
+        ),
+      );
+    } else {
+      this.#setSent(this.#sent.filter((record) => record.entryId !== item.target));
+    }
+  }
+
+  #setSent(next: readonly SentRecord[]): void {
+    const same = next.length === this.#sent.length && next.every((r, i) => r === this.#sent[i]);
+    if (same) return;
+    this.#sent = next;
+    this.#notify();
   }
 
   #setReplaying(value: boolean): void {

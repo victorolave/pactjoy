@@ -1,5 +1,5 @@
 import type { TodayView } from "@pactjoy/app";
-import { type ReactNode, useMemo } from "react";
+import type { ReactNode } from "react";
 import { useOnline } from "../../../context/connectivity-context.tsx";
 import { OfflineBanner, SyncingBanner } from "../../../platform/offline/OfflineBanner.tsx";
 import { ApiError } from "../../../ports/api-error.ts";
@@ -7,7 +7,7 @@ import { longDate } from "../../../shared/format.ts";
 import { toUiError } from "../../../shared/ui-error.ts";
 import { Button } from "../../../ui/Button.tsx";
 import { Icon } from "../../../ui/icon/Icon.tsx";
-import { overlayToday, useOutboxReplaying, useOutboxState } from "../../entry/index.ts";
+import { useOutboxReplaying, useOverlayToday } from "../../entry/index.ts";
 import { useReminderNamesSync } from "../../notifications/index.ts";
 import { PendingMarksContext } from "../pending-marks.ts";
 import { useToday } from "../queries.ts";
@@ -137,9 +137,8 @@ function TodayWithData({
   readonly localToday: string | null;
   readonly connectionLost: boolean;
 }) {
-  const { items } = useOutboxState();
   const sending = useOutboxReplaying();
-  const { view, marks } = useMemo(() => overlayToday(data, items), [data, items]);
+  const { view, marks } = useOverlayToday(data);
   return (
     <div className={styles.screen}>
       {connectionLost ? <OfflineBanner /> : sending && <SyncingBanner />}

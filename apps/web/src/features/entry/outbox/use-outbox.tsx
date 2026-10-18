@@ -1,3 +1,4 @@
+import type { TodayView } from "@pactjoy/app";
 import {
   createContext,
   type ReactNode,
@@ -9,9 +10,15 @@ import {
 } from "react";
 import type { Connectivity } from "../../../ports/connectivity.ts";
 import type { IdSource } from "../../../ports/ids.ts";
-import { EMPTY_OUTBOX, type OutboxState, type OutboxStore } from "../../../ports/outbox-store.ts";
+import {
+  EMPTY_OUTBOX,
+  type OutboxState,
+  type OutboxStore,
+  type SentRecord,
+} from "../../../ports/outbox-store.ts";
 import type { Visibility } from "../../../ports/visibility.ts";
 import { Outbox, type OutboxDeps } from "./outbox.ts";
+import { overlayToday } from "./overlay.ts";
 import { startReplayTriggers } from "./triggers.ts";
 
 const OutboxContext = createContext<Outbox | null>(null);
@@ -80,6 +87,26 @@ function useSubscribe(outbox: Outbox | null): (notify: () => void) => () => void
 export function useOutboxReplaying(): boolean {
   const outbox = useOutbox();
   return useSyncExternalStore(useSubscribe(outbox), () => outbox?.replaying() ?? false);
+}
+
+const NO_SENT: readonly SentRecord[] = [];
+
+/**
+ * The server's Today with what is waiting on the phone laid over it, plus the records that were
+ * sent but are not in this fetch yet (they stay laid over it until a fetch holds them, so the row
+ * never looks open in between). Tells the outbox which entries the fetch already has.
+ */
+export function useOverlayToday(data: TodayView): ReturnType<typeof overlayToday> {
+  const outbox = useOutbox();
+  const { items } = useOutboxState();
+  const sent = useSyncExternalStore(useSubscribe(outbox), () => outbox?.sentRecords() ?? NO_SENT);
+  useEffect(() => {
+    if (outbox === null || !("rows" in data)) return;
+    outbox.acknowledge(
+      new Set(data.rows.flatMap((row) => row.entries.map((entry) => entry.entryId as string))),
+    );
+  }, [outbox, data]);
+  return useMemo(() => overlayToday(data, items, sent), [data, items, sent]);
 }
 
 /** The outbox's items and notices, re-rendering when they change; empty while signed out. */

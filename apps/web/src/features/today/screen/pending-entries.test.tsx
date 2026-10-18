@@ -5,6 +5,7 @@ import { quantity, reading } from "../../../testing/fixtures/edit-rows.ts";
 import {
   activeTodayFixture,
   dayRowFixture,
+  entryFixture,
   pendingItemFixture,
   weekRowFixture,
 } from "../../../testing/fixtures/today.ts";
@@ -136,13 +137,53 @@ describe("Today shows what is waiting on the phone (OE-R7, design 15g)", () => {
     expect(within(card as HTMLElement).getByText(BADGE)).toBeInTheDocument();
   });
 
-  it("the badges go when the queue has been sent (OE-R7.S5)", async () => {
+  it("the badges go when the queue has been sent and Today holds the entry (OE-R7.S5)", async () => {
     const app = offlineDay();
     await userEvent.click(await screen.findByRole("button", { name: "Registrar Meditar" }));
     await screen.findByText(BADGE);
+    // What the server will answer once the record is in.
+    app.deps.api.setToday(
+      activeTodayFixture({
+        rows: [
+          dayRowFixture({
+            habitName: "Meditar",
+            entries: [entryFixture({ kind: "done" }, { entryId: "entry-1" as never })],
+          }),
+        ],
+      }),
+    );
     act(() => app.deps.connectivity.setOnline(true));
     await waitFor(() => expect(screen.queryByText(BADGE)).not.toBeInTheDocument());
     expect(screen.queryByText(FOOTNOTE)).not.toBeInTheDocument();
     expect(app.deps.api.recorded).toHaveLength(1);
+  });
+
+  it("a sent record keeps its row filled until Today has it, so a second tap does not record again", async () => {
+    const app = renderApp({
+      online: false,
+      today: activeTodayFixture({
+        rows: [
+          dayRowFixture({ habitName: "Meditar" }),
+          dayRowFixture({
+            habitName: "Leer",
+            commitmentId: "commitment-3" as never,
+          }),
+        ],
+      }),
+    });
+    await userEvent.click(await screen.findByRole("button", { name: "Registrar Meditar" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Registrar Leer" }));
+    await waitFor(() => expect(app.deps.outboxStore.load("user-1").items).toHaveLength(2));
+    const fetchesBefore = app.deps.api.calls.getToday;
+    act(() => app.deps.connectivity.setOnline(true));
+    await waitFor(() => expect(app.deps.api.recorded).toHaveLength(2));
+    // The replay ended and Today was fetched again, but that Today does not have the entries yet.
+    await waitFor(() => expect(app.deps.api.calls.getToday).toBeGreaterThan(fetchesBefore));
+    await waitFor(() => expect(app.deps.outboxStore.load("user-1").items).toEqual([]));
+    for (const name of ["Registrar Meditar", "Registrar Leer"]) {
+      expect(screen.getByRole("button", { name })).toHaveAttribute("aria-pressed", "true");
+    }
+    await userEvent.click(screen.getByRole("button", { name: "Registrar Meditar" }));
+    expect(app.deps.api.recordAttempts).toHaveLength(2);
   });
 });

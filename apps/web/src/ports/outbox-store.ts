@@ -16,6 +16,16 @@ export interface QueuedRecord {
   readonly command: RecordEntryCommand & { readonly forDate: string };
 }
 
+/**
+ * A queued record the server accepted in this session. Memory only: it keeps the row filled until
+ * the Today fetched afterwards holds the entry (the record is gone from the queue by then).
+ */
+export interface SentRecord {
+  readonly entryId: string;
+  readonly habitName: string;
+  readonly command: QueuedRecord["command"];
+}
+
 /** A full-state edit (`PUT`). `target` is a server `entryId` or a local reference `local:<id>`. */
 export interface QueuedEdit {
   readonly kind: "edit";
