@@ -1,5 +1,6 @@
 import type { Logger } from "../composition/logger.ts";
 import { DEFAULT_MAX_BODY_BYTES, readJsonBody } from "./body.ts";
+import { clientNetworkOf } from "./client-network.ts";
 import { createCors } from "./cors.ts";
 import { respond } from "./envelope.ts";
 import { createRouter, type RouteSpec, stripBasePath } from "./router.ts";
@@ -10,6 +11,8 @@ export interface RequestContext<A> {
   readonly params: Readonly<Record<string, string>>;
   readonly body: unknown;
   readonly requestId: string;
+  /** The client network from `X-Forwarded-For` (see `clientNetworkOf`), or `null`. Never log it. */
+  readonly clientNetwork: string | null;
 }
 
 export interface PipelineRoute<A> extends RouteSpec {
@@ -132,6 +135,7 @@ export function createPipeline<A>(deps: {
           params: match.params,
           body: body.body,
           requestId,
+          clientNetwork: clientNetworkOf(request.headers),
         }),
       );
     } catch (e) {

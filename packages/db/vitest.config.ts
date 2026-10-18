@@ -7,6 +7,7 @@ const UNIT_ONLY_IN_TEST_DIR = [
   "test/bootstrap-roles.test.ts",
   "test/boundary.test.ts",
   "test/erasure-coverage.test.ts",
+  "test/rate-limit-statement.test.ts",
 ];
 
 export default defineConfig({

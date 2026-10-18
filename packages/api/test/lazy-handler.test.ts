@@ -45,6 +45,7 @@ function composition() {
         push: null,
         jobsSecret: null,
         identity: null,
+        rateLimitKey: null,
         tokenVerifier: {
           verify: (token) => {
             verify(token);

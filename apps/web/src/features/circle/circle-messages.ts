@@ -1,6 +1,7 @@
 import type {
   CreateCircleError,
   GenerateInviteError,
+  JoinAttemptError,
   JoinCircleError,
   LeaveCircleError,
   PreviewInviteError,
@@ -12,6 +13,7 @@ import { ApiError } from "../../ports/api-error.ts";
 type AppKind = (
   | CreateCircleError
   | GenerateInviteError
+  | JoinAttemptError
   | JoinCircleError
   | LeaveCircleError
   | PreviewInviteError
@@ -90,6 +92,13 @@ export const CIRCLE_FAILURES = {
   CircleArchived: { message: "Ese círculo ya no está activo.", field: "code", retryable: false },
   AlreadyInActiveCircle: {
     message: "Ya formas parte de un círculo. Sal de él antes de unirte a otro.",
+    field: null,
+    retryable: false,
+  },
+  // Rate limited (ADR-0020): for the whole form, never the code, so it hints nothing about it.
+  // Trying again at once cannot help, so it offers no retry.
+  TooManyJoinAttempts: {
+    message: "Hiciste muchos intentos seguidos. Espera unos minutos y vuelve a intentarlo.",
     field: null,
     retryable: false,
   },

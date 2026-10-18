@@ -26,6 +26,7 @@ import { describeHabitRepositoryContract } from "./habit.contract.ts";
 import { describeNotificationOutboxContract } from "./notification-outbox.contract.ts";
 import { describePauseRequestRepositoryContract } from "./pause.contract.ts";
 import { describePushSubscriptionContract } from "./push-subscription.contract.ts";
+import { describeRateLimitContract } from "./rate-limit.contract.ts";
 import { describeReviewRepositoryContract } from "./review.contract.ts";
 import { describeSeasonRepositoryContract } from "./season.contract.ts";
 import { describeSeasonClosureRepositoryContract } from "./season-closure.contract.ts";
@@ -46,6 +47,7 @@ describePauseRequestRepositoryContract("in-memory", inMemory);
 describeNotificationOutboxContract("in-memory", inMemory);
 describePushSubscriptionContract("in-memory", inMemory);
 describeCommitmentReminderContract("in-memory", inMemory);
+describeRateLimitContract("in-memory", inMemory);
 describeReviewRepositoryContract("in-memory", async () => ({
   repository: createInMemoryReviewRepository(),
 }));

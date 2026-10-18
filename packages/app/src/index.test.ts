@@ -9,6 +9,8 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "ACCOUNT_DELETION_CONFIRMATION",
   "AUTO_APPROVE_AFTER_MS",
   "ERASED_DISPLAY_NAME",
+  "JOIN_ATTEMPT_LIMITS",
+  "admitJoinAttempt",
   "deleteAccount",
   "PAUSE_REASONS",
   "addCommitment",

@@ -8,6 +8,8 @@ import { ERASED_REQUEST_FINGERPRINT } from "../entry/entry.repository.ts";
 import { storedPhoto } from "../entry-photo/photo-seed.ts";
 import { storedPause } from "../pause/pause-seed.ts";
 import { respondToPause } from "../pause/respond-to-pause.ts";
+import { admitJoinAttempt } from "../rate-limit/join-attempts.ts";
+import { probeUserMinute } from "../rate-limit/rate-limit-seed.ts";
 import { storedReminder } from "../reminders/reminder-seed.ts";
 import { givenReviewWorld, type ReviewWorld } from "../review/review-fixtures.ts";
 import { storedReviews } from "../review/review-seed.ts";
@@ -254,6 +256,20 @@ describe("erasing Andrea from a circle that goes on (active season)", () => {
     const hers = await storedSocial(app, season.id, world.andreaId);
     expect(hers.received).toEqual([]);
     expect(hers.dismissed).toEqual([]);
+  });
+
+  it("deletes her join-attempt counters and keeps Victor's (ADR-0020)", async () => {
+    const world = await givenAccountWorld();
+    const { app } = world;
+    const attempt = (actor: typeof world.andrea) =>
+      admitJoinAttempt({ uow: app.uow, clock: app.clock }, actor, { networkKey: null });
+    await attempt(world.andrea);
+    await attempt(world.victor);
+
+    await andreaDeletes(world);
+
+    expect(await probeUserMinute(app, world.andrea.userId)).toBe(1);
+    expect(await probeUserMinute(app, world.victor.userId)).toBe(2);
   });
 
   it("keeps what she sent (anonymous) and every peer-owned row, and her own reactions", async () => {

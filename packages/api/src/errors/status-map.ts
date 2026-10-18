@@ -120,16 +120,22 @@ export const APP_ERROR_STATUS = {
   WindowClosed: 409,
   // 410 (1)
   InviteExpired: 410,
+  // 429 (1): the join attempts of a user or a network (ADR-0020).
+  TooManyJoinAttempts: 429,
   // 503 (1): the data is erased, only the identity step is left to repeat (ADR-0019).
   IdentityUnavailable: 503,
-} as const satisfies Record<AppErrorKind, 403 | 404 | 409 | 410 | 422 | 503>;
+} as const satisfies Record<AppErrorKind, 403 | 404 | 409 | 410 | 422 | 429 | 503>;
 
 /**
  * The app error as an API result. `details` is the app error minus `kind`, when it has any
- * (e.g. `{reason}` or `{field}`): the app's errors carry only small enums and field names.
+ * (e.g. `{reason}` or `{field}`): the app's errors carry only small enums and field names. A
+ * `retryAfterSeconds` is not a detail: it becomes the `Retry-After` header.
  */
 export function appErrorResult(error: AppError): ApiResult {
-  const { kind, ...rest } = error as { kind: AppErrorKind } & Record<string, unknown>;
+  const { kind, retryAfterSeconds, ...rest } = error as { kind: AppErrorKind } & Record<
+    string,
+    unknown
+  >;
   return {
     status: APP_ERROR_STATUS[kind],
     error: {
@@ -137,5 +143,8 @@ export function appErrorResult(error: AppError): ApiResult {
       message: kind,
       ...(Object.keys(rest).length > 0 ? { details: rest } : {}),
     },
+    ...(typeof retryAfterSeconds === "number"
+      ? { headers: { "Retry-After": String(retryAfterSeconds) } }
+      : {}),
   };
 }

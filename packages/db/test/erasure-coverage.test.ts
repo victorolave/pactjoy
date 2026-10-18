@@ -420,6 +420,7 @@ describe("the real migrations and ERASURE_COVERAGE (ADR-0019)", () => {
         "pause_requests",
         "pause_responses",
         "push_subscriptions",
+        "rate_limit_counters",
         "reviews",
         "season_approvals",
         "season_closure_decisions",

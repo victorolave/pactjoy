@@ -38,6 +38,11 @@ export interface ApiDeps {
    * configured: `DELETE /me` answers 503 before it writes anything.
    */
   readonly identity: IdentityAdmin | null;
+  /**
+   * The HMAC key of the client networks join attempts are counted against (ADR-0020); `null`
+   * counts them per user only.
+   */
+  readonly rateLimitKey: string | null;
   readonly tokenVerifier: TokenVerifier;
   readonly logger: Logger;
   /** Millisecond clock for request durations; defaults to Date.now. */

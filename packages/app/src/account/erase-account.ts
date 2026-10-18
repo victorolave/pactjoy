@@ -10,6 +10,7 @@ import { eraseMemberNotifications } from "../notifications/erase.ts";
 import { eraseMemberPauseDetails } from "../pause/erase.ts";
 import type { IdGenerator } from "../ports/id-generator.ts";
 import type { Repositories } from "../ports/repositories.ts";
+import { eraseUserRateLimits } from "../rate-limit/erase.ts";
 import { eraseMemberReminders } from "../reminders/erase.ts";
 import { eraseMemberReviews } from "../review/erase.ts";
 import { eraseMemberClosures } from "../season/closure/erase.ts";
@@ -127,6 +128,7 @@ async function eraseUserOwned(
 ): Promise<void> {
   await eraseMemberNotifications(repos, userId, memberIds);
   await repos.habits.deleteByOwner(userId);
+  await eraseUserRateLimits(repos, userId);
 }
 
 /**

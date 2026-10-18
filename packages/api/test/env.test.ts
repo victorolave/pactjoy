@@ -41,7 +41,25 @@ describe("loadApiEnv", () => {
         jobsSecret: null,
         push: null,
         authAdmin: null,
+        rateLimitKey: null,
       },
+    });
+  });
+
+  describe("the rate-limit key (ADR-0020): optional, at least 32 characters, never echoed", () => {
+    const KEY = `${"r".repeat(31)}!`;
+
+    it("reads it when set", () => {
+      const result = load({ ...BASE, API_RATE_LIMIT_KEY: KEY });
+      expect(result.ok && result.value.rateLimitKey).toBe(KEY);
+    });
+
+    it("a key shorter than 32 characters, or with a space, is invalid, and its value is never in the error", () => {
+      for (const value of ["short-rate-key-hunter2", `${"r".repeat(20)} ${"r".repeat(20)}`]) {
+        const error = failure({ ...BASE, API_RATE_LIMIT_KEY: value });
+        expect(error).toEqual({ missing: [], invalid: ["API_RATE_LIMIT_KEY"] });
+        expect(describeEnvError(error)).not.toContain("hunter2");
+      }
     });
   });
 
@@ -290,6 +308,7 @@ describe("loadApiEnv", () => {
       "API_PUSH_VAPID_PRIVATE_KEY",
       "API_PUSH_VAPID_PUBLIC_KEY",
       "API_PUSH_VAPID_SUBJECT",
+      "API_RATE_LIMIT_KEY",
       "API_STORAGE_BUCKET",
       "API_STORAGE_S3_ACCESS_KEY_ID",
       "API_STORAGE_S3_ENDPOINT",

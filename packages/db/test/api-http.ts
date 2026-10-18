@@ -47,16 +47,25 @@ export function createHttpOverPostgres(max = 3) {
       jobsSecret: null,
       // No admin key in these tests: DELETE /me answers 503 before any write.
       identity: null,
+      // Join attempts counted per user and per network, so both paths run on Postgres.
+      rateLimitKey: "r".repeat(32),
       tokenVerifier: createFakeTokenVerifier(tokens),
       logger: { info: () => undefined, warn: () => undefined, error: () => undefined },
     },
     { basePath: "/api", allowedOrigins: [] },
   );
-  const call = async (method: string, path: string, token: string, body?: unknown) => {
+  const call = async (
+    method: string,
+    path: string,
+    token: string,
+    body?: unknown,
+    headers: Readonly<Record<string, string>> = {},
+  ) => {
     const response = await handler(
       new Request(`http://x/api${path}`, {
         method,
         headers: {
+          ...headers,
           authorization: `Bearer ${token}`,
           ...(body === undefined ? {} : { "content-type": "application/json" }),
         },
