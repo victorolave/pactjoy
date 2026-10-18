@@ -2,7 +2,8 @@ import type { PushPayload } from "./push-payload.ts";
 
 /**
  * The Spanish copy and destination of each push (ADR-0017). The payload carries ids only, so no
- * copy names a person or a habit; the screen it opens shows the details to whoever may see them.
+ * copy names a person; the screen it opens shows the details to whoever may see them. The one
+ * exception is the reminder, which names the owner's own habit from names kept on the device.
  * Derived copy: the owner approves it at the real-iPhone check. Neutral on purpose: Notion forbids
  * pressure, rankings, streaks and "you did not log" (REQ-F1).
  */
@@ -25,7 +26,10 @@ export const GENERIC_NOTIFICATION: NotificationView = {
 /** An id as a single path segment: it can never add a slash, a dot segment or another origin. */
 const segment = (value: string) => encodeURIComponent(value).replace(/\./g, "%2E");
 
-type Builder = (params: Readonly<Record<string, string>>) => Omit<NotificationView, "tag">;
+type Builder = (
+  params: Readonly<Record<string, string>>,
+  names: ReadonlyMap<string, string>,
+) => Omit<NotificationView, "tag">;
 
 /** Per kind: the params it needs (all strings, or numbers turned into strings) and its view. */
 const KINDS: Readonly<
@@ -90,14 +94,36 @@ const KINDS: Readonly<
       url: "/",
     }),
   },
+  commitmentReminder: {
+    needs: ["seasonId", "commitmentId", "forDate"],
+    // The owner's own habit by name only when the device knows it, which is only for a visible
+    // commitment (`reminder-names.ts`); a private one stays generic on the lock screen. The tap
+    // opens the Entry sheet on Today; a commitment no longer there just shows Today.
+    view: (p, names) => {
+      const name = names.get(p.commitmentId ?? "");
+      return {
+        title: name === undefined ? "Es hora de tu hábito" : `Es hora de ${name}`,
+        body: "Toca para registrarlo.",
+        url: `/?entry=${segment(p.commitmentId ?? "")}`,
+      };
+    },
+  },
 };
 
 /** Params that are whole numbers; every other param is a non-empty string (an id or a date). */
 const NUMERIC = new Set(["periodIndex", "pactRevision"]);
 const isId = (value: unknown): value is string => typeof value === "string" && value.length > 0;
 
-/** The view for a payload; the generic notice for anything unknown, incomplete or malformed. */
-export function notificationFor(payload: PushPayload | null): NotificationView {
+const NO_NAMES: ReadonlyMap<string, string> = new Map();
+
+/**
+ * The view for a payload; the generic notice for anything unknown, incomplete or malformed.
+ * `names` are the device's own habit names (`reminder-names.ts`), used by the reminder only.
+ */
+export function notificationFor(
+  payload: PushPayload | null,
+  names: ReadonlyMap<string, string> = NO_NAMES,
+): NotificationView {
   if (payload === null) return GENERIC_NOTIFICATION;
   const kind = Object.hasOwn(KINDS, payload.kind) ? KINDS[payload.kind] : undefined;
   if (kind === undefined) return GENERIC_NOTIFICATION;
@@ -111,5 +137,5 @@ export function notificationFor(payload: PushPayload | null): NotificationView {
     }
   }
   const subject = kind.needs.filter((name) => name !== "pactRevision").map((name) => params[name]);
-  return { ...kind.view(params), tag: [payload.kind, ...subject].join(":") };
+  return { ...kind.view(params, names), tag: [payload.kind, ...subject].join(":") };
 }

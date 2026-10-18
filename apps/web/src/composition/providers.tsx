@@ -12,6 +12,7 @@ import { IdsProvider } from "../context/ids-context.tsx";
 import { NotificationPermissionProvider } from "../context/notification-permission-context.tsx";
 import { PhotoProvider } from "../context/photo-context.tsx";
 import { PushSubscriptionProvider } from "../context/push-subscription-context.tsx";
+import { ReminderNamesProvider } from "../context/reminder-names-context.tsx";
 import { SharingProvider } from "../context/sharing-context.tsx";
 import { ToastProvider } from "../context/toast-context.tsx";
 import { SessionProvider, useSession } from "../features/auth/index.ts";
@@ -25,15 +26,17 @@ export function AppProviders({
   readonly deps: AppDependencies;
   readonly children: ReactNode;
 }) {
-  const { queryClient, persister, device } = deps;
+  const { queryClient, persister, device, reminderNames } = deps;
   // Cached data belongs to the signed-in user: drop it, and the saved copy, whenever the session
-  // ends. So does the name draft. The device flags (welcome seen, install and permission steps)
-  // are about this phone, not the person, so they stay: the carousel does not return on every login.
+  // ends. So do the name draft and the habit names reminders show. The device flags (welcome seen,
+  // install and permission steps) are about this phone, not the person, so they stay: the carousel
+  // does not return on every login.
   const onSessionEnd = useCallback(() => {
     queryClient.clear();
     void persister.removeClient();
     device.clearSession();
-  }, [queryClient, persister, device]);
+    void reminderNames.clear();
+  }, [queryClient, persister, device, reminderNames]);
   // The device's push registration belongs to the person: removed before the session ends.
   const { notifications, push, api } = deps;
   const beforeSignOut = useCallback(
@@ -62,10 +65,12 @@ export function AppProviders({
                       <AppInstallProvider appInstall={deps.appInstall}>
                         <NotificationPermissionProvider notifications={deps.notifications}>
                           <PushSubscriptionProvider push={deps.push}>
-                            <ClockProvider clock={deps.clock}>
-                              <SessionPushSync />
-                              <ToastProvider>{children}</ToastProvider>
-                            </ClockProvider>
+                            <ReminderNamesProvider reminderNames={reminderNames}>
+                              <ClockProvider clock={deps.clock}>
+                                <SessionPushSync />
+                                <ToastProvider>{children}</ToastProvider>
+                              </ClockProvider>
+                            </ReminderNamesProvider>
                           </PushSubscriptionProvider>
                         </NotificationPermissionProvider>
                       </AppInstallProvider>

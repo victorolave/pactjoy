@@ -28,12 +28,14 @@ import type { DevicePushSubscription } from "../ports/push-subscription.ts";
 import type { SeasonProgressApi } from "../ports/season-progress-api.ts";
 import type {
   CarryOverDto,
+  CommitmentReminderDto,
   CommitmentStageDto,
   MyPauseRequests,
   PauseApprovalDto,
   PauseRequestDto,
   PhotoUploadDto,
   ProfileSummaryDto,
+  ReminderSettingCommand,
   ReviewDraftDto,
   SeasonDto,
   SeasonHistoryDto,
@@ -74,6 +76,8 @@ type ExistingMethod =
   | "submitReview"
   | "skipBaseline"
   | "getCommitmentStage"
+  | "getCommitmentReminder"
+  | "setCommitmentReminder"
   | "getSeasonResults"
   | "submitSeasonClosure"
   | "getCarryOver"
@@ -141,6 +145,8 @@ export class FakePactJoyApi implements PactJoyApi {
     submitReview: 0,
     skipBaseline: 0,
     getCommitmentStage: 0,
+    getCommitmentReminder: 0,
+    setCommitmentReminder: 0,
     getSeasonResults: 0,
     submitSeasonClosure: 0,
     getCarryOver: 0,
@@ -187,6 +193,14 @@ export class FakePactJoyApi implements PactJoyApi {
   #myPauseRequests: MyPauseRequests = noPauseRequestsFixture();
   readonly #reviews = new Map<string, ReviewDraftDto>();
   readonly #stages = new Map<string, CommitmentStageDto>();
+  /** Stored reminders by commitment id; an absent one reads as the default (off, 20:00, every day). */
+  readonly reminders = new Map<string, CommitmentReminderDto>();
+  /** Every setCommitmentReminder call, including the ones scripted to fail. */
+  readonly reminderCommands: {
+    readonly seasonId: string;
+    readonly commitmentId: string;
+    readonly setting: ReminderSettingCommand;
+  }[] = [];
   readonly #seasonResults = new Map<string, SeasonResultsDto>();
   readonly #carryOvers = new Map<string, CarryOverDto>();
   #seasonHistory: SeasonHistoryDto = seasonHistoryFixture();
@@ -519,6 +533,41 @@ export class FakePactJoyApi implements PactJoyApi {
   async getCommitmentStage(_seasonId: string, commitmentId: string, _signal?: AbortSignal) {
     this.#enter("getCommitmentStage");
     return this.#stages.get(commitmentId) ?? { commitmentId, stage: "new" as const };
+  }
+
+  async getCommitmentReminder(_seasonId: string, commitmentId: string, _signal?: AbortSignal) {
+    this.#enter("getCommitmentReminder");
+    return this.#reminderOf(commitmentId);
+  }
+
+  #reminderOf(commitmentId: string): CommitmentReminderDto {
+    return (
+      this.reminders.get(commitmentId) ?? {
+        commitmentId,
+        enabled: false,
+        minuteOfDay: 20 * 60,
+        weekdays: [0, 1, 2, 3, 4, 5, 6],
+        availableWeekdays: [0, 1, 2, 3, 4, 5, 6],
+      }
+    );
+  }
+
+  async setCommitmentReminder(
+    seasonId: string,
+    commitmentId: string,
+    setting: ReminderSettingCommand,
+  ) {
+    const gate = this.#takeGate("setCommitmentReminder");
+    this.reminderCommands.push({ seasonId, commitmentId, setting });
+    this.#enter("setCommitmentReminder");
+    await gate;
+    const saved: CommitmentReminderDto = {
+      ...this.#reminderOf(commitmentId),
+      ...setting,
+      weekdays: [...setting.weekdays].sort((a, b) => a - b),
+    };
+    this.reminders.set(commitmentId, saved);
+    return saved;
   }
 
   async getSeasonResults(seasonId: string, _signal?: AbortSignal) {

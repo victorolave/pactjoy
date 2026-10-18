@@ -16,6 +16,7 @@ import type { SeasonProgressApi } from "./season-progress-api.ts";
 import type {
   CarryOverDto,
   ClosureDecisionEntryDto,
+  CommitmentReminderDto,
   CommitmentStageDto,
   HabitDto,
   MyPauseRequests,
@@ -23,6 +24,7 @@ import type {
   PauseRequestDto,
   PhotoUploadDto,
   ProfileSummaryDto,
+  ReminderSettingCommand,
   ReviewDraftDto,
   SeasonDto,
   SeasonHistoryDto,
@@ -205,6 +207,18 @@ export interface PactJoyApi extends SeasonProgressApi {
     commitmentId: string,
     signal?: AbortSignal,
   ): Promise<CommitmentStageDto>;
+  /** MY reminder for one of my commitments, or its default (off, 20:00). A peer's is a 404. */
+  getCommitmentReminder(
+    seasonId: string,
+    commitmentId: string,
+    signal?: AbortSignal,
+  ): Promise<CommitmentReminderDto>;
+  /** Saves MY reminder; idempotent, and it never touches the pact. */
+  setCommitmentReminder(
+    seasonId: string,
+    commitmentId: string,
+    setting: ReminderSettingCommand,
+  ): Promise<CommitmentReminderDto>;
   /**
    * The owner's final figures of an ended season (36). Readable from the results day on, before
    * and after the season is finalized; owner-only, no route carries a member id (ADR-0015).

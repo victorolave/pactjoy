@@ -13,3 +13,4 @@ export {
   pushStatus,
   removeThisDevice,
 } from "./push-device.ts";
+export { useReminderNamesSync } from "./use-reminder-names-sync.ts";
