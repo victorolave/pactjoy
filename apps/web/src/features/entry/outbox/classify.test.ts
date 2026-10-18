@@ -118,6 +118,29 @@ describe("classify (OE-R4)", () => {
     expect(classify(record, error("EntryDeleted"), { dependentDelete: false })).toBe("terminal");
   });
 
+  // The status speaks first: a server or gateway in trouble never drops an item, whatever code it
+  // carries (one outside the table today, or a terminal one sent with a 5xx).
+  it.each([
+    [0, "SomethingNew"],
+    [429, "TooManyJoinAttempts"],
+    [429, "WindowClosed"],
+    [500, "InviteCodeGenerationFailed"],
+    [502, "BadGateway"],
+    [503, "IdentityUnavailable"],
+    [504, "WindowClosed"],
+  ])("an answer with status %i (%s) is retryable for every kind of item", (status, code) => {
+    const failure = new ApiError(code, status, "req");
+    for (const item of [record, edit, remove]) {
+      expect(classify(item, failure, { dependentDelete: false })).toBe("retryable");
+    }
+  });
+
+  it.each([400, 404, 409, 410, 422])("a %i with an unknown code is still terminal", (status) => {
+    expect(
+      classify(record, new ApiError("SomethingNew", status, "req"), { dependentDelete: false }),
+    ).toBe("terminal");
+  });
+
   it("anything that is not an ApiError is terminal: never retried forever, never silent", () => {
     expect(classify(record, new TypeError("boom"), { dependentDelete: false })).toBe("terminal");
   });

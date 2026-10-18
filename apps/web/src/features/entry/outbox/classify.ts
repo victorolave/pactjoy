@@ -1,3 +1,4 @@
+import { ApiError } from "../../../ports/api-error.ts";
 import type { OutboxItem } from "../../../ports/outbox-store.ts";
 import { toUiError } from "../../../shared/ui-error.ts";
 
@@ -17,8 +18,13 @@ export interface ClassifyContext {
   readonly dependentDelete: boolean;
 }
 
-/** Only the failure kind decides, so a new API code needs no change here: unknown ones are terminal. */
+/**
+ * The status speaks first: no answer (0), too many requests (429) or a server error (5xx) never
+ * drops an item, whatever code it carries. Otherwise the failure kind decides, so a new API code
+ * needs no change here: unknown ones are terminal.
+ */
 export function classify(item: OutboxItem, error: unknown, context: ClassifyContext): Outcome {
+  if (error instanceof ApiError && isTransient(error.status)) return "retryable";
   const { kind, code } = toUiError(error);
   const gone = code === "EntryDeleted" || code === "EntryNotFound";
   // Deleting what is already gone is the goal reached.
@@ -38,3 +44,5 @@ export function classify(item: OutboxItem, error: unknown, context: ClassifyCont
       return "terminal";
   }
 }
+
+const isTransient = (status: number): boolean => status === 0 || status === 429 || status >= 500;
