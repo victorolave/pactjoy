@@ -35,6 +35,12 @@ describe("Avatar", () => {
     expect(screen.getByRole("img")).toHaveTextContent("?");
   });
 
+  it("is named as a member who left when the account was deleted (empty name)", () => {
+    render(<Avatar name="" />);
+    const avatar = screen.getByRole("img", { name: "Miembro que salió" });
+    expect(avatar).toHaveTextContent("?");
+  });
+
   it("supports size 28 and 48 as string or number", () => {
     const { rerender } = render(<Avatar name="Andrea" size={48} />);
     let avatar = screen.getByRole("img", { name: "Andrea" });
@@ -68,6 +74,15 @@ describe("AvatarStack", () => {
     expect(screen.getAllByRole("img").map((img) => img.getAttribute("aria-label"))).toEqual([
       "Andrea",
       "Victor",
+    ]);
+  });
+
+  it("keeps one avatar for each of two members who left", () => {
+    render(<AvatarStack names={["Andrea", "", ""]} />);
+    expect(screen.getAllByRole("img").map((img) => img.getAttribute("aria-label"))).toEqual([
+      "Andrea",
+      "Miembro que salió",
+      "Miembro que salió",
     ]);
   });
 

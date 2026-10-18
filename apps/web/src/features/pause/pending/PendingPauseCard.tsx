@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useOnline } from "../../../context/connectivity-context.tsx";
 import type { PauseRequestDto } from "../../../ports/wire.ts";
 import { dayMonth } from "../../../shared/format.ts";
+import { memberName } from "../../../shared/member-name.ts";
 import { Badge } from "../../../ui/Badge.tsx";
 import { Button } from "../../../ui/Button.tsx";
 import { Card } from "../../../ui/Card.tsx";
@@ -68,7 +69,7 @@ export function PendingPauseCard({
             <ul className={styles.approvers}>
               {request.approvers.map((approver) => (
                 <li key={approver.memberId}>
-                  {`${approver.displayName}: ${responseText(approver.response)}`}
+                  {`${memberName(approver.displayName)}: ${responseText(approver.response)}`}
                 </li>
               ))}
             </ul>

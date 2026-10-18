@@ -242,6 +242,24 @@ describe("Circle tab with people (31a-lite)", () => {
     expect(members.getByRole("img", { name: "Andrea" })).toHaveTextContent("A");
   });
 
+  it("lists a member whose account was deleted as a member who left (ADR-0019)", async () => {
+    const pair = pairCircleFixture();
+    if (pair.circle === null) throw new Error("the pair fixture always has a circle");
+    const [andrea, ...rest] = pair.circle.members;
+    if (andrea === undefined) throw new Error("the pair fixture lists Andrea first");
+    renderApp({
+      path: "/circle",
+      myCircle: {
+        ...pair,
+        circle: { ...pair.circle, members: [{ ...andrea, displayName: "" }, ...rest] },
+      },
+    });
+    const members = within(await screen.findByRole("list", { name: "Miembros" }));
+    expect(members.getByText("Miembro que salió")).toBeInTheDocument();
+    expect(members.getByRole("img", { name: "Miembro que salió" })).toHaveTextContent("?");
+    expect(members.getByText("Tú")).toBeInTheDocument();
+  });
+
   it("shows the pact and the week of a running season", async () => {
     renderApp({ path: "/circle", myCircle: pairCircleFixture(ACTIVE) });
     expect(await screen.findByText("Pacto activo")).toBeInTheDocument();

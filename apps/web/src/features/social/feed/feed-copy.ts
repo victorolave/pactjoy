@@ -1,4 +1,5 @@
 import type { FeedItemDto, FeedMemberDto, FeedSubjectDto } from "../../../ports/wire.ts";
+import { isLeftMember } from "../../../shared/member-name.ts";
 import { amountText } from "../../../shared/row-labels.ts";
 import type { IconName } from "../../../ui/icon/Icon.tsx";
 import { glyphOf } from "../reactions/reaction-emojis.ts";
@@ -40,12 +41,14 @@ type Actor =
 
 function actorOf(memberId: string, members: readonly FeedMemberDto[]): Actor {
   const member = members.find((candidate) => candidate.id === memberId);
-  // A member who left arrives without a name; the same goes for one the feed does not list.
-  if (member === undefined || member.left || member.displayName === null) {
+  // A member who left arrives without a name (null), a deleted account with an empty one; the same
+  // goes for one the feed does not list.
+  const name = member?.displayName ?? null;
+  if (member === undefined || member.left || name === null || isLeftMember(name)) {
     return { kind: "left", name: LEFT_MEMBER, avatar: "?" };
   }
-  if (member.isYou) return { kind: "you", avatar: member.displayName };
-  return { kind: "peer", name: member.displayName, avatar: member.displayName };
+  if (member.isYou) return { kind: "you", avatar: name };
+  return { kind: "peer", name, avatar: name };
 }
 
 /** "Completaste X." for the viewer, "Andrea completó X." for anyone else. */

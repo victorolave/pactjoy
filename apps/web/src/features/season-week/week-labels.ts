@@ -1,5 +1,6 @@
 import type { WeekSummary } from "../../ports/wire.ts";
 import { pointsText } from "../../shared/format.ts";
+import { memberName } from "../../shared/member-name.ts";
 import { formatDecimal, targetText, unitLabel } from "../../shared/row-labels.ts";
 
 type Row = WeekSummary["commitments"][number];
@@ -86,7 +87,7 @@ export function circleLine(summary: WeekSummary): string | null {
   const points = (value: number | null) => (value === null ? "—" : `+${value}`);
   const viewer = summary.circle.find((member) => member.memberId === summary.viewerId);
   const peers = summary.circle.filter((member) => member.memberId !== summary.viewerId);
-  const parts = peers.map((peer) => `${peer.displayName} ${points(peer.points)}`);
+  const parts = peers.map((peer) => `${memberName(peer.displayName)} ${points(peer.points)}`);
   if (viewer !== undefined) parts.push(`tú ${points(viewer.points)}`);
   return `En el círculo: ${parts.join(" · ")}`;
 }

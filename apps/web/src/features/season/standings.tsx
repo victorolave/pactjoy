@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { SeasonProgress } from "../../ports/wire.ts";
+import { memberName } from "../../shared/member-name.ts";
 import { Avatar } from "../../ui/Avatar.tsx";
 import styles from "./Standings.module.css";
 
@@ -74,7 +75,7 @@ export function Standings({
                 {row.rank}
               </span>
               <Avatar name={row.displayName} size={28} />
-              <span className={styles.name}>{row.displayName}</span>
+              <span className={styles.name}>{memberName(row.displayName)}</span>
               <span className={styles.points}>{row.points} pts</span>
             </>
           );
@@ -82,8 +83,8 @@ export function Standings({
           if (!isPair && !row.isViewer && onNavigateToMember) {
             const accessibleName =
               row.rank !== null
-                ? `${row.rank}. ${row.displayName}, ${row.points} pts`
-                : `${row.displayName}, ${row.points} pts`;
+                ? `${row.rank}. ${memberName(row.displayName)}, ${row.points} pts`
+                : `${memberName(row.displayName)}, ${row.points} pts`;
             const hintId = `hint-season-member-${row.memberId}`;
 
             return (
@@ -97,7 +98,7 @@ export function Standings({
                 >
                   {content}
                   <span id={hintId} className={styles.visuallyHidden}>
-                    Ver la temporada de {row.displayName}
+                    Ver la temporada de {memberName(row.displayName)}
                   </span>
                 </button>
               </li>
@@ -128,7 +129,7 @@ export function Standings({
                 className={styles.peerLink}
                 onClick={() => onNavigateToMember?.(peerRow.memberId)}
               >
-                Ver la temporada de {peerRow.displayName}
+                Ver la temporada de {memberName(peerRow.displayName)}
               </button>
             </div>
           )}

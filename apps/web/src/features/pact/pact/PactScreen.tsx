@@ -6,6 +6,7 @@ import { ApiError } from "../../../ports/api-error.ts";
 import type { CommitmentDto, Serialized } from "../../../ports/wire.ts";
 import { addDays } from "../../../shared/date.ts";
 import { weekdayDay } from "../../../shared/format.ts";
+import { isLeftMember, memberName } from "../../../shared/member-name.ts";
 import { scheduleText, targetText } from "../../../shared/row-labels.ts";
 import { Avatar, AvatarStack } from "../../../ui/Avatar.tsx";
 import { Badge } from "../../../ui/Badge.tsx";
@@ -45,6 +46,13 @@ function formatShortDate(isoDate: string): string {
 function formatDateRange(startDate: string, lengthWeeks: number): string {
   const endDate = addDays(startDate, lengthWeeks * 7 - 1);
   return `${formatShortDate(startDate)} – ${formatShortDate(endDate)}`;
+}
+
+/** What a hidden commitment says about who can read it; nobody can once the owner is gone. */
+function hiddenDetail(displayName: string): string {
+  return isLeftMember(displayName)
+    ? "Los detalles son privados"
+    : `Solo ${displayName} ve los detalles`;
 }
 
 function formatMeasureDetail(measure: Serialized<MeasureView>): string {
@@ -113,7 +121,7 @@ export function PactScreen() {
 
   const startDate = season.actualStart ?? season.nominalStart;
   const otherMembers = circle.members.filter((m) => m.id !== viewerId);
-  const otherNames = otherMembers.map((m) => m.displayName).join(", ") || "tu círculo";
+  const otherNames = otherMembers.map((m) => memberName(m.displayName)).join(", ") || "tu círculo";
 
   // 14a Pact Closed celebration
   if (screenKind === "closed") {
@@ -194,7 +202,7 @@ export function PactScreen() {
                   <div key={member.id} className={styles.statusRow}>
                     <Avatar name={member.displayName} size="sm" />
                     <span className={styles.statusName}>
-                      {member.id === viewerId ? "Tú" : member.displayName}
+                      {member.id === viewerId ? "Tú" : memberName(member.displayName)}
                     </span>
                     <Badge
                       tone={isApproved ? "success" : "pending"}
@@ -304,7 +312,7 @@ export function PactScreen() {
               <div className={styles.memberHeader}>
                 <Avatar name={member.displayName} size="sm" />
                 <span className={styles.memberTitle}>
-                  {isYou ? "Tus compromisos" : member.displayName}
+                  {isYou ? "Tus compromisos" : memberName(member.displayName)}
                 </span>
                 <Badge
                   tone={isApproved ? "success" : "pending"}
@@ -320,7 +328,7 @@ export function PactScreen() {
                     const isHiddenOther = c.kind === "hidden";
                     const name = isHiddenOther ? "Meta privada" : (c.habit?.name ?? "Hábito");
                     const detail = isHiddenOther
-                      ? `Solo ${member.displayName} ve los detalles`
+                      ? hiddenDetail(member.displayName)
                       : formatMeasureDetail(c.measure);
                     const privacyTag = isPrivate ? "Privado" : "Visible";
 

@@ -111,4 +111,14 @@ describe("week labels (design 25a–c)", () => {
     });
     expect(circleLine(pending)).toBe("En el círculo: Andrea — · tú +96");
   });
+
+  it("circle line names a peer whose account was deleted as a member who left (ADR-0019)", () => {
+    const erased = weekSummary({
+      circle: [
+        { memberId: "member-gone", displayName: "", points: 87 },
+        { memberId: "member-victor", displayName: "Victor", points: 96 },
+      ],
+    });
+    expect(circleLine(erased)).toBe("En el círculo: Miembro que salió +87 · tú +96");
+  });
 });

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useDeviceStore } from "../../../context/device-store-context.tsx";
+import { memberName } from "../../../shared/member-name.ts";
 import { Button } from "../../../ui/Button.tsx";
 import { InlineMessage } from "../../../ui/InlineMessage.tsx";
 import { commitmentList, peersUnchangedText, perOpportunityText } from "../pause-format.ts";
@@ -54,7 +55,9 @@ export function RedistributedBanner() {
           : `Al pausar ${names[0]}, sus puntos pasaron de ${only.before} a ${only.after}.`
         : `Tu pausa cubre ${names.length === 0 ? "tus compromisos" : commitmentList(names)}: sus puntos se redistribuyeron entre las oportunidades que siguen activas.`;
     const peers = peersUnchangedText(
-      (circle.data?.circle?.members ?? []).filter((m) => !m.isYou).map((m) => m.displayName),
+      (circle.data?.circle?.members ?? [])
+        .filter((m) => !m.isYou)
+        .map((m) => memberName(m.displayName)),
     );
     const text = [lead, totalText(before, after), peers].filter(Boolean).join(" ");
     device.set(key, "1");

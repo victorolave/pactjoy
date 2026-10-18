@@ -35,6 +35,20 @@ describe("the requester's pending view (screen 27, PS-6, PS-7)", () => {
     ).toBeInTheDocument();
   });
 
+  it("lists an approver whose account was deleted as a member who left (ADR-0019)", () => {
+    renderCard(
+      pauseRequestFixture({
+        ...R1,
+        approvers: [
+          { memberId: "m-a", displayName: "Andrea", response: "approve" },
+          { memberId: "m-gone", displayName: "", response: null },
+        ],
+      }),
+    );
+    expect(screen.getByText(/^Andrea: /)).toBeInTheDocument();
+    expect(screen.getByText(/^Miembro que salió: /)).toBeInTheDocument();
+  });
+
   it("explains what happens meanwhile, and after a rejection", () => {
     renderCard();
     expect(

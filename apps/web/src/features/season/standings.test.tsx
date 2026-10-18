@@ -209,6 +209,50 @@ describe("Standings", () => {
     });
   });
 
+  describe("a member whose account was deleted (empty displayName, ADR-0019)", () => {
+    const erased = createEntry({
+      memberId: "member-gone",
+      displayName: "",
+      isViewer: false,
+      rank: 1,
+      points: 412,
+    });
+    const viewer = createEntry({ memberId: "member-victor", rank: 2, points: 400 });
+
+    it("names the row for a pair, with its points, avatar and the link to their season", () => {
+      render(
+        <Standings
+          standings={{ memberCount: 2, rows: [erased, viewer] }}
+          season={season}
+          calendar={calendar}
+        />,
+      );
+      expect(screen.getByText("Miembro que salió")).toBeInTheDocument();
+      expect(screen.getByText("412 pts")).toBeInTheDocument();
+      expect(screen.getByRole("img", { name: "Miembro que salió" })).toHaveTextContent("?");
+      expect(
+        screen.getByRole("button", { name: "Ver la temporada de Miembro que salió" }),
+      ).toBeInTheDocument();
+    });
+
+    it("names the row and its accessible description in a group", () => {
+      const other = createEntry({ memberId: "member-andrea", displayName: "Andrea", rank: 3 });
+      render(
+        <Standings
+          standings={{ memberCount: 3, rows: [erased, viewer, { ...other, isViewer: false }] }}
+          season={season}
+          calendar={calendar}
+          onNavigateToMember={vi.fn()}
+        />,
+      );
+      expect(
+        screen.getByRole("button", { name: "1. Miembro que salió, 412 pts" }),
+      ).toBeInTheDocument();
+      expect(screen.getByText("Ver la temporada de Miembro que salió")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "3. Andrea, 400 pts" })).toBeInTheDocument();
+    });
+  });
+
   describe("footer prop", () => {
     it("renders custom footer and hides points subtitle, gap copy, and peer link", () => {
       const rows = [
