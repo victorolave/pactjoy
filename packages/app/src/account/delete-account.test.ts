@@ -265,6 +265,63 @@ describe("deleteAccount after the data transaction", () => {
     },
   );
 
+  it("removes what a still-valid token wrote between the erasure and the identity deletion", async () => {
+    const world = await givenAccountWorld();
+    const { app } = world;
+    const late = {
+      ...deps(app),
+      identity: {
+        async deleteUser(id: typeof ANDREA.userId) {
+          // The old access token still works until the identity is gone.
+          await seedNotifications(app, {
+            devices: [
+              pushSubscriptionFixture({
+                id: pushSubscriptionId("d-late"),
+                userId: id,
+                endpoint: "https://web.push.apple.com/late",
+              }),
+            ],
+          });
+          await app.uow.transaction(async ({ habits }) => {
+            await habits.save(habitFixture({ id: habitId("h-late"), ownerId: id }), null);
+            return ok(undefined);
+          });
+          await app.identity.deleteUser(id);
+        },
+      },
+    };
+
+    const result = await deleteAccount(late, world.andrea, CONFIRM);
+
+    expect(result).toEqual(ok(undefined));
+    expect(await app.habits.listByOwner(world.andrea.userId)).toEqual([]);
+    expect(app.pushSubscriptions.all().map((d) => d.id)).not.toContain(
+      pushSubscriptionId("d-late"),
+    );
+    expect(app.identity.deleted).toEqual([world.andrea.userId]);
+  });
+
+  it("calls the identity admin before the photo purge", async () => {
+    const world = await givenAccountWorld();
+    const { app } = world;
+    let objectsWhenIdentityCalled = -1;
+    const spying = {
+      ...deps(app),
+      identity: {
+        async deleteUser(id: typeof ANDREA.userId) {
+          objectsWhenIdentityCalled = app.evidence.keys().length;
+          await app.identity.deleteUser(id);
+        },
+      },
+    };
+    expect(app.evidence.keys()).toHaveLength(1);
+
+    await deleteAccount(spying, world.andrea, CONFIRM);
+
+    expect(objectsWhenIdentityCalled).toBe(1);
+    expect(app.evidence.keys()).toEqual([]);
+  });
+
   it("is a no-op the second time: nothing is written and the identity call repeats", async () => {
     const world = await givenAccountWorld();
     await deleteAccount(deps(world.app), world.andrea, CONFIRM);

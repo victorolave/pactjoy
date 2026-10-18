@@ -108,13 +108,26 @@ export async function eraseAccount(
     await eraseMemberEncouragements(repos, memberIds);
   }
   const released = memberIds.length > 0 ? await releaseMemberPhotos(repos, memberIds) : [];
-  await eraseMemberNotifications(repos, userId, memberIds);
-  await repos.habits.deleteByOwner(userId);
+  await eraseUserOwned(repos, userId, memberIds);
 
   for (const season of seasons) {
     await hideCommitments(repos, season, memberIds);
   }
   return { released, dropped, memberships: circles.length, circlesDeleted };
+}
+
+/**
+ * The user-level deletes, keyed by the ORIGINAL user id: notices addressed to the person (and to
+ * their members, when given), their devices and their habits. `deleteAccount` repeats it with no
+ * members once the identity is gone, to sweep what the still-valid token wrote in between.
+ */
+export async function eraseUserOwned(
+  repos: Repositories,
+  userId: UserId,
+  memberIds: readonly MemberId[] = [],
+): Promise<void> {
+  await eraseMemberNotifications(repos, userId, memberIds);
+  await repos.habits.deleteByOwner(userId);
 }
 
 /**
