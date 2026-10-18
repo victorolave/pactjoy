@@ -5,6 +5,7 @@ import type {
   CarryOverError,
   CircleFeedError,
   CommitmentProgressError,
+  CommitmentReminderError,
   CommitmentStageError,
   CreateCircleError,
   CreateHabitError,
@@ -37,6 +38,7 @@ import type {
   SeasonResultsError,
   SeasonViewError,
   SendEncouragementError,
+  SetCommitmentReminderError,
   SkipBaselineError,
   StandingsError,
   SubmitReviewError,
@@ -96,6 +98,8 @@ export type AppError =
   | RemoveFeedReactionError
   | SendEncouragementError
   | DismissNudgeError
-  | PushSubscriptionError;
+  | PushSubscriptionError
+  | CommitmentReminderError
+  | SetCommitmentReminderError;
 
 export type AppErrorKind = AppError["kind"];

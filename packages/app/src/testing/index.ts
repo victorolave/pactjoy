@@ -32,6 +32,8 @@ export type { FixedOffsetTimeZoneOptions } from "./fixed-time-zone.ts";
 export { createFixedOffsetTimeZone } from "./fixed-time-zone.ts";
 export type { InMemoryCircleRepository } from "./in-memory-circle-repository.ts";
 export { createInMemoryCircleRepository } from "./in-memory-circle-repository.ts";
+export type { InMemoryCommitmentReminderRepository } from "./in-memory-commitment-reminder-repository.ts";
+export { createInMemoryCommitmentReminderRepository } from "./in-memory-commitment-reminder-repository.ts";
 export type { InMemoryEncouragementRepository } from "./in-memory-encouragement-repository.ts";
 export { createInMemoryEncouragementRepository } from "./in-memory-encouragement-repository.ts";
 export type { InMemoryEntryPhotoRepository } from "./in-memory-entry-photo-repository.ts";

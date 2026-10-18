@@ -16,6 +16,7 @@ import { FakeNotificationPermission } from "./testing/fake-notification-permissi
 import { FakePactJoyApi } from "./testing/fake-pactjoy-api.ts";
 import { FakePhotoUploader } from "./testing/fake-photo-uploader.ts";
 import { FakePushSubscription } from "./testing/fake-push-subscription.ts";
+import { FakeReminderNames } from "./testing/fake-reminder-names.ts";
 import { FakeSharing } from "./testing/fake-sharing.ts";
 import { FixedClock } from "./testing/fixed-clock.ts";
 import { activeTodayFixture, noCircleTodayFixture } from "./testing/fixtures/today.ts";
@@ -46,6 +47,7 @@ function deps(signedIn: boolean): AppDependencies {
     appInstall: new FakeAppInstall(),
     notifications: new FakeNotificationPermission(),
     push: new FakePushSubscription(),
+    reminderNames: new FakeReminderNames(),
     clock: new FixedClock(0),
     sessions: new SessionManager(auth, store, new FixedClock(0)),
     sessionEvents: createSessionEvents(),

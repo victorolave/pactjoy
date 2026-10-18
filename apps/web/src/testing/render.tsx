@@ -22,6 +22,7 @@ import { FakeNotificationPermission } from "./fake-notification-permission.ts";
 import { FakePactJoyApi } from "./fake-pactjoy-api.ts";
 import { FakePhotoUploader } from "./fake-photo-uploader.ts";
 import { FakePushSubscription } from "./fake-push-subscription.ts";
+import { FakeReminderNames } from "./fake-reminder-names.ts";
 import { FakeSharing } from "./fake-sharing.ts";
 import { FixedClock } from "./fixed-clock.ts";
 import { soloCircleFixture } from "./fixtures/circle.ts";
@@ -118,6 +119,7 @@ export interface RenderedApp extends RenderResult {
     readonly appInstall: FakeAppInstall;
     readonly notifications: FakeNotificationPermission;
     readonly push: FakePushSubscription;
+    readonly reminderNames: FakeReminderNames;
     readonly clock: FixedClock;
   };
 }
@@ -184,6 +186,7 @@ function createFakeDeps({
     appInstall: new FakeAppInstall({ standalone, platform, canPrompt }),
     notifications: new FakeNotificationPermission(notificationPermission),
     push,
+    reminderNames: new FakeReminderNames(),
     clock,
     sessions: new SessionManager(auth, store, new FixedClock(0)),
     sessionEvents: createSessionEvents(),

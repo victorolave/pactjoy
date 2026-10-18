@@ -18,6 +18,7 @@ import { FakeNotificationPermission } from "../testing/fake-notification-permiss
 import { FakePactJoyApi } from "../testing/fake-pactjoy-api.ts";
 import { FakePhotoUploader } from "../testing/fake-photo-uploader.ts";
 import { FakePushSubscription } from "../testing/fake-push-subscription.ts";
+import { FakeReminderNames } from "../testing/fake-reminder-names.ts";
 import { FakeSharing } from "../testing/fake-sharing.ts";
 import { FixedClock } from "../testing/fixed-clock.ts";
 import { MemoryStorage } from "../testing/memory-storage.ts";
@@ -52,6 +53,7 @@ function dependenciesFor(scenario: Scenario): AppDependencies {
     appInstall: new FakeAppInstall(),
     notifications: new FakeNotificationPermission(),
     push: new FakePushSubscription(),
+    reminderNames: new FakeReminderNames(),
     clock: new FixedClock(0),
     sessions: new SessionManager(auth, store, new FixedClock(0)),
     sessionEvents: createSessionEvents(),

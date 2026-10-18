@@ -8,6 +8,7 @@ import type { NotificationOutboxRepository } from "../notifications/notification
 import type { PushSubscriptionRepository } from "../notifications/push-subscription.repository.ts";
 import type { PauseRequestRepository } from "../pause/pause-request.repository.ts";
 import type { FeedReactionRepository } from "../reaction/feed-reaction.repository.ts";
+import type { CommitmentReminderRepository } from "../reminders/commitment-reminder.repository.ts";
 import type { ReviewRepository } from "../review/review.repository.ts";
 import type { SeasonClosureRepository } from "../season/closure/season-closure.repository.ts";
 import type { SeasonRepository } from "../season/season.repository.ts";
@@ -35,6 +36,8 @@ export interface Repositories {
   readonly pauses: PauseRequestRepository;
   /** Confined to `src/notifications/` (`notification-guard.test.ts`): an endpoint and its keys stay there. */
   readonly pushSubscriptions: PushSubscriptionRepository;
+  /** Owner-only: confined to `src/reminders/` (`reminder-guard.test.ts`), ADR-0017 addendum (D2). */
+  readonly reminders: CommitmentReminderRepository;
   /** Owner-only: read it only from `src/review/` (`review-guard.test.ts`), never for a peer. */
   readonly reviews: ReviewRepository;
   /** Decisions are owner-only: use it only from `src/season/closure/` (`closure-guard.test.ts`). */

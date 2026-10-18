@@ -2,6 +2,7 @@ import { findActiveMember } from "../circle/circle.ts";
 import { encouragementNotice } from "../encouragement/encouragement-notice.ts";
 import { isPauseStillPending, pausesEndingTomorrow } from "../pause/pause-notices.ts";
 import type { Repositories } from "../ports/repositories.ts";
+import { isReminderStillDue } from "../reminders/reminder-notices.ts";
 import { isReviewDue } from "../review/review-notices.ts";
 import type { Instant } from "../time/instant.ts";
 import type { TimeZone } from "../time/time-zone.port.ts";
@@ -61,6 +62,13 @@ export async function relevanceOf(
       break;
     case "seasonStarted":
       holds = season.status === "active";
+      break;
+    case "commitmentReminder":
+      holds = await isReminderStillDue(repos, context, {
+        memberId: notice.recipientMemberId,
+        commitmentId: notice.params.commitmentId,
+        forDate: notice.params.forDate,
+      });
       break;
     case "reviewDue":
       holds = await isReviewDue(
