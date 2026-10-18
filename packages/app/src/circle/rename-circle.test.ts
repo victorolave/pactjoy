@@ -30,6 +30,7 @@ describe("renameCircle", () => {
               status: "active",
               joinedAt: app.clock.now(),
               leftAt: null,
+              erasedAt: null,
             },
           ],
           version: created.value.version + 1,

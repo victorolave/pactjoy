@@ -15,6 +15,7 @@ describe("memberFixture", () => {
       status: "active",
       joinedAt: instant(1_700_000_000_000),
       leftAt: null,
+      erasedAt: null,
     });
 
     const left = memberFixture({

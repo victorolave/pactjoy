@@ -24,6 +24,7 @@ const member = (n: number) => ({
   status: "active" as const,
   joinedAt: T0,
   leftAt: null,
+  erasedAt: null,
 });
 const invite = (code: string, by: number, expiresAt = instant(T0 + 600_000)) => ({
   code: inviteCode(code),
@@ -72,6 +73,43 @@ const rawInsertMember = (c: Circle, n: number, position: number) =>
   );
 
 describe("circle repository on Postgres", () => {
+  it("E: round-trips erasedAt through saves without resurrecting the auth identity", async () => {
+    const initial = circle(1);
+    await save(initial, null);
+    const erased = {
+      ...initial,
+      version: 1,
+      archivedAt: T0,
+      members: initial.members.map((m) => ({
+        ...m,
+        status: "left" as const,
+        leftAt: T0,
+        erasedAt: T0,
+        displayName: "",
+        userId: userId(uuid(0x999)),
+      })),
+    };
+    await save(erased, 0);
+    expect(await load(initial)).toEqual(erased);
+    const rows = await admin.unsafe(
+      "select erased_at from pactjoy.circle_members where circle_id = $1",
+      [initial.id],
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.erased_at).not.toBeNull();
+  });
+
+  it("E: rejects an erased timestamp on an active member", async () => {
+    const initial = circle(1);
+    await save(initial, null);
+    const error = await admin
+      .unsafe("update pactjoy.circle_members set erased_at = now() where circle_id = $1", [
+        initial.id,
+      ])
+      .catch((e: unknown) => e);
+    expect(error).toMatchObject({ code: "23514", constraint_name: "circle_members_erased_shape" });
+  });
+
   it("CP-S7: members come back by position, not by physical row order", async () => {
     const c = circle(1, { members: [] });
     await save(c, null);

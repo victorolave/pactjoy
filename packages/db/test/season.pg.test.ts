@@ -37,6 +37,7 @@ const circle: Circle = {
       status: "active",
       joinedAt: T0,
       leftAt: null,
+      erasedAt: null,
     },
   ],
   invite: null,

@@ -20,6 +20,8 @@ export interface Member {
   readonly status: "active" | "left";
   readonly joinedAt: Instant;
   readonly leftAt: Instant | null;
+  /** Account erasure tombstone; ordinary departure keeps this null (ADR-0019). */
+  readonly erasedAt: Instant | null;
 }
 
 /**
@@ -106,6 +108,7 @@ export function buildCircle(input: BuildCircleInput): Result<Circle, BuildCircle
         status: "active",
         joinedAt: input.now,
         leftAt: null,
+        erasedAt: null,
       },
     ],
     invite: null,

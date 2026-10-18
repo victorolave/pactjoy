@@ -47,6 +47,7 @@ const member = (who: typeof REQUESTER, name: string) => ({
   status: "active" as const,
   joinedAt: NOW,
   leftAt: null,
+  erasedAt: null,
 });
 const CIRCLE = {
   id: circleId(uuid(0xc1)),

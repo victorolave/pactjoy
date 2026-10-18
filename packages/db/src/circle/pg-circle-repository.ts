@@ -25,6 +25,7 @@ interface MemberRow {
   status: "active" | "left";
   joined_at: Instant;
   left_at: Instant | null;
+  erased_at: Instant | null;
 }
 interface InviteRow {
   code: string;
@@ -59,7 +60,7 @@ export function createPgCircleRepository(exec: SqlExecutor, mode: BindMode): Cir
   async function load(row: CircleRow | undefined): Promise<Circle | null> {
     if (!row) return null;
     const members = await exec.query<MemberRow>(
-      "select id, user_id, display_name, status, joined_at, left_at from pactjoy.circle_members where circle_id = $1 order by position",
+      "select id, user_id, display_name, status, joined_at, left_at, erased_at from pactjoy.circle_members where circle_id = $1 order by position",
       [row.id],
     );
     const invites = await exec.query<InviteRow>(
@@ -78,6 +79,7 @@ export function createPgCircleRepository(exec: SqlExecutor, mode: BindMode): Cir
           status: m.status,
           joinedAt: m.joined_at,
           leftAt: m.left_at,
+          erasedAt: m.erased_at,
         }),
       ),
       invite: invite
@@ -158,11 +160,11 @@ export function createPgCircleRepository(exec: SqlExecutor, mode: BindMode): Cir
       }
       if (circle.members.length > 0) {
         const values = circle.members.map((_, i) => {
-          const n = i * 8;
-          return `($${n + 1}, $${n + 2}, $${n + 3}, $${n + 4}, $${n + 5}, $${n + 6}, $${n + 7}::timestamptz, $${n + 8}::timestamptz)`;
+          const n = i * 9;
+          return `($${n + 1}, $${n + 2}, $${n + 3}, $${n + 4}, $${n + 5}, $${n + 6}, $${n + 7}::timestamptz, $${n + 8}::timestamptz, $${n + 9}::timestamptz)`;
         });
         await exec.query(
-          `insert into pactjoy.circle_members (id, circle_id, position, user_id, display_name, status, joined_at, left_at) values ${values.join(", ")}`,
+          `insert into pactjoy.circle_members (id, circle_id, position, user_id, display_name, status, joined_at, left_at, erased_at) values ${values.join(", ")}`,
           circle.members.flatMap((m, position) => [
             m.id,
             circle.id,
@@ -172,6 +174,7 @@ export function createPgCircleRepository(exec: SqlExecutor, mode: BindMode): Cir
             m.status,
             iso(m.joinedAt),
             isoOrNull(m.leftAt),
+            isoOrNull(m.erasedAt),
           ]),
         );
       }

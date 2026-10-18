@@ -43,6 +43,7 @@ export interface MemberFixtureOptions {
   readonly status?: "active" | "left";
   readonly joinedAt?: Instant;
   readonly leftAt?: Instant | null;
+  readonly erasedAt?: Instant | null;
 }
 
 /** Builds a {@link Member} for test setup, bypassing use-case validation (unlike `circle.ts`'s `buildCircle`). */
@@ -54,6 +55,7 @@ export function memberFixture(options: MemberFixtureOptions): Member {
     status: options.status ?? "active",
     joinedAt: options.joinedAt ?? DEFAULT_INSTANT,
     leftAt: options.leftAt ?? null,
+    erasedAt: options.erasedAt ?? null,
   };
 }
 
