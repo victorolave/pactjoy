@@ -1,5 +1,6 @@
 import type { TodayRow } from "@pactjoy/app";
 import type { ReactNode } from "react";
+import type { PendingKind } from "../../entry/index.ts";
 import { RowPauseActions } from "../../pause/index.ts";
 import { DayRow } from "./DayRow.tsx";
 import { PausedRow } from "./PausedRow.tsx";
@@ -13,9 +14,17 @@ export interface TodayRowCardProps {
   readonly below?: ReactNode;
   /** The tap's own fill, before the server's row shows the entry: a day row looks registered. */
   readonly optimisticDone?: boolean;
+  /** A change waiting on the phone for this row (design 15g): its line and badge. */
+  readonly pending?: PendingKind | undefined;
 }
 
-export function TodayRowCard({ row, action, below, optimisticDone = false }: TodayRowCardProps) {
+export function TodayRowCard({
+  row,
+  action,
+  below,
+  optimisticDone = false,
+  pending,
+}: TodayRowCardProps) {
   const { state } = row.opportunity;
   if (state === "paused" || state === "onHold") return <PausedRow row={row} />;
   const writable =
@@ -45,8 +54,8 @@ export function TodayRowCard({ row, action, below, optimisticDone = false }: Tod
     ...(underneath === undefined ? {} : { below: underneath }),
   };
   return row.kind === "day" ? (
-    <DayRow row={row} optimisticDone={optimisticDone} {...controls} />
+    <DayRow row={row} optimisticDone={optimisticDone} pending={pending} {...controls} />
   ) : (
-    <WeekRow row={row} {...controls} />
+    <WeekRow row={row} pending={pending} {...controls} />
   );
 }

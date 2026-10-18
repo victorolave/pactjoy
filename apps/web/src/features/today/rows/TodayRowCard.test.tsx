@@ -81,6 +81,52 @@ describe("TodayRowCard routing (TO-R5)", () => {
   });
 });
 
+describe("changes waiting on the phone (OE-R7, design 15g)", () => {
+  const localDone = dayRowFixture({
+    entries: [entryFixture({ kind: "done" }, { entryId: "local:a" as never })],
+  });
+
+  it("a pending record says so under the title and carries the badge, with no points", () => {
+    const earned = dayRowFixture({
+      ...localDone,
+      points: { ...localDone.points, earned: 8 },
+    });
+    render(<TodayRowCard row={earned} pending="record" />);
+    expect(screen.getByText("Registrado en este teléfono")).toBeInTheDocument();
+    expect(screen.getByText("Pendiente de sincronizar")).toBeInTheDocument();
+    expect(screen.queryByText(/pts?$/)).not.toBeInTheDocument();
+    expect(screen.queryByText("Registrado hoy")).not.toBeInTheDocument();
+  });
+
+  it("a pending edit keeps the server's points and says the change is on the phone", () => {
+    const logged = weekRowFixture({
+      points: { ...weekRowFixture().points, earned: 12 },
+    });
+    render(<TodayRowCard row={logged} pending="edit" />);
+    expect(screen.getByText("Cambio guardado en este teléfono")).toBeInTheDocument();
+    expect(screen.getByText("Pendiente de sincronizar")).toBeInTheDocument();
+    expect(screen.getByText("+12 pts")).toBeInTheDocument();
+  });
+
+  it("a pending delete says it was deleted on the phone", () => {
+    render(<TodayRowCard row={dayRowFixture()} pending="delete" />);
+    expect(screen.getByText("Borrado en este teléfono")).toBeInTheDocument();
+    expect(screen.getByText("Pendiente de sincronizar")).toBeInTheDocument();
+  });
+
+  it("shows neither the line nor the badge when nothing is pending", () => {
+    render(<TodayRowCard row={dayRowFixture()} />);
+    expect(screen.queryByText("Pendiente de sincronizar")).not.toBeInTheDocument();
+    expect(screen.queryByText(/en este teléfono/)).not.toBeInTheDocument();
+  });
+
+  it("an open day row with a pending record looks done (the filled circle's row)", () => {
+    render(<TodayRowCard row={localDone} pending="record" />);
+    const glyph = screen.getByRole("article").querySelector('[data-tone="done"]');
+    expect(glyph).not.toBeNull();
+  });
+});
+
 describe("week row (TO-R4)", () => {
   it("shows sessions done of target and today's bar for timesPerWeek (TO-S7)", () => {
     show(weekRowFixture());

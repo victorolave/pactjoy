@@ -14,8 +14,7 @@ import { renderApp } from "../../testing/render.tsx";
 import { seedPersistedToday } from "../../testing/seed-persisted-today.ts";
 
 const NETWORK = () => new ApiError("NetworkError", 0, null);
-const OFFLINE =
-  "Sin conexión. Estás viendo lo último que se guardó; para registrar necesitas conexión.";
+const OFFLINE = "Sin conexión. Puedes registrar; se enviará al volver.";
 
 const withRows = () => activeTodayFixture({ rows: [dayRowFixture({ habitName: "Meditar" })] });
 

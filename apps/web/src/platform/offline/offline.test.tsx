@@ -1,6 +1,7 @@
 import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
+import { ApiError } from "../../ports/api-error.ts";
 import { meditation, quantity, reading } from "../../testing/fixtures/edit-rows.ts";
 import {
   activeTodayFixture,
@@ -11,8 +12,8 @@ import {
 } from "../../testing/fixtures/today.ts";
 import { renderApp } from "../../testing/render.tsx";
 
-const OFFLINE =
-  "Sin conexión. Estás viendo lo último que se guardó; para registrar necesitas conexión.";
+const OFFLINE = "Sin conexión. Puedes registrar; se enviará al volver.";
+const SYNCING = "Enviando lo que registraste sin conexión…";
 
 const openRows = () => [
   dayRowFixture({ habitName: "Meditar" }),
@@ -24,11 +25,41 @@ const openRows = () => [
 ];
 
 describe("offline banner (TO-R10)", () => {
-  it("says there is no connection, and never claims anything is pending", async () => {
+  it("says there is no connection and that registering is still possible (OE-R9.S1)", async () => {
     renderApp({ online: false, today: activeTodayFixture({ rows: openRows() }) });
-    const banner = await screen.findByText(OFFLINE);
-    expect(banner).toBeInTheDocument();
-    expect(screen.queryByText(/se enviará|pendiente|al volver/i)).not.toBeInTheDocument();
+    expect(await screen.findByText(OFFLINE)).toBeInTheDocument();
+    expect(screen.queryByText(/necesitas conexión/)).not.toBeInTheDocument();
+    expect(screen.queryByText(SYNCING)).not.toBeInTheDocument();
+  });
+
+  it("says it is sending what was registered offline, until the queue is empty (OE-R9.S2)", async () => {
+    const { deps } = renderApp({
+      online: false,
+      today: activeTodayFixture({ rows: openRows() }),
+    });
+    await userEvent.click(await screen.findByRole("button", { name: "Registrar Meditar" }));
+    await waitFor(() => expect(deps.outboxStore.load("user-1").items).toHaveLength(1));
+    const release = deps.api.hold("recordEntry");
+    act(() => deps.connectivity.setOnline(true));
+    expect(await screen.findByText(SYNCING)).toBeInTheDocument();
+    expect(screen.queryByText(OFFLINE)).not.toBeInTheDocument();
+    release();
+    await waitFor(() => expect(screen.queryByText(SYNCING)).not.toBeInTheDocument());
+    expect(deps.outboxStore.load("user-1").items).toEqual([]);
+  });
+
+  it("does not claim to be sending when a retryable failure stopped the replay", async () => {
+    const { deps } = renderApp({
+      online: false,
+      today: activeTodayFixture({ rows: openRows() }),
+    });
+    await userEvent.click(await screen.findByRole("button", { name: "Registrar Meditar" }));
+    await waitFor(() => expect(deps.outboxStore.load("user-1").items).toHaveLength(1));
+    deps.api.failNext("recordEntry", new ApiError("ServiceUnavailable", 503, null));
+    act(() => deps.connectivity.setOnline(true));
+    await waitFor(() => expect(deps.api.recordAttempts).toHaveLength(1));
+    await waitFor(() => expect(screen.queryByText(SYNCING)).not.toBeInTheDocument());
+    expect(deps.outboxStore.load("user-1").items).toHaveLength(1);
   });
 
   it("shows the sin-conexion illustration with the banner", async () => {

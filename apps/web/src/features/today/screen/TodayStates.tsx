@@ -6,11 +6,12 @@ import { Card } from "../../../ui/Card.tsx";
 import { InlineMessage } from "../../../ui/InlineMessage.tsx";
 import { Icon } from "../../../ui/icon/Icon.tsx";
 import { Illustration, type IllustrationName } from "../../../ui/Placeholder.tsx";
-import { EntrySheetHost } from "../../entry/index.ts";
+import { EntrySheetHost, PENDING_FOOTNOTE } from "../../entry/index.ts";
 import { EndsTomorrowBanner, PauseTodayAction } from "../../pause/index.ts";
 import { ReviewTodayCard } from "../../review/index.ts";
 import { SeasonCloseTodayCard } from "../../season-close/index.ts";
 import { TodayActivity } from "../activity/TodayActivity.tsx";
+import { usePendingMarks } from "../pending-marks.ts";
 import { PendingYesterday } from "../pending-yesterday/PendingYesterday.tsx";
 import { RowWithControls } from "../rows/RowWithControls.tsx";
 import { SeasonCard } from "../season/SeasonCard.tsx";
@@ -218,6 +219,7 @@ export function RunningToday({
 }) {
   const { forToday, otherDays, week } = model.sections;
   const showDayState = model.kind === "active";
+  const waiting = usePendingMarks().count > 0;
   return (
     <TodayDateContext.Provider value={{ today: model.today, refDate: model.refDate }}>
       <RunningHeader model={model} />
@@ -260,6 +262,7 @@ export function RunningToday({
           ))}
         </Section>
       )}
+      {waiting && <p className={styles.footnote}>{PENDING_FOOTNOTE}</p>}
       {showDayState && <PauseTodayAction />}
       <TodayActivity />
       <SeasonCard model={model.season} />

@@ -12,6 +12,7 @@ import {
 import { useTodayDates } from "../../../shared/today-date-context.tsx";
 import { ProgressBar } from "../../../ui/ProgressBar.tsx";
 import { Tag } from "../../../ui/Tag.tsx";
+import type { PendingKind } from "../../entry/index.ts";
 import type { WeekTodayRow } from "../today-view-model.ts";
 import { RowFrame } from "./RowFrame.tsx";
 import { SessionBar } from "./SessionBar.tsx";
@@ -55,10 +56,12 @@ export function WeekRow({
   row,
   action,
   below,
+  pending,
 }: {
   readonly row: WeekTodayRow;
   readonly action?: ReactNode;
   readonly below?: ReactNode;
+  readonly pending?: PendingKind | undefined;
 }) {
   const { progress } = row;
   const dates = useTodayDates();
@@ -75,6 +78,7 @@ export function WeekRow({
       badges={row.privacy === "private" ? <Tag>Privado</Tag> : undefined}
       points={row.points.earned}
       action={action}
+      pending={pending}
       below={
         <>
           {progress === null ? undefined : barOf(row, progress)}

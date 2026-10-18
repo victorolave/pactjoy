@@ -1,15 +1,19 @@
-import type { ReactNode } from "react";
+import type { TodayView } from "@pactjoy/app";
+import { type ReactNode, useMemo } from "react";
 import { useOnline } from "../../../context/connectivity-context.tsx";
-import { OfflineBanner } from "../../../platform/offline/OfflineBanner.tsx";
+import { OfflineBanner, SyncingBanner } from "../../../platform/offline/OfflineBanner.tsx";
 import { ApiError } from "../../../ports/api-error.ts";
 import { longDate } from "../../../shared/format.ts";
 import { toUiError } from "../../../shared/ui-error.ts";
 import { Button } from "../../../ui/Button.tsx";
 import { Icon } from "../../../ui/icon/Icon.tsx";
+import { overlayToday, useOutboxReplaying, useOutboxState } from "../../entry/index.ts";
 import { useReminderNamesSync } from "../../notifications/index.ts";
+import { PendingMarksContext } from "../pending-marks.ts";
 import { useToday } from "../queries.ts";
 import { TodayRowSeasonContext } from "../rows/row-navigation.ts";
 import { type TodayModel, toTodayModel } from "../today-view-model.ts";
+import { OutboxNotices } from "./OutboxNotices.tsx";
 import { TodayClosedWeek } from "./TodayClosedWeek.tsx";
 import styles from "./TodayScreen.module.css";
 import { TodaySkeleton } from "./TodaySkeleton.tsx";
@@ -112,12 +116,40 @@ export function TodayScreen() {
   const connectionLost =
     !online || (today.isError && toUiError(today.error).code === "NetworkError");
   return (
+    <TodayWithData
+      data={today.data}
+      localToday={today.localToday}
+      connectionLost={connectionLost}
+    />
+  );
+}
+
+/**
+ * The server's Today with what is waiting on the phone laid over it (design 15g). The banner says
+ * "sin conexión" while the connection is lost and "enviando" while the queue is being sent.
+ */
+function TodayWithData({
+  data,
+  localToday,
+  connectionLost,
+}: {
+  readonly data: TodayView;
+  readonly localToday: string | null;
+  readonly connectionLost: boolean;
+}) {
+  const { items } = useOutboxState();
+  const sending = useOutboxReplaying();
+  const { view, marks } = useMemo(() => overlayToday(data, items), [data, items]);
+  return (
     <div className={styles.screen}>
-      {connectionLost && <OfflineBanner />}
-      <TodayContent
-        model={toTodayModel(today.data)}
-        banner={<TodayClosedWeek view={today.data} localToday={today.localToday} />}
-      />
+      {connectionLost ? <OfflineBanner /> : sending && <SyncingBanner />}
+      <OutboxNotices />
+      <PendingMarksContext.Provider value={marks}>
+        <TodayContent
+          model={toTodayModel(view)}
+          banner={<TodayClosedWeek view={view} localToday={localToday} />}
+        />
+      </PendingMarksContext.Provider>
     </div>
   );
 }

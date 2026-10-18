@@ -11,7 +11,7 @@ import { InlineMessage } from "../../../ui/InlineMessage.tsx";
 import { Sheet } from "../../../ui/Sheet.tsx";
 import { Tag } from "../../../ui/Tag.tsx";
 import styles from "../entry.module.css";
-import { OFFLINE_SAVE_LINE, QUEUED_DELETED, QUEUED_SAVED } from "../entry-messages.ts";
+import { OFFLINE_SAVE_LINE, QUEUED_SAVED } from "../entry-messages.ts";
 import { Confirmation } from "../feedback/Confirmation.tsx";
 import { useEarnedGain } from "../feedback/use-earned-gain.ts";
 import { LimitGrid } from "../limit/LimitGrid.tsx";
@@ -105,11 +105,10 @@ function EntryEditor({
   useEffect(() => {
     if (rejected) photo.reject();
   }, [rejected, edit.problem]);
-  // A delete closes the sheet and says so in a toast: the entry is gone, so there is nothing to edit.
+  // A delete closes the sheet (its hook says so in a toast): the entry is gone, nothing to edit.
   // biome-ignore lint/correctness/useExhaustiveDependencies: runs once, when the deletion lands
   useEffect(() => {
     if (remove.deleted === null) return;
-    toasts.show({ message: remove.queued ? QUEUED_DELETED : "Registro borrado." });
     onClose();
   }, [remove.deleted]);
   if (edit.saved !== null) {

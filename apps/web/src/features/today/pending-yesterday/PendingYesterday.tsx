@@ -1,11 +1,13 @@
 import type { PendingYesterdayItem, TodayEntry } from "@pactjoy/app";
 import { weekdayDay } from "../../../shared/format.ts";
 import { quantityText } from "../../../shared/row-labels.ts";
+import { Badge } from "../../../ui/Badge.tsx";
 import { Card } from "../../../ui/Card.tsx";
 import { IconButton } from "../../../ui/IconButton.tsx";
 import { InlineMessage } from "../../../ui/InlineMessage.tsx";
 import { Icon } from "../../../ui/icon/Icon.tsx";
-import { CheckCircle, useEntrySheet, useOneTap } from "../../entry/index.ts";
+import { CheckCircle, PENDING_BADGE, useEntrySheet, useOneTap } from "../../entry/index.ts";
+import { usePendingMarks } from "../pending-marks.ts";
 import type { YesterdayRegistered } from "../today-view-model.ts";
 import styles from "./PendingYesterday.module.css";
 
@@ -78,6 +80,8 @@ function RegisteredItem({ registered }: { readonly registered: YesterdayRegister
   const sheet = useEntrySheet();
   const { row, entry } = registered;
   const edited: TodayEntry = entry;
+  // Queued on the phone: it is not on the server yet.
+  const pending = usePendingMarks().entries.get(entry.entryId);
   return (
     <div className={styles.entry}>
       <div className={styles.line}>
@@ -86,6 +90,11 @@ function RegisteredItem({ registered }: { readonly registered: YesterdayRegister
           <div
             className={styles.day}
           >{`${weekdayDay(edited.forDate)} · ${stateOf(registered)}`}</div>
+          {pending !== undefined && (
+            <Badge tone="pending" icon="cloud-off">
+              {PENDING_BADGE}
+            </Badge>
+          )}
         </div>
         <IconButton
           icon="pencil"

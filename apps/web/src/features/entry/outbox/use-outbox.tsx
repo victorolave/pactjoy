@@ -60,6 +60,15 @@ export function useOutbox(): Outbox | null {
 
 const NO_SUBSCRIPTION = () => () => undefined;
 
+/** Whether a replay is sending queued items right now (the "syncing" line); false while signed out. */
+export function useOutboxReplaying(): boolean {
+  const outbox = useOutbox();
+  return useSyncExternalStore(
+    outbox === null ? NO_SUBSCRIPTION : (notify) => outbox.subscribe(notify),
+    () => outbox?.replaying() ?? false,
+  );
+}
+
 /** The outbox's items and notices, re-rendering when they change; empty while signed out. */
 export function useOutboxState(): OutboxState {
   const outbox = useOutbox();

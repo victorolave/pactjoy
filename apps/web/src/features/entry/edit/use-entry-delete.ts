@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
+import { useToasts } from "../../../context/toast-context.tsx";
 import { toUiError } from "../../../shared/ui-error.ts";
-import { entryFailure } from "../entry-messages.ts";
+import { entryFailure, QUEUED_DELETED } from "../entry-messages.ts";
 import type { EntryProblem } from "../quantity/use-quantity-entry.ts";
 import { type EntryContext, useDeleteEntry } from "../queries.ts";
 
@@ -8,15 +9,18 @@ export interface EntryDelete {
   readonly pending: boolean;
   /** What to confirm once the entry is gone; null until then. */
   readonly deleted: string | null;
-  /** The deletion was kept on the phone, to be sent when the connection is back. */
-  readonly queued: boolean;
   readonly problem: EntryProblem | null;
   remove(confirmation: string): void;
 }
 
+/**
+ * Deletes one entry. The toast that says so belongs to the mutation, not to the sheet: a deletion
+ * kept on the phone hides the entry at once, which can close the sheet before this component sees
+ * the answer.
+ */
 export function useEntryDelete(entryId: string, context: EntryContext): EntryDelete {
+  const toasts = useToasts();
   const [deleted, setDeleted] = useState<string | null>(null);
-  const [queued, setQueued] = useState(false);
   const [problem, setProblem] = useState<EntryProblem | null>(null);
   const removing = useRef(false);
   const confirmation = useRef("");
@@ -25,7 +29,7 @@ export function useEntryDelete(entryId: string, context: EntryContext): EntryDel
     {
       onSuccess: (outcome) => {
         removing.current = false;
-        setQueued(outcome.queued);
+        toasts.show({ message: outcome.queued ? QUEUED_DELETED : "Registro borrado." });
         setDeleted(confirmation.current);
       },
       onError: (error) => {
@@ -47,5 +51,5 @@ export function useEntryDelete(entryId: string, context: EntryContext): EntryDel
     del.mutate(entryId);
   };
 
-  return { pending: del.isPending, deleted, queued, problem, remove };
+  return { pending: del.isPending, deleted, problem, remove };
 }

@@ -14,6 +14,7 @@ import {
   useOneTap,
   useUndoEntry,
 } from "../../entry/index.ts";
+import { usePendingMarks } from "../pending-marks.ts";
 import styles from "./rows.module.css";
 import { TodayRowCard } from "./TodayRowCard.tsx";
 
@@ -32,7 +33,12 @@ export function RowWithControls({
   const dates = useTodayDates();
   const sheet = useEntrySheet();
   const [confirmingUndo, setConfirmingUndo] = useState(false);
-  const { state } = row.opportunity;
+  const pending = usePendingMarks().rows.get(row.commitmentId);
+  // A registro deleted on the phone leaves the row open to record again, as the server will show it.
+  const state =
+    pending === "delete" && row.entries.length === 0 && row.opportunity.state === "logged"
+      ? "open"
+      : row.opportunity.state;
   const windowOpen =
     (state === "open" || state === "logged") && !(row.kind === "day" && !row.scheduledToday);
   const isDone = row.kind === "day" && row.measure.unit === "done";
@@ -74,6 +80,7 @@ export function RowWithControls({
       <TodayRowCard
         row={row}
         optimisticDone={oneTap.optimisticDone}
+        pending={pending}
         action={
           <>
             {offersCircle && (
