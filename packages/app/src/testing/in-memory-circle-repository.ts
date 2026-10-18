@@ -4,7 +4,7 @@ import { ConcurrencyConflict } from "../shared/errors.ts";
 import type { CircleId, UserId } from "../shared/ids.ts";
 
 interface StagedWrite {
-  readonly circle: Circle;
+  readonly circle: Circle | null;
   readonly expectedVersion: number | null;
 }
 
@@ -56,6 +56,12 @@ function findActiveByUser(store: ReadonlyMap<CircleId, Circle>, userId: UserId):
   return null;
 }
 
+function listByUser(store: ReadonlyMap<CircleId, Circle>, userId: UserId): Circle[] {
+  return [...store.values()]
+    .filter((circle) => circle.members.some((member) => member.userId === userId))
+    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+}
+
 /**
  * A5 / CM-18: one active membership per user across the whole `view`. Throws
  * the same `ConcurrencyConflict` that Postgres's unique partial index
@@ -99,6 +105,15 @@ export function createInMemoryCircleRepository(): InMemoryCircleRepository {
       return findActiveByUser(store, userId);
     },
 
+    async listByUser(userId) {
+      return listByUser(store, userId);
+    },
+
+    async delete(id, expectedVersion) {
+      if (store.get(id)?.version !== expectedVersion) throw new ConcurrencyConflict();
+      store.delete(id);
+    },
+
     async guardVersion(): Promise<void> {
       // Read-set guards only mean something inside a transaction.
     },
@@ -118,13 +133,15 @@ export function createInMemoryCircleRepository(): InMemoryCircleRepository {
       const guards = new Map<CircleId, number>();
 
       function view(id: CircleId): Circle | null {
-        return staged.get(id)?.circle ?? store.get(id) ?? null;
+        const write = staged.get(id);
+        return write ? write.circle : (store.get(id) ?? null);
       }
 
       function viewMap(): Map<CircleId, Circle> {
         const merged = new Map(store);
         for (const [id, { circle }] of staged) {
-          merged.set(id, circle);
+          if (circle) merged.set(id, circle);
+          else merged.delete(id);
         }
         return merged;
       }
@@ -142,12 +159,32 @@ export function createInMemoryCircleRepository(): InMemoryCircleRepository {
           return findActiveByUser(viewMap(), userId);
         },
 
+        async listByUser(userId) {
+          return listByUser(viewMap(), userId);
+        },
+
+        async delete(id, expectedVersion) {
+          const earlier = staged.get(id);
+          if (earlier && view(id)?.version !== expectedVersion) throw new ConcurrencyConflict();
+          staged.set(id, {
+            circle: null,
+            expectedVersion: earlier ? earlier.expectedVersion : expectedVersion,
+          });
+        },
+
         async guardVersion(id: CircleId, expectedVersion: number): Promise<void> {
+          if (staged.get(id)?.circle === null) throw new ConcurrencyConflict();
           guards.set(id, expectedVersion);
         },
 
         async save(circle: Circle, expectedVersion: number | null): Promise<void> {
-          staged.set(circle.id, { circle, expectedVersion });
+          const earlier = staged.get(circle.id);
+          if (earlier && (view(circle.id)?.version ?? null) !== expectedVersion)
+            throw new ConcurrencyConflict();
+          staged.set(circle.id, {
+            circle,
+            expectedVersion: earlier ? earlier.expectedVersion : expectedVersion,
+          });
         },
       };
 
@@ -168,12 +205,13 @@ export function createInMemoryCircleRepository(): InMemoryCircleRepository {
           }
           assertOneActiveCirclePerUser(
             viewMap(),
-            [...staged.values()].map((write) => write.circle),
+            [...staged.values()].flatMap((write) => (write.circle ? [write.circle] : [])),
           );
         },
         apply(): void {
           for (const [id, { circle }] of staged) {
-            store.set(id, circle);
+            if (circle) store.set(id, circle);
+            else store.delete(id);
           }
         },
       };

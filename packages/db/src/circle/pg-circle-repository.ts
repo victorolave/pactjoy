@@ -46,6 +46,7 @@ const CIRCLE_COLUMNS = "c.id, c.name, c.created_at, c.archived_at, c.version";
  */
 export function createPgCircleRepository(exec: SqlExecutor, mode: BindMode): CircleRepository {
   const preWrite = new Map<string, number | null>();
+  const deleted = new Set<string>();
 
   /**
    * Torn reads: the three queries run at READ COMMITTED inside a write
@@ -116,6 +117,35 @@ export function createPgCircleRepository(exec: SqlExecutor, mode: BindMode): Cir
         [user],
       ),
 
+    async listByUser(user) {
+      const { rows } = await exec.query<CircleRow>(
+        `select ${CIRCLE_COLUMNS} from pactjoy.circles c where exists (select 1 from pactjoy.circle_members m where m.circle_id = c.id and m.user_id = $1) order by c.id`,
+        [user],
+      );
+      const circles: Circle[] = [];
+      for (const row of rows) {
+        const circle = await load(row);
+        if (circle) circles.push(circle);
+      }
+      return circles;
+    },
+
+    async delete(id, expectedVersion) {
+      const { rows } = await exec.query<{ version: number }>(
+        "select version from pactjoy.circles where id = $1 for no key update",
+        [id],
+      );
+      if (rows[0]?.version !== expectedVersion) throw new ConcurrencyConflict();
+      await exec.query("delete from pactjoy.circle_invites where circle_id = $1", [id]);
+      await exec.query("delete from pactjoy.circle_members where circle_id = $1", [id]);
+      const { rowCount } = await exec.query(
+        "delete from pactjoy.circles where id = $1 and version = $2",
+        [id, expectedVersion],
+      );
+      if (rowCount === 0) throw new ConcurrencyConflict();
+      deleted.add(id);
+    },
+
     /**
      * Eager read-set guard. `FOR NO KEY UPDATE`, never FOR SHARE (two guards
      * upgrading to a write deadlock) and not FOR UPDATE (it would block the
@@ -126,6 +156,7 @@ export function createPgCircleRepository(exec: SqlExecutor, mode: BindMode): Cir
      */
     async guardVersion(id, expectedVersion) {
       if (mode === "read") return;
+      if (deleted.has(id)) throw new ConcurrencyConflict();
       if (preWrite.has(id)) {
         if (preWrite.get(id) !== expectedVersion) throw new ConcurrencyConflict();
         return;
@@ -147,6 +178,7 @@ export function createPgCircleRepository(exec: SqlExecutor, mode: BindMode): Cir
           [...root, circle.version],
         );
         if (first) preWrite.set(circle.id, null);
+        deleted.delete(circle.id);
       } else {
         // Only mutable columns are SET: `id` is a key column (never SET, ADR-0010) and `created_at` never changes.
         const { rowCount } = await exec.query(

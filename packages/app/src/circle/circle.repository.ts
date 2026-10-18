@@ -34,6 +34,10 @@ export interface CircleRepository {
   findByInviteCode(code: string): Promise<Circle | null>;
   /** The circle `userId` is currently an active member of, if any (A5, CM-11). */
   findActiveByUser(userId: UserId): Promise<Circle | null>;
+  /** All memberships, active AND earlier departures, in ascending circle-id order. */
+  listByUser(userId: UserId): Promise<readonly Circle[]>;
+  /** Deletes invites and members before the root; caller removes every season first. Version checked. */
+  delete(id: CircleId, expectedVersion: number): Promise<void>;
   /**
    * Read-set guard (D5) for a circle this transaction only READ: at commit,
    * the transaction fails with `ConcurrencyConflict` if the stored version

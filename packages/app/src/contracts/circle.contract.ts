@@ -48,6 +48,105 @@ export function describeCircleRepositoryContract(
   describe(`CircleRepository contract (${name})`, () => {
     const getCircle = (uow: Uow) => read(uow, (c) => c.get(CIRCLE.id));
 
+    it("E: lists every membership, including earlier leavers, in stable id order", async () => {
+      const { uow } = await factory();
+      const owner = member(1, { status: "left", leftAt: instant(5) });
+      expect(await read(uow, (c) => c.listByUser(owner.userId))).toEqual([]);
+      const earlier = circleFixture({ id: CIRCLE.id, members: [owner] });
+      const current = circleFixture({
+        id: OTHER_CIRCLE_ID,
+        members: [member(2, { userId: owner.userId })],
+      });
+      await saveCircle(uow, current, null);
+      await saveCircle(uow, earlier, null);
+      expect(await read(uow, (c) => c.listByUser(owner.userId))).toEqual([earlier, current]);
+      expect(await read(uow, (c) => c.listByUser(member(9).userId))).toEqual([]);
+    });
+
+    it("E: deletes the root, membership and invite without touching another circle", async () => {
+      const { uow } = await factory();
+      const first = circleFixture({
+        id: CIRCLE.id,
+        members: [member(1)],
+        invite: invite("ERASE1", member(1)),
+      });
+      const other = circleFixture({ id: OTHER_CIRCLE_ID, members: [member(2)] });
+      await saveCircle(uow, first, null);
+      await saveCircle(uow, other, null);
+      await uow.transaction(async ({ circles }) => {
+        await circles.delete(first.id, 0);
+        expect(await circles.get(first.id)).toBeNull();
+        expect(await circles.listByUser(member(1).userId)).toEqual([]);
+        return ok(undefined);
+      });
+      expect(await getCircle(uow)).toBeNull();
+      expect(await read(uow, (c) => c.findByInviteCode("ERASE1"))).toBeNull();
+      expect(await read(uow, (c) => c.get(other.id))).toEqual(other);
+    });
+
+    it("E: rolls back a staged circle deletion", async () => {
+      const { uow } = await factory();
+      const circle = circleFixture({ id: CIRCLE.id, members: [member(1)] });
+      await saveCircle(uow, circle, null);
+      await uow.transaction(async ({ circles }) => {
+        await circles.delete(circle.id, 0);
+        expect(await circles.get(circle.id)).toBeNull();
+        return { ok: false as const, error: "abort" };
+      });
+      expect(await getCircle(uow)).toEqual(circle);
+    });
+
+    it("E: a stale or missing circle deletion conflicts without deleting children", async () => {
+      const { uow } = await factory();
+      const circle = circleFixture({
+        id: CIRCLE.id,
+        members: [member(1)],
+        invite: invite("ERASE2", member(1)),
+      });
+      await saveCircle(uow, circle, null);
+      const remove = (id: Circle["id"], version: number) =>
+        uow.transaction(async ({ circles }) => {
+          await circles.delete(id, version);
+          return ok(undefined);
+        });
+      await expect(remove(circle.id, 99)).rejects.toBeInstanceOf(ConcurrencyConflict);
+      await expect(remove(OTHER_CIRCLE_ID, 0)).rejects.toBeInstanceOf(ConcurrencyConflict);
+      expect(await getCircle(uow)).toEqual(circle);
+    });
+
+    it("E: repeated saves validate the current staged version but commit against the original", async () => {
+      const { uow } = await factory();
+      const circle = circleFixture({ id: CIRCLE.id, members: [member(1)] });
+      await saveCircle(uow, circle, null);
+      await uow.transaction(async ({ circles }) => {
+        await circles.save({ ...circle, name: "left first", version: 1 }, 0);
+        await circles.save({ ...circle, name: "erased second", version: 2 }, 1);
+        return ok(undefined);
+      });
+      expect(await getCircle(uow)).toEqual({ ...circle, name: "erased second", version: 2 });
+    });
+
+    it("E: insert-save-delete is atomic and a guard after delete conflicts", async () => {
+      const { uow } = await factory();
+      const circle = circleFixture({ id: CIRCLE.id, members: [member(1)] });
+      await uow.transaction(async ({ circles }) => {
+        await circles.save(circle, null);
+        await circles.save({ ...circle, version: 1 }, 0);
+        await circles.delete(circle.id, 1);
+        return ok(undefined);
+      });
+      expect(await getCircle(uow)).toBeNull();
+      await saveCircle(uow, circle, null);
+      await expect(
+        uow.transaction(async ({ circles }) => {
+          await circles.delete(circle.id, 0);
+          await circles.guardVersion(circle.id, 0);
+          return ok(undefined);
+        }),
+      ).rejects.toBeInstanceOf(ConcurrencyConflict);
+      expect(await getCircle(uow)).toEqual(circle);
+    });
+
     it("CP-S1: get returns null for an unknown id", async () => {
       const { uow } = await factory();
       expect(await getCircle(uow)).toBeNull();
