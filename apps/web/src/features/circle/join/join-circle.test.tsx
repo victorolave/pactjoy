@@ -240,18 +240,21 @@ describe("join a circle: errors (design 6b)", () => {
         window.dispatchEvent(new Event("online"));
       },
     ],
-  ])("never previews again on %s: each preview spends a join attempt (ADR-0020)", async (_, event) => {
-    const { deps } = renderJoin();
-    deps.api.failNext("previewInvite", new ApiError("InviteNotFound", 404, null));
-    await typeCode();
-    await screen.findByRole("alert");
-    expect(deps.api.calls.previewInvite).toBe(1);
+  ])(
+    "never previews again on %s: each preview spends a join attempt (ADR-0020)",
+    async (_, event) => {
+      const { deps } = renderJoin();
+      deps.api.failNext("previewInvite", new ApiError("InviteNotFound", 404, null));
+      await typeCode();
+      await screen.findByRole("alert");
+      expect(deps.api.calls.previewInvite).toBe(1);
 
-    event();
-    await new Promise((resolve) => setTimeout(resolve, 50));
+      event();
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
-    expect(deps.api.calls.previewInvite).toBe(1);
-  });
+      expect(deps.api.calls.previewInvite).toBe(1);
+    },
+  );
 
   it("too many attempts on join: says so and stays on the screen (ADR-0020)", async () => {
     const { deps, location } = renderJoin();
