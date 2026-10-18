@@ -155,6 +155,76 @@ describe("SessionProvider", () => {
     expect(onSessionEnd).toHaveBeenCalledTimes(1);
   });
 
+  it("a late 401 after the account was deleted keeps its notice instead of replacing it", async () => {
+    const auth = new FakeAuth();
+    const store = new MemoryTokenStore(fakeSession());
+    const events = createSessionEvents();
+    const onSessionEnd = vi.fn();
+    render(
+      <SessionProvider
+        auth={auth}
+        store={store}
+        manager={new SessionManager(auth, store, new FixedClock(0))}
+        expired={events}
+        onSessionEnd={onSessionEnd}
+      >
+        <Probe />
+      </SessionProvider>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "cuenta borrada" }));
+
+    act(() => events.expire());
+
+    expect(screen.getByLabelText("notice")).toHaveTextContent("accountDeleted");
+    expect(onSessionEnd).toHaveBeenCalledTimes(1);
+  });
+
+  it("a late 401 in the same tick as the account deletion cannot replace its notice either", () => {
+    const auth = new FakeAuth();
+    const store = new MemoryTokenStore(fakeSession());
+    const events = createSessionEvents();
+    render(
+      <SessionProvider
+        auth={auth}
+        store={store}
+        manager={new SessionManager(auth, store, new FixedClock(0))}
+        expired={events}
+      >
+        <Probe />
+      </SessionProvider>,
+    );
+
+    act(() => {
+      screen.getByRole("button", { name: "cuenta borrada" }).click();
+      events.expire();
+    });
+
+    expect(screen.getByLabelText("notice")).toHaveTextContent("accountDeleted");
+  });
+
+  it("an unauthorized report with no session leaves everything as it is", () => {
+    const auth = new FakeAuth();
+    const store = new MemoryTokenStore(null);
+    const events = createSessionEvents();
+    const onSessionEnd = vi.fn();
+    render(
+      <SessionProvider
+        auth={auth}
+        store={store}
+        manager={new SessionManager(auth, store, new FixedClock(0))}
+        expired={events}
+        onSessionEnd={onSessionEnd}
+      >
+        <Probe />
+      </SessionProvider>,
+    );
+
+    act(() => events.expire());
+
+    expect(screen.getByLabelText("notice")).toHaveTextContent("none");
+    expect(onSessionEnd).not.toHaveBeenCalled();
+  });
+
   it("expires when the API layer reports an unauthorized request (AU-R5, AU-S6)", () => {
     const auth = new FakeAuth();
     const store = new MemoryTokenStore(fakeSession());

@@ -98,7 +98,12 @@ export function SessionProvider({
   );
 
   const expire = useCallback(() => {
+    // A late 401 of a request that outlived the session (after a sign out or the account deletion)
+    // must not replace the notice that ended it. The ref is cleared here, not only on render, so
+    // two calls in the same tick see the first one.
+    if (current.current === null) return;
     store.clear();
+    current.current = null;
     setNotice("sessionExpired");
     setSession(null);
     onSessionEnd?.();
@@ -106,6 +111,7 @@ export function SessionProvider({
 
   const accountDeleted = useCallback(() => {
     store.clear();
+    current.current = null;
     setNotice("accountDeleted");
     setSession(null);
     onSessionEnd?.();

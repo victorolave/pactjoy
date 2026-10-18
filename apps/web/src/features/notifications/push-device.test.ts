@@ -154,6 +154,53 @@ describe("dropThisDeviceLocally (the account was deleted)", () => {
     };
     await expect(dropThisDeviceLocally(deps.push)).resolves.toBeUndefined();
   });
+
+  it("waits for a start-up sync still in flight, so it cannot subscribe again after the drop", async () => {
+    const deps = given("granted");
+    const config = deps.api.getPushConfig.bind(deps.api);
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    deps.api.getPushConfig = async (signal) => {
+      await gate;
+      return config(signal);
+    };
+    const sync = syncPush(deps);
+    let dropped = false;
+
+    const dropping = dropThisDeviceLocally(deps.push).then(() => {
+      dropped = true;
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(dropped).toBe(false);
+    release();
+    await Promise.all([sync, dropping]);
+
+    expect(deps.push.subscribes).toEqual(["BFAKE-VAPID-KEY"]);
+    expect(deps.push.device).toBeNull();
+  });
+
+  it("still drops when the sync it waited for failed", async () => {
+    const deps = given("granted");
+    deps.api.getPushConfig = async () => {
+      throw new Error("offline");
+    };
+    const sync = syncPush(deps);
+    sync.catch(() => undefined);
+    deps.push.device = {
+      subscription: {
+        endpoint: "https://web.push.apple.com/old",
+        keys: { p256dh: "k", auth: "a" },
+      },
+      serverKey: "BFAKE-VAPID-KEY",
+    };
+
+    await dropThisDeviceLocally(deps.push);
+
+    expect(deps.push.device).toBeNull();
+  });
 });
 
 describe("pushStatus (the Ajustes row)", () => {
