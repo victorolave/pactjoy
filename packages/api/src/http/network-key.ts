@@ -7,8 +7,8 @@ const base64url = (bytes: Uint8Array): string =>
     .replace(/=+$/, "");
 
 /**
- * Keys a client network for storage (ADR-0020): HMAC-SHA256 under the server secret
- * `API_RATE_LIMIT_KEY`, truncated to 128 bits, base64url. The address itself is never stored or
+ * Keys a client network for storage (ADR-0020): HMAC-SHA256 under the server's rate-limit secret
+ * (the composition reads it), truncated to 128 bits, base64url. The address itself is never stored or
  * logged; and because the hash is keyed, a dump of the counters cannot be reversed by hashing the
  * whole IPv4 space. WebCrypto only, so it runs on Node and Deno alike.
  */

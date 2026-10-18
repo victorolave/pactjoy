@@ -91,6 +91,32 @@ describe("identity admin credential confinement (ADR-0019)", () => {
   });
 });
 
+describe("rate-limit key confinement (ADR-0020)", () => {
+  const RATE_KEY_NAME = ["API", "RATE", "LIMIT", "KEY"].join("_");
+
+  it("the variable name appears only in the composition config, its tests and docs", () => {
+    const allowed = new Set([
+      "packages/api/src/composition/config.ts",
+      "supabase/functions/.env.example",
+      "packages/api/test/env.test.ts",
+      "packages/api/test/deno-shell.test.ts",
+      "packages/api/test/network-key.test.ts",
+    ]);
+    const outside = holding(RATE_KEY_NAME).filter(
+      (file) => !allowed.has(file) && !file.startsWith("docs/") && !/^[^/]+\.md$/.test(file),
+    );
+    expect(outside).toEqual([]);
+    expect(holding(RATE_KEY_NAME)).toContain("packages/api/src/composition/config.ts");
+  });
+
+  it("the name is absent from the web app and from every inner package", () => {
+    const leaks = holding(RATE_KEY_NAME).filter((file) =>
+      /^(apps\/web|packages\/(app|engine|db|storage|push))\//.test(file),
+    );
+    expect(leaks).toEqual([]);
+  });
+});
+
 describe("no error carries the key", () => {
   const KEY = ["sb", "secret", "guard-fixture-not-a-key"].join("_");
   const ID = userId("0190a000-0000-7000-8000-000000000001");
