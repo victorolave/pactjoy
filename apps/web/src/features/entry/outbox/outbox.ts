@@ -25,6 +25,8 @@ import {
 
 /** A concurrency conflict is retried this many times before the item is rejected. */
 const MAX_CONFLICT_RETRIES = 3;
+/** The wait before each of those retries: the other writer needs a moment to finish. */
+const CONFLICT_RETRY_DELAY_MS = 500;
 
 export interface OutboxDeps {
   /** Only the entry writes: the outbox never reads. */
@@ -202,7 +204,10 @@ export class Outbox {
           if (outcome === "conflict") {
             const retries = (this.#conflicts.get(id) ?? 0) + 1;
             this.#conflicts.set(id, retries);
-            if (retries <= MAX_CONFLICT_RETRIES) continue;
+            if (retries <= MAX_CONFLICT_RETRIES) {
+              await new Promise<void>((resolve) => setTimeout(resolve, CONFLICT_RETRY_DELAY_MS));
+              continue;
+            }
           }
           if (outcome === "sent") {
             if (item.kind === "delete") this.#remember(item, null);

@@ -253,24 +253,52 @@ describe("Outbox.drain: classes of answer (OE-R4)", () => {
   );
 
   it("retries a concurrency conflict up to three times, then rejects it", async () => {
+    vi.useFakeTimers();
     const { api, outbox, queue } = setup();
     queue(recordInput("a"));
     for (let n = 0; n < 4; n += 1)
       api.failNext("recordEntry", apiError("ConcurrencyConflict", 409));
-    expect(await outbox.drain()).toBe("done");
+    const done = outbox.drain();
+    await vi.runAllTimersAsync();
+    vi.useRealTimers();
+    expect(await done).toBe("done");
     expect(api.recordAttempts).toHaveLength(4);
     expect(outbox.snapshot().items).toEqual([]);
     expect(outbox.snapshot().notices).toHaveLength(1);
   });
 
   it("a conflict that clears within the retries is sent", async () => {
+    vi.useFakeTimers();
     const { api, outbox, queue } = setup();
     queue(recordInput("a"));
     api.failNext("recordEntry", apiError("ConcurrencyConflict", 409));
     api.failNext("recordEntry", apiError("ConcurrencyConflict", 409));
-    expect(await outbox.drain()).toBe("done");
+    const done = outbox.drain();
+    await vi.runAllTimersAsync();
+    vi.useRealTimers();
+    expect(await done).toBe("done");
     expect(api.recorded).toHaveLength(1);
     expect(outbox.snapshot().notices).toEqual([]);
+  });
+
+  it("waits between conflict retries instead of hammering the server", async () => {
+    vi.useFakeTimers();
+    try {
+      const { api, outbox, queue } = setup();
+      queue(recordInput("a"));
+      api.failNext("recordEntry", apiError("ConcurrencyConflict", 409));
+      const done = outbox.drain();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(api.recordAttempts).toHaveLength(1);
+      await vi.advanceTimersByTimeAsync(499);
+      expect(api.recordAttempts).toHaveLength(1);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(await done).toBe("done");
+      expect(api.recordAttempts).toHaveLength(2);
+      expect(api.recorded).toHaveLength(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("an unauthorized answer stops the replay and keeps the queue (session rules apply)", async () => {
