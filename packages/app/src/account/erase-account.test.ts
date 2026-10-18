@@ -1,5 +1,6 @@
-import { fromInt } from "@pactjoy/engine";
+import { fromInt, type MemberId } from "@pactjoy/engine";
 import { describe, expect, it } from "vitest";
+import { memberId } from "../circle/circle.ts";
 import { leaveCircle } from "../circle/leave-circle.ts";
 import { buildCommitment, commitmentId, type Measure } from "../commitment/commitment.ts";
 import { storedSocial } from "../encouragement/encouragement-seed.ts";
@@ -8,11 +9,13 @@ import { storedPhoto } from "../entry-photo/photo-seed.ts";
 import { storedPause } from "../pause/pause-seed.ts";
 import { respondToPause } from "../pause/respond-to-pause.ts";
 import { storedReminder } from "../reminders/reminder-seed.ts";
+import { givenReviewWorld, type ReviewWorld } from "../review/review-fixtures.ts";
 import { storedReviews } from "../review/review-seed.ts";
 import { memberScore } from "../score/member-score.query.ts";
 import { standings } from "../score/standings.query.ts";
+import { givenClosures } from "../season/closure/closure-fixtures.ts";
 import { storedClosure } from "../season/closure/closure-seed.ts";
-import { encouragementId, habitId } from "../shared/ids.ts";
+import { circleId, encouragementId, habitId, seasonId } from "../shared/ids.ts";
 import { ok } from "../shared/result.ts";
 import { PER_DAY_REACH } from "../testing/entry-measures.ts";
 import { type AccountWorld, givenAccountWorld, OLD_SEASON_ID } from "./account-world.ts";
@@ -33,6 +36,74 @@ async function andreaDeletes(world: AccountWorld) {
   const result = await deleteAccount(depsOf(world), world.andrea, CONFIRM);
   expect(result).toEqual(ok(undefined));
 }
+
+describe("erasing the member an ended season still waits for (SC-C9)", () => {
+  const ANDREA = memberId("member-andrea");
+  const SEASON = seasonId("season-1");
+  const CIRCLE = circleId("circle-1");
+
+  /** Day 30 of a 4-week season, past the grace day: Victor is the only one with something to close. */
+  async function given(closed: readonly MemberId[]) {
+    const world = await givenReviewWorld({ lengthWeeks: 4 });
+    await givenClosures(world.app, SEASON, closed);
+    const app = world.at(30);
+    const season = () => app.uow.read((repos) => repos.seasons.get(SEASON));
+    const erase = (actor: ReviewWorld["victor"]) =>
+      deleteAccount(
+        {
+          uow: app.uow,
+          clock: app.clock,
+          timeZone: app.timeZone,
+          ids: app.ids,
+          evidence: app.evidence,
+          identity: app.identity,
+        },
+        actor,
+        CONFIRM,
+      );
+    return { world, season, erase };
+  }
+
+  it("finalizes the season and hides his visible commitment in the same transaction", async () => {
+    const { world, season, erase } = await given([ANDREA]);
+    const before = await season();
+    expect(before?.status).toBe("active");
+    expect(
+      before?.commitments.filter((c) => c.id === world.victorRun).map((c) => c.privacy),
+    ).toEqual(["visible"]);
+
+    const result = await erase(world.victor);
+
+    expect(result).toEqual(ok(undefined));
+    const after = await season();
+    expect(after?.status).toBe("closed");
+    expect(
+      after?.commitments.filter((c) => c.id === world.victorRun).map((c) => c.privacy),
+    ).toEqual(["private"]);
+    // One version for the finalization, one for hiding the commitment.
+    expect(after?.version).toBe((before?.version ?? 0) + 2);
+    expect(
+      (await world.app.circles.get(CIRCLE))?.members.map((m) => [m.id, m.erasedAt !== null]),
+    ).toEqual([
+      [ANDREA, false],
+      [memberId("member-victor"), true],
+    ]);
+  });
+
+  it("does not finalize while another participant is still to close, but still hides his commitment", async () => {
+    const { world, season, erase } = await given([]);
+
+    const result = await erase(world.victor);
+
+    expect(result).toEqual(ok(undefined));
+    const after = await season();
+    expect(after?.status).toBe("active");
+    expect(
+      after?.commitments.filter((c) => c.id === world.victorRun).map((c) => c.privacy),
+    ).toEqual(["private"]);
+    expect(after?.version).toBe(1);
+  });
+});
 
 describe("erasing Andrea from a circle that goes on (active season)", () => {
   it("tombstones her membership: same member id, no name, no link to her user, left and erased", async () => {

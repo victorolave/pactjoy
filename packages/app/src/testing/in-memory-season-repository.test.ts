@@ -100,6 +100,46 @@ describe("createInMemorySeasonRepository", () => {
     expect(await repo.get(season.id)).toBeNull();
   });
 
+  it("two saves of one season in one transaction commit against the version the store held at the start", async () => {
+    const repo = createInMemorySeasonRepository();
+    const season = fixtureSeason("season-1");
+    await repo.save(season, null);
+    const scope = repo.beginTransaction();
+
+    const first = { ...season, version: season.version + 1 };
+    await scope.repository.save(first, season.version);
+    await scope.repository.save({ ...first, version: first.version + 1 }, first.version);
+
+    scope.validate();
+    scope.apply();
+    expect((await repo.get(season.id))?.version).toBe(season.version + 2);
+  });
+
+  it("two saves of one season in one transaction still fail validate() when a peer wrote in between", async () => {
+    const repo = createInMemorySeasonRepository();
+    const season = fixtureSeason("season-1");
+    await repo.save(season, null);
+    const scope = repo.beginTransaction();
+    const first = { ...season, version: season.version + 1 };
+    await scope.repository.save(first, season.version);
+    await scope.repository.save({ ...first, version: first.version + 1 }, first.version);
+    await repo.save({ ...season, version: season.version + 1 }, season.version);
+
+    expect(() => scope.validate()).toThrow(ConcurrencyConflict);
+  });
+
+  it("a second save in one transaction rejects a version that is stale against the transaction's own view", async () => {
+    const repo = createInMemorySeasonRepository();
+    const season = fixtureSeason("season-1");
+    await repo.save(season, null);
+    const scope = repo.beginTransaction();
+    await scope.repository.save({ ...season, version: season.version + 1 }, season.version);
+
+    await expect(
+      scope.repository.save({ ...season, version: season.version + 2 }, season.version),
+    ).rejects.toBeInstanceOf(ConcurrencyConflict);
+  });
+
   it("a transactional delete with a stale version fails validate() without mutating", async () => {
     const repo = createInMemorySeasonRepository();
     const season = fixtureSeason("season-1");

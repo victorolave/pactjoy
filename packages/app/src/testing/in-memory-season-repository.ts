@@ -154,7 +154,16 @@ export function createInMemorySeasonRepository(): InMemorySeasonRepository {
         },
 
         async save(season: Season, expectedVersion: number | null): Promise<void> {
-          staged.set(season.id, { season, expectedVersion });
+          const earlier = staged.get(season.id);
+          // Saved before in this transaction: check against its own view and keep the version the
+          // store must still have at commit (null for a row inserted here), as `delete` does.
+          if (earlier && (view(season.id)?.version ?? null) !== expectedVersion) {
+            throw new ConcurrencyConflict();
+          }
+          staged.set(season.id, {
+            season,
+            expectedVersion: earlier ? earlier.expectedVersion : expectedVersion,
+          });
         },
 
         async delete(id: SeasonId, expectedVersion: number): Promise<void> {
