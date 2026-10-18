@@ -1,4 +1,5 @@
 import type { PendingYesterdayItem, TodayRow } from "@pactjoy/app";
+import { useTodayDates } from "../../../shared/today-date-context.tsx";
 import { EditSheet } from "../edit/EditSheet.tsx";
 import { EntrySheet } from "./EntrySheet.tsx";
 import { useEntrySheet } from "./use-entry-sheet.ts";
@@ -14,6 +15,7 @@ export function EntrySheetHost({
   readonly pendingYesterday?: readonly PendingYesterdayItem[];
 }) {
   const { commitmentId, entryId, forYesterday, select, close } = useEntrySheet();
+  const stale = useTodayDates()?.stale === true;
   const row = rows.find((candidate) => candidate.commitmentId === commitmentId);
   if (row === undefined) return null;
   const entry = row.entries.find((candidate) => candidate.entryId === entryId);
@@ -23,6 +25,8 @@ export function EntrySheetHost({
     );
   }
   const pending = pendingYesterday.find((item) => item.commitmentId === row.commitmentId);
+  // The day on display is over on this phone: only the explicit De ayer registro may be added.
+  if (stale && !(forYesterday && pending !== undefined)) return null;
   return (
     <EntrySheet
       key={row.commitmentId}

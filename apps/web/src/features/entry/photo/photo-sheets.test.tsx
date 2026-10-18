@@ -7,6 +7,7 @@ import {
   activeTodayFixture,
   type EntryPhoto,
   entryFixture,
+  FIXTURE_DAY_NOW_MS,
   weekRowFixture,
 } from "../../../testing/fixtures/today.ts";
 import { renderApp } from "../../../testing/render.tsx";
@@ -117,7 +118,7 @@ describe("recording with a photo (entry sheet)", () => {
   });
 
   it("offline the photo control is disabled with its reason (SC-W2)", async () => {
-    openRecord({ online: false });
+    openRecord({ online: false, now: FIXTURE_DAY_NOW_MS });
     const dialog = await screen.findByRole("dialog", { name: "Leer" });
 
     await userEvent.click(within(dialog).getByRole("button", { name: "Añadir nota o foto" }));

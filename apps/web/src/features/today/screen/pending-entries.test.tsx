@@ -6,6 +6,7 @@ import {
   activeTodayFixture,
   dayRowFixture,
   entryFixture,
+  FIXTURE_DAY_NOW_MS,
   pendingItemFixture,
   weekRowFixture,
 } from "../../../testing/fixtures/today.ts";
@@ -17,6 +18,7 @@ const FOOTNOTE = "Puntos y clasificación se actualizan al sincronizar.";
 const offlineDay = () =>
   renderApp({
     online: false,
+    now: FIXTURE_DAY_NOW_MS,
     today: activeTodayFixture({ rows: [dayRowFixture({ habitName: "Meditar" })] }),
   });
 
@@ -72,6 +74,7 @@ describe("Today shows what is waiting on the phone (OE-R7, design 15g)", () => {
   it("opens the edit of a pending quantity with the queued value, and saving coalesces (OE-R7.S4)", async () => {
     const app = renderApp({
       online: false,
+      now: FIXTURE_DAY_NOW_MS,
       path: "/?entry=commitment-2",
       today: activeTodayFixture({ rows: [weekRowFixture()] }),
     });
@@ -100,6 +103,7 @@ describe("Today shows what is waiting on the phone (OE-R7, design 15g)", () => {
   it("a queued delete hides the entry and the row says it was deleted on the phone", async () => {
     renderApp({
       online: false,
+      now: FIXTURE_DAY_NOW_MS,
       path: "/?entry=commitment-2&id=entry-1",
       today: activeTodayFixture({ rows: [reading([quantity("25", "entry-1")])] }),
     });
@@ -115,6 +119,7 @@ describe("Today shows what is waiting on the phone (OE-R7, design 15g)", () => {
     const row = dayRowFixture({ habitName: "Meditar" });
     renderApp({
       online: false,
+      now: FIXTURE_DAY_NOW_MS,
       today: activeTodayFixture({
         rows: [row],
         pendingYesterday: [
@@ -161,6 +166,7 @@ describe("Today shows what is waiting on the phone (OE-R7, design 15g)", () => {
   it("a sent record keeps its row filled until Today has it, so a second tap does not record again", async () => {
     const app = renderApp({
       online: false,
+      now: FIXTURE_DAY_NOW_MS,
       today: activeTodayFixture({
         rows: [
           dayRowFixture({ habitName: "Meditar" }),

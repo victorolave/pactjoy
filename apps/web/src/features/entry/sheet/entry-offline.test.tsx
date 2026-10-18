@@ -2,7 +2,11 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { quantity, reading } from "../../../testing/fixtures/edit-rows.ts";
-import { activeTodayFixture, weekRowFixture } from "../../../testing/fixtures/today.ts";
+import {
+  activeTodayFixture,
+  FIXTURE_DAY_NOW_MS,
+  weekRowFixture,
+} from "../../../testing/fixtures/today.ts";
 import { renderApp } from "../../../testing/render.tsx";
 
 const QUEUED = "Guardado en este teléfono. Se enviará al volver la conexión.";
@@ -12,6 +16,7 @@ describe("the record sheet without a connection (OE-R8.S1)", () => {
   const open = () =>
     renderApp({
       online: false,
+      now: FIXTURE_DAY_NOW_MS,
       path: "/?entry=commitment-2",
       today: activeTodayFixture({ rows: [weekRowFixture()] }),
     });

@@ -7,6 +7,7 @@ import {
   activeTodayFixture,
   type DayRow,
   dayRowFixture,
+  FIXTURE_DAY_NOW_MS,
   pendingItemFixture,
   weekRowFixture,
 } from "../../testing/fixtures/today.ts";
@@ -26,7 +27,11 @@ const openRows = () => [
 
 describe("offline banner (TO-R10)", () => {
   it("says there is no connection and that registering is still possible (OE-R9.S1)", async () => {
-    renderApp({ online: false, today: activeTodayFixture({ rows: openRows() }) });
+    renderApp({
+      online: false,
+      now: FIXTURE_DAY_NOW_MS,
+      today: activeTodayFixture({ rows: openRows() }),
+    });
     expect(await screen.findByText(OFFLINE)).toBeInTheDocument();
     expect(screen.queryByText(/necesitas conexión/)).not.toBeInTheDocument();
     expect(screen.queryByText(SYNCING)).not.toBeInTheDocument();
@@ -35,6 +40,7 @@ describe("offline banner (TO-R10)", () => {
   it("says it is sending what was registered offline, until the queue is empty (OE-R9.S2)", async () => {
     const { deps } = renderApp({
       online: false,
+      now: FIXTURE_DAY_NOW_MS,
       today: activeTodayFixture({ rows: openRows() }),
     });
     await userEvent.click(await screen.findByRole("button", { name: "Registrar Meditar" }));
@@ -51,6 +57,7 @@ describe("offline banner (TO-R10)", () => {
   it("does not claim to be sending when a retryable failure stopped the replay", async () => {
     const { deps } = renderApp({
       online: false,
+      now: FIXTURE_DAY_NOW_MS,
       today: activeTodayFixture({ rows: openRows() }),
     });
     await userEvent.click(await screen.findByRole("button", { name: "Registrar Meditar" }));
@@ -63,7 +70,11 @@ describe("offline banner (TO-R10)", () => {
   });
 
   it("shows the sin-conexion illustration with the banner", async () => {
-    renderApp({ online: false, today: activeTodayFixture({ rows: openRows() }) });
+    renderApp({
+      online: false,
+      now: FIXTURE_DAY_NOW_MS,
+      today: activeTodayFixture({ rows: openRows() }),
+    });
     await screen.findByText(OFFLINE);
     expect(screen.getByRole("img", { name: "Sin conexión" })).toHaveAttribute(
       "src",
@@ -94,7 +105,11 @@ describe("offline banner (TO-R10)", () => {
 
 describe("entry writes work offline, every other write stays disabled (OE-R8, OE-R11)", () => {
   it("enables the register, missed and edit controls on the rows (OE-R8.S1)", async () => {
-    renderApp({ online: false, today: activeTodayFixture({ rows: openRows() }) });
+    renderApp({
+      online: false,
+      now: FIXTURE_DAY_NOW_MS,
+      today: activeTodayFixture({ rows: openRows() }),
+    });
     await screen.findByText(OFFLINE);
     for (const name of [
       "Registrar Meditar",
@@ -107,13 +122,21 @@ describe("entry writes work offline, every other write stays disabled (OE-R8, OE
   });
 
   it("keeps pausing disabled (OE-R8.S2)", async () => {
-    renderApp({ online: false, today: activeTodayFixture({ rows: openRows() }) });
+    renderApp({
+      online: false,
+      now: FIXTURE_DAY_NOW_MS,
+      today: activeTodayFixture({ rows: openRows() }),
+    });
     await screen.findByText(OFFLINE);
     expect(screen.getByRole("button", { name: "Pausar un compromiso" })).toBeDisabled();
   });
 
   it("a tap offline is kept on the phone: no request, one item in the outbox", async () => {
-    const { deps } = renderApp({ online: false, today: activeTodayFixture({ rows: openRows() }) });
+    const { deps } = renderApp({
+      online: false,
+      now: FIXTURE_DAY_NOW_MS,
+      today: activeTodayFixture({ rows: openRows() }),
+    });
     await screen.findByText(OFFLINE);
     await userEvent.click(screen.getByRole("button", { name: "Registrar Meditar" }));
     await waitFor(() => expect(deps.outboxStore.load("user-1").items).toHaveLength(1));
@@ -136,6 +159,7 @@ describe("entry writes work offline, every other write stays disabled (OE-R8, OE
   it("enables saving in the sheet of a day row too and keeps the record on the phone (C-W2)", async () => {
     const { deps } = renderApp({
       online: false,
+      now: FIXTURE_DAY_NOW_MS,
       path: "/?entry=commitment-3",
       today: activeTodayFixture({
         rows: [
@@ -167,6 +191,7 @@ describe("entry writes work offline, every other write stays disabled (OE-R8, OE
     const row = dayRowFixture({ habitName: "Meditar" });
     const { deps } = renderApp({
       online: false,
+      now: FIXTURE_DAY_NOW_MS,
       today: activeTodayFixture({
         rows: [row],
         pendingYesterday: [
@@ -194,6 +219,7 @@ describe("entry writes work offline, every other write stays disabled (OE-R8, OE
   it("disables the photo in the sheet and says why (OE-R1.S4)", async () => {
     renderApp({
       online: false,
+      now: FIXTURE_DAY_NOW_MS,
       path: "/?entry=commitment-2",
       today: activeTodayFixture({ rows: [weekRowFixture()] }),
     });
@@ -206,6 +232,7 @@ describe("entry writes work offline, every other write stays disabled (OE-R8, OE
   it("shows the offline sentence in a sheet only while there is no connection", async () => {
     const { deps } = renderApp({
       online: false,
+      now: FIXTURE_DAY_NOW_MS,
       path: "/?entry=commitment-2",
       today: activeTodayFixture({ rows: [weekRowFixture()] }),
     });
@@ -221,6 +248,7 @@ describe("entry writes work offline, every other write stays disabled (OE-R8, OE
   it("enables saving and deleting in the edit sheet", async () => {
     renderApp({
       online: false,
+      now: FIXTURE_DAY_NOW_MS,
       path: "/?entry=commitment-2&id=entry-1",
       today: activeTodayFixture({ rows: [reading([quantity("25")])] }),
     });

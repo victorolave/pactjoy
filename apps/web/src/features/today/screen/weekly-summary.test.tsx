@@ -173,7 +173,9 @@ describe("Today weekly summary integration (25a)", () => {
       if (mode === "resume") act(() => focusManager.setFocused(true));
       else await act(() => vi.advanceTimersByTimeAsync(2000));
       await waitFor(() => expect(screen.queryByText("Semana 4 cerrada")).not.toBeInTheDocument());
-      expect(screen.getByRole("button", { name: "Registrar Meditar" })).toBeVisible();
+      // The new day could not load: the old day's rows take no tap (they would land on yesterday).
+      expect(screen.getByText("Hoy todavía no se cargó; conéctate para registrar.")).toBeVisible();
+      expect(screen.queryByRole("button", { name: "Registrar Meditar" })).not.toBeInTheDocument();
       expect(app.deps.api.calls.getToday).toBeGreaterThan(1);
     },
   );

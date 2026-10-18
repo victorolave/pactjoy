@@ -9,6 +9,7 @@ import {
   dayRowFixture,
   endedTodayFixture,
   entryFixture,
+  FIXTURE_DAY_NOW_MS,
   weekRowFixture,
 } from "../../../testing/fixtures/today.ts";
 import { renderApp } from "../../../testing/render.tsx";
@@ -252,7 +253,11 @@ const QUEUED = "Guardado en este teléfono. Se enviará al volver la conexión."
 
 describe("one tap without a connection (OE-R1, OE-R2, OE-R8)", () => {
   const offline = (row: TodayRow = openDone()) =>
-    renderApp({ online: false, today: activeTodayFixture({ rows: [row] }) });
+    renderApp({
+      online: false,
+      now: FIXTURE_DAY_NOW_MS,
+      today: activeTodayFixture({ rows: [row] }),
+    });
   const stored = (app: ReturnType<typeof renderApp>) => app.deps.outboxStore.load("user-1").items;
 
   it("keeps the tap on the phone and says so, with Deshacer and no retry toast (OE-R1.S1)", async () => {

@@ -39,8 +39,11 @@ export function RowWithControls({
     pending === "delete" && row.entries.length === 0 && row.opportunity.state === "logged"
       ? "open"
       : row.opportunity.state;
+  // A saved day that is over on this phone takes no registro until the new day loads (C1).
   const windowOpen =
-    (state === "open" || state === "logged") && !(row.kind === "day" && !row.scheduledToday);
+    dates?.stale !== true &&
+    (state === "open" || state === "logged") &&
+    !(row.kind === "day" && !row.scheduledToday);
   const isDone = row.kind === "day" && row.measure.unit === "done";
   const doneEntry = row.entries.find((entry) => entry.value.kind === "done");
   // Entry writes are kept on the phone without a connection, so every control stays on (ADR-0012

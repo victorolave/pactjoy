@@ -3,7 +3,11 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { ApiError } from "../../../ports/api-error.ts";
 import type { OutboxNotice, OutboxState } from "../../../ports/outbox-store.ts";
-import { activeTodayFixture, dayRowFixture } from "../../../testing/fixtures/today.ts";
+import {
+  activeTodayFixture,
+  dayRowFixture,
+  FIXTURE_DAY_NOW_MS,
+} from "../../../testing/fixtures/today.ts";
 import { renderApp } from "../../../testing/render.tsx";
 
 const notice = (id: string, habitName: string, forDate = "2026-10-13"): OutboxNotice => ({
@@ -62,6 +66,7 @@ describe("rejected entries (OE-R5, OE-R10)", () => {
   it("a registro the server turned down after the wait becomes a notice that stays (OE-R4.S5, OE-R5.S1)", async () => {
     const { deps } = renderApp({
       online: false,
+      now: FIXTURE_DAY_NOW_MS,
       today: activeTodayFixture({ rows: [dayRowFixture({ habitName: "Meditar" })] }),
     });
     await userEvent.click(await screen.findByRole("button", { name: "Registrar Meditar" }));

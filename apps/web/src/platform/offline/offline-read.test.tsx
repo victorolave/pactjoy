@@ -7,6 +7,7 @@ import { ApiError } from "../../ports/api-error.ts";
 import {
   activeTodayFixture,
   dayRowFixture,
+  FIXTURE_DAY_NOW_MS,
   noCircleTodayFixture,
 } from "../../testing/fixtures/today.ts";
 import { MemoryStorage } from "../../testing/memory-storage.ts";
@@ -25,6 +26,7 @@ describe("reading Today offline (TO-R10)", () => {
     const { deps } = renderApp({
       storage,
       online: false,
+      now: FIXTURE_DAY_NOW_MS,
       today: noCircleTodayFixture(),
       todayFailures: [NETWORK()],
     });

@@ -213,16 +213,22 @@ function NoCommitments({ model }: { readonly model: RunningModel }) {
 export function RunningToday({
   model,
   banner,
+  stale = false,
 }: {
   readonly model: RunningModel;
   readonly banner?: ReactNode;
+  /** The rows are a saved day already over on this phone (see `TodayDates.stale`). */
+  readonly stale?: boolean;
 }) {
   const { forToday, otherDays, week } = model.sections;
   const showDayState = model.kind === "active";
   const waiting = usePendingMarks().count > 0;
   return (
-    <TodayDateContext.Provider value={{ today: model.today, refDate: model.refDate }}>
+    <TodayDateContext.Provider value={{ today: model.today, refDate: model.refDate, stale }}>
       <RunningHeader model={model} />
+      {stale && (
+        <InlineMessage tone="info" title="Hoy todavía no se cargó; conéctate para registrar." />
+      )}
       {showDayState && <EndsTomorrowBanner rows={model.sheetRows} />}
       {banner}
       <ReviewTodayCard />

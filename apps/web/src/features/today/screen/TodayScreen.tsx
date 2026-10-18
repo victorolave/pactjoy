@@ -23,9 +23,11 @@ import { NoCircle, NoSeason, NotStarted, PactOpen, RunningToday } from "./TodayS
 function TodayContent({
   model,
   banner,
+  stale,
 }: {
   readonly model: TodayModel;
   readonly banner: ReactNode;
+  readonly stale: boolean;
 }) {
   switch (model.kind) {
     case "noCircle":
@@ -40,7 +42,7 @@ function TodayContent({
     case "ended":
       return (
         <TodayRowSeasonContext.Provider value={model.seasonId}>
-          <RunningToday model={model} banner={banner} />
+          <RunningToday model={model} banner={banner} stale={stale} />
         </TodayRowSeasonContext.Provider>
       );
   }
@@ -97,6 +99,17 @@ function TodayFailure({
   );
 }
 
+/**
+ * A running season's Today whose day is already over on this phone (its season clock), when the
+ * server cannot vouch for it: the view was restored from storage, or the connection is lost. A tap
+ * would otherwise be kept for yesterday. While the server answers, its day wins over a phone clock
+ * that runs ahead; a phone clock behind it never closes anything.
+ */
+function isStaleDay(view: TodayView, localToday: string | null, serverVouches: boolean): boolean {
+  if (view.state !== "active" || localToday === null || serverVouches) return false;
+  return localToday > view.today;
+}
+
 export function TodayScreen() {
   const today = useToday();
   const online = useOnline();
@@ -123,6 +136,7 @@ export function TodayScreen() {
       fetchStartedAt={today.fetchStartedAt}
       connectionLost={connectionLost}
       fresh={!today.isError && !today.isFetching && !connectionLost && today.fromServer}
+      stale={isStaleDay(today.data, today.localToday, today.fromServer && !connectionLost)}
     />
   );
 }
@@ -139,6 +153,7 @@ function TodayWithData({
   fetchStartedAt,
   connectionLost,
   fresh,
+  stale,
 }: {
   readonly data: TodayView;
   readonly localToday: string | null;
@@ -146,6 +161,8 @@ function TodayWithData({
   readonly connectionLost: boolean;
   /** `data` is a settled answer the server gave in this session (see `FirstFullWeekCelebration`). */
   readonly fresh: boolean;
+  /** The view's day is over on this phone and the server cannot be asked (see `isStaleDay`). */
+  readonly stale: boolean;
 }) {
   const sending = useOutboxReplaying();
   const { view, marks } = useOverlayToday(data, fetchStartedAt);
@@ -158,6 +175,7 @@ function TodayWithData({
         <TodayContent
           model={toTodayModel(view)}
           banner={<TodayClosedWeek view={view} localToday={localToday} />}
+          stale={stale}
         />
       </PendingMarksContext.Provider>
     </div>
