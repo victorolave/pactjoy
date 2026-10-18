@@ -88,6 +88,61 @@ describe("scanMigrations", () => {
   });
 });
 
+describe("scanMigrations refuses what it cannot follow (a schema change must not bypass the registry)", () => {
+  it.each([
+    ["alter column ... type", "alter table pactjoy.things alter column label type varchar(10)"],
+    [
+      "alter ... type without the column keyword",
+      "alter table pactjoy.things alter label type text",
+    ],
+    [
+      "alter column ... set data type",
+      "alter table pactjoy.things alter column payload set data type text",
+    ],
+    ["rename column", "alter table pactjoy.things rename column label to title"],
+    ["rename to", "alter table pactjoy.things rename to others"],
+    ["set schema", "alter table pactjoy.things set schema elsewhere"],
+    [
+      "an unknown action in a list",
+      "alter table pactjoy.things add column ok text, inherit parent",
+    ],
+  ])("throws on %s", (_name, statement) => {
+    expect(() => scanMigrations([FIXTURE_CREATE, statement])).toThrow(/things/);
+  });
+
+  it("throws on a table in another schema, or in none, instead of skipping it", () => {
+    expect(() => scanMigrations(["create table other.things (id uuid, note text);"])).toThrow(
+      /other\.things/,
+    );
+    expect(() => scanMigrations(["create table things (id uuid, note text);"])).toThrow(/things/);
+    expect(() => scanMigrations(["alter table other.things add column bio text;"])).toThrow(
+      /other\.things/,
+    );
+    expect(() => scanMigrations(["create table pactjoy.copy as select 1;"])).toThrow(/copy/);
+  });
+
+  it("follows the alters it understands: drop column removes it, not null and default change nothing", () => {
+    const columns = scanMigrations([
+      FIXTURE_CREATE,
+      `alter table pactjoy.things
+         drop column payload,
+         alter column label set not null,
+         alter column mood drop default,
+         disable row level security;
+       alter table pactjoy.things drop tags;`,
+    ]);
+
+    expect(columns.filter((c) => c.table === "things").map((c) => c.column)).toEqual([
+      "id",
+      "owner_id",
+      "label",
+      "mood",
+      "kind",
+      "created_at",
+    ]);
+  });
+});
+
 describe("findCoverageGaps", () => {
   const columns = scanMigrations([FIXTURE_CREATE]);
   const complete = {
@@ -136,6 +191,52 @@ describe("findCoverageGaps", () => {
       "t.created_by",
       "t.actor",
       "t.recipient_user_id",
+    ]);
+  });
+
+  it("treats every type outside the numeric, time, boolean and uuid allowlist as free text", () => {
+    const typed = scanMigrations([
+      `create table pactjoy.t (
+         a character varying not null,
+         b json,
+         c citext,
+         d bytea,
+         e inet,
+         f text[],
+         g char(3),
+         h "text",
+         i varchar(5) check (i in ('x')),
+         j integer, k bigint, l numeric(5,2), m timestamptz, n timestamp with time zone,
+         o boolean, p double precision, q date, r interval, s smallint, t uuid, u real
+       );`,
+    ]);
+
+    expect(findCoverageGaps(typed, {}, new Set(["t"])).missing).toEqual([
+      "t.a",
+      "t.b",
+      "t.c",
+      "t.d",
+      "t.e",
+      "t.f",
+      "t.g",
+      "t.h",
+    ]);
+  });
+
+  it("reports the wider person shapes: *_by, author, peer and participant", () => {
+    const named = scanMigrations([
+      `create table pactjoy.t (
+         invited_by uuid, approved_by uuid, author_id uuid, peer_member_id uuid,
+         participant uuid, standby_id uuid, season_id uuid
+       );`,
+    ]);
+
+    expect(findCoverageGaps(named, {}, new Set(["t"])).missing).toEqual([
+      "t.invited_by",
+      "t.approved_by",
+      "t.author_id",
+      "t.peer_member_id",
+      "t.participant",
     ]);
   });
 

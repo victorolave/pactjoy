@@ -6,10 +6,13 @@
  * (a `create table` or an `alter table ... add column`) cannot be forgotten: the guard test fails
  * until the new column is registered here, seeded by the sentinel and handled by the use case.
  *
- * Must be registered: every uuid column named after a person (member, user, owner, recipient, ...)
- * and every `text`, `varchar` or `jsonb` column, because free text is not safe just because its
- * name does not say "member". A column whose values a CHECK pins to a closed list (an enum) is
- * exempt: it cannot hold what a person typed.
+ * Must be registered: every uuid column named after a person (member, user, owner, recipient,
+ * author, peer, `*_by`, ...) and every column whose type is outside the numeric, time, boolean and
+ * uuid allowlist (text, character varying, json, citext, bytea, arrays...), because free text is not
+ * safe just because its name does not say "member". A column whose values a CHECK pins to a closed
+ * list (an enum) is exempt: it cannot hold what a person typed. The scan THROWS on a statement it
+ * cannot follow (a type change, a rename, a table outside the `pactjoy` schema), so a schema change
+ * cannot slip past the registry.
  */
 
 export type ErasureRule = "delete" | "anonymize" | "keep";
@@ -43,8 +46,40 @@ export interface CoverageGaps {
 
 /** A uuid column that names a person. */
 export const PERSON_COLUMN =
-  /(^|_)(member|user|owner|recipient|sender|actor|reactor|viewer|target|requester|approver|creator)(_id)?$|^created_by$/;
-const FREE_TEXT_TYPES = new Set(["text", "varchar", "jsonb"]);
+  /(^|_)(member|user|owner|recipient|sender|actor|reactor|viewer|target|requester|approver|creator|author|peer|participant)(_id)?$|(^|_)by$/;
+
+/**
+ * The types that cannot hold what a person typed. Every other type (text, character varying, char,
+ * json, jsonb, citext, bytea, inet, arrays, user-defined...) is free text and must be registered,
+ * unless a CHECK pins it to a closed list.
+ */
+const SAFE_TYPES = new Set([
+  "smallint",
+  "integer",
+  "int",
+  "int2",
+  "int4",
+  "int8",
+  "bigint",
+  "numeric",
+  "decimal",
+  "real",
+  "double",
+  "float4",
+  "float8",
+  "smallserial",
+  "serial",
+  "bigserial",
+  "boolean",
+  "bool",
+  "uuid",
+  "date",
+  "time",
+  "timetz",
+  "timestamp",
+  "timestamptz",
+  "interval",
+]);
 
 const stripComments = (sql: string): string => sql.replace(/--[^\n]*/g, "");
 
@@ -86,10 +121,23 @@ function statements(sql: string): string[] {
 }
 
 const TABLE_ELEMENT = /^(constraint|primary\s+key|unique|check|foreign\s+key|exclude|like)\b/i;
-const COLUMN_DEFINITION = /^"?(\w+)"?\s+(\w+)/;
-const CREATE_TABLE = /^create\s+table\s+(?:if\s+not\s+exists\s+)?pactjoy\.(\w+)\s*\(([\s\S]*)\)$/i;
-const ALTER_TABLE = /^alter\s+table\s+(?:only\s+)?(?:if\s+exists\s+)?pactjoy\.(\w+)\s+([\s\S]*)$/i;
-const ADD_COLUMN = /^add\s+column\s+(?:if\s+not\s+exists\s+)?([\s\S]*)$/i;
+const COLUMN_DEFINITION = /^"?(\w+)"?\s+"?(\w+)"?(\s*\[\s*\])*/;
+const SCHEMA = "pactjoy";
+const CREATE_ANY =
+  /^create\s+(?:(?:global\s+|local\s+)?(?:temp|temporary)\s+|unlogged\s+)?table\b/i;
+const CREATE_TABLE =
+  /^create\s+table\s+(?:if\s+not\s+exists\s+)?(?:"?(\w+)"?\.)?"?(\w+)"?\s*\(([\s\S]*)\)$/i;
+const ALTER_ANY = /^alter\s+table\b/i;
+const ALTER_TABLE =
+  /^alter\s+table\s+(?:only\s+)?(?:if\s+exists\s+)?(?:"?(\w+)"?\.)?"?(\w+)"?\s+([\s\S]*)$/i;
+const ADD_COLUMN = /^add\s+(?:column\s+)?(?:if\s+not\s+exists\s+)?([\s\S]*)$/i;
+const ADD_CONSTRAINT = /^add\s+(constraint|primary\s+key|unique|check|foreign\s+key|exclude)\b/i;
+const DROP_CONSTRAINT = /^drop\s+constraint\b/i;
+const DROP_COLUMN =
+  /^drop\s+(?:column\s+)?(?:if\s+exists\s+)?"?(\w+)"?(?:\s+(?:cascade|restrict))?$/i;
+const ROW_SECURITY = /^(?:enable|disable|force|no\s+force)\s+row\s+level\s+security$/i;
+const COLUMN_DEFAULT_OR_NULL =
+  /^alter\s+(?:column\s+)?"?\w+"?\s+(?:set|drop)\s+(?:not\s+null|default\b)/i;
 
 /** Columns a CHECK pins to a closed list, anywhere in the statement. */
 function enumColumns(statement: string): string[] {
@@ -98,38 +146,76 @@ function enumColumns(statement: string): string[] {
   );
 }
 
-/** Reads every column the migrations define, in order. A later definition of a column replaces the earlier. */
+const head = (statement: string): string => statement.replace(/\s+/g, " ").slice(0, 100);
+
+/** The guard must follow every table; a schema it does not know is a failure, never a skip. */
+function qualified(schema: string | undefined, table: string, statement: string): string {
+  if (schema?.toLowerCase() !== SCHEMA) {
+    throw new Error(
+      `erasure-coverage: a table outside the ${SCHEMA} schema cannot be followed (${schema ?? "no schema"}.${table}): ${head(statement)}`,
+    );
+  }
+  return table.toLowerCase();
+}
+
+/**
+ * Reads every column the migrations define, in order. A later definition of a column replaces the
+ * earlier, `drop column` removes it. Throws on any statement it cannot follow (a type change, a
+ * rename, another schema...): a schema change must never bypass the registry silently.
+ */
 export function scanMigrations(sources: readonly string[]): ScannedColumn[] {
   const columns = new Map<string, Omit<ScannedColumn, "enumChecked">>();
   const pinned = new Set<string>();
 
-  const define = (table: string, definition: string): void => {
+  const define = (table: string, definition: string, statement: string): void => {
     const match = COLUMN_DEFINITION.exec(definition);
-    if (!match?.[1] || !match[2]) return;
+    if (!match?.[1] || !match[2]) {
+      throw new Error(`erasure-coverage: cannot read the column definition in: ${head(statement)}`);
+    }
     columns.set(`${table}.${match[1].toLowerCase()}`, {
       table,
       column: match[1].toLowerCase(),
-      type: match[2].toLowerCase(),
+      type: `${match[2].toLowerCase()}${match[3] ? "[]" : ""}`,
     });
   };
 
   for (const source of sources) {
     for (const statement of statements(stripComments(source))) {
-      const create = CREATE_TABLE.exec(statement);
-      if (create?.[1] && create[2] !== undefined) {
-        for (const element of splitTopLevel(create[2])) {
-          if (!TABLE_ELEMENT.test(element)) define(create[1].toLowerCase(), element);
+      let table: string | undefined;
+      if (CREATE_ANY.test(statement)) {
+        const create = CREATE_TABLE.exec(statement);
+        if (!create?.[2] || create[3] === undefined) {
+          throw new Error(`erasure-coverage: cannot read this create table: ${head(statement)}`);
         }
-      }
-      const alter = ALTER_TABLE.exec(statement);
-      if (alter?.[1] && alter[2] !== undefined) {
-        const table = alter[1].toLowerCase();
-        for (const action of splitTopLevel(alter[2])) {
+        table = qualified(create[1], create[2], statement);
+        for (const element of splitTopLevel(create[3])) {
+          if (!TABLE_ELEMENT.test(element)) define(table, element, statement);
+        }
+      } else if (ALTER_ANY.test(statement)) {
+        const alter = ALTER_TABLE.exec(statement);
+        if (!alter?.[2] || alter[3] === undefined) {
+          throw new Error(`erasure-coverage: cannot read this alter table: ${head(statement)}`);
+        }
+        const altered = qualified(alter[1], alter[2], statement);
+        table = altered;
+        for (const action of splitTopLevel(alter[3])) {
+          if (ADD_CONSTRAINT.test(action) || DROP_CONSTRAINT.test(action)) continue;
+          if (ROW_SECURITY.test(action) || COLUMN_DEFAULT_OR_NULL.test(action)) continue;
+          const dropped = DROP_COLUMN.exec(action);
+          if (dropped?.[1]) {
+            columns.delete(`${altered}.${dropped[1].toLowerCase()}`);
+            continue;
+          }
           const added = ADD_COLUMN.exec(action);
-          if (added?.[1]) define(table, added[1]);
+          if (added?.[1]) {
+            define(altered, added[1], statement);
+            continue;
+          }
+          throw new Error(
+            `erasure-coverage: an alter of ${altered} the guard does not understand (${head(action)}); teach scanMigrations about it and re-check ERASURE_COVERAGE`,
+          );
         }
       }
-      const table = (create ?? alter)?.[1]?.toLowerCase();
       if (table) for (const column of enumColumns(statement)) pinned.add(`${table}.${column}`);
     }
   }
@@ -144,7 +230,7 @@ const keyOf = (column: Pick<ScannedColumn, "table" | "column">): string =>
 
 const isRequired = (column: ScannedColumn): boolean =>
   (column.type === "uuid" && PERSON_COLUMN.test(column.column)) ||
-  (FREE_TEXT_TYPES.has(column.type) && !column.enumChecked);
+  (!SAFE_TYPES.has(column.type) && !column.enumChecked);
 
 /** What the guard fails on: see {@link CoverageGaps}. */
 export function findCoverageGaps(
