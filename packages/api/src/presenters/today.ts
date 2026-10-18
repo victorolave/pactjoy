@@ -159,6 +159,7 @@ function presentRanked(view: Extract<StandingsView, { kind: "ranked" }>) {
 function presentActive(view: Active): Active {
   return {
     state: view.state,
+    firstFullWeek: view.firstFullWeek ?? null,
     ...presentBase(view),
     summary: {
       week: view.summary.week,

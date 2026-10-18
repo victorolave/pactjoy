@@ -10,6 +10,7 @@ import { useReminderNamesSync } from "../../notifications/index.ts";
 import { useToday } from "../queries.ts";
 import { TodayRowSeasonContext } from "../rows/row-navigation.ts";
 import { type TodayModel, toTodayModel } from "../today-view-model.ts";
+import { FirstFullWeekCelebration } from "./FirstFullWeekCelebration.tsx";
 import { TodayClosedWeek } from "./TodayClosedWeek.tsx";
 import styles from "./TodayScreen.module.css";
 import { TodaySkeleton } from "./TodaySkeleton.tsx";
@@ -114,6 +115,10 @@ export function TodayScreen() {
   return (
     <div className={styles.screen}>
       {connectionLost && <OfflineBanner />}
+      <FirstFullWeekCelebration
+        view={today.data}
+        fresh={!today.isError && !today.isFetching && !connectionLost && today.fromServer}
+      />
       <TodayContent
         model={toTodayModel(today.data)}
         banner={<TodayClosedWeek view={today.data} localToday={today.localToday} />}

@@ -1,6 +1,7 @@
 import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePactJoyApi } from "../../context/api-context.tsx";
 import type { SubmitClosureCommand } from "../../ports/pactjoy-api.ts";
+import { todayQuery } from "../../shared/fetch-today.ts";
 import {
   habitsKey,
   myCircleKey,
@@ -15,7 +16,7 @@ import {
 /** What Today says about the end of the season, through the query Today itself uses (no second request). */
 export function useSeasonCloseOffer() {
   const api = usePactJoyApi();
-  const query = useQuery({ queryKey: todayKey, queryFn: ({ signal }) => api.getToday(signal) });
+  const query = useQuery(todayQuery(api));
   const today = query.data;
   if (today === undefined || !("seasonClose" in today)) return null;
   return {

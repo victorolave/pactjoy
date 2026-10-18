@@ -2,6 +2,7 @@ import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tansta
 import { usePactJoyApi } from "../../context/api-context.tsx";
 import { ApiError } from "../../ports/api-error.ts";
 import type { PauseDecision, RequestPauseCommand } from "../../ports/pactjoy-api.ts";
+import { todayQuery } from "../../shared/fetch-today.ts";
 import {
   myCircleKey,
   pauseRequestsKey,
@@ -28,7 +29,7 @@ export function useMyPauseRequests() {
  */
 export function useTodayForPause() {
   const api = usePactJoyApi();
-  return useQuery({ queryKey: todayKey, queryFn: ({ signal }) => api.getToday(signal) });
+  return useQuery(todayQuery(api));
 }
 
 export function useCircleForPause() {
