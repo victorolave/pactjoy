@@ -1,4 +1,5 @@
 import type { MemberId } from "@pactjoy/engine";
+import { eraseMember } from "../circle/erase-member.ts";
 import { buildCommitment, commitmentId } from "../commitment/commitment.ts";
 import { seedEncouragement } from "../encouragement/encouragement-seed.ts";
 import type { EntryRecord } from "../entry/entry.ts";
@@ -21,6 +22,7 @@ import {
   reviewId,
   seasonClosureId,
   seasonId,
+  userId,
 } from "../shared/ids.ts";
 import { createTestApp, type TestApp } from "../testing/app-harness.ts";
 import {
@@ -56,6 +58,42 @@ export interface AccountWorld extends PauseWorld {
   readonly attachedPhoto: ReservedPhoto;
   /** Reserved by Andrea and never uploaded. */
   readonly pendingPhoto: ReservedPhoto;
+}
+
+/**
+ * GIVEN, for the read-model tests: the state erasing Andrea leaves behind, written straight to the
+ * stores. Her membership is a tombstone (left, no name), her commitments are private in every
+ * season and her habits are gone. Nothing else changes: her pending Pause request stays pending.
+ */
+export async function givenAndreaErased(world: AccountWorld): Promise<void> {
+  await world.app.uow.transaction(async (repos) => {
+    const circle = await repos.circles.get(world.circle.id);
+    if (!circle) throw new Error("setup: the circle vanished");
+    await repos.circles.save(
+      {
+        ...circle,
+        members: circle.members.map((m) =>
+          m.id === world.andreaId ? eraseMember(m, ACCOUNT_NOW, userId("erased-andrea")) : m,
+        ),
+        version: circle.version + 1,
+      },
+      circle.version,
+    );
+    for (const season of await repos.seasons.listByCircle(circle.id)) {
+      await repos.seasons.save(
+        {
+          ...season,
+          commitments: season.commitments.map((c) =>
+            c.memberId === world.andreaId ? { ...c, privacy: "private" as const } : c,
+          ),
+          version: season.version + 1,
+        },
+        season.version,
+      );
+    }
+    await repos.habits.deleteByOwner(world.andrea.userId);
+    return { ok: true as const, value: undefined };
+  });
 }
 
 /**
