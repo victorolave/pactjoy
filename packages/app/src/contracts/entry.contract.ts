@@ -1,11 +1,17 @@
-import { frac, seasonDay } from "@pactjoy/engine";
+import { frac, type MemberId, seasonDay } from "@pactjoy/engine";
 import { describe, expect, it } from "vitest";
 import { memberId } from "../circle/circle.ts";
 import { commitmentId } from "../commitment/commitment.ts";
 import type { EntryRecord, EntryValue } from "../entry/entry.ts";
 import type { Repositories } from "../ports/repositories.ts";
 import { ConcurrencyConflict } from "../shared/errors.ts";
-import { type EntryPhotoId, entryId, entryPhotoId, type SeasonId } from "../shared/ids.ts";
+import {
+  type EntryPhotoId,
+  entryId,
+  entryPhotoId,
+  type SeasonId,
+  seasonId,
+} from "../shared/ids.ts";
 import { ok } from "../shared/result.ts";
 import { entryPhotoFixture } from "../testing/builders.ts";
 import { instant } from "../time/instant.ts";
@@ -409,6 +415,143 @@ export function describeEntryRepositoryContract(
       ).rejects.toThrow();
       expect(await get(e)).toEqual(e);
       expect(await stored(e)).toEqual(e);
+    });
+
+    describe("account erasure", () => {
+      const PEER = memberId(uuid(0xa2));
+      const noted = (n: number, options: Partial<EntryRecord> = {}) =>
+        entry(n, {
+          note: "secret note",
+          requestFingerprint: '["done",null,"secret note"]',
+          ...options,
+        });
+      const erase = (uow: Uow, members: readonly MemberId[]) =>
+        uow.transaction(async ({ entries }) => {
+          await entries.eraseEvidence(members);
+          return ok(undefined);
+        });
+
+      it("eraseEvidence blanks note, photo and the plain-text request key of live rows and tombstones, keeping the scoring facts", async () => {
+        const { uow, add, remove, stored, get } = await subject();
+        await uow.transaction(async ({ entryPhotos }) => {
+          await entryPhotos.add(photoRow(1));
+          return ok(undefined);
+        });
+        const live = noted(1, { photoId: PHOTO(1) });
+        const quantity = noted(2, {
+          value: { kind: "quantity", value: frac(7n, 2n) },
+          editedAt: instant(9),
+        });
+        const dead = noted(3);
+        const peer = noted(4, { memberId: PEER });
+        await add(live, quantity, dead, peer);
+        await remove(dead, 0);
+        await erase(uow, [MEMBER]);
+        expect(await get(live)).toEqual({
+          ...live,
+          note: null,
+          photoId: null,
+          requestFingerprint: "erased",
+          clientRequestId: live.id,
+          version: 1,
+        });
+        expect(await get(quantity)).toEqual({
+          ...quantity,
+          note: null,
+          requestFingerprint: "erased",
+          clientRequestId: quantity.id,
+          version: 1,
+        });
+        expect(await stored(dead)).toMatchObject({
+          deleted: true,
+          value: null,
+          note: null,
+          day: dead.day,
+          requestFingerprint: "erased",
+          clientRequestId: dead.id,
+          version: 2,
+        });
+        expect(await get(peer)).toEqual(peer);
+      });
+
+      it("eraseEvidence moves the idempotency key to the entry id and frees nothing else", async () => {
+        const { uow, add } = await subject();
+        const e = noted(1);
+        await add(e);
+        await erase(uow, [MEMBER]);
+        const byOld = await uow.read(({ entries }) =>
+          entries.findByClientRequest(e.memberId, e.commitmentId, e.clientRequestId),
+        );
+        const byId = await uow.read(({ entries }) =>
+          entries.findByClientRequest(e.memberId, e.commitmentId, e.id),
+        );
+        expect(byOld).toBeNull();
+        expect(byId).toMatchObject({ id: e.id, requestFingerprint: "erased" });
+      });
+
+      it("eraseEvidence is a safe repeat that bumps no version twice, and [] is a no-op", async () => {
+        const { uow, add, get } = await subject();
+        const e = noted(1);
+        await add(e);
+        await erase(uow, []);
+        expect(await get(e)).toEqual(e);
+        await erase(uow, [MEMBER]);
+        await erase(uow, [MEMBER]);
+        expect(await get(e)).toMatchObject({ version: 1, requestFingerprint: "erased" });
+      });
+
+      it("eraseEvidence is seen inside its own transaction and undone by a rollback", async () => {
+        const { uow, add, get } = await subject();
+        const e = noted(1);
+        await add(e);
+        const seen = await uow.transaction(async ({ entries }) => {
+          await entries.eraseEvidence([MEMBER]);
+          return ok(await entries.get(e.id));
+        });
+        expect((seen as { value: EntryRecord | null }).value).toMatchObject({
+          note: null,
+          version: 1,
+        });
+        const f = noted(2);
+        await add(f);
+        await expect(
+          uow.transaction(async ({ entries }) => {
+            await entries.eraseEvidence([MEMBER]);
+            throw new Error("boom");
+          }),
+        ).rejects.toThrow("boom");
+        expect(await get(f)).toEqual(f);
+      });
+
+      it("deleteBySeasons removes live rows and tombstones of the seasons, and nothing for others", async () => {
+        const { uow, add, remove, get, stored } = await subject();
+        await uow.transaction(async ({ entryPhotos }) => {
+          await entryPhotos.add(photoRow(1));
+          return ok(undefined);
+        });
+        const live = entry(1, { photoId: PHOTO(1) });
+        const dead = entry(2);
+        await add(live, dead);
+        await remove(dead, 0);
+        const drop = (ids: SeasonId[]) =>
+          uow.transaction(async ({ entries }) => {
+            await entries.deleteBySeasons(ids);
+            return ok(undefined);
+          });
+        await drop([]);
+        await drop([seasonId(uuid(0xe99))]);
+        expect(await get(live)).toEqual(live);
+        await drop([SEASON.id]);
+        await drop([SEASON.id]);
+        expect(await get(live)).toBeNull();
+        expect(await stored(dead)).toBeNull();
+        expect(await uow.read(({ entries }) => entries.listBySeason(SEASON.id))).toEqual([]);
+        expect(
+          await uow.read(({ entries }) =>
+            entries.findByClientRequest(MEMBER, COMMITMENT, dead.clientRequestId),
+          ),
+        ).toBeNull();
+      });
     });
   });
 }

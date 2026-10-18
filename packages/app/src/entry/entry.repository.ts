@@ -59,4 +59,17 @@ export interface EntryRepository {
    * @throws {ConcurrencyConflict} if the stored version is no longer `expectedVersion`, or the entry is gone or already deleted.
    */
   remove(id: EntryId, expectedVersion: number): Promise<void>;
+  /**
+   * Account erasure: for ALL rows of `memberIds`, tombstones included, blanks `note` and `photoId`,
+   * sets `requestFingerprint` to {@link ERASED_REQUEST_FINGERPRINT} (it holds the note in plain text)
+   * and `clientRequestId` to the entry id (a free client string), and bumps the version. Value, day
+   * and recorded facts are kept: peers' standings do not move. A row already erased is left alone,
+   * so a repeat writes nothing. `[]` is a no-op. The caller holds the circle and season guards.
+   */
+  eraseEvidence(memberIds: readonly MemberId[]): Promise<void>;
+  /** Full-circle erasure: deletes every row, tombstones included, of `seasonIds`. `[]` is a no-op. */
+  deleteBySeasons(seasonIds: readonly SeasonId[]): Promise<void>;
 }
+
+/** The `requestFingerprint` an erased entry carries (a real one is a JSON array, so it never collides). */
+export const ERASED_REQUEST_FINGERPRINT = "erased";

@@ -195,5 +195,22 @@ export function createPgEntryRepository(exec: SqlExecutor): EntryRepository {
       );
       if (rows.length === 0) throw new ConcurrencyConflict();
     },
+
+    // 'erased' is ERASED_REQUEST_FINGERPRINT of the port. Key columns (client_request_id) are
+    // updated on purpose: nothing references entries, so the row lock upgrade blocks no foreign key.
+    async eraseEvidence(memberIds) {
+      if (memberIds.length === 0) return;
+      await exec.query(
+        "update pactjoy.entries set note = null, photo_id = null, request_fingerprint = 'erased', client_request_id = id::text, version = version + 1 where member_id = any($1::uuid[]) and request_fingerprint <> 'erased'",
+        [memberIds],
+      );
+    },
+
+    async deleteBySeasons(seasonIds) {
+      if (seasonIds.length === 0) return;
+      await exec.query("delete from pactjoy.entries where season_id = any($1::uuid[])", [
+        seasonIds,
+      ]);
+    },
   };
 }
