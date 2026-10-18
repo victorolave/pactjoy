@@ -13,6 +13,7 @@ import { PendingMarksContext } from "../pending-marks.ts";
 import { useToday } from "../queries.ts";
 import { TodayRowSeasonContext } from "../rows/row-navigation.ts";
 import { type TodayModel, toTodayModel } from "../today-view-model.ts";
+import { FirstFullWeekCelebration } from "./FirstFullWeekCelebration.tsx";
 import { OutboxNotices } from "./OutboxNotices.tsx";
 import { TodayClosedWeek } from "./TodayClosedWeek.tsx";
 import styles from "./TodayScreen.module.css";
@@ -121,24 +122,30 @@ export function TodayScreen() {
       localToday={today.localToday}
       fetchStartedAt={today.fetchStartedAt}
       connectionLost={connectionLost}
+      fresh={!today.isError && !today.isFetching && !connectionLost && today.fromServer}
     />
   );
 }
 
 /**
  * The server's Today with what is waiting on the phone laid over it (design 15g). The banner says
- * "sin conexión" while the connection is lost and "enviando" while the queue is being sent.
+ * "sin conexión" while the connection is lost and "enviando" while the queue is being sent. The
+ * first-full-week celebration reads the server's own view, never the overlay: what waits on the
+ * phone is not a kept week.
  */
 function TodayWithData({
   data,
   localToday,
   fetchStartedAt,
   connectionLost,
+  fresh,
 }: {
   readonly data: TodayView;
   readonly localToday: string | null;
   readonly fetchStartedAt: number | null;
   readonly connectionLost: boolean;
+  /** `data` is a settled answer the server gave in this session (see `FirstFullWeekCelebration`). */
+  readonly fresh: boolean;
 }) {
   const sending = useOutboxReplaying();
   const { view, marks } = useOverlayToday(data, fetchStartedAt);
@@ -146,6 +153,7 @@ function TodayWithData({
     <div className={styles.screen}>
       {connectionLost ? <OfflineBanner /> : sending && <SyncingBanner />}
       <OutboxNotices />
+      <FirstFullWeekCelebration view={data} fresh={fresh} />
       <PendingMarksContext.Provider value={marks}>
         <TodayContent
           model={toTodayModel(view)}

@@ -12,6 +12,7 @@ export type DeviceKey =
   | "nameDraft"
   | `pact-closed-seen:${string}`
   | `pause-redistributed-seen:${string}`
+  | `first-full-week-seen:${string}`
   | `weekly-summary-seen:${string}`;
 
 /** Small flags and drafts kept on this device only. Storage failures never throw. */

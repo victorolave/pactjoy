@@ -111,6 +111,14 @@ New browser capabilities follow the same rule as the first ports: a port in `src
 
 **`myCircle` is not persisted offline.** Only `["today"]` is persisted. A saved `myCircle` would restore a stale `noCircle` or circle after a leave or join. `CACHE_VERSION` changes for persisted shape, scoring semantics or newly persisted keys; v5 purges pre-T0 ended-season scores and stale weekly-series figures. Progress responses are not persisted. Weekly-summary dismissal stores only a device-local MemberId/season/week flag, surviving session clearing without storing summary data; opening consumes it, and the season-local day boundary hides it.
 
+## Addendum: first full week celebration (2026-10-18)
+
+Owner definition: the first final season week with every active opportunity kept, across all of the viewer's commitments. Minimum is enough, pauses are excluded, at least one opportunity is required, and both the week grace and opportunity deadlines must have expired. Eligibility is derived by the app from exact engine results and sent as an optional nullable `firstFullWeek` index in Today; older payloads fail closed. No new feed event or push is emitted.
+
+Today shows a private accessible celebration only after an actual successful online fetch on this mount, not cache hydration or a failed refresh. Opening consumes `first-full-week-seen:<member>:<season>` on this device, matching the weekly-summary flag policy; each new season can celebrate again. The Sheet retains focus/Escape behavior, the Together ribbon honors reduced motion, and acknowledgement uses the optional haptics port. Persistence denial falls back to the device adapter's in-memory flags.
+
+Derived Spanish copy, pending owner approval: “Tu primera semana completa”; “En la semana {N} cumpliste tu mínimo en todas tus oportunidades activas.”; “Seguir con mi día”. Real-iPhone and live design-fidelity checks remain owner checks; the shipped components/tokens and cached design inventory were reused because the private project could not be inspected live.
+
 ## Addendum: season timezone (change `pwa-season-habits-pact`, D7)
 
 **Owner decision, 2026-10-07.** Circles have no timezone. At season creation the client captures the creator's device IANA timezone and sends it with the start date. That timezone is stored on the season and stays fixed for its calendar; a subsequent device timezone change does not change it. The default start is tomorrow in this season timezone, with the editable date window resolved in the same zone. This corrects D7's earlier wording, "circle timezone", without changing the existing implementation.

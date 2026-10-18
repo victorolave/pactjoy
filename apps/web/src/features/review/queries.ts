@@ -1,8 +1,8 @@
 import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePactJoyApi } from "../../context/api-context.tsx";
 import type { SubmitReviewCommand } from "../../ports/pactjoy-api.ts";
+import { todayQuery } from "../../shared/fetch-today.ts";
 import { progressKey, reviewKey, reviewsKey, stageKey, todayKey } from "../../shared/query-keys.ts";
-import { fetchToday } from "../../shared/today-fetch.ts";
 
 /**
  * The owner's view of one review period. Read live (the summary is recomputed from Entries) and
@@ -56,7 +56,7 @@ export function useSkipBaseline(seasonId: string) {
 /** What Today says about reviews, through the same query Today uses (no second request). */
 export function useReviewOffer() {
   const api = usePactJoyApi();
-  const query = useQuery({ queryKey: todayKey, queryFn: ({ signal }) => fetchToday(api, signal) });
+  const query = useQuery(todayQuery(api));
   const today = query.data;
   if (today === undefined || !("pendingReview" in today)) {
     return { pendingReview: null, baselineOffer: null };
@@ -72,7 +72,7 @@ export function useReviewOffer() {
  */
 export function useResultsOpenOn(): string | null {
   const api = usePactJoyApi();
-  const query = useQuery({ queryKey: todayKey, queryFn: ({ signal }) => fetchToday(api, signal) });
+  const query = useQuery(todayQuery(api));
   const today = query.data;
   if (today === undefined || !("seasonClose" in today) || today.seasonClose === null) return null;
   return today.seasonClose.step === "resultsSoon" ? today.seasonClose.resultsFrom : null;
