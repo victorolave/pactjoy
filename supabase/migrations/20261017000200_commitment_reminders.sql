@@ -9,7 +9,7 @@
 --
 --   minute_of_day  season-local, 08:00-21:45 on a 15-minute grid, so the hour a
 --                  reminder stays valid ends by the 22:00 quiet hours
---   weekdays       bitmask of engine weekdays (bit 0 = Sunday ... bit 6 = Saturday)
+--   weekdays       bitmask of engine weekdays (bit 0 = Monday ... bit 6 = Sunday)
 --
 -- There is NO foreign key (like the notification tables): a pact-open season can be
 -- discarded and commitments are replaced wholesale by the season's save; the

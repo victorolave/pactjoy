@@ -42,6 +42,8 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "pushConfig",
   "removePushSubscription",
   "savePushSubscription",
+  "getCommitmentReminder",
+  "setCommitmentReminder",
   "requestEntryPhotoUpload",
   "requestPause",
   "respondToPause",

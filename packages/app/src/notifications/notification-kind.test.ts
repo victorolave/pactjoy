@@ -15,6 +15,7 @@ const ALLOWED: readonly NotificationKind[] = [
   "seasonStarted",
   "reviewDue",
   "seasonClosed",
+  "commitmentReminder",
 ];
 
 const FORBIDDEN_WORDS = [
@@ -59,6 +60,12 @@ describe("KIND_POLICY", () => {
       "pauseRejected",
       "pactPendingApproval",
     ]);
+  });
+
+  it("sends a reminder at its owner's chosen time, never shifted and never rolled over (REQ-R7)", () => {
+    expect(KIND_POLICY.commitmentReminder).toEqual({ timing: "chosenTime", rollover: false });
+    const chosen = NOTIFICATION_KINDS.filter((kind) => KIND_POLICY[kind].timing === "chosenTime");
+    expect(chosen).toEqual(["commitmentReminder"]);
   });
 
   it("rolls a missed calendar notice over once, except the pause end (the next day is the end itself)", () => {

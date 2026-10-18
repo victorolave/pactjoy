@@ -26,7 +26,7 @@ const COLUMNS =
 
 const iso = (at: Instant) => new Date(at).toISOString();
 
-/** Engine weekdays to the 7-bit mask the table stores (bit 0 = Sunday). */
+/** Engine weekdays to the 7-bit mask the table stores (bit 0 = Monday). */
 function maskOf(weekdays: readonly Weekday[]): number {
   return weekdays.reduce<number>((mask, day) => mask | (1 << day), 0);
 }

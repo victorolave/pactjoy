@@ -17,7 +17,7 @@ export interface CommitmentReminder {
   readonly enabled: boolean;
   /** Season-local time, minutes after midnight: 08:00-21:45 in 15-minute steps. */
   readonly minuteOfDay: number;
-  /** The days it fires on (engine weekdays, 0 = Sunday), distinct and sorted. */
+  /** The days it fires on (engine weekdays, 0 = Monday), distinct and sorted. */
   readonly weekdays: readonly Weekday[];
   readonly updatedAt: Instant;
   readonly version: number;

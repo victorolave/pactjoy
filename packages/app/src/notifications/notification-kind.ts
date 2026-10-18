@@ -1,3 +1,4 @@
+import type { CommitmentId } from "@pactjoy/engine";
 import type { PauseRequestId, SeasonId } from "../shared/ids.ts";
 import type { LocalDate } from "../time/local-date.ts";
 
@@ -25,6 +26,16 @@ export interface NotificationParams {
   readonly reviewDue: { readonly seasonId: SeasonId; readonly periodIndex: number };
   /** On the results day; it absorbs the closing review (no separate `reviewDue`). */
   readonly seasonClosed: { readonly seasonId: SeasonId };
+  /**
+   * To the commitment's owner, at the time they chose, while that day is still open to register
+   * (D2). Ids only, like every notice: the device names the habit for a visible commitment and
+   * keeps the generic copy for a private one.
+   */
+  readonly commitmentReminder: {
+    readonly seasonId: SeasonId;
+    readonly commitmentId: CommitmentId;
+    readonly forDate: LocalDate;
+  };
 }
 
 /** The closed set of notices (REQ-F1). `notification-kind.test.ts` pins it. */
@@ -38,9 +49,10 @@ export type NoticeContent = {
 export interface KindPolicy {
   /**
    * `immediate`: on the next dispatch tick (quiet hours still apply). `morning`: 09:00 season-local
-   * on the day it is about, until 22:00.
+   * on the day it is about, until 22:00. `chosenTime`: at the owner's own time (08:00-21:45), valid
+   * for one hour and never past 22:00, so quiet hours never shift it: it is sent on time or dropped.
    */
-  readonly timing: "immediate" | "morning";
+  readonly timing: "immediate" | "morning" | "chosenTime";
   /** A `morning` notice not delivered by 22:00 moves once to the next day's 09:00-22:00 window. */
   readonly rollover: boolean;
 }
@@ -55,6 +67,7 @@ export const KIND_POLICY: Readonly<Record<NotificationKind, KindPolicy>> = {
   seasonStarted: { timing: "morning", rollover: true },
   reviewDue: { timing: "morning", rollover: true },
   seasonClosed: { timing: "morning", rollover: true },
+  commitmentReminder: { timing: "chosenTime", rollover: false },
 };
 
 export const NOTIFICATION_KINDS = Object.keys(KIND_POLICY) as readonly NotificationKind[];

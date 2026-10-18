@@ -2,6 +2,7 @@ import type { Circle } from "../circle/circle.ts";
 import { pausesEndingTomorrow } from "../pause/pause-notices.ts";
 import type { Repositories } from "../ports/repositories.ts";
 import type { UnitOfWork } from "../ports/unit-of-work.ts";
+import { type DueReminder, dueReminders } from "../reminders/reminder-notices.ts";
 import { interimReviewDueFrom, isReviewDue } from "../review/review-notices.ts";
 import { participantsOf } from "../season/closure/finalize.ts";
 import { closeDatesOf } from "../season/closure/season-calendar.ts";
@@ -12,7 +13,7 @@ import type { Instant } from "../time/instant.ts";
 import type { LocalDate } from "../time/local-date.ts";
 import { type TimeZone, timeZoneId } from "../time/time-zone.port.ts";
 import { enqueueNotices } from "./enqueue-notices.ts";
-import { addDays, inPlanningWindow, morningWindow } from "./notice-timing.ts";
+import { addDays, inPlanningWindow, morningWindow, quietHoursEnd } from "./notice-timing.ts";
 import { KIND_POLICY, type NoticeContent } from "./notification-kind.ts";
 import type { NoticeDraft } from "./outbox-notice.ts";
 
@@ -142,12 +143,47 @@ async function seasonDrafts(
 }
 
 /**
+ * The reminders due now as notices (D2, design J18): one per commitment and day, keyed
+ * `commitmentReminder:{season}:{commitment}:{date}:{member}`, valid for the reminder's own hour.
+ */
+function reminderDrafts(
+  due: readonly DueReminder[],
+  season: Season,
+  circle: Circle,
+): readonly NoticeDraft[] {
+  return due.map((reminder) => ({
+    kind: "commitmentReminder",
+    params: {
+      seasonId: season.id,
+      commitmentId: reminder.commitmentId,
+      forDate: reminder.forDate,
+    },
+    dedupeKey: [
+      "commitmentReminder",
+      season.id,
+      reminder.commitmentId,
+      reminder.forDate,
+      reminder.memberId,
+    ].join(":"),
+    circleId: circle.id,
+    seasonId: season.id,
+    recipientMemberId: reminder.memberId,
+    recipientUserId: reminder.userId,
+    timeZone: season.timeZone,
+    notBefore: reminder.notBefore,
+    expiresAt: reminder.expiresAt,
+    rolloversLeft: 0,
+  }));
+}
+
+/**
  * Plans the calendar notices (ADR-0017, design J6): `seasonStarted` on the start day, `reviewDue` on
  * the first day of each interim review, `seasonClosed` on the results day (absorbing the closing
  * review) and `pauseEndsTomorrow` the day before a pause's last day, each to the participants,
  * 09:00 to 22:00 season-local. It plans only while `now` is inside that window, so nothing is ever
- * planned for a day already over. It keeps no state: the dedupe key is the memory, so a re-run, a
- * concurrent run or a late run adds nothing twice (REQ-O4). One transaction per season.
+ * planned for a day already over. It also adds the commitment reminders due now (D2), outside the
+ * quiet hours only. It keeps no state: the dedupe key is the memory, so a re-run, a concurrent run
+ * or a late run adds nothing twice (REQ-O4). One transaction per season.
  */
 export async function planNotifications(
   deps: PlanNotificationsDeps,
@@ -159,18 +195,22 @@ export async function planNotifications(
 
   let enqueued = 0;
   for (const candidate of listed) {
-    if (!inPlanningWindow(now, candidate.timeZone, deps.timeZone)) continue;
+    const calendar = inPlanningWindow(now, candidate.timeZone, deps.timeZone);
+    // Reminders run on their owners' times (08:00-21:45), so only the quiet hours plan nothing.
+    if (!calendar && quietHoursEnd(now, candidate.timeZone, deps.timeZone) !== null) continue;
     const result = await deps.uow.transaction(async (repos) => {
       const season = await repos.seasons.get(candidate.id);
       const circle = season ? await repos.circles.get(season.circleId) : null;
       if (!season || !circle || season.actualStart === null) return ok(0);
-      return ok(
-        await enqueueNotices(
-          repos,
-          await seasonDrafts(repos, season, circle, now, deps.timeZone),
-          now,
+      const drafts = [
+        ...(calendar ? await seasonDrafts(repos, season, circle, now, deps.timeZone) : []),
+        ...reminderDrafts(
+          await dueReminders(repos, { season, circle, now, timeZone: deps.timeZone }),
+          season,
+          circle,
         ),
-      );
+      ];
+      return ok(await enqueueNotices(repos, drafts, now));
     });
     if (result.ok) enqueued += result.value;
   }

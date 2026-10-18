@@ -21,7 +21,7 @@ const commitmentWith = (measure: Measure) =>
     measure,
   });
 
-const MON_WED_FRI: Measure = {
+const TUE_THU_SAT: Measure = {
   ...PER_DAY_REACH,
   schedule: { period: "perSession", frequency: { kind: "specificDays", weekdays: [5, 1, 3] } },
 };
@@ -35,7 +35,7 @@ const setting = (extra: Partial<ReminderSetting> = {}): ReminderSetting => ({
 
 describe("reminder days and defaults (REQ-R1)", () => {
   it("a specificDays commitment is reminded on its own days, sorted", () => {
-    expect(reminderDaysOf(commitmentWith(MON_WED_FRI))).toEqual([1, 3, 5]);
+    expect(reminderDaysOf(commitmentWith(TUE_THU_SAT))).toEqual([1, 3, 5]);
   });
 
   it("timesPerWeek and weeklyTotal commitments can be reminded on any day", () => {
@@ -44,7 +44,7 @@ describe("reminder days and defaults (REQ-R1)", () => {
   });
 
   it("defaults to off at 20:00 on every day the commitment can fire (SC-R7)", () => {
-    expect(defaultReminderSetting(commitmentWith(MON_WED_FRI))).toEqual({
+    expect(defaultReminderSetting(commitmentWith(TUE_THU_SAT))).toEqual({
       enabled: false,
       minuteOfDay: 1200,
       weekdays: [1, 3, 5],
@@ -53,7 +53,7 @@ describe("reminder days and defaults (REQ-R1)", () => {
 });
 
 describe("invalidReminderReason (REQ-R3)", () => {
-  const c = commitmentWith(MON_WED_FRI);
+  const c = commitmentWith(TUE_THU_SAT);
 
   it("accepts 08:00 to 21:45 on the 15-minute grid", () => {
     for (const minuteOfDay of [480, 495, 1200, 1305]) {

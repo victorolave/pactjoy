@@ -318,7 +318,24 @@ export type {
 } from "./progress/week-summary.query.ts";
 export { weekSummary } from "./progress/week-summary.query.ts";
 export type { CommitmentReminderRepository } from "./reminders/commitment-reminder.repository.ts";
-export type { CommitmentReminder } from "./reminders/commitment-reminder.ts";
+export type {
+  CommitmentReminder,
+  InvalidReminderReason,
+  ReminderSetting,
+} from "./reminders/commitment-reminder.ts";
+export type {
+  CommitmentReminderError,
+  CommitmentReminderInput,
+  CommitmentReminderView,
+  GetCommitmentReminderDeps,
+  SetCommitmentReminderDeps,
+  SetCommitmentReminderError,
+  SetCommitmentReminderInput,
+} from "./reminders/commitment-reminder-setting.ts";
+export {
+  getCommitmentReminder,
+  setCommitmentReminder,
+} from "./reminders/commitment-reminder-setting.ts";
 export type {
   CommitmentStageDeps,
   CommitmentStageError,
