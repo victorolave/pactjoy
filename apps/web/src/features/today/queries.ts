@@ -1,5 +1,5 @@
 import { focusManager, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePactJoyApi } from "../../context/api-context.tsx";
 import { useClock } from "../../context/clock-context.tsx";
 import { progressKey, todayKey } from "../../shared/query-keys.ts";
@@ -11,12 +11,12 @@ export function useToday() {
   const clock = useClock();
   const client = useQueryClient();
   const [, onDayChange] = useState(0);
-  const [confirmed, setConfirmed] = useState(0);
+  const confirmed = useRef(0);
   const query = useQuery({
     queryKey: todayKey,
     queryFn: async ({ signal }) => {
       const view = await api.getToday(signal);
-      if (!signal.aborted) setConfirmed((count) => count + 1);
+      if (!signal.aborted) confirmed.current += 1;
       return view;
     },
   });
@@ -37,7 +37,7 @@ export function useToday() {
   }, [clock, client, zone]);
   return {
     ...query,
-    confirmed,
+    confirmed: confirmed.current,
     localToday: zone === undefined ? null : seasonDate(clock.nowMs(), zone),
   };
 }
