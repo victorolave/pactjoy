@@ -93,19 +93,19 @@ describe("join attempts are rate limited (ADR-0020)", () => {
         headers: {
           authorization: "Bearer victor",
           "content-type": "application/json",
-          "x-forwarded-for": "203.0.113.7, 10.0.0.1",
+          "x-forwarded-for": "81.2.69.160, 10.0.0.1",
         },
         body: JSON.stringify({ inviteCode: "AAAAAA" }),
       }),
     );
-    const hashed = `network:${await createNetworkKeyer(RATE_LIMIT_KEY)("203.0.113.7")}`;
-    const counts = await countsOf(app, [hashed, "network:203.0.113.7"]);
+    const hashed = `network:${await createNetworkKeyer(RATE_LIMIT_KEY)("81.2.69.160")}`;
+    const counts = await countsOf(app, [hashed, "network:81.2.69.160"]);
     expect(counts).toEqual([2, 1]);
   });
 
   it("RL7: without the key, or without the header, only the user is counted", async () => {
     for (const [rateLimitKey, forwarded] of [
-      [null, "203.0.113.7"],
+      [null, "81.2.69.160"],
       [RATE_LIMIT_KEY, null],
     ] as const) {
       const { handler, app } = await given({ rateLimitKey });
@@ -120,7 +120,7 @@ describe("join attempts are rate limited (ADR-0020)", () => {
           body: JSON.stringify({ inviteCode: "AAAAAA" }),
         }),
       );
-      const hashed = `network:${await createNetworkKeyer(RATE_LIMIT_KEY)("203.0.113.7")}`;
+      const hashed = `network:${await createNetworkKeyer(RATE_LIMIT_KEY)("81.2.69.160")}`;
       // The probe's own hit: 1 means no network counter; 2 means the user was counted.
       expect(await countsOf(app, [hashed, `user:${VICTOR}`])).toEqual([1, 2]);
     }

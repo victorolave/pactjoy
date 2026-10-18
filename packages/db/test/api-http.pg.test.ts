@@ -112,7 +112,7 @@ describe("HTTP over Postgres: the real handler on the migrated database", () => 
 
   it("ADR-0020: the 11th join attempt in a minute is a 429, and the network is stored only as a keyed hash", async () => {
     const { call } = api;
-    const forwarded = { "x-forwarded-for": "203.0.113.7" };
+    const forwarded = { "x-forwarded-for": "81.2.69.160" };
     for (let i = 0; i < 10; i += 1) {
       const preview = await call(
         "POST",
@@ -143,6 +143,6 @@ describe("HTTP over Postgres: the real handler on the migrated database", () => 
       "user",
     ]);
     expect(rows[0]?.subject).toMatch(/^network:[A-Za-z0-9_-]{22}$/);
-    expect(JSON.stringify(rows)).not.toContain("203.0.113");
+    expect(JSON.stringify(rows)).not.toContain("81.2.69");
   });
 });

@@ -30,7 +30,12 @@ Both routes share one budget of **join attempts**, counted in **fixed windows** 
   - Ended windows are deleted lazily by the next attempt (one indexed delete on `expires_at`). There is no job, no trigger and no SQL function.
 - **The client network.**
   - It is the **first** entry of `X-Forwarded-For`. IPv4 is used as it is; IPv6 is reduced to its /64, because one host or home usually holds a whole /64; an IPv4-mapped IPv6 address is read as IPv4.
-  - A missing or unparsable header means only the user limits apply, and so do loopback, unspecified and link-local addresses (`127/8`, `0/8`, `169.254/16`, `::`, `::1`, `::a.b.c.d`, `fe80::/10`). Those name no client network, and a bucket for them would be shared by everyone who forges one.
+  - A missing or unparsable header means only the user limits apply, and so does any address that is not global unicast. Those are, in IPv4:
+    - `0/8`, `10/8`, `100.64/10`, `127/8`, `169.254/16`, `172.16/12`;
+    - `192.0.0/24`, `192.0.2/24`, `192.168/16`, `198.18/15`, `198.51.100/24`, `203.0.113/24`;
+    - everything from `224/4` up.
+
+    In IPv6, anything outside `2000::/3`. Such an address is a proxy or container in front of everyone, or a forged value, and a bucket for it would be shared by all.
   - The first entry is chosen because a later entry could be a proxy shared by many users, and limiting on it would throttle everyone together. The per-user limit is the floor and cannot be forged.
   - Whether the hosted gateway overwrites or appends a client-supplied `X-Forwarded-For` is an owner check (below), and it gates setting the key. If the gateway only appends, the first entry is attacker-controlled. An attacker could then escape the network limit, and worse, fill a chosen victim network's budget: a targeted denial of joins for everyone behind that address. Refused attempts count, so the victim stays locked out while the attack lasts. The key therefore stays unset until the check shows the gateway overwrites, or until the extraction is changed to the entry the gateway itself appends.
 - **No raw address is stored or logged.**

@@ -39,13 +39,26 @@ function ipv6(text: string): number[] | null {
   return [...head, ...Array<number>(8 - given).fill(0), ...rest];
 }
 
+/** The IPv4 ranges that are not global unicast, each a test over the octets. */
+const NON_GLOBAL_V4: readonly ((o: readonly number[]) => boolean)[] = [
+  ([a]) => a === 0 || a === 10 || a === 127 || (a ?? 0) >= 224, // this net, private, loopback, multicast and reserved
+  ([a, b]) => a === 100 && (b ?? 0) >= 64 && (b ?? 0) <= 127, // 100.64/10 shared (CGNAT)
+  ([a, b]) => a === 169 && b === 254, // link-local
+  ([a, b]) => a === 172 && (b ?? 0) >= 16 && (b ?? 0) <= 31, // 172.16/12 private
+  ([a, b, c]) => a === 192 && b === 0 && (c === 0 || c === 2), // 192.0.0/24 IETF, 192.0.2/24 TEST-NET-1
+  ([a, b]) => a === 192 && b === 168, // private
+  ([a, b]) => a === 198 && (b === 18 || b === 19), // 198.18/15 benchmarking
+  ([a, b, c]) => a === 198 && b === 51 && c === 100, // TEST-NET-2
+  ([a, b, c]) => a === 203 && b === 0 && c === 113, // TEST-NET-3
+];
+
 /**
- * Unspecified (`0/8`), loopback (`127/8`) and link-local (`169.254/16`) name no client network: a
- * bucket for them would be shared by everyone who forges one, so they count as unknown.
+ * A non-global address (private, shared, loopback, link-local, documentation, multicast,
+ * reserved) names no client network: it is a proxy or container in front of everyone, or a forged
+ * value, and a bucket for it would be shared by all. It counts as unknown.
  */
 function publicV4(octets: readonly number[]): string | null {
-  const [a, b] = octets;
-  return a === 0 || a === 127 || (a === 169 && b === 254) ? null : octets.join(".");
+  return NON_GLOBAL_V4.some((test) => test(octets)) ? null : octets.join(".");
 }
 
 /**
@@ -72,8 +85,8 @@ export function clientNetworkOf(headers: Headers): string | null {
     const [high = 0, low = 0] = hextets.slice(6);
     return publicV4([high >> 8, high & 0xff, low >> 8, low & 0xff]);
   }
-  // `::`, `::1` and the IPv4-compatible `::a.b.c.d`, and link-local `fe80::/10`.
-  if ((zeroHead && hextets[5] === 0) || ((hextets[0] ?? 0) & 0xffc0) === 0xfe80) return null;
+  // Only global unicast `2000::/3`: not `::`, `::1`, link-local, unique-local or multicast.
+  if (((hextets[0] ?? 0) & 0xe000) !== 0x2000) return null;
   return `${hextets
     .slice(0, 4)
     .map((h) => h.toString(16))
