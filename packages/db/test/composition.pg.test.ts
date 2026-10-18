@@ -56,6 +56,7 @@ describe("createPostgresUnitOfWork", () => {
       "nudgeDismissals",
       "pauses",
       "pushSubscriptions",
+      "reminders",
       "reviews",
       "seasonClosures",
       "seasons",
