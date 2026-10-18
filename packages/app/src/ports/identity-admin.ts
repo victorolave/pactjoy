@@ -7,8 +7,11 @@ export interface IdentityAdmin {
 
 /** Infrastructure failure with no upstream response, identifier or credential in its message. */
 export class IdentityAdminError extends Error {
-  constructor(readonly code: "unavailable" | "rejected") {
+  readonly code: "unavailable" | "rejected";
+
+  constructor(code: "unavailable" | "rejected") {
     super(code);
+    this.code = code;
     this.name = "IdentityAdminError";
   }
 }
