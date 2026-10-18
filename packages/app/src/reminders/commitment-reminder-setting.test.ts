@@ -143,6 +143,61 @@ describe("setCommitmentReminder (REQ-R1..R4)", () => {
     expect(await app.reminders.get(world.season.id, world.andreaCommitment)).toBeNull();
   });
 
+  it("after the commitment's days change, shows only days it still has, so it can be saved again", async () => {
+    const { app, world, input, set } = await given();
+    await set({ weekdays: [1, 3] });
+    // The owner edits the commitment to other days (same id): the stored row is not reconciled.
+    await app.uow.transaction(async (repos) => {
+      const season = await repos.seasons.get(world.season.id);
+      if (!season) throw new Error("fixture");
+      const measure: Measure = {
+        ...PER_DAY_REACH,
+        schedule: { period: "perSession", frequency: { kind: "specificDays", weekdays: [3, 6] } },
+      };
+      await repos.seasons.save(
+        {
+          ...season,
+          commitments: season.commitments.map((c) =>
+            c.id === world.andreaCommitment ? { ...c, measure } : c,
+          ),
+          version: season.version + 1,
+        },
+        season.version,
+      );
+      return { ok: true, value: undefined };
+    });
+    const view = await getCommitmentReminder(app, world.andrea, input);
+    expect(view.ok && [view.value.weekdays, view.value.availableWeekdays]).toEqual([[3], [3, 6]]);
+    // What the card sends back from that view saves.
+    expect((await set({ weekdays: [3], minuteOfDay: 9 * 60 })).ok).toBe(true);
+  });
+
+  it("a stored reminder whose days all disappeared shows the commitment's days", async () => {
+    const { app, world, input, set } = await given();
+    await set({ weekdays: [1] });
+    await app.uow.transaction(async (repos) => {
+      const season = await repos.seasons.get(world.season.id);
+      if (!season) throw new Error("fixture");
+      const measure: Measure = {
+        ...PER_DAY_REACH,
+        schedule: { period: "perSession", frequency: { kind: "specificDays", weekdays: [3, 6] } },
+      };
+      await repos.seasons.save(
+        {
+          ...season,
+          commitments: season.commitments.map((c) =>
+            c.id === world.andreaCommitment ? { ...c, measure } : c,
+          ),
+          version: season.version + 1,
+        },
+        season.version,
+      );
+      return { ok: true, value: undefined };
+    });
+    const view = await getCommitmentReminder(app, world.andrea, input);
+    expect(view.ok && view.value.weekdays).toEqual([3, 6]);
+  });
+
   it("only the owner can set it", async () => {
     const { app, world, input } = await given();
     const result = await setCommitmentReminder(app, world.victor, {

@@ -98,6 +98,18 @@ const settingOf = (reminder: CommitmentReminder): ReminderSetting => ({
   weekdays: reminder.weekdays,
 });
 
+/**
+ * The stored setting as the owner sees it today: if the commitment's days changed since it was
+ * saved (an edit keeps the commitment id), only the days it still has, or all of them when none is
+ * left, so whatever the owner sends back is valid. The planner never fires on a day without a
+ * session anyway (`reminder-notices.ts`).
+ */
+function shownSetting(reminder: CommitmentReminder, commitment: CommitmentRecord): ReminderSetting {
+  const allowed = reminderDaysOf(commitment);
+  const kept = reminder.weekdays.filter((day) => allowed.includes(day));
+  return { ...settingOf(reminder), weekdays: kept.length > 0 ? kept : allowed };
+}
+
 const sameSetting = (a: ReminderSetting, b: ReminderSetting) =>
   a.enabled === b.enabled &&
   a.minuteOfDay === b.minuteOfDay &&
@@ -114,7 +126,12 @@ export async function getCommitmentReminder(
     const owned = await loadOwned(repos, actor, input);
     if (!owned.ok) return owned;
     const { commitment, stored } = owned.value;
-    return ok(viewOf(commitment, stored ? settingOf(stored) : defaultReminderSetting(commitment)));
+    return ok(
+      viewOf(
+        commitment,
+        stored ? shownSetting(stored, commitment) : defaultReminderSetting(commitment),
+      ),
+    );
   });
 }
 
