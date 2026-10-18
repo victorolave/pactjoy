@@ -45,6 +45,8 @@ export function createHttpOverPostgres(max = 3) {
       evidence: noEvidenceStorage,
       push: null,
       jobsSecret: null,
+      // No admin key in these tests: DELETE /me answers 503 before any write.
+      identity: null,
       tokenVerifier: createFakeTokenVerifier(tokens),
       logger: { info: () => undefined, warn: () => undefined, error: () => undefined },
     },

@@ -27,6 +27,7 @@ describe("buildCircle", () => {
         status: "active",
         joinedAt: NOW,
         leftAt: null,
+        erasedAt: null,
       },
     ]);
     expect(result.value.invite).toBeNull();
@@ -125,6 +126,7 @@ describe("activeMembers / findActiveMember", () => {
           status: "left" as const,
           joinedAt: NOW,
           leftAt: NOW,
+          erasedAt: null,
         },
       ],
     };

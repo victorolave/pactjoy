@@ -23,4 +23,12 @@ export interface EncouragementRepository {
    * @throws {ConcurrencyConflict} if the id or either unique key already exists.
    */
   add(encouragement: Encouragement): Promise<void>;
+  /**
+   * Account erasure (ADR-0019): deletes every encouragement RECEIVED by `memberIds`. What they
+   * SENT is kept, anonymous, unless its recipient is erased too. Reads nothing back. `[]` is a
+   * no-op.
+   */
+  deleteByRecipients(memberIds: readonly MemberId[]): Promise<void>;
+  /** Full-circle erasure: deletes every encouragement of `seasonIds`. `[]` is a no-op. */
+  deleteBySeasons(seasonIds: readonly SeasonId[]): Promise<void>;
 }

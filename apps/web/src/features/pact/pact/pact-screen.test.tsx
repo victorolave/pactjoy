@@ -143,6 +143,24 @@ describe("PactScreen: Screen 12a (Review and Approve)", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows a member whose account was deleted as a member who left, without 'only they see the details' (ADR-0019)", async () => {
+    const pair = pairCircleFixture();
+    if (pair.circle === null) throw new Error("the pair fixture always has a circle");
+    const [andrea, ...rest] = pair.circle.members;
+    if (andrea === undefined) throw new Error("the pair fixture lists Andrea first");
+    renderPact({
+      circle: {
+        ...pair,
+        circle: { ...pair.circle, members: [{ ...andrea, displayName: "" }, ...rest] },
+      },
+    });
+    expect(await screen.findByText("Miembro que salió")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Miembro que salió" })).toHaveTextContent("?");
+    expect(screen.getByText("Meta privada")).toBeInTheDocument();
+    expect(screen.getByText("Los detalles son privados")).toBeInTheDocument();
+    expect(screen.queryByText(/Solo .* ve los detalles/)).not.toBeInTheDocument();
+  });
+
   it("submits approval sending expectedPactRevision", async () => {
     const season = { ...pairSeasonFixture(), pactRevision: 7 };
     const { deps } = renderPact({ season });

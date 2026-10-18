@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ConcurrencyConflict } from "../shared/errors.ts";
-import { entryPhotoId } from "../shared/ids.ts";
+import { entryPhotoId, seasonId } from "../shared/ids.ts";
 import { instant } from "../time/instant.ts";
 import { entryPhotoFixture } from "./builders.ts";
 import { createInMemoryEntryPhotoRepository } from "./in-memory-entry-photo-repository.ts";
@@ -66,6 +66,46 @@ describe("in-memory EntryPhotoRepository transactions", () => {
     scope.validate();
     scope.apply();
     expect(await repo.get(A.id)).toBeNull();
+  });
+
+  it("releaseAllOfMembers inside a scope is seen by it, invisible outside, and applied on commit", async () => {
+    const repo = createInMemoryEntryPhotoRepository();
+    await repo.add({ ...A, status: "attached", version: 1 });
+    const scope = repo.beginTransaction();
+    const done = await scope.repository.releaseAllOfMembers([A.memberId]);
+    expect(done).toEqual([{ ...A, status: "released", version: 2 }]);
+    expect((await scope.repository.get(A.id))?.status).toBe("released");
+    expect((await repo.get(A.id))?.status).toBe("attached");
+    scope.validate();
+    scope.apply();
+    expect((await repo.get(A.id))?.version).toBe(2);
+  });
+
+  it("deleteBySeasons inside a scope hides the rows, drops them on commit and spares other seasons", async () => {
+    const repo = createInMemoryEntryPhotoRepository();
+    const other = { ...B, seasonId: seasonId("other") };
+    await repo.add(A);
+    await repo.add(other);
+    const scope = repo.beginTransaction();
+    expect(await scope.repository.deleteBySeasons([A.seasonId])).toEqual([A]);
+    expect(await scope.repository.get(A.id)).toBeNull();
+    expect(await repo.get(A.id)).toEqual(A);
+    scope.validate();
+    scope.apply();
+    expect(await repo.get(A.id)).toBeNull();
+    expect(await repo.get(other.id)).toEqual(other);
+  });
+
+  it("deleteBySeasons fails validation when another scope moved the row on first", async () => {
+    const repo = createInMemoryEntryPhotoRepository();
+    await repo.add(A);
+    const first = repo.beginTransaction();
+    const second = repo.beginTransaction();
+    await first.repository.save({ ...A, status: "attached", version: 1 }, 0);
+    await second.repository.deleteBySeasons([A.seasonId]);
+    first.validate();
+    first.apply();
+    expect(() => second.validate()).toThrow(ConcurrencyConflict);
   });
 
   it("an abandoned scope leaves no trace", async () => {

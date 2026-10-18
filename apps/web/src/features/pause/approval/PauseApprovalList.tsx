@@ -3,6 +3,7 @@ import { useClock } from "../../../context/clock-context.tsx";
 import { useOnline } from "../../../context/connectivity-context.tsx";
 import type { PauseDecision } from "../../../ports/pactjoy-api.ts";
 import type { PauseApprovalDto } from "../../../ports/wire.ts";
+import { memberName } from "../../../shared/member-name.ts";
 import { Button } from "../../../ui/Button.tsx";
 import { Card } from "../../../ui/Card.tsx";
 import { InlineMessage } from "../../../ui/InlineMessage.tsx";
@@ -33,7 +34,7 @@ function ApprovalCard({
   const online = useOnline();
   const respond = useRespondToPause();
   const [failure, setFailure] = useState<string | null>(null);
-  const title = `${item.requester.displayName} pidió pausar ${targetsText(item.commitments)}`;
+  const title = `${memberName(item.requester.displayName)} pidió pausar ${targetsText(item.commitments)}`;
 
   const answer = async (decision: PauseDecision) => {
     if (respond.isPending) return;

@@ -22,6 +22,7 @@ const memberOf = (n: number) => ({
   status: "active" as const,
   joinedAt: T0,
   leftAt: null,
+  erasedAt: null,
 });
 const C: Circle = {
   id: circleId(uuid(0xc1)),

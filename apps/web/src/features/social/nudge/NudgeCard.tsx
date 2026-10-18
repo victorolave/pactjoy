@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useOnline } from "../../../context/connectivity-context.tsx";
 import { ApiError } from "../../../ports/api-error.ts";
 import type { FeedMemberDto, NudgeDto, ReactionCode } from "../../../ports/wire.ts";
+import { isLeftMember } from "../../../shared/member-name.ts";
 import { Card } from "../../../ui/Card.tsx";
 import { cx } from "../../../ui/cx.ts";
 import { IconButton } from "../../../ui/IconButton.tsx";
@@ -33,7 +34,14 @@ export function NudgeCard({ nudge, members }: NudgeCardProps) {
   const [gone, setGone] = useState(false);
   const [failed, setFailed] = useState(false);
   const target = members.find((member) => member.id === nudge.targetId);
-  if (gone || target === undefined || target.displayName === null) return null;
+  // Nobody to encourage once the member left or their account was deleted (no name to show).
+  if (
+    gone ||
+    target === undefined ||
+    target.displayName === null ||
+    isLeftMember(target.displayName)
+  )
+    return null;
 
   const busy = send.isPending || dismiss.isPending;
   const settle = {

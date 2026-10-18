@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { MyCircle } from "../../../ports/pactjoy-api.ts";
+import { memberName } from "../../../shared/member-name.ts";
 import { Avatar } from "../../../ui/Avatar.tsx";
 import { Badge } from "../../../ui/Badge.tsx";
 import { Button } from "../../../ui/Button.tsx";
@@ -37,7 +38,9 @@ export function MembersView({
           {circle.members.map((member) => (
             <li key={member.id} className={styles.member}>
               <Avatar name={member.displayName} size="xl" />
-              <span className={styles.memberName}>{member.isYou ? "Tú" : member.displayName}</span>
+              <span className={styles.memberName}>
+                {member.isYou ? "Tú" : memberName(member.displayName)}
+              </span>
             </li>
           ))}
         </ul>

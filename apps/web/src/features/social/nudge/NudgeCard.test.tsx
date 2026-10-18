@@ -35,6 +35,13 @@ describe("NudgeCard (design 31a)", () => {
     ).toBeInTheDocument();
   });
 
+  it("offers nothing for a member whose account was deleted: there is nobody to encourage (ADR-0019)", () => {
+    const erased = members.map((m) => (m.id === ANDREA ? { ...m, displayName: "" } : m));
+    renderInProviders(<NudgeCard nudge={nudgeFixture()} members={erased} />, { feedPages });
+    expect(screen.queryByText(/le está costando más/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Enviar Celebrar" })).not.toBeInTheDocument();
+  });
+
   it("offers the four emojis and 'Ahora no' as a labelled icon button", () => {
     show();
     for (const name of [

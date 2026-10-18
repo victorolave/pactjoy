@@ -141,5 +141,20 @@ export function createPgNotificationOutboxRepository(
       );
       return rowCount;
     },
+
+    async deleteAddressedTo(userId, memberIds) {
+      await exec.query(
+        "delete from pactjoy.notification_outbox where recipient_user_id = $1 or recipient_member_id = any($2::uuid[])",
+        [userId, memberIds],
+      );
+    },
+
+    async deleteByCircles(circleIds) {
+      if (circleIds.length === 0) return;
+      await exec.query(
+        "delete from pactjoy.notification_outbox where circle_id = any($1::uuid[])",
+        [circleIds],
+      );
+    },
   };
 }

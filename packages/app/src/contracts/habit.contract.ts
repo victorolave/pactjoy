@@ -104,6 +104,63 @@ export function describeHabitRepositoryContract(
       expect(await readHabit(uow)).toEqual(cleared);
     });
 
+    describe("deleteByOwner", () => {
+      const OTHER_OWNER = userId("00000000-0000-4000-8000-0000000000b3");
+      const MINE_A = { ...HABIT, id: habitId("00000000-0000-4000-8000-0000000000f1") };
+      const MINE_B = {
+        ...HABIT,
+        id: habitId("00000000-0000-4000-8000-0000000000f2"),
+        graduatedAt: instant(1_700_000_123_456),
+      };
+      const THEIRS = {
+        ...HABIT,
+        id: habitId("00000000-0000-4000-8000-0000000000f3"),
+        ownerId: OTHER_OWNER,
+      };
+      const remove = (uow: Uow, owner: typeof OTHER_OWNER) =>
+        uow.transaction(async ({ habits }) => {
+          await habits.deleteByOwner(owner);
+          return ok(undefined);
+        });
+
+      it("deletes every habit of the owner, graduated or not, and keeps another owner's", async () => {
+        const { uow } = await factory();
+        await saveHabit(uow, MINE_A, null);
+        await saveHabit(uow, MINE_B, null);
+        await saveHabit(uow, THEIRS, null);
+        await remove(uow, HABIT.ownerId);
+        expect(await uow.read(({ habits }) => habits.listByOwner(HABIT.ownerId))).toEqual([]);
+        expect(await uow.read(({ habits }) => habits.get(MINE_B.id))).toBeNull();
+        expect(await uow.read(({ habits }) => habits.listByOwner(OTHER_OWNER))).toEqual([THEIRS]);
+      });
+
+      it("is a safe repeat for an owner with no habits", async () => {
+        const { uow } = await factory();
+        await saveHabit(uow, THEIRS, null);
+        await remove(uow, HABIT.ownerId);
+        await remove(uow, HABIT.ownerId);
+        expect(await uow.read(({ habits }) => habits.get(THEIRS.id))).toEqual(THEIRS);
+      });
+
+      it("inside a transaction the deletion is seen by later reads, then a rollback restores", async () => {
+        const { uow } = await factory();
+        await saveHabit(uow, MINE_A, null);
+        const seen = await uow.transaction(async ({ habits }) => {
+          await habits.deleteByOwner(HABIT.ownerId);
+          return ok([await habits.get(MINE_A.id), await habits.listByOwner(HABIT.ownerId)]);
+        });
+        expect((seen as { value: unknown }).value).toEqual([null, []]);
+        await saveHabit(uow, MINE_B, null);
+        await expect(
+          uow.transaction(async ({ habits }) => {
+            await habits.deleteByOwner(HABIT.ownerId);
+            throw new Error("boom");
+          }),
+        ).rejects.toThrow("boom");
+        expect(await uow.read(({ habits }) => habits.get(MINE_B.id))).toEqual(MINE_B);
+      });
+    });
+
     describe("listByOwner", () => {
       const OTHER_OWNER = userId("00000000-0000-4000-8000-0000000000b2");
       const OLD = { ...HABIT, id: habitId("00000000-0000-4000-8000-0000000000e1") };

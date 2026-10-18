@@ -58,6 +58,16 @@ describe("MemberSeason (23d)", () => {
     expect(items).toEqual(["Puntos412", "Consistencia88 %", "Ideal81 %"]);
   });
 
+  it("titles the season of a member whose account was deleted, hidden commitments and all (ADR-0019)", () => {
+    const view = andrea({ member: { memberId: "member-andrea", displayName: "" } });
+    render(<MemberSeason view={view} onBack={() => {}} />);
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Miembro que salió" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Miembro que salió" })).toHaveTextContent("?");
+    expect(screen.getByRole("list", { name: "Miembro que salió" })).toBeInTheDocument();
+  });
+
   it("metrics with nothing counted yet show an em dash (Notion), never 0 %", () => {
     render(
       <MemberSeason

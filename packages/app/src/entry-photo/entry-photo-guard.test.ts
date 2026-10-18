@@ -35,7 +35,8 @@ const FORBIDDEN: readonly { readonly name: string; readonly pattern: RegExp }[] 
   },
   {
     name: "ledger method call",
-    pattern: /\bentryPhotos\s*\.\s*(getMany|countOpen|releaseExpired|listReleased|purge)\b/,
+    pattern:
+      /\bentryPhotos\s*\.\s*(getMany|countOpen|releaseExpired|listReleased|purge|releaseAllOfMembers|deleteBySeasons)\b/,
   },
   {
     name: "storage call",
@@ -81,6 +82,8 @@ describe("the photo ledger and storage are used inside the entry-photo module on
       "releaseExpired",
       "listReleased",
       "purge",
+      "releaseAllOfMembers",
+      "deleteBySeasons",
     ]);
   });
 
@@ -101,6 +104,8 @@ describe("the photo ledger and storage are used inside the entry-photo module on
     ["entryPhotos as a callback parameter", "uow.read(({ entryPhotos }) => entryPhotos.get(id))"],
     ["entryPhotos as a callback parameter", "async ({ entries, entryPhotos }) => {"],
     ["ledger method call", "await entryPhotos.releaseExpired(null, now, 5);"],
+    ["ledger method call", "await repos.entryPhotos.releaseAllOfMembers(ids);"],
+    ["ledger method call", "const rows = await entryPhotos.deleteBySeasons(seasonIds);"],
     ["storage call", "const url = await deps.evidence.signUpload(key, object, 300, now);"],
     ["storage call", "await evidence.delete(key);"],
   ])("the %s pattern does catch %j (guards the guard)", (name, source) => {

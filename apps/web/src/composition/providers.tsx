@@ -16,7 +16,11 @@ import { ReminderNamesProvider } from "../context/reminder-names-context.tsx";
 import { SharingProvider } from "../context/sharing-context.tsx";
 import { ToastProvider } from "../context/toast-context.tsx";
 import { SessionProvider, useSession } from "../features/auth/index.ts";
-import { PushSync, removeThisDevice } from "../features/notifications/index.ts";
+import {
+  dropThisDeviceLocally,
+  PushSync,
+  removeThisDevice,
+} from "../features/notifications/index.ts";
 import type { AppDependencies } from "./dependencies.ts";
 
 export function AppProviders({
@@ -43,6 +47,8 @@ export function AppProviders({
     () => removeThisDevice({ permission: notifications, push, api }),
     [notifications, push, api],
   );
+  // After a deletion only the browser's own subscription is left to drop (the server erased the rest).
+  const onAccountDeleted = useCallback(() => dropThisDeviceLocally(push), [push]);
   return (
     <SessionProvider
       auth={deps.auth}
@@ -51,6 +57,7 @@ export function AppProviders({
       expired={deps.sessionEvents}
       onSessionEnd={onSessionEnd}
       beforeSignOut={beforeSignOut}
+      onAccountDeleted={onAccountDeleted}
     >
       <PersistedQueries client={queryClient} persister={persister}>
         <ApiProvider api={deps.api}>

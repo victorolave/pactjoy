@@ -126,12 +126,20 @@ function displayNameOf(circle: Circle, memberId: MemberId): string {
   return member.displayName;
 }
 
+/**
+ * The commitment of a request and its habit, which is `null` once the habit's owner erased their
+ * account (ADR-0019 E14: their commitments are private then). Only a reader that shows the habit
+ * must insist on it, through {@link requiredHabit}.
+ */
 function habitOf(resolved: Resolved, commitmentId: CommitmentId) {
   const commitment = resolved.season.commitments.find((c) => c.id === commitmentId);
   if (!commitment) throw new Error(`commitment ${commitmentId} of a pause is gone`);
-  const habit = resolved.habits.get(commitment.habitId);
-  if (!habit) throw new Error(`habit ${commitment.habitId} of commitment ${commitmentId} is gone`);
-  return { commitment, habit };
+  return { commitment, habit: resolved.habits.get(commitment.habitId) ?? null };
+}
+
+function requiredHabit(habit: Habit | null, commitmentId: CommitmentId): Habit {
+  if (!habit) throw new Error(`habit of commitment ${commitmentId} is gone`);
+  return habit;
 }
 
 /**
@@ -159,7 +167,7 @@ export async function pauseRequestViews(
         autoApproveAt: record.autoApproveAt,
         decidedAt: record.decidedAt,
         commitments: record.commitments.map((item) => {
-          const { habit } = habitOf(context, item.commitmentId);
+          const habit = requiredHabit(habitOf(context, item.commitmentId).habit, item.commitmentId);
           return {
             commitmentId: item.commitmentId,
             habitName: habit.name,
@@ -209,14 +217,16 @@ export async function pauseApprovalViews(
         myResponse,
         commitments: request.commitments.map((item): PauseCommitmentApprovalView => {
           const { commitment, habit } = habitOf(context, item.commitmentId);
-          return commitment.privacy === "private"
-            ? { kind: "hidden", commitmentId: item.commitmentId }
-            : {
-                kind: "visible",
-                commitmentId: item.commitmentId,
-                habitName: habit.name,
-                icon: habit.icon,
-              };
+          if (commitment.privacy === "private") {
+            return { kind: "hidden", commitmentId: item.commitmentId };
+          }
+          const shown = requiredHabit(habit, item.commitmentId);
+          return {
+            kind: "visible",
+            commitmentId: item.commitmentId,
+            habitName: shown.name,
+            icon: shown.icon,
+          };
         }),
       };
     });

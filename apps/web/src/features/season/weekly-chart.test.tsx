@@ -42,6 +42,20 @@ describe("SeasonWeeklyChart", () => {
     expect(grids.length).toBeGreaterThanOrEqual(2);
   });
 
+  it("names a peer whose account was deleted as a member who left (ADR-0019)", () => {
+    const base = activeSeasonProgress({ memberCount: 2 });
+    const progress = {
+      ...base,
+      standings: {
+        ...base.standings,
+        rows: base.standings.rows.map((row) => (row.isViewer ? row : { ...row, displayName: "" })),
+      },
+    };
+    render(<SeasonWeeklyChart progress={progress} />);
+    expect(screen.getAllByText("Miembro que salió")).toHaveLength(2);
+    expect(screen.getByRole("columnheader", { name: "Miembro que salió" })).toBeInTheDocument();
+  });
+
   it("returns null for solo circles (memberCount === 1)", () => {
     const progress = activeSeasonProgress({ memberCount: 1 });
     const { container } = render(<SeasonWeeklyChart progress={progress} />);

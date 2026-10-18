@@ -38,6 +38,16 @@ describe("the approval list in the Círculo tab (screen 28, PS-8..PS-10)", () =>
     expect(within(card).getByRole("button", { name: "Aprobar" })).toBeInTheDocument();
   });
 
+  it("names a requester whose account was deleted as a member who left (ADR-0019)", async () => {
+    await renderList([
+      pauseApprovalFixture({ ...R1, requester: { memberId: "member-gone", displayName: "" } }),
+    ]);
+    const card = await screen.findByRole("article", {
+      name: "Miembro que salió pidió pausar Gym",
+    });
+    expect(within(card).getByText("Miembro que salió pidió pausar Gym")).toBeInTheDocument();
+  });
+
   it("says when it approves itself if the viewer does not answer", async () => {
     await renderList([R1]);
     // The test clock reads 2026-10-03T12:00Z; the request approves itself at 2026-10-04T14:12Z.

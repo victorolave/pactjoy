@@ -100,5 +100,21 @@ export function createPgCommitmentReminderRepository(
       );
       if (rowCount !== 1) throw new ConcurrencyConflict();
     },
+
+    async deleteByMembers(memberIds) {
+      if (memberIds.length === 0) return;
+      await exec.query(
+        "delete from pactjoy.commitment_reminders where member_id = any($1::uuid[])",
+        [memberIds],
+      );
+    },
+
+    async deleteBySeasons(seasonIds) {
+      if (seasonIds.length === 0) return;
+      await exec.query(
+        "delete from pactjoy.commitment_reminders where season_id = any($1::uuid[])",
+        [seasonIds],
+      );
+    },
   };
 }

@@ -6,7 +6,7 @@ type Store = ReadonlyMap<string, CommitmentReminder>;
 
 const keyOf = (seasonId: string, commitmentId: string) => `${seasonId}|${commitmentId}`;
 
-function read(view: () => Store): Omit<CommitmentReminderRepository, "save"> {
+function read(view: () => Store): Pick<CommitmentReminderRepository, "get" | "listEnabled"> {
   return {
     async get(seasonId, commitmentId) {
       return view().get(keyOf(seasonId, commitmentId)) ?? null;
@@ -15,6 +15,25 @@ function read(view: () => Store): Omit<CommitmentReminderRepository, "save"> {
       return [...view().values()]
         .filter((reminder) => reminder.seasonId === seasonId && reminder.enabled)
         .sort((a, b) => (a.commitmentId < b.commitmentId ? -1 : 1));
+    },
+  };
+}
+
+function erasures(
+  view: () => Store,
+  drop: (key: string) => void,
+): Pick<CommitmentReminderRepository, "deleteByMembers" | "deleteBySeasons"> {
+  const dropWhere = (matches: (reminder: CommitmentReminder) => boolean) => {
+    for (const [key, reminder] of view()) if (matches(reminder)) drop(key);
+  };
+  return {
+    async deleteByMembers(memberIds) {
+      const members = new Set(memberIds);
+      dropWhere((reminder) => members.has(reminder.memberId));
+    },
+    async deleteBySeasons(seasonIds) {
+      const seasons = new Set(seasonIds);
+      dropWhere((reminder) => seasons.has(reminder.seasonId));
     },
   };
 }
@@ -45,6 +64,10 @@ export function createInMemoryCommitmentReminderRepository(): InMemoryCommitment
 
   return {
     ...read(() => store),
+    ...erasures(
+      () => store,
+      (key) => void store.delete(key),
+    ),
 
     async save(reminder, expectedVersion) {
       checkVersion(store, reminder, expectedVersion);
@@ -56,19 +79,32 @@ export function createInMemoryCommitmentReminderRepository(): InMemoryCommitment
         string,
         { readonly reminder: CommitmentReminder; readonly expected: number | null }
       >();
+      const drops = new Set<string>();
       const view = (): Store => {
         const merged = new Map(store);
+        for (const key of drops) merged.delete(key);
         for (const [key, { reminder }] of staged) merged.set(key, reminder);
         return merged;
       };
       return {
         repository: {
           ...read(view),
+          ...erasures(view, (key) => {
+            staged.delete(key);
+            drops.add(key);
+          }),
           async save(reminder, expectedVersion) {
             checkVersion(view(), reminder, expectedVersion);
             const key = keyOf(reminder.seasonId, reminder.commitmentId);
             const earlier = staged.get(key);
-            staged.set(key, { reminder, expected: earlier ? earlier.expected : expectedVersion });
+            // A save after a deletion replaces the row that is still stored, so it is fenced by it.
+            const expected = earlier
+              ? earlier.expected
+              : drops.has(key)
+                ? (store.get(key)?.version ?? null)
+                : expectedVersion;
+            drops.delete(key);
+            staged.set(key, { reminder, expected });
           },
         },
         validate(): void {
@@ -77,6 +113,7 @@ export function createInMemoryCommitmentReminderRepository(): InMemoryCommitment
           }
         },
         apply(): void {
+          for (const key of drops) store.delete(key);
           for (const [key, { reminder }] of staged) store.set(key, reminder);
         },
       };

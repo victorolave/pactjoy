@@ -1,3 +1,4 @@
+import { memberInitial, memberName } from "../shared/member-name.ts";
 import styles from "./Avatar.module.css";
 import { cx } from "./cx.ts";
 
@@ -33,10 +34,10 @@ export function Avatar({ name, size = "md" }: AvatarProps) {
     <span
       className={cx(styles.avatar, sizeClass)}
       role="img"
-      aria-label={name}
+      aria-label={memberName(name)}
       style={{ background: `var(--${tint}-200)` }}
     >
-      {trimmed === "" ? "?" : trimmed.charAt(0).toUpperCase()}
+      {memberInitial(name)}
     </span>
   );
 }
@@ -50,8 +51,10 @@ export interface AvatarStackProps {
 export function AvatarStack({ names, size = "sm", max = 4 }: AvatarStackProps) {
   return (
     <span className={styles.stack}>
-      {names.slice(0, max).map((name) => (
-        <Avatar key={name} name={name} size={size} />
+      {names.slice(0, max).map((name, index) => (
+        // Two members who left share the empty name, so the name alone is not a key.
+        // biome-ignore lint/suspicious/noArrayIndexKey: the list is a fixed, ordered slice
+        <Avatar key={`${index}-${name}`} name={name} size={size} />
       ))}
     </span>
   );

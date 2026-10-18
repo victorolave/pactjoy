@@ -46,12 +46,18 @@ async function readCapped(request: Request, maxBytes: number): Promise<Uint8Arra
 /**
  * Body of a request: `undefined` when empty (the route decides whether that is
  * acceptable), else a parsed JSON object. Unknown-field checks belong to the route schemas.
+ * A GET or DELETE must not carry a body, except a DELETE whose route opted in (`deleteBody`,
+ * ADR-0019: the confirmation word travels in the body).
  */
-export async function readJsonBody(request: Request, maxBytes: number): Promise<BodyResult> {
+export async function readJsonBody(
+  request: Request,
+  maxBytes: number,
+  options: { readonly deleteBody?: boolean } = {},
+): Promise<BodyResult> {
   const bytes = await readCapped(request, maxBytes);
   if (bytes === null) return tooLarge();
   if (bytes.byteLength === 0) return { ok: true, body: undefined };
-  if (request.method === "GET" || request.method === "DELETE") {
+  if (request.method === "GET" || (request.method === "DELETE" && !options.deleteBody)) {
     return fail(422, "InvalidRequest", { reason: "bodyNotAllowed" });
   }
   const [mediaType, ...params] = (request.headers.get("content-type") ?? "")

@@ -87,6 +87,22 @@ function operations(view: () => Store, sink: Sink): NotificationOutboxRepository
       for (const row of old) sink.drop(row.dedupeKey);
       return old.length;
     },
+
+    async deleteAddressedTo(userId, memberIds) {
+      const members = new Set(memberIds);
+      for (const row of view().values()) {
+        if (row.recipientUserId === userId || members.has(row.recipientMemberId)) {
+          sink.drop(row.dedupeKey);
+        }
+      }
+    },
+
+    async deleteByCircles(circleIds) {
+      const circles = new Set(circleIds);
+      for (const row of view().values()) {
+        if (circles.has(row.circleId)) sink.drop(row.dedupeKey);
+      }
+    },
   };
 }
 

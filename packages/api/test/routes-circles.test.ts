@@ -27,6 +27,7 @@ function setup(overrides: Partial<ApiDeps> = {}, allowedOrigins: string[] = []) 
       evidence: app.evidence,
       push: null,
       jobsSecret: null,
+      identity: null,
       tokenVerifier: createFakeTokenVerifier({ andrea: ANDREA, victor: VICTOR }),
       logger: { info: () => undefined, warn: () => undefined, error: () => undefined },
       ...overrides,

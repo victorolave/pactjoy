@@ -50,6 +50,33 @@ export function describeSeasonClosureRepositoryContract(
       return subject.repository;
     };
 
+    it("E: deletes owner closures and decisions, preserving another member, with safe repeats", async () => {
+      const repository = await setup();
+      const own = closure(1);
+      const peer = closure(2, { memberId: OTHER });
+      await repository.save(own, null);
+      await repository.save(peer, null);
+      await repository.deleteByMembers([]);
+      expect(await repository.getMine(SEASON.id, OWNER)).toEqual(own);
+      await repository.deleteByMembers([OWNER]);
+      await repository.deleteByMembers([OWNER]);
+      expect(await repository.getMine(SEASON.id, OWNER)).toBeNull();
+      expect(await repository.getMine(SEASON.id, OTHER)).toEqual(peer);
+      expect(await repository.closedMemberIds(SEASON.id)).toEqual([OTHER]);
+    });
+
+    it("E: deletes closures of selected seasons only, including every member", async () => {
+      const repository = await setup();
+      const own = closure(1);
+      await repository.save(own, null);
+      await repository.save(closure(2, { memberId: OTHER }), null);
+      await repository.deleteBySeasons([seasonId(uuid(0xe99))]);
+      expect(await repository.getMine(SEASON.id, OWNER)).toEqual(own);
+      await repository.deleteBySeasons([SEASON.id]);
+      expect(await repository.closedMemberIds(SEASON.id)).toEqual([]);
+      expect(await repository.getMine(SEASON.id, OTHER)).toBeNull();
+    });
+
     it("getMine is null for a member who has not closed", async () => {
       const repository = await setup();
       expect(await repository.getMine(SEASON.id, OWNER)).toBeNull();

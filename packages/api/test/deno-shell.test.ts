@@ -14,10 +14,11 @@ const codeLines = (text: string) =>
   text.split("\n").filter((line) => line.trim() !== "" && !line.trim().startsWith("//"));
 
 describe("Deno shell (supabase/functions/api)", () => {
-  it("DE-S2: the entry is composition only: no routing, no Response, at most 45 code lines", () => {
+  it("DE-S2: the entry is composition only: no routing, no Response, at most 50 code lines", () => {
     const text = read(ENTRY);
-    // 40 until ADR-0017 added two adapters (Web Push and the jobs secret) to the composition.
-    expect(codeLines(text).length).toBeLessThanOrEqual(45);
+    // 40 until ADR-0017 added two adapters (Web Push and the jobs secret) to the composition,
+    // 45 until ADR-0019 added the identity admin (a conditional adapter, formatted over 8 lines).
+    expect(codeLines(text).length).toBeLessThanOrEqual(50);
     const code = codeLines(text).join("\n");
     expect(code).not.toMatch(/\bswitch\b|\bpathname\b|new Response\b/);
     expect(code).toContain("Deno.serve(");
@@ -35,6 +36,15 @@ describe("Deno shell (supabase/functions/api)", () => {
     expect(code).toContain("createWebPushSender(env.push)");
     expect(code).toMatch(/jobsSecret:\s*env\.jobsSecret/);
     expect(code).not.toMatch(/API_JOBS_SECRET|API_PUSH_VAPID|service[_-]?role/i);
+  });
+
+  it("ADR-0019: the entry composes the identity admin from the validated env, with no key name, URL or key of its own", () => {
+    const code = codeLines(read(ENTRY)).join("\n");
+    expect(code).toContain("createGoTrueIdentityAdmin(");
+    expect(code).toMatch(/identity:\s*env\.authAdmin\s*===\s*null/);
+    expect(code).toContain("adminKey: env.authAdmin.key");
+    expect(code).toContain("authUrl: env.authAdmin.authUrl");
+    expect(code).not.toMatch(/API_AUTH_ADMIN_KEY|sb_secret_|https?:\/\//);
   });
 
   it("DE-S3: the entry imports only @pactjoy/* packages (vendors go through the import map)", () => {

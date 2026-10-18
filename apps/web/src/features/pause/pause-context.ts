@@ -1,4 +1,5 @@
 import { addDays } from "../../shared/date.ts";
+import { memberName } from "../../shared/member-name.ts";
 import { useCircleForPause, useMyPauseRequests, useTodayForPause } from "./queries.ts";
 
 const DAYS_PER_WEEK = 7;
@@ -52,7 +53,9 @@ export function usePauseContext() {
     retry: () => void today.refetch(),
     season,
     /** Everyone who answers a request: the other active members. */
-    approverNames: members.filter((member) => !member.isYou).map((member) => member.displayName),
+    approverNames: members
+      .filter((member) => !member.isYou)
+      .map((member) => memberName(member.displayName)),
     /** Days left per Commitment; absent until the read model arrives. */
     remainingDays: new Map(
       (requests.data?.budgets ?? []).map((budget) => [budget.commitmentId, budget.remainingDays]),

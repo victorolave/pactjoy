@@ -1,6 +1,7 @@
 import type { TodayView } from "@pactjoy/app";
 import { addDays, daysBetween } from "../../shared/date.ts";
 import { longDate } from "../../shared/format.ts";
+import { memberName } from "../../shared/member-name.ts";
 
 type Seasoned = Extract<TodayView, { state: "pactOpen" | "notStarted" | "active" | "ended" }>;
 type Running = Extract<TodayView, { state: "active" | "ended" }>;
@@ -151,7 +152,7 @@ function standingsPair(view: Running): StandingsPairModel | null {
     rank: viewer.rank,
     participantCount: eligibleParticipantCount,
     viewerPoints: viewer.points,
-    otherName: other.displayName,
+    otherName: memberName(other.displayName),
     otherPoints: other.points,
     difference: Math.abs(other.points - viewer.points),
   };

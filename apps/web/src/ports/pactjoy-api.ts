@@ -270,6 +270,12 @@ export interface PactJoyApi extends SeasonProgressApi {
   savePushSubscription(subscription: DevicePushSubscription): Promise<void>;
   /** Removes this device for the signed-in user; removing a missing one succeeds. */
   removePushSubscription(endpoint: string): Promise<void>;
+  /**
+   * Deletes the signed-in person's account for good (ADR-0019). The adapter sends the typed
+   * confirmation word; the screen only enables the action once the person has typed it. Retrying
+   * after a failure is safe: the server finishes whatever the first call left undone.
+   */
+  deleteAccount(): Promise<void>;
 }
 
 export interface PushConfigDto {

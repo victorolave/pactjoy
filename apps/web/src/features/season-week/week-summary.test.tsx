@@ -87,6 +87,20 @@ describe("WeekSummaryScreen (25b, 25c)", () => {
     expect(screen.queryByText(/En el círculo/)).toBeNull();
   });
 
+  it("names a peer whose account was deleted as a member who left, in the line and the avatar (ADR-0019)", async () => {
+    showing(
+      weekSummary({
+        circle: [
+          { memberId: "member-gone", displayName: "", points: 87 },
+          { memberId: "member-victor", displayName: "Victor", points: 96 },
+        ],
+      }),
+    );
+
+    expect(await screen.findByText("En el círculo: Miembro que salió +87 · tú +96")).toBeTruthy();
+    expect(screen.getByRole("img", { name: "Miembro que salió" })).toHaveTextContent("?");
+  });
+
   it("nothing counted yet reads an em dash, never 0 %", async () => {
     showing(weekSummary({ consistency: null, idealCompletion: null, headline: null }));
 

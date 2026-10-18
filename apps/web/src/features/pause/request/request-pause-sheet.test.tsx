@@ -86,6 +86,25 @@ describe("the request sheet (screen 26, PS-1..PS-5)", () => {
     expect(submit()).toHaveTextContent("Enviar solicitud");
   });
 
+  it("names an approver whose account was deleted as a member who left (ADR-0019)", async () => {
+    const pair = pairCircleFixture();
+    if (pair.circle === null) throw new Error("the pair fixture always has a circle");
+    const [andrea, ...rest] = pair.circle.members;
+    if (andrea === undefined) throw new Error("the pair fixture lists Andrea first");
+    await renderSheet(
+      {},
+      {
+        myCircle: {
+          ...pair,
+          circle: { ...pair.circle, members: [{ ...andrea, displayName: "" }, ...rest] },
+        },
+      },
+    );
+    expect(
+      screen.getByText("Lo aprueba Miembro que salió. Si nadie responde en 48 h, se aprueba sola."),
+    ).toBeInTheDocument();
+  });
+
   it("has no approval line in a solo circle, and the button says it takes effect now (PS-S4)", async () => {
     await renderSheet({}, { myCircle: soloCircleFixture() });
     expect(screen.queryByText(/se aprueba sola/)).not.toBeInTheDocument();

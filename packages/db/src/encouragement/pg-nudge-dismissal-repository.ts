@@ -52,5 +52,20 @@ export function createPgNudgeDismissalRepository(exec: SqlExecutor): NudgeDismis
         ],
       );
     },
+
+    async deleteByMembers(memberIds) {
+      if (memberIds.length === 0) return;
+      await exec.query(
+        "delete from pactjoy.nudge_dismissals where viewer_member_id = any($1::uuid[]) or target_member_id = any($1::uuid[])",
+        [memberIds],
+      );
+    },
+
+    async deleteBySeasons(seasonIds) {
+      if (seasonIds.length === 0) return;
+      await exec.query("delete from pactjoy.nudge_dismissals where season_id = any($1::uuid[])", [
+        seasonIds,
+      ]);
+    },
   };
 }

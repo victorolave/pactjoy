@@ -1,5 +1,6 @@
 import { type ReactNode, useId } from "react";
 import type { MemberProgress } from "../../ports/wire.ts";
+import { memberName } from "../../shared/member-name.ts";
 import { Avatar } from "../../ui/Avatar.tsx";
 import { Card } from "../../ui/Card.tsx";
 import { IconButton } from "../../ui/IconButton.tsx";
@@ -43,7 +44,7 @@ export function MemberSeason({ view, onBack }: MemberSeasonProps) {
               {`Semana ${calendar.weekIndex + 1} de ${season.lengthWeeks}`}
             </p>
             <h1 id={nameId} className={styles.name}>
-              {member.displayName}
+              {memberName(member.displayName)}
             </h1>
           </div>
         </header>

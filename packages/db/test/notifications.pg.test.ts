@@ -193,6 +193,7 @@ describe("dispatchNotifications on Postgres", () => {
               status: "active",
               joinedAt: instant(T0),
               leftAt: null,
+              erasedAt: null,
             },
           ],
           invite: null,

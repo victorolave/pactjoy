@@ -39,6 +39,18 @@ const iso = (at: Instant) => new Date(at).toISOString();
  */
 export function createPgSeasonClosureRepository(exec: SqlExecutor): SeasonClosureRepository {
   return {
+    async deleteByMembers(memberIds) {
+      if (memberIds.length === 0) return;
+      await exec.query("delete from pactjoy.season_closures where member_id = any($1::uuid[])", [
+        memberIds,
+      ]);
+    },
+    async deleteBySeasons(seasonIds) {
+      if (seasonIds.length === 0) return;
+      await exec.query("delete from pactjoy.season_closures where season_id = any($1::uuid[])", [
+        seasonIds,
+      ]);
+    },
     async getMine(season, member) {
       const { rows } = await exec.query<ClosureRow>(
         `select ${COLUMNS} from pactjoy.season_closures where season_id = $1 and member_id = $2`,

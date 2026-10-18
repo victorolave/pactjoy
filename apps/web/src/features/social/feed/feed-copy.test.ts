@@ -190,6 +190,24 @@ describe("feedLine: a member who left", () => {
   });
 });
 
+describe("feedLine: a member whose account was deleted (empty name, ADR-0019)", () => {
+  // The A3 feed already sends null for a leaver; an empty name must read the same.
+  const erased = members.map((m) => (m.id === ANDREA ? { ...m, displayName: "" } : m));
+
+  it("is named as someone who left, with the same avatar as a leaver", () => {
+    expect(text(completedItemFixture(), erased)).toBe(
+      "Un miembro que salió completó Correr · 5 km.",
+    );
+    expect(feedLine(completedItemFixture(), erased).avatarName).toBe("?");
+  });
+
+  it("is the sender of an encouragement without a name", () => {
+    expect(feedLine(encouragementReceivedItemFixture(), erased).text).toMatch(
+      /^Un miembro que salió te envió /,
+    );
+  });
+});
+
 describe("feedLine: the avatar and the icon", () => {
   it("shows the actor's avatar on member items and an icon on system items", () => {
     expect(feedLine(completedItemFixture(), members)).toMatchObject({

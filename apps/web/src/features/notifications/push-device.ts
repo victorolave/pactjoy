@@ -98,6 +98,22 @@ export async function removeThisDevice(deps: PushDeviceDeps): Promise<void> {
   }
 }
 
+/**
+ * After the account was deleted (ADR-0019): the server already erased this device's registration
+ * with the user, so only the browser's subscription is left. Never calls the API, never rejects.
+ * It waits for a sync still in flight first: one that was between reading the config and
+ * subscribing would otherwise create the subscription again right after this drops it.
+ */
+export async function dropThisDeviceLocally(push: PushSubscriptionPort): Promise<void> {
+  if (!push.supported()) return;
+  await syncSettled(push);
+  try {
+    await push.unsubscribe();
+  } catch {
+    // Best effort: the browser drops a subscription whose permission is gone anyway.
+  }
+}
+
 /** On every app start with a session (REQ-X5, REQ-X6). Never rejects. */
 export async function resyncOnStart(deps: PushDeviceDeps): Promise<void> {
   try {

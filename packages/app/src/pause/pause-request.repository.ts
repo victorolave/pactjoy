@@ -27,4 +27,10 @@ export interface PauseRequestRepository {
    * (or, for an insert, the id already exists).
    */
   save(record: PauseRequestRecord, expectedVersion: number | null): Promise<void>;
+  /**
+   * Full-circle erasure: deletes every request of `seasonIds`, commitments and responses included.
+   * `[]` is a no-op. A member's own erasure never deletes a request (peers' scoring depends on it):
+   * it blanks the details through a normal `save` (`eraseMemberPauseDetails`).
+   */
+  deleteBySeasons(seasonIds: readonly SeasonId[]): Promise<void>;
 }

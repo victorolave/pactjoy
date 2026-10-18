@@ -150,6 +150,7 @@ export async function joinCircle(
       status: "active",
       joinedAt: now,
       leftAt: null,
+      erasedAt: null,
     };
     const updated: Circle = {
       ...circle,

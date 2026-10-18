@@ -45,10 +45,12 @@ const SEASON: SeasonDto = {
 afterEach(() => vi.useRealTimers());
 
 describe("Circle tab, no circle (31b)", () => {
-  it("offers to create a circle or to join with a code", async () => {
+  // The file's first cold render (imports, route, queries) can pass the 1 s default on a loaded
+  // CI runner; the test's own budget stays above the heading's 5 s wait.
+  it("offers to create a circle or to join with a code", { timeout: 15_000 }, async () => {
     renderApp({ path: "/circle", myCircle: NO_CIRCLE, nameDraft: "Victor" });
     expect(
-      await screen.findByRole("heading", { name: "Tu círculo empieza aquí." }),
+      await screen.findByRole("heading", { name: "Tu círculo empieza aquí." }, { timeout: 5000 }),
     ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Crear círculo" })).toHaveAttribute(
       "href",
@@ -240,6 +242,24 @@ describe("Circle tab with people (31a-lite)", () => {
     expect(members.queryByText(/Victor/)).not.toBeInTheDocument();
     expect(members.getByRole("img", { name: "Victor" })).toHaveTextContent("V");
     expect(members.getByRole("img", { name: "Andrea" })).toHaveTextContent("A");
+  });
+
+  it("lists a member whose account was deleted as a member who left (ADR-0019)", async () => {
+    const pair = pairCircleFixture();
+    if (pair.circle === null) throw new Error("the pair fixture always has a circle");
+    const [andrea, ...rest] = pair.circle.members;
+    if (andrea === undefined) throw new Error("the pair fixture lists Andrea first");
+    renderApp({
+      path: "/circle",
+      myCircle: {
+        ...pair,
+        circle: { ...pair.circle, members: [{ ...andrea, displayName: "" }, ...rest] },
+      },
+    });
+    const members = within(await screen.findByRole("list", { name: "Miembros" }));
+    expect(members.getByText("Miembro que salió")).toBeInTheDocument();
+    expect(members.getByRole("img", { name: "Miembro que salió" })).toHaveTextContent("?");
+    expect(members.getByText("Tú")).toBeInTheDocument();
   });
 
   it("shows the pact and the week of a running season", async () => {

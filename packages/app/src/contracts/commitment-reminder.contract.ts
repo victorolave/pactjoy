@@ -1,11 +1,12 @@
+import type { MemberId } from "@pactjoy/engine";
 import { describe, expect, it } from "vitest";
 import { memberId } from "../circle/circle.ts";
 import { commitmentId } from "../commitment/commitment.ts";
 import type { Repositories } from "../ports/repositories.ts";
 import type { CommitmentReminder } from "../reminders/commitment-reminder.ts";
 import { ConcurrencyConflict } from "../shared/errors.ts";
-import { seasonId } from "../shared/ids.ts";
-import { ok } from "../shared/result.ts";
+import { type SeasonId, seasonId } from "../shared/ids.ts";
+import { err, ok } from "../shared/result.ts";
 import { instant } from "../time/instant.ts";
 import type { ContractSubject } from "./fixtures.ts";
 
@@ -16,6 +17,7 @@ const T0 = 1_791_987_120_000;
 const SEASON = seasonId(uuid(0xe1));
 const OTHER_SEASON = seasonId(uuid(0xe2));
 const ANDREA = memberId(uuid(0xa1));
+const VICTOR = memberId(uuid(0xa2));
 
 const reminder = (n: number, extra: Partial<CommitmentReminder> = {}): CommitmentReminder => ({
   seasonId: SEASON,
@@ -47,7 +49,18 @@ export function describeCommitmentReminderContract(
           return ok(undefined);
         });
       return {
+        uow,
         save,
+        deleteByMembers: (ids: readonly MemberId[]) =>
+          uow.transaction(async ({ reminders }) => {
+            await reminders.deleteByMembers(ids);
+            return ok(undefined);
+          }),
+        deleteBySeasons: (ids: readonly SeasonId[]) =>
+          uow.transaction(async ({ reminders }) => {
+            await reminders.deleteBySeasons(ids);
+            return ok(undefined);
+          }),
         get: (n: number, season = SEASON) =>
           uow.read(({ reminders }) => reminders.get(season, reminder(n).commitmentId)),
         enabled: (season = SEASON) => uow.read(({ reminders }) => reminders.listEnabled(season)),
@@ -100,6 +113,61 @@ export function describeCommitmentReminderContract(
         reminder(3).commitmentId,
       ]);
       expect(await s.enabled(OTHER_SEASON)).toEqual([reminder(4, { seasonId: OTHER_SEASON })]);
+    });
+
+    it("deleteByMembers deletes those members' settings in every season, enabled or not, with safe repeats", async () => {
+      const s = await subject();
+      await s.save(reminder(1), null);
+      await s.save(reminder(2, { enabled: false }), null);
+      await s.save(reminder(3, { seasonId: OTHER_SEASON }), null);
+      await s.save(reminder(4, { memberId: VICTOR }), null);
+      await s.deleteByMembers([]);
+      expect(await s.get(1)).toEqual(reminder(1));
+      await s.deleteByMembers([ANDREA]);
+      await s.deleteByMembers([ANDREA]);
+      expect(await s.get(1)).toBeNull();
+      expect(await s.get(2)).toBeNull();
+      expect(await s.get(3, OTHER_SEASON)).toBeNull();
+      expect(await s.get(4)).toEqual(reminder(4, { memberId: VICTOR }));
+    });
+
+    it("deleteBySeasons deletes every member's settings of those seasons only", async () => {
+      const s = await subject();
+      await s.save(reminder(1), null);
+      await s.save(reminder(2, { memberId: VICTOR }), null);
+      await s.save(reminder(3, { seasonId: OTHER_SEASON }), null);
+      await s.deleteBySeasons([]);
+      expect(await s.get(1)).toEqual(reminder(1));
+      await s.deleteBySeasons([SEASON]);
+      await s.deleteBySeasons([SEASON]);
+      expect(await s.get(1)).toBeNull();
+      expect(await s.get(2)).toBeNull();
+      expect(await s.get(3, OTHER_SEASON)).toEqual(reminder(3, { seasonId: OTHER_SEASON }));
+    });
+
+    it("a deleted setting's key is free for a new one, and a rolled-back deletion keeps it", async () => {
+      const s = await subject();
+      await s.save(reminder(1), null);
+      await s.uow.transaction(async ({ reminders }) => {
+        await reminders.deleteByMembers([ANDREA]);
+        return err("rollback");
+      });
+      expect(await s.get(1)).toEqual(reminder(1));
+      await s.deleteByMembers([ANDREA]);
+      await s.save(reminder(1), null);
+      expect(await s.get(1)).toEqual(reminder(1));
+    });
+
+    it("saving after a deletion in the same transaction stores the new setting", async () => {
+      const s = await subject();
+      await s.save(reminder(1), null);
+      const again = reminder(1, { minuteOfDay: 9 * 60 });
+      await s.uow.transaction(async ({ reminders }) => {
+        await reminders.deleteBySeasons([SEASON]);
+        await reminders.save(again, null);
+        return ok(undefined);
+      });
+      expect(await s.get(1)).toEqual(again);
     });
   });
 }

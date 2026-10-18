@@ -8,7 +8,7 @@ import { renderApp } from "../../../testing/render.tsx";
 const SETTINGS = "/profile/settings";
 
 describe("Ajustes (design 40, Q6)", () => {
-  it("has the email, leaving the circle, signing out and the notifications row (PS-R4, ADR-0017)", async () => {
+  it("has the email, leaving the circle, signing out, deleting the account and the notifications row (PS-R4, ADR-0017, ADR-0019)", async () => {
     renderApp({ path: SETTINGS, myCircle: pairCircleFixture() });
     expect(await screen.findByRole("heading", { name: "Ajustes" })).toBeInTheDocument();
     expect(screen.getByText("andrea@example.com")).toBeInTheDocument();
@@ -16,9 +16,8 @@ describe("Ajustes (design 40, Q6)", () => {
     expect(screen.getByRole("button", { name: "Cerrar sesión" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Avisos" })).toBeInTheDocument();
     expect(screen.getByText("Notificaciones")).toBeInTheDocument();
-    for (const deferred of ["Apariencia", "Eliminar cuenta"]) {
-      expect(screen.queryByText(deferred)).not.toBeInTheDocument();
-    }
+    expect(screen.getByRole("button", { name: "Eliminar cuenta" })).toBeInTheDocument();
+    expect(screen.queryByText("Apariencia")).not.toBeInTheDocument();
     expect(screen.queryByRole("switch")).not.toBeInTheDocument();
   });
 

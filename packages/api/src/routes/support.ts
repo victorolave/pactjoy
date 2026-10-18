@@ -2,6 +2,7 @@ import type {
   Actor,
   Clock,
   EvidenceStorage,
+  IdentityAdmin,
   IdGenerator,
   PushSender,
   RandomSource,
@@ -32,6 +33,11 @@ export interface ApiDeps {
   readonly push: PushSender | null;
   /** The shared secret of the job routes; `null` leaves `/jobs` unmounted (every job path is 404). */
   readonly jobsSecret: string | null;
+  /**
+   * Server-side identity erasure for account deletion (ADR-0019); `null` when it is not
+   * configured: `DELETE /me` answers 503 before it writes anything.
+   */
+  readonly identity: IdentityAdmin | null;
   readonly tokenVerifier: TokenVerifier;
   readonly logger: Logger;
   /** Millisecond clock for request durations; defaults to Date.now. */

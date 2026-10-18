@@ -174,5 +174,23 @@ export function describeFeedReactionRepositoryContract(
       await repository.remove(first.id, 0);
       await expect(repository.remove(first.id, 0)).rejects.toBeInstanceOf(ConcurrencyConflict);
     });
+
+    it("deleteBySeasons deletes every reaction of those seasons only, and frees the keys", async () => {
+      const repository = await setup();
+      const mine = reaction(1);
+      const theirs = reaction(2, { memberId: CARLA, itemKey: OTHER_ITEM });
+      await repository.save(mine, null);
+      await repository.save(theirs, null);
+      await repository.deleteBySeasons([]);
+      await repository.deleteBySeasons([seasonId(uuid(0xe99))]);
+      expect(await repository.listBySeason(SEASON.id)).toEqual([mine, theirs]);
+      await repository.deleteBySeasons([SEASON.id]);
+      await repository.deleteBySeasons([SEASON.id]);
+      expect(await repository.listBySeason(SEASON.id)).toEqual([]);
+      expect(await repository.find(SEASON.id, ITEM, VICTOR)).toBeNull();
+      const again = reaction(3, { emoji: "clap" });
+      await repository.save(again, null);
+      expect(await repository.find(SEASON.id, ITEM, VICTOR)).toEqual(again);
+    });
   });
 }

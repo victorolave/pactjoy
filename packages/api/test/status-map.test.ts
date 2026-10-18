@@ -50,9 +50,10 @@ function errorCoverageGaps(index: string, source: string) {
 }
 
 describe("app error status map", () => {
-  it("EM-S1..S5: 108 kinds, 51x422 6x403 11x404 39x409 1x410", () => {
-    expect(KINDS).toHaveLength(108);
-    expect(kindsWith(422)).toHaveLength(51);
+  it("EM-S1..S5: 110 kinds, 52x422 6x403 11x404 39x409 1x410 1x503", () => {
+    expect(KINDS).toHaveLength(110);
+    expect(kindsWith(422)).toHaveLength(52);
+    expect(kindsWith(503)).toEqual(["IdentityUnavailable"]);
     expect(kindsWith(403)).toEqual([
       "CannotRespondToOwnPause",
       "CommitmentNotOwned",
@@ -183,9 +184,17 @@ describe("app error status map", () => {
     expect(APP_ERROR_STATUS.IdempotencyKeyReused).toBe(422);
   });
 
-  it("every status is a valid client-error code and every kind is a PascalCase identifier", () => {
+  it("DA: a wrong confirmation word is 422; an identity provider that cannot delete is 503 (ADR-0019)", () => {
+    expect(APP_ERROR_STATUS.ConfirmationMismatch).toBe(422);
+    expect(appErrorResult({ kind: "IdentityUnavailable" })).toEqual({
+      status: 503,
+      error: { code: "IdentityUnavailable", message: "IdentityUnavailable" },
+    });
+  });
+
+  it("every status is a valid error code and every kind is a PascalCase identifier", () => {
     for (const k of KINDS) {
-      expect([403, 404, 409, 410, 422]).toContain(APP_ERROR_STATUS[k]);
+      expect([403, 404, 409, 410, 422, 503]).toContain(APP_ERROR_STATUS[k]);
       expect(k).toMatch(/^[A-Z][A-Za-z]+$/);
     }
   });
@@ -212,7 +221,7 @@ describe("app error status map", () => {
     const index = readFileSync(resolve(import.meta.dirname, "../../app/src/index.ts"), "utf8");
     const source = readFileSync(resolve(import.meta.dirname, "../src/errors/app-error.ts"), "utf8");
     expect(errorCoverageGaps(index, source)).toEqual({ imports: [], union: [] });
-    expect(exportedErrorNames(index).length).toBe(51);
+    expect(exportedErrorNames(index).length).toBe(52);
   });
 
   it("EM-S16: the scan compares exact names, so a new CircleError is detected", () => {

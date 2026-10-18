@@ -1,4 +1,5 @@
 import type { SeasonProgress } from "../../ports/wire.ts";
+import { memberName } from "../../shared/member-name.ts";
 import styles from "./WeeklyChart.module.css";
 
 type StartedSeason = Extract<SeasonProgress, { state: "active" | "ended" }>;
@@ -25,7 +26,7 @@ export function SeasonWeeklyChart({ progress }: SeasonWeeklyChartProps) {
 
   const viewerId = viewerRow.memberId;
   const peerId = peerRow.memberId;
-  const peerName = peerRow.displayName;
+  const peerName = memberName(peerRow.displayName);
 
   // Active points across past and current weeks determine the scaling ceiling.
   const activePoints = weeks

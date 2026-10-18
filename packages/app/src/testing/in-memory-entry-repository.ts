@@ -1,5 +1,5 @@
 import type { CommitmentId, MemberId } from "@pactjoy/engine";
-import type { EntryRepository } from "../entry/entry.repository.ts";
+import { type EntryRepository, ERASED_REQUEST_FINGERPRINT } from "../entry/entry.repository.ts";
 import type { EntryCore, EntryRecord, EntryTombstone, StoredEntry } from "../entry/entry.ts";
 import { ConcurrencyConflict } from "../shared/errors.ts";
 import type { EntryId, SeasonId } from "../shared/ids.ts";
@@ -51,6 +51,19 @@ function tombstone(entry: EntryRecord): EntryTombstone {
     requestFingerprint: entry.requestFingerprint,
   };
   return { ...core, value: null, note: null, photoId: null, deleted: true };
+}
+
+/** The account-erasure image of a row (any state); an already erased row is returned as it is. */
+function erased<T extends StoredEntry>(entry: T): T {
+  if (entry.requestFingerprint === ERASED_REQUEST_FINGERPRINT) return entry;
+  return {
+    ...entry,
+    note: null,
+    photoId: null,
+    requestFingerprint: ERASED_REQUEST_FINGERPRINT,
+    clientRequestId: entry.id,
+    version: entry.version + 1,
+  };
 }
 
 /** Programming errors in the caller, not races: thrown as plain errors. */
@@ -155,24 +168,41 @@ export function createInMemoryEntryRepository(): InMemoryEntryRepository {
       store[index] = tombstone(current);
     },
 
+    async eraseEvidence(memberIds) {
+      store.forEach((entry, index) => {
+        if (memberIds.includes(entry.memberId)) store[index] = erased(entry);
+      });
+    },
+
+    async deleteBySeasons(seasonIds) {
+      for (let index = store.length - 1; index >= 0; index--) {
+        if (seasonIds.includes((store[index] as StoredEntry).seasonId)) store.splice(index, 1);
+      }
+    },
+
     beginTransaction(): EntryTransactionScope {
       const staged: EntryRecord[] = [];
       // Edits and removals by entry id, each with the version first read.
       const replaced = new Map<EntryId, { expectedVersion: number; next: EntryRecord }>();
       const removed = new Map<EntryId, number>();
+      // Erasures by entry id, with the version first read from the live store (rows staged here
+      // are erased in place), and the seasons dropped wholesale. Both layer over the edits above.
+      const erasedFromStore = new Map<EntryId, number>();
+      const droppedSeasons = new Set<SeasonId>();
 
       /** Everything this transaction sees, tombstones included. */
       function viewAll(): StoredEntry[] {
         return [
-          ...store.map((entry) =>
-            entry.deleted
+          ...store.map((entry) => {
+            const edited = entry.deleted
               ? entry
               : removed.has(entry.id)
                 ? tombstone(replaced.get(entry.id)?.next ?? entry)
-                : (replaced.get(entry.id)?.next ?? entry),
-          ),
+                : (replaced.get(entry.id)?.next ?? entry);
+            return erasedFromStore.has(entry.id) ? erased(edited) : edited;
+          }),
           ...staged,
-        ];
+        ].filter((entry) => !droppedSeasons.has(entry.seasonId));
       }
 
       function stillAt(id: EntryId, expectedVersion: number): boolean {
@@ -225,6 +255,21 @@ export function createInMemoryEntryRepository(): InMemoryEntryRepository {
           }
           removed.set(id, staged?.expectedVersion ?? expectedVersion);
         },
+
+        async eraseEvidence(memberIds) {
+          for (const entry of store) {
+            if (memberIds.includes(entry.memberId) && !erasedFromStore.has(entry.id)) {
+              erasedFromStore.set(entry.id, entry.version);
+            }
+          }
+          staged.forEach((entry, index) => {
+            if (memberIds.includes(entry.memberId)) staged[index] = erased(entry);
+          });
+        },
+
+        async deleteBySeasons(seasonIds) {
+          for (const id of seasonIds) droppedSeasons.add(id);
+        },
       };
 
       return {
@@ -239,6 +284,11 @@ export function createInMemoryEntryRepository(): InMemoryEntryRepository {
           ];
           if (!read.every(([id, expectedVersion]) => stillAt(id, expectedVersion))) {
             throw new ConcurrencyConflict();
+          }
+          for (const [id, version] of erasedFromStore) {
+            if (store.find((entry) => entry.id === id)?.version !== version) {
+              throw new ConcurrencyConflict();
+            }
           }
         },
         apply(): void {
@@ -255,7 +305,13 @@ export function createInMemoryEntryRepository(): InMemoryEntryRepository {
           for (const id of removed.keys()) {
             store[indexOf(id)] = tombstone(store[indexOf(id)] as EntryRecord);
           }
+          for (const id of erasedFromStore.keys()) {
+            store[indexOf(id)] = erased(store[indexOf(id)] as StoredEntry);
+          }
           store.push(...staged);
+          for (let index = store.length - 1; index >= 0; index--) {
+            if (droppedSeasons.has((store[index] as StoredEntry).seasonId)) store.splice(index, 1);
+          }
         },
       };
     },

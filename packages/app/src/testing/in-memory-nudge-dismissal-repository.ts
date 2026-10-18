@@ -36,6 +36,24 @@ function listMine(store: Store, seasonId: string, viewerId: string): NudgeDismis
     );
 }
 
+/** Calls `drop` for every row that `deleteByMembers` / `deleteBySeasons` removes. */
+function erasures(
+  view: () => Store,
+  drop: (key: string) => void,
+): Pick<NudgeDismissalRepository, "deleteByMembers" | "deleteBySeasons"> {
+  const dropWhere = (matches: (d: NudgeDismissal) => boolean) => {
+    for (const [key, d] of view()) if (matches(d)) drop(key);
+  };
+  return {
+    async deleteByMembers(memberIds) {
+      dropWhere((d) => memberIds.includes(d.viewerId) || memberIds.includes(d.targetId));
+    },
+    async deleteBySeasons(seasonIds) {
+      dropWhere((d) => seasonIds.includes(d.seasonId));
+    },
+  };
+}
+
 /**
  * Deterministic in-memory {@link NudgeDismissalRepository} for tests (ADR-0008). Same rule as the
  * database adapter: a case is dismissed once, and dismissing it again keeps the first row.
@@ -52,17 +70,28 @@ export function createInMemoryNudgeDismissalRepository(): InMemoryNudgeDismissal
       if (!store.has(keyOf(dismissal))) store.set(keyOf(dismissal), dismissal);
     },
 
+    ...erasures(
+      () => store,
+      (key) => void store.delete(key),
+    ),
+
     beginTransaction(): NudgeDismissalTransactionScope {
       const staged = new Map<string, NudgeDismissal>();
+      const dropped = new Set<string>();
 
       function view(): Map<string, NudgeDismissal> {
         const merged = new Map(store);
+        for (const key of dropped) merged.delete(key);
         for (const [key, dismissal] of staged) if (!merged.has(key)) merged.set(key, dismissal);
         return merged;
       }
 
       return {
         repository: {
+          ...erasures(view, (key) => {
+            staged.delete(key);
+            dropped.add(key);
+          }),
           async listMine(seasonId, viewerId) {
             return listMine(view(), seasonId, viewerId);
           },
@@ -72,6 +101,7 @@ export function createInMemoryNudgeDismissalRepository(): InMemoryNudgeDismissal
         },
         validate(): void {},
         apply(): void {
+          for (const key of dropped) store.delete(key);
           for (const [key, dismissal] of staged) if (!store.has(key)) store.set(key, dismissal);
         },
       };

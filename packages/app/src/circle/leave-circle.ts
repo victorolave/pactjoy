@@ -8,6 +8,7 @@ import type { Actor } from "../shared/actor.ts";
 import type { CircleId } from "../shared/ids.ts";
 import { err, ok, type Result } from "../shared/result.ts";
 import type { Clock } from "../time/clock.port.ts";
+import type { Instant } from "../time/instant.ts";
 import type { TimeZone } from "../time/time-zone.port.ts";
 import { type Circle, findActiveMember, type Member } from "./circle.ts";
 
@@ -57,55 +58,75 @@ export async function leaveCircle(
       return err({ kind: "NotAMember" });
     }
 
-    const now = deps.clock.now();
-    const members: readonly Member[] = circle.members.map((m) =>
-      m.id === member.id ? { ...m, status: "left" as const, leftAt: now } : m,
-    );
-    const lastMemberLeft = members.every((m) => m.status === "left");
-    const updated: Circle = {
-      ...circle,
-      members,
-      archivedAt: lastMemberLeft ? now : circle.archivedAt,
-      version: circle.version + 1,
-    };
-    await repos.circles.save(updated, circle.version);
-
-    const latestSeason = await repos.seasons.findLatestByCircle(circle.id);
-    if (latestSeason?.status === "pactOpen") {
-      if (lastMemberLeft) {
-        // Nobody is left to have agreed to anything: discard the open season.
-        await repos.seasons.delete(latestSeason.id, latestSeason.version);
-      } else {
-        await repos.seasons.save(
-          {
-            ...resetApprovals(latestSeason),
-            commitments: latestSeason.commitments.filter((c) => c.memberId !== member.id),
-            version: latestSeason.version + 1,
-          },
-          latestSeason.version,
-        );
-      }
-    }
-    if (latestSeason?.status === "active" && latestSeason.actualStart !== null) {
-      await settlePausesOnLeave(repos, {
-        season: latestSeason,
-        before: circle,
-        after: updated,
-        leaver: member.id,
-        now,
+    return ok(
+      await leaveCircleCore(repos, {
+        circle,
+        member,
+        now: deps.clock.now(),
         timeZone: deps.timeZone,
-      });
-      // An ended season waiting only for this member is complete without them (SC-F3): the leave
-      // that completes the set finalizes it. Only `complete`, never `stale`: laggards are cut off
-      // by opening the next season, not by someone leaving.
-      await finalizeIfReady(
-        repos,
-        latestSeason,
-        updated,
-        seasonCloseDay(latestSeason, now, deps.timeZone),
-        "complete",
+      }),
+    );
+  });
+}
+
+/** The exact leave transition, shared with account erasure in its caller-owned transaction. */
+export async function leaveCircleCore(
+  repos: Repositories,
+  input: {
+    readonly circle: Circle;
+    readonly member: Member;
+    readonly now: Instant;
+    readonly timeZone: TimeZone;
+  },
+): Promise<Circle> {
+  const { circle, member, now, timeZone } = input;
+  const members: readonly Member[] = circle.members.map((m) =>
+    m.id === member.id ? { ...m, status: "left" as const, leftAt: now } : m,
+  );
+  const lastMemberLeft = members.every((m) => m.status === "left");
+  const updated: Circle = {
+    ...circle,
+    members,
+    archivedAt: lastMemberLeft ? now : circle.archivedAt,
+    version: circle.version + 1,
+  };
+  await repos.circles.save(updated, circle.version);
+
+  const latestSeason = await repos.seasons.findLatestByCircle(circle.id);
+  if (latestSeason?.status === "pactOpen") {
+    if (lastMemberLeft) {
+      // Nobody is left to have agreed to anything: discard the open season.
+      await repos.seasons.delete(latestSeason.id, latestSeason.version);
+    } else {
+      await repos.seasons.save(
+        {
+          ...resetApprovals(latestSeason),
+          commitments: latestSeason.commitments.filter((c) => c.memberId !== member.id),
+          version: latestSeason.version + 1,
+        },
+        latestSeason.version,
       );
     }
-    return ok(updated);
-  });
+  }
+  if (latestSeason?.status === "active" && latestSeason.actualStart !== null) {
+    await settlePausesOnLeave(repos, {
+      season: latestSeason,
+      before: circle,
+      after: updated,
+      leaver: member.id,
+      now,
+      timeZone,
+    });
+    // An ended season waiting only for this member is complete without them (SC-F3): the leave
+    // that completes the set finalizes it. Only `complete`, never `stale`: laggards are cut off
+    // by opening the next season, not by someone leaving.
+    await finalizeIfReady(
+      repos,
+      latestSeason,
+      updated,
+      seasonCloseDay(latestSeason, now, timeZone),
+      "complete",
+    );
+  }
+  return updated;
 }

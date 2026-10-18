@@ -37,6 +37,7 @@ const circle: Circle = {
       status: "active",
       joinedAt: T0,
       leftAt: null,
+      erasedAt: null,
     },
   ],
   invite: null,
@@ -136,6 +137,34 @@ describe("season repository on Postgres (read/write side)", () => {
       save({ ...withChildren, version: 1, commitments: [], approvals: [] }, 7),
     ).rejects.toBeInstanceOf(ConcurrencyConflict);
     expect([await count("season_commitments"), await count("season_approvals")]).toEqual([1, 1]);
+  });
+
+  it("two saves of one season in one transaction commit, each against the version the row had when the transaction read it (finalize, then hide a commitment)", async () => {
+    await save(withChildren, null);
+    await uow.transaction(async ({ seasons }) => {
+      const first: Season = { ...withChildren, status: "closed", version: 1 };
+      await seasons.save(first, 0);
+      await seasons.save(
+        { ...first, commitments: [{ ...commitment, privacy: "private" }], version: 2 },
+        1,
+      );
+      return ok(undefined);
+    });
+    const stored = await uow.read(({ seasons }) => seasons.get(season.id));
+    expect(stored).toMatchObject({ status: "closed", version: 2 });
+    expect(stored?.commitments.map((c) => c.privacy)).toEqual(["private"]);
+  });
+
+  it("a second save of one season in one transaction with a stale version is a ConcurrencyConflict", async () => {
+    await save(withChildren, null);
+    await expect(
+      uow.transaction(async ({ seasons }) => {
+        await seasons.save({ ...withChildren, status: "closed", version: 1 }, 0);
+        await seasons.save({ ...withChildren, version: 2 }, 0);
+        return ok(undefined);
+      }),
+    ).rejects.toBeInstanceOf(ConcurrencyConflict);
+    expect((await uow.read(({ seasons }) => seasons.get(season.id)))?.version).toBe(0);
   });
 
   it("SP-S15: delete cascades to every child row", async () => {

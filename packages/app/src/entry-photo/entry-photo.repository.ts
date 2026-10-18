@@ -1,5 +1,5 @@
 import type { MemberId } from "@pactjoy/engine";
-import type { EntryPhotoId } from "../shared/ids.ts";
+import type { EntryPhotoId, SeasonId } from "../shared/ids.ts";
 import type { Instant } from "../time/instant.ts";
 import type { EntryPhoto } from "./entry-photo.ts";
 
@@ -45,4 +45,18 @@ export interface EntryPhotoRepository {
   listReleased(memberId: MemberId | null, limit: number): Promise<readonly EntryPhoto[]>;
   /** Hard-deletes the `released` rows among `ids`. A pending or attached row is never deleted; unknown ids are ignored. */
   purge(ids: readonly EntryPhotoId[]): Promise<void>;
+  /**
+   * Account erasure: moves every `pending` and `attached` row of `memberIds` to `released`, bumping
+   * its version, and returns EVERY released row of those members (the ones just moved and the ones
+   * released earlier by a replace, a remove or an entry delete, untouched) so the caller can purge
+   * their objects after the commit. A repeat bumps nothing and returns the same released rows. One
+   * statement on a relational adapter. The entries' own links are cleared by `eraseEvidence`.
+   */
+  releaseAllOfMembers(memberIds: readonly MemberId[]): Promise<readonly EntryPhoto[]>;
+  /**
+   * Full-circle erasure: deletes every row of `seasonIds` whatever its status and returns them, so the
+   * caller can delete their objects after the commit. The entries that point at them must be deleted
+   * first (the foreign key is RESTRICT). `[]` is a no-op.
+   */
+  deleteBySeasons(seasonIds: readonly SeasonId[]): Promise<readonly EntryPhoto[]>;
 }

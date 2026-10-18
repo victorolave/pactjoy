@@ -8,13 +8,15 @@ export interface ListRowProps {
   /** Makes the row a button, styled as the design's link-coloured action. */
   readonly onClick?: () => void;
   readonly disabled?: boolean;
+  /** `danger` colours an action that cannot be undone (deleting the account). */
+  readonly tone?: "default" | "danger";
 }
 
 /**
  * One row of a settings list (design 40): a label with a value, or an action. Rows go inside a
  * `Card` with `flush`; the hairline between them comes from the list.
  */
-export function ListRow({ label, value, onClick, disabled }: ListRowProps) {
+export function ListRow({ label, value, onClick, disabled, tone = "default" }: ListRowProps) {
   if (onClick === undefined) {
     return (
       <div className={cx(styles.row, styles.info)}>
@@ -26,7 +28,7 @@ export function ListRow({ label, value, onClick, disabled }: ListRowProps) {
   return (
     <button
       type="button"
-      className={cx(styles.row, styles.action)}
+      className={cx(styles.row, styles.action, tone === "danger" && styles.danger)}
       onClick={onClick}
       disabled={disabled}
     >

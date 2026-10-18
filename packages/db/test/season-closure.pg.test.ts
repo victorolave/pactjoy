@@ -68,6 +68,18 @@ const seedSeason = async () => {
 
 /** The repository as a use case sees it: every call in its own unit of work, errors mapped. */
 const repository: SeasonClosureRepository = {
+  deleteByMembers: async (members) => {
+    await uow.transaction(async ({ seasonClosures }) => {
+      await seasonClosures.deleteByMembers(members);
+      return ok(undefined);
+    });
+  },
+  deleteBySeasons: async (seasons) => {
+    await uow.transaction(async ({ seasonClosures }) => {
+      await seasonClosures.deleteBySeasons(seasons);
+      return ok(undefined);
+    });
+  },
   getMine: (season, member) =>
     uow.read(({ seasonClosures }) => seasonClosures.getMine(season, member)),
   closedMemberIds: (season) =>

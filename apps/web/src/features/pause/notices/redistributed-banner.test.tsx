@@ -239,6 +239,13 @@ describe("the 'points redistributed' notice (screen 30b, PS-14, PS-15)", () => {
       ).toBeInTheDocument();
     });
 
+    it("names a peer whose account was deleted as a member who left (ADR-0019)", async () => {
+      await open(SINGLE, new MemoryStorage(), peers(["Andrea", ""]));
+      expect(
+        await screen.findByText(/Los de Andrea y Miembro que salió no cambian\.$/),
+      ).toBeInTheDocument();
+    });
+
     it("is omitted in a solo circle, and when the circle read fails", async () => {
       await open(SINGLE);
       expect(await screen.findByText(/Tu total subió de 397 a 400\.$/)).toBeInTheDocument();

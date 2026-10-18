@@ -7,6 +7,12 @@
  * the separate `./testing` subpath (`src/testing/index.ts`), never here.
  */
 
+export type {
+  DeleteAccountDeps,
+  DeleteAccountError,
+  DeleteAccountInput,
+} from "./account/delete-account.ts";
+export { ACCOUNT_DELETION_CONFIRMATION, deleteAccount } from "./account/delete-account.ts";
 export { createCryptoRandomSource } from "./adapters/crypto-random-source.ts";
 export { createIntlTimeZone } from "./adapters/intl-time-zone.ts";
 export { createSystemClock } from "./adapters/system-clock.ts";
@@ -20,6 +26,7 @@ export type {
   CreateCircleInput,
 } from "./circle/create-circle.ts";
 export { createCircle } from "./circle/create-circle.ts";
+export { ERASED_DISPLAY_NAME } from "./circle/erase-member.ts";
 export type {
   GenerateInviteDeps,
   GenerateInviteError,
@@ -300,6 +307,7 @@ export type {
 } from "./ports/evidence-storage.ts";
 export { EvidenceStorageError } from "./ports/evidence-storage.ts";
 export type { IdGenerator } from "./ports/id-generator.ts";
+export { type IdentityAdmin, IdentityAdminError } from "./ports/identity-admin.ts";
 export type {
   PushMessage,
   PushOutcome,

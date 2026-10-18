@@ -77,6 +77,33 @@ describe("readJsonBody", () => {
     });
   });
 
+  it("a DELETE parses its JSON body only when the route opted in (ADR-0019)", async () => {
+    const del = (body: string, headers: Record<string, string> = {}) =>
+      post(body, headers, "DELETE");
+    expect(
+      await readJsonBody(del('{"confirmation":"ELIMINAR"}'), MAX, { deleteBody: true }),
+    ).toEqual({ ok: true, body: { confirmation: "ELIMINAR" } });
+    expect(code(await readJsonBody(del('{"a":1}'), MAX))).toBe("422 InvalidRequest");
+    expect(code(await readJsonBody(del('{"a":1}'), MAX, { deleteBody: false }))).toBe(
+      "422 InvalidRequest",
+    );
+    // Opting in lifts only the method rule: the rest of the body rules still apply.
+    expect(
+      code(
+        await readJsonBody(del("{}", { "content-type": "text/plain" }), MAX, { deleteBody: true }),
+      ),
+    ).toBe("415 UnsupportedMediaType");
+    expect(code(await readJsonBody(del("{nope"), MAX, { deleteBody: true }))).toBe(
+      "400 InvalidJson",
+    );
+    // A GET never carries a body, opt-in or not.
+    expect(
+      code(
+        await readJsonBody(new Request("http://x/a", { method: "GET" }), MAX, { deleteBody: true }),
+      ),
+    ).toBe("ok");
+  });
+
   it("only utf-8 is accepted as a charset: anything else is 415", async () => {
     for (const ct of ["application/json; charset=latin1", "application/json;charset=utf-16"]) {
       expect(code(await readJsonBody(post("{}", { "content-type": ct }), MAX))).toBe(

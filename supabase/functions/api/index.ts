@@ -3,6 +3,7 @@
 import {
   createApi,
   createConsoleLogger,
+  createGoTrueIdentityAdmin,
   createJwksTokenVerifier,
   createLazyHandler,
   describeEnvError,
@@ -37,6 +38,14 @@ const build = () => {
       // Web Push and the job routes (ADR-0017): each off when its variables are unset.
       push: env.push === null ? null : createWebPushSender(env.push),
       jobsSecret: env.jobsSecret,
+      // Account deletion (ADR-0019): identity erasure, only when its key is configured.
+      identity:
+        env.authAdmin === null
+          ? null
+          : createGoTrueIdentityAdmin({
+              authUrl: env.authAdmin.authUrl,
+              adminKey: env.authAdmin.key,
+            }),
       tokenVerifier: createJwksTokenVerifier({ jwksUrl: env.jwksUrl, issuer: env.jwtIssuer }),
       logger,
       isUnavailable: isDatabaseUnavailable,

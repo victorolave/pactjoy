@@ -49,6 +49,8 @@ export type { InMemoryFeedReactionRepository } from "./in-memory-feed-reaction-r
 export { createInMemoryFeedReactionRepository } from "./in-memory-feed-reaction-repository.ts";
 export type { InMemoryHabitRepository } from "./in-memory-habit-repository.ts";
 export { createInMemoryHabitRepository } from "./in-memory-habit-repository.ts";
+export type { InMemoryIdentityAdmin } from "./in-memory-identity-admin.ts";
+export { createInMemoryIdentityAdmin } from "./in-memory-identity-admin.ts";
 export type { InMemoryNotificationOutbox } from "./in-memory-notification-outbox.ts";
 export { createInMemoryNotificationOutbox } from "./in-memory-notification-outbox.ts";
 export type { InMemoryNudgeDismissalRepository } from "./in-memory-nudge-dismissal-repository.ts";
