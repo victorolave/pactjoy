@@ -88,6 +88,135 @@ describe("scanMigrations", () => {
   });
 });
 
+describe("scanMigrations blind spots", () => {
+  const typesOf = (columns: ReturnType<typeof scanMigrations>, table: string) =>
+    columns.filter((c) => c.table === table).map((c) => `${c.column}:${c.type}`);
+
+  it("reads a statement preceded by a block comment, whatever the comment holds", () => {
+    const columns = scanMigrations([
+      `/* The notes table.
+          It's not a "real" one; a semicolon here -- or a dash pair -- is only text. */
+       create table pactjoy.notes (id uuid, body text);
+       /* inline */ alter /* between */ table pactjoy.notes add column mood text;`,
+    ]);
+
+    expect(typesOf(columns, "notes")).toEqual(["id:uuid", "body:text", "mood:text"]);
+  });
+
+  it("reads a statement preceded by a line comment and by a block comment in a row", () => {
+    const columns = scanMigrations([
+      `-- first
+       /* second */
+       create table pactjoy.notes (id uuid);`,
+    ]);
+
+    expect(typesOf(columns, "notes")).toEqual(["id:uuid"]);
+  });
+
+  it.each([
+    [
+      "a create table inside a DO block",
+      "do $$ begin create table pactjoy.hidden (id uuid, note text); end $$;",
+      /create table/i,
+    ],
+    [
+      "an alter table inside a DO block",
+      "do $$ begin alter table pactjoy.things add column bio text; end $$;",
+      /alter table/i,
+    ],
+    [
+      "a create table after another statement keyword",
+      "begin create table pactjoy.hidden (id uuid, note text);",
+      /create table/i,
+    ],
+    [
+      "a create unlogged table that does not start the statement",
+      "do $$ begin create unlogged table pactjoy.hidden (note text); end $$;",
+      /does not start its statement.*unlogged table/i,
+    ],
+  ])("throws on %s instead of skipping it", (_name, statement, message) => {
+    expect(() => scanMigrations([FIXTURE_CREATE, statement])).toThrow(message);
+  });
+
+  it("still ignores the words in a name or a string that are not a table statement", () => {
+    const columns = scanMigrations([
+      FIXTURE_CREATE,
+      `comment on table pactjoy.things is 'a table';
+       create index things_label_idx on pactjoy.things (label);
+       grant select on table pactjoy.things to anon;`,
+    ]);
+
+    expect(columns.filter((c) => c.table === "things")).toHaveLength(8);
+  });
+
+  it("unpins a column when drop constraint removes the constraint that pinned it", () => {
+    const pinned = (columns: ReturnType<typeof scanMigrations>, name: string) =>
+      columns.find((c) => c.table === "things" && c.column === name)?.enumChecked;
+
+    const afterDrop = scanMigrations([
+      FIXTURE_CREATE,
+      "alter table pactjoy.things drop constraint things_mood_check;",
+    ]);
+    expect(pinned(afterDrop, "mood")).toBe(false);
+    expect(pinned(afterDrop, "kind")).toBe(true);
+
+    const quotedIfExists = scanMigrations([
+      FIXTURE_CREATE,
+      'alter table pactjoy.things drop constraint if exists "things_kind_check" cascade;',
+    ]);
+    expect(pinned(quotedIfExists, "kind")).toBe(false);
+    expect(pinned(quotedIfExists, "mood")).toBe(true);
+  });
+
+  it("unpins a column pinned by a later add constraint, and keeps the pin of an unrelated drop", () => {
+    const columns = scanMigrations([
+      FIXTURE_CREATE,
+      `alter table pactjoy.things
+         add column state text,
+         add constraint things_state_check check (state in ('on', 'off'));
+       alter table pactjoy.things drop constraint things_state_check;
+       alter table pactjoy.things drop constraint things_shape;`,
+    ]);
+
+    expect(columns.find((c) => c.column === "state")?.enumChecked).toBe(false);
+    expect(columns.find((c) => c.column === "mood")?.enumChecked).toBe(true);
+  });
+
+  it("unpins a column whose unnamed check carries Postgres' default name", () => {
+    const columns = scanMigrations([
+      `create table pactjoy.t (status text not null check (status in ('x')));
+       alter table pactjoy.t drop constraint t_status_check;`,
+    ]);
+
+    expect(columns.find((c) => c.column === "status")?.enumChecked).toBe(false);
+  });
+
+  it("keeps a column pinned while another constraint still pins it", () => {
+    const columns = scanMigrations([
+      `create table pactjoy.t (
+         status text not null constraint t_one check (status in ('x')),
+         constraint t_two check (status in ('x', 'y'))
+       );
+       alter table pactjoy.t drop constraint t_one;`,
+    ]);
+
+    expect(columns.find((c) => c.column === "status")?.enumChecked).toBe(true);
+  });
+
+  it("does not carry a pin over to a column dropped and added back as free text", () => {
+    const columns = scanMigrations([
+      FIXTURE_CREATE,
+      `alter table pactjoy.things drop column mood;
+       alter table pactjoy.things add column mood text;`,
+    ]);
+
+    expect(columns.find((c) => c.column === "mood")).toMatchObject({
+      type: "text",
+      enumChecked: false,
+    });
+  });
+});
+
 describe("scanMigrations refuses what it cannot follow (a schema change must not bypass the registry)", () => {
   it.each([
     ["alter column ... type", "alter table pactjoy.things alter column label type varchar(10)"],

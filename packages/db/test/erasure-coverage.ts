@@ -81,7 +81,9 @@ const SAFE_TYPES = new Set([
   "interval",
 ]);
 
-const stripComments = (sql: string): string => sql.replace(/--[^\n]*/g, "");
+/** Block comments first (a `--` inside one is text), each becoming a space so tokens never glue. */
+const stripComments = (sql: string): string =>
+  sql.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/--[^\n]*/g, "");
 
 /** Splits at commas outside parentheses and string literals. */
 function splitTopLevel(text: string): string[] {
@@ -132,17 +134,39 @@ const ALTER_TABLE =
   /^alter\s+table\s+(?:only\s+)?(?:if\s+exists\s+)?(?:"?(\w+)"?\.)?"?(\w+)"?\s+([\s\S]*)$/i;
 const ADD_COLUMN = /^add\s+(?:column\s+)?(?:if\s+not\s+exists\s+)?([\s\S]*)$/i;
 const ADD_CONSTRAINT = /^add\s+(constraint|primary\s+key|unique|check|foreign\s+key|exclude)\b/i;
-const DROP_CONSTRAINT = /^drop\s+constraint\b/i;
+const DROP_CONSTRAINT =
+  /^drop\s+constraint\s+(?:if\s+exists\s+)?"?(\w+)"?(?:\s+(?:cascade|restrict))?$/i;
+/** A create or alter of a table that is not where the statement starts (a DO block, a wrapper...). */
+const TABLE_STATEMENT_ANYWHERE =
+  /\b(?:create\s+(?:(?:global\s+|local\s+)?(?:temp|temporary)\s+|unlogged\s+)?|alter\s+)table\b/i;
 const DROP_COLUMN =
   /^drop\s+(?:column\s+)?(?:if\s+exists\s+)?"?(\w+)"?(?:\s+(?:cascade|restrict))?$/i;
 const ROW_SECURITY = /^(?:enable|disable|force|no\s+force)\s+row\s+level\s+security$/i;
 const COLUMN_DEFAULT_OR_NULL =
   /^alter\s+(?:column\s+)?"?\w+"?\s+(?:set|drop)\s+(?:not\s+null|default\b)/i;
 
-/** Columns a CHECK pins to a closed list, anywhere in the statement. */
-function enumColumns(statement: string): string[] {
-  return [...statement.matchAll(/check\s*\(\s*"?(\w+)"?\s*(?:in\s*\(|=\s*')/gi)].flatMap((match) =>
-    match[1] ? [match[1].toLowerCase()] : [],
+/**
+ * The CHECKs that pin a column to a closed list, anywhere in the statement, with the constraint's
+ * name: the one written (`constraint x check ...`) or, for an unnamed check, Postgres' default
+ * `<table>_<column>_check`, so a later `drop constraint` finds it either way.
+ */
+function enumConstraints(
+  table: string,
+  statement: string,
+): { readonly name: string; readonly column: string }[] {
+  return [
+    ...statement.matchAll(
+      /(?:constraint\s+"?(\w+)"?\s+)?check\s*\(\s*"?(\w+)"?\s*(?:in\s*\(|=\s*')/gi,
+    ),
+  ].flatMap((match) =>
+    match[2]
+      ? [
+          {
+            name: (match[1] ?? `${table}_${match[2]}_check`).toLowerCase(),
+            column: match[2].toLowerCase(),
+          },
+        ]
+      : [],
   );
 }
 
@@ -165,7 +189,16 @@ function qualified(schema: string | undefined, table: string, statement: string)
  */
 export function scanMigrations(sources: readonly string[]): ScannedColumn[] {
   const columns = new Map<string, Omit<ScannedColumn, "enumChecked">>();
-  const pinned = new Set<string>();
+  // Column key -> the names of the CHECKs that pin it: it stays pinned until the last one is dropped.
+  const pinned = new Map<string, Set<string>>();
+
+  const unpinConstraint = (table: string, name: string): void => {
+    for (const [key, names] of pinned) {
+      if (!key.startsWith(`${table}.`)) continue;
+      names.delete(name.toLowerCase());
+      if (names.size === 0) pinned.delete(key);
+    }
+  };
 
   const define = (table: string, definition: string, statement: string): void => {
     const match = COLUMN_DEFINITION.exec(definition);
@@ -199,11 +232,18 @@ export function scanMigrations(sources: readonly string[]): ScannedColumn[] {
         const altered = qualified(alter[1], alter[2], statement);
         table = altered;
         for (const action of splitTopLevel(alter[3])) {
-          if (ADD_CONSTRAINT.test(action) || DROP_CONSTRAINT.test(action)) continue;
+          if (ADD_CONSTRAINT.test(action)) continue;
+          const droppedConstraint = DROP_CONSTRAINT.exec(action);
+          if (droppedConstraint?.[1]) {
+            unpinConstraint(altered, droppedConstraint[1]);
+            continue;
+          }
           if (ROW_SECURITY.test(action) || COLUMN_DEFAULT_OR_NULL.test(action)) continue;
           const dropped = DROP_COLUMN.exec(action);
           if (dropped?.[1]) {
-            columns.delete(`${altered}.${dropped[1].toLowerCase()}`);
+            const key = `${altered}.${dropped[1].toLowerCase()}`;
+            columns.delete(key);
+            pinned.delete(key);
             continue;
           }
           const added = ADD_COLUMN.exec(action);
@@ -215,8 +255,19 @@ export function scanMigrations(sources: readonly string[]): ScannedColumn[] {
             `erasure-coverage: an alter of ${altered} the guard does not understand (${head(action)}); teach scanMigrations about it and re-check ERASURE_COVERAGE`,
           );
         }
+      } else if (TABLE_STATEMENT_ANYWHERE.test(statement)) {
+        // A table is created or altered somewhere the scan does not read (a DO block, a wrapper):
+        // its columns would escape the registry, so it is a failure, never a skip.
+        throw new Error(
+          `erasure-coverage: a create/alter table that does not start its statement cannot be followed: ${head(statement)}`,
+        );
       }
-      if (table) for (const column of enumColumns(statement)) pinned.add(`${table}.${column}`);
+      if (table) {
+        for (const { name, column } of enumConstraints(table, statement)) {
+          const key = `${table}.${column}`;
+          pinned.set(key, (pinned.get(key) ?? new Set<string>()).add(name));
+        }
+      }
     }
   }
   return [...columns.entries()].map(([key, column]) => ({
