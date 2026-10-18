@@ -1,4 +1,7 @@
 export const todayKey = ["today"] as const;
+/** The owner's reminder for one commitment (D2). Never persisted offline. */
+export const reminderKey = (seasonId: string, commitmentId: string) =>
+  ["reminder", seasonId, commitmentId] as const;
 export const habitsKey = ["habits"] as const;
 /** Every season read shares this root, so one invalidation refreshes them all. */
 export const seasonsKey = ["season"] as const;

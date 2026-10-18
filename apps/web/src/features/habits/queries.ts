@@ -107,11 +107,19 @@ export function useSaveWizard(
         privacy: draft.privacy,
         measure: wireMeasure(draft.measure),
       };
-      return commitment === undefined
-        ? api.addCommitment(seasonId, { ...input, habitId: habit.id })
-        : api.editCommitment(seasonId, commitment.id, input);
+      const season =
+        commitment === undefined
+          ? await api.addCommitment(seasonId, { ...input, habitId: habit.id })
+          : await api.editCommitment(seasonId, commitment.id, input);
+      const savedHabitId = habit.id;
+      // The saved commitment, so the done screen can offer its reminder (D2).
+      const commitmentId =
+        commitment?.id ??
+        season.commitments.find((c) => c.kind === "detail" && c.habitId === savedHabitId)?.id ??
+        null;
+      return { season, commitmentId };
     },
-    onSuccess: (season) => client.setQueryData(seasonKey(seasonId), season),
+    onSuccess: ({ season }) => client.setQueryData(seasonKey(seasonId), season),
     onSettled: async () => {
       await Promise.all(
         [seasonKey(seasonId), habitsKey, todayKey, myCircleKey].map((queryKey) =>
