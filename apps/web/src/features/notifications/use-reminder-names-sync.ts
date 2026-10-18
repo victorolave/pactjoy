@@ -13,8 +13,9 @@ export function useReminderNamesSync(view: TodayView | undefined): void {
   const names = useReminderNames();
   const commitments = useMemo<readonly NamedCommitment[] | null>(() => {
     if (view === undefined) return null;
-    // No running season: nothing can be reminded, so no name stays behind (fail closed).
-    if (view.state !== "active" && view.state !== "ended") return [];
+    // Only a running season fires reminders (an ended one never plans again): otherwise no name
+    // stays behind (fail closed).
+    if (view.state !== "active") return [];
     // A private name never even reaches the port (which drops it too).
     return view.rows
       .filter((row) => row.privacy === "visible")

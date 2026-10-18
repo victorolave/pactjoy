@@ -5,6 +5,7 @@ import { pairCircleFixture } from "../../testing/fixtures/circle.ts";
 import {
   activeTodayFixture,
   dayRowFixture,
+  endedTodayFixture,
   noSeasonTodayFixture,
   weekRowFixture,
 } from "../../testing/fixtures/today.ts";
@@ -44,6 +45,17 @@ describe("reminder names on the device", () => {
 
   it("a Today with no running season leaves no names behind", async () => {
     const { deps } = renderApp({ path: "/", today: noSeasonTodayFixture() });
+    await waitFor(() => expect(deps.reminderNames.saves).toEqual([[]]));
+    expect(deps.reminderNames.current()).toEqual(new Map());
+  });
+
+  it("an ended season leaves no names behind either: its reminders never fire again", async () => {
+    const { deps } = renderApp({
+      path: "/",
+      today: endedTodayFixture({
+        rows: [dayRowFixture({ habitName: "Meditar", privacy: "visible" })],
+      }),
+    });
     await waitFor(() => expect(deps.reminderNames.saves).toEqual([[]]));
     expect(deps.reminderNames.current()).toEqual(new Map());
   });
