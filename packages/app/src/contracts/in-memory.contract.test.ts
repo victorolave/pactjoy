@@ -9,6 +9,7 @@ import { createInMemoryReviewRepository } from "../testing/in-memory-review-repo
 import { createInMemorySeasonClosureRepository } from "../testing/in-memory-season-closure-repository.ts";
 import { instant } from "../time/instant.ts";
 import { describeCircleRepositoryContract } from "./circle.contract.ts";
+import { describeCommitmentReminderContract } from "./commitment-reminder.contract.ts";
 import {
   describeEncouragementRepositoryContract,
   describeNudgeDismissalRepositoryContract,
@@ -44,6 +45,7 @@ describeSeasonRepositoryContract("in-memory", inMemory);
 describePauseRequestRepositoryContract("in-memory", inMemory);
 describeNotificationOutboxContract("in-memory", inMemory);
 describePushSubscriptionContract("in-memory", inMemory);
+describeCommitmentReminderContract("in-memory", inMemory);
 describeReviewRepositoryContract("in-memory", async () => ({
   repository: createInMemoryReviewRepository(),
 }));

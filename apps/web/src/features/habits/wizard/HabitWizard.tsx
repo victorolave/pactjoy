@@ -6,6 +6,7 @@ import { FlowScreen } from "../../../ui/FlowScreen.tsx";
 import { InlineMessage } from "../../../ui/InlineMessage.tsx";
 import { Icon } from "../../../ui/icon/Icon.tsx";
 import { Skeleton } from "../../../ui/Skeleton.tsx";
+import { ReminderCard } from "../../notifications/index.ts";
 import { useSaveWizard, useWizardData } from "../queries.ts";
 import { IdentityStep } from "./IdentityStep.tsx";
 import { MeasureStep } from "./MeasureStep.tsx";
@@ -255,6 +256,10 @@ function WizardForm({
               <Icon name="check" size="lg" />
             </span>
             <WizardSummary draft={draft} saved />
+            {/* Optional (REQ-R12): it starts off, and continuing leaves it off. */}
+            {save.data?.commitmentId != null && (
+              <ReminderCard seasonId={seasonId} commitmentId={save.data.commitmentId} />
+            )}
           </div>
         )}
       </fieldset>

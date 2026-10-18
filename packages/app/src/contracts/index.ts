@@ -7,6 +7,7 @@
  */
 
 export { describeCircleRepositoryContract } from "./circle.contract.ts";
+export { describeCommitmentReminderContract } from "./commitment-reminder.contract.ts";
 export type {
   EncouragementContractSubject,
   NudgeDismissalContractSubject,

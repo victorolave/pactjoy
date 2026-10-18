@@ -112,9 +112,18 @@ describe("service worker (WF-R7, ADR-0017: a hand-written worker for Web Push)",
 
   it("always shows a notification on push (iOS requires it) and opens the app on a tap", () => {
     expect(code).toMatch(/addEventListener\("push"/);
-    expect(code).toMatch(/event\.waitUntil\(\s*self\.registration\.showNotification\(/);
+    expect(code).toMatch(/event\.waitUntil\(\s*showNotice\(/);
+    expect(code).toMatch(/await self\.registration\.showNotification\(/);
     expect(code).toMatch(/addEventListener\("notificationclick"/);
     expect(code).toContain("notificationFor(");
+  });
+
+  it("names a reminder's habit from the device's own names, failing closed to the generic copy", () => {
+    const names = code.slice(code.indexOf("async function reminderNames"));
+    expect(names).toMatch(/try \{[\s\S]*?caches\.open\(REMINDER_NAMES_CACHE\)[\s\S]*?\} catch \{/);
+    expect(names).toMatch(/catch \{\s*return decodeReminderNames\(null\);/);
+    // Only the reminder reads them; every other push shows what it showed before.
+    expect(code).toMatch(/payload\?\.kind === "commitmentReminder" \? await reminderNames\(\)/);
   });
 
   it("a tap does not reload a window already on the destination, and opens one if navigating fails", () => {

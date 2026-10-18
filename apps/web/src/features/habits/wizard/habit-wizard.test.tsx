@@ -305,6 +305,23 @@ describe("habit wizard routes (screens 9/9c)", () => {
     expect(location()).toBe(`/season/${wizardSeason.id}/habits/new`);
   });
 
+  it("REQ-R12: once saved, offers an optional reminder for the new commitment; skipping leaves it off", async () => {
+    const { deps } = setup();
+    await lastStep();
+    await userEvent.click(screen.getByRole("button", { name: "Guardar hábito" }));
+    expect(await screen.findByRole("heading", { name: "Hábito guardado" })).toBeVisible();
+    const toggle = await screen.findByRole("switch", { name: "Recordatorio" });
+    expect(toggle).not.toBeChecked();
+    expect(deps.api.reminderCommands).toEqual([]);
+    await userEvent.click(toggle);
+    await waitFor(() => expect(deps.api.reminderCommands).toHaveLength(1));
+    expect(deps.api.reminderCommands[0]).toMatchObject({
+      seasonId: wizardSeason.id,
+      commitmentId: "commitment-read",
+      setting: { enabled: true, minuteOfDay: 1200 },
+    });
+  });
+
   it("accepts screen 10's habitId and reuses it instead of creating another habit", async () => {
     const { deps } = setup(`/season/${wizardSeason.id}/habits/new?habitId=${wizardHabit.id}`);
     expect(await ready()).toHaveValue(wizardHabit.name);

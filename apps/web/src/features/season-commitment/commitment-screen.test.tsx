@@ -159,11 +159,11 @@ describe("CommitmentScreen (24a)", () => {
     ).toBeTruthy();
   });
 
-  it("deferred workflows leave no trace: no stage, reminder or pause action", async () => {
+  it("deferred workflows leave no trace: no stage or pause action", async () => {
     showing(commitmentProgress());
 
     await screen.findByRole("heading", { level: 1, name: "Leer" });
-    for (const text of [/Recordatorio/, /Pausar/, /En desarrollo/, /Nuevo/, /Reanudar/]) {
+    for (const text of [/Pausar/, /En desarrollo/, /Nuevo/, /Reanudar/]) {
       expect(screen.queryByText(text)).toBeNull();
     }
     // Only the way back and the read-only history cell (C4) are controls.
@@ -297,6 +297,33 @@ describe("CommitmentScreen stage badge (periodic review)", () => {
     await screen.findByRole("heading", { level: 1, name: "Leer" });
     expect(screen.queryByText(/Nuevo|En desarrollo|Integrado|Graduado/)).toBeNull();
     expect(app.deps.api.calls.getCommitmentStage).toBe(0);
+  });
+});
+
+describe("CommitmentScreen reminder (D2, REQ-R12)", () => {
+  it("the owner can turn on a reminder for their own commitment while the season runs", async () => {
+    const app = showing(commitmentProgress());
+    await userEvent.click(await screen.findByRole("switch", { name: "Recordatorio" }));
+    await waitFor(() => expect(app.deps.api.reminderCommands).toHaveLength(1));
+    expect(app.deps.api.reminderCommands[0]).toMatchObject({
+      seasonId: SEASON,
+      commitmentId: LEER,
+      setting: { enabled: true, minuteOfDay: 1200 },
+    });
+  });
+
+  it("never shows, or asks for, someone else's reminder", async () => {
+    const app = showing({ ...commitmentProgress(), memberId: "member-andrea" });
+    await screen.findByRole("heading", { level: 1, name: "Leer" });
+    expect(screen.queryByRole("switch", { name: "Recordatorio" })).toBeNull();
+    expect(app.deps.api.calls.getCommitmentReminder).toBe(0);
+  });
+
+  it("an ended season has no reminder to set", async () => {
+    const app = showing({ ...commitmentProgress(), state: "ended" } as CommitmentProgress);
+    await screen.findByRole("heading", { level: 1, name: "Leer" });
+    expect(screen.queryByRole("switch", { name: "Recordatorio" })).toBeNull();
+    expect(app.deps.api.calls.getCommitmentReminder).toBe(0);
   });
 });
 

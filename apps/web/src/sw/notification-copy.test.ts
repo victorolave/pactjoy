@@ -97,6 +97,53 @@ describe("notificationFor", () => {
     expect(new URL(notice.url, "https://app.example").origin).toBe("https://app.example");
   });
 
+  describe("commitmentReminder (D2): the habit is named on the device, never in the payload", () => {
+    const C = "commitment-1";
+    const reminder = payload("commitmentReminder", {
+      seasonId: S,
+      commitmentId: C,
+      forDate: "2026-10-20",
+    });
+
+    it("names the owner's habit when the device knows it (a visible commitment)", () => {
+      const notice = notificationFor(parsePushPayload(reminder), new Map([[C, "Leer"]]));
+      expect(notice).toEqual({
+        title: "Es hora de Leer",
+        body: "Toca para registrarlo.",
+        tag: "commitmentReminder:season-1:commitment-1:2026-10-20",
+        url: "/?entry=commitment-1",
+      });
+    });
+
+    it("fails closed to the generic copy: a private commitment, or no names on the device", () => {
+      for (const names of [new Map<string, string>(), new Map([["other", "Leer"]]), undefined]) {
+        const notice = notificationFor(parsePushPayload(reminder), names);
+        expect(notice.title).toBe("Es hora de tu hábito");
+        expect(notice.url).toBe("/?entry=commitment-1");
+      }
+    });
+
+    it("the destination stays a same-origin Today link whatever the id holds", () => {
+      const notice = show(
+        payload("commitmentReminder", {
+          seasonId: S,
+          commitmentId: "x&id=y#//evil.example",
+          forDate: "2026-10-20",
+        }),
+      );
+      expect(notice.url).toBe("/?entry=x%26id%3Dy%23%2F%2Fevil%2Eexample");
+      expect(new URL(notice.url, "https://app.example").searchParams.get("entry")).toBe(
+        "x&id=y#//evil.example",
+      );
+    });
+
+    it("needs every param", () => {
+      expect(show(payload("commitmentReminder", { seasonId: S, commitmentId: C }))).toEqual(
+        GENERIC_NOTIFICATION,
+      );
+    });
+  });
+
   it("REQ-F1/K4: no copy talks about ranking, losing, streaks or not logging", () => {
     const kinds: [string, Record<string, unknown>][] = [
       ["pauseRequested", { seasonId: S, pauseRequestId: P }],
@@ -108,6 +155,7 @@ describe("notificationFor", () => {
       ["reviewDue", { seasonId: S, periodIndex: 1 }],
       ["seasonClosed", { seasonId: S }],
       ["encouragementNudge", { seasonId: S, encouragementId: "encouragement-1" }],
+      ["commitmentReminder", { seasonId: S, commitmentId: "c", forDate: "2026-10-20" }],
     ];
     for (const [kind, params] of kinds) {
       const { title, body } = show(payload(kind, params));

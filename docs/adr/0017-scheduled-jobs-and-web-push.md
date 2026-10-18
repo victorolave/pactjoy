@@ -62,7 +62,7 @@ The forces:
 
 ### Erasure (change E)
 
-Account deletion must delete `push_subscriptions` by `user_id` and `notification_outbox` rows by `recipient_user_id` or `recipient_member_id`. Pending notices about an erased member drop at dispatch because their pause or season is gone or no longer relevant.
+Account deletion must delete `push_subscriptions` by `user_id`, `notification_outbox` rows by `recipient_user_id` or `recipient_member_id`, and (from D2) `commitment_reminders` by `member_id`. Pending notices about an erased member drop at dispatch because their pause or season is gone or no longer relevant.
 
 ## Alternatives considered
 
@@ -115,6 +115,17 @@ Account deletion must delete `push_subscriptions` by `user_id` and `notification
 
 - Outbox rows are kept 7 days after they end, for diagnosis, then purged by the dispatcher.
 - Accepted for now (review of 2026-10-17): a retry after every device failed resends to all of them, so a device that got an earlier copy may show a duplicate (the `Topic` collapses it only while undelivered); a session that EXPIRES (not a sign-out) keeps the device registered until the next login moves the endpoint, and its pushes carry ids only; the planner loads every live season on each tick, which is fine at MVP scale and can later select ids and zones first.
+
+## Addendum (2026-10-18): commitment reminders (roadmap D2)
+
+The owner decided both open D2 questions on 2026-10-18: the reminder names the owner's own habit ("Es hora de Leer") for a VISIBLE commitment and stays generic ("Es hora de tu hábito") for a private one, because the lock screen is exposed; the default time is 20:00 season-local, and the 22:00-08:00 quiet hours still apply.
+
+- **R1. Its own owner-only aggregate.** `CommitmentReminder {seasonId, commitmentId, memberId, enabled, minuteOfDay, weekdays, updatedAt, version}` in `pactjoy.commitment_reminders` (migration `20261017000200`): one row per commitment, no foreign key (like the other notification tables), RLS on with no policies, revoked. `minute_of_day` is 08:00-21:45 on a 15-minute grid and `weekdays` a 7-bit mask of engine weekdays (bit 0 = Monday); the CHECKs mirror the use case and nothing else. A commitment never configured has no row and reads as the default: off, 20:00, its own days (a `specificDays` commitment) or every day. The store is confined to `src/reminders/` (`reminder-guard.test.ts`).
+- **R2. A personal setting, not part of the pact.** `getCommitmentReminder` and `setCommitmentReminder` are the owner's only (a peer's commitment is `CommitmentNotFound`, like an unknown one); setting it is allowed while the pact is open or the season runs (`SeasonClosed` after), is idempotent, and never touches `pactRevision`, `season.version` or the approvals. Turning on, or moving, the reminder of a graduated habit is `HabitGraduated`; turning one off always works. Routes: `GET` and `PUT /seasons/:seasonId/commitments/:commitmentId/reminder` (`InvalidReminder` 422 with its `reason`, `SeasonClosed` 409).
+- **R3. Planned only once due, re-checked at dispatch.** The `commitmentReminder` kind (`chosenTime` timing, no rollover; params `{seasonId, commitmentId, forDate}`, ids only) is added by the planner only while `now` is inside [time, min(time + 1 h, 22:00)) on one of its days, so a time changed the same day still applies and the dedupe key `commitmentReminder:{season}:{commitment}:{date}:{member}` keeps it to one per commitment and day. The planner now plans reminders outside the 09:00-22:00 calendar window too, but never in the quiet hours. A reminder is sent on time or dropped as `expired`; it is never shifted. Whether the day is still open is decided by the SAME pure `todayRows` the Today screen uses: no reminder for a day already registered (done or "Hoy no salió"), paused or on hold, a day with no session (`specificDays`), a `timesPerWeek` week that reached its prorated sessions, a `weeklyTotal` reach at its ideal, a graduated habit, a season that is not active or a day outside it, or an owner who left. Dispatch re-checks the same, plus that the reminder is still enabled on that weekday.
+- **R4. The name lives on the device, never in the push.** The payload stays ids only. Today leaves the names of the viewer's own VISIBLE commitments in Cache Storage (`pactjoy-reminder-names-v1`, behind a `ReminderNamesPort`); the service worker reads them at push time and fails closed to the generic copy for a private commitment, a missing name, or any error. Signing out (and any session end) forgets them. A tap opens the Entry sheet for that commitment (`/?entry=<id>`); a commitment no longer on Today just shows Today.
+- **R5. Web.** A `ReminderCard` (a switch, the time, the days) on the owner's commitment detail while the season runs, and, optionally, on the wizard's done screen for the new commitment. It never asks for the notification permission; with notifications off on the device it points to Ajustes. Offline it cannot change. Reminders are not carried to the next season: a new commitment starts off.
+- **Migration order.** `encouragementNudge` (A3, `20261018000100`) and `commitmentReminder` each replace the outbox kind CHECK; the D2 one is `20261018000200` and lists every kind, so it must run after A3's.
 
 ## Ops checklist (owner)
 

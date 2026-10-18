@@ -34,6 +34,7 @@ import type {
   CarryOverDto,
   CircleFeedDto,
   CommitmentProgress,
+  CommitmentReminderDto,
   CommitmentStageDto,
   HabitDto,
   MemberProgress,
@@ -44,6 +45,7 @@ import type {
   ProfileSummaryDto,
   ReactionCode,
   ReactionsDto,
+  ReminderSettingCommand,
   ReviewDraftDto,
   SeasonDto,
   SeasonHistoryDto,
@@ -84,6 +86,24 @@ const isPushConfig = (data: unknown): data is PushConfigDto =>
   Object.keys(data).length === 1 &&
   "vapidPublicKey" in data &&
   (data.vapidPublicKey === null || typeof data.vapidPublicKey === "string");
+
+const isWeekdays = (value: unknown): value is readonly number[] =>
+  Array.isArray(value) &&
+  value.length <= 7 &&
+  value.every((day) => Number.isInteger(day) && day >= 0 && day <= 6);
+
+/** The owner's reminder setting (ADR-0017 addendum, D2), every field checked. */
+const isCommitmentReminder = (data: unknown): data is CommitmentReminderDto => {
+  if (typeof data !== "object" || data === null) return false;
+  const r = data as Record<string, unknown>;
+  return (
+    typeof r.commitmentId === "string" &&
+    typeof r.enabled === "boolean" &&
+    Number.isInteger(r.minuteOfDay) &&
+    isWeekdays(r.weekdays) &&
+    isWeekdays(r.availableWeekdays)
+  );
+};
 
 export interface HttpPactJoyApiOptions {
   readonly baseUrl: string;
@@ -484,6 +504,31 @@ export class HttpPactJoyApi implements PactJoyApi {
     signal?: AbortSignal,
   ): Promise<CommitmentStageDto> {
     return this.#read(`${commitmentPath(seasonId, commitmentId)}/stage`, isCommitmentStage, signal);
+  }
+
+  async getCommitmentReminder(
+    seasonId: string,
+    commitmentId: string,
+    signal?: AbortSignal,
+  ): Promise<CommitmentReminderDto> {
+    return this.#read(
+      `${commitmentPath(seasonId, commitmentId)}/reminder`,
+      isCommitmentReminder,
+      signal,
+    );
+  }
+
+  async setCommitmentReminder(
+    seasonId: string,
+    commitmentId: string,
+    setting: ReminderSettingCommand,
+  ): Promise<CommitmentReminderDto> {
+    return (await this.#request({
+      method: "PUT",
+      path: `${commitmentPath(seasonId, commitmentId)}/reminder`,
+      body: setting,
+      valid: isCommitmentReminder,
+    })) as CommitmentReminderDto;
   }
 
   async getSeasonResults(seasonId: string, signal?: AbortSignal): Promise<SeasonResultsDto> {

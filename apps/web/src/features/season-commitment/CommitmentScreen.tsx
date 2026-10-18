@@ -10,6 +10,7 @@ import { IconButton } from "../../ui/IconButton.tsx";
 import { Icon } from "../../ui/icon/Icon.tsx";
 import { ProgressBar } from "../../ui/ProgressBar.tsx";
 import { Skeleton } from "../../ui/Skeleton.tsx";
+import { ReminderCard } from "../notifications/index.ts";
 import { CommitmentPauseSection } from "../pause/index.ts";
 import { HabitStageBadge } from "../review/index.ts";
 import {
@@ -173,6 +174,10 @@ function Commitment({
         <p className={styles.subtitle}>{commitmentSubtitle(row)}</p>
       </div>
       <CommitmentPauseSection commitmentId={commitmentId} />
+      {/* The reminder is the owner's alone, and only while the season still runs (D2). */}
+      {isOwner && view.state === "active" && (
+        <ReminderCard seasonId={view.season.id} commitmentId={commitmentId} />
+      )}
       <PointsCard view={view} />
       <HistoryGrid view={view} onPhotoUnavailable={refreshLinks} />
       <Scoring view={view} />
@@ -182,7 +187,8 @@ function Commitment({
 
 /**
  * `/season/:seasonId/commitments/:commitmentId` (design 24a, 24b): one commitment's season,
- * read-only apart from the pause entry point (Lote 4). The owner's stage badge comes from the review feature (ADR-0014); reminder actions are not part of Lote 2. Back honours where it was
+ * read-only apart from the pause entry point (Lote 4) and, for the owner, the reminder (D2). The
+ * owner's stage badge comes from the review feature (ADR-0014). Back honours where it was
  * opened from (Today passes `{ from: "today" }`), Temporada otherwise.
  */
 export function CommitmentScreen() {

@@ -13,3 +13,5 @@ export {
   pushStatus,
   removeThisDevice,
 } from "./push-device.ts";
+export { ReminderCard } from "./reminder/ReminderCard.tsx";
+export { useReminderNamesSync } from "./use-reminder-names-sync.ts";

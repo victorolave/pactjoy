@@ -123,6 +123,23 @@ export interface CommitmentStageDto {
 }
 
 /**
+ * What the owner chooses for a commitment's reminder (ADR-0017 addendum, D2). `minuteOfDay` is
+ * season-local (08:00-21:45, 15-minute steps); `weekdays` are engine weekdays, 0 = Monday.
+ */
+export interface ReminderSettingCommand {
+  readonly enabled: boolean;
+  readonly minuteOfDay: number;
+  readonly weekdays: readonly number[];
+}
+
+/** `GET`/`PUT /seasons/:id/commitments/:id/reminder`: owner-only; a peer's is a 404. */
+export interface CommitmentReminderDto extends ReminderSettingCommand {
+  readonly commitmentId: string;
+  /** The days this commitment can be reminded on (its own days, or all seven). */
+  readonly availableWeekdays: readonly number[];
+}
+
+/**
  * The season close as it arrives over the wire (change season-close-graduation, ADR-0015). Every
  * view is the OWNER's: no member id appears in them, and no route carries one.
  */

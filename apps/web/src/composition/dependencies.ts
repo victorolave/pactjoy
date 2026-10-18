@@ -13,6 +13,7 @@ import type { NotificationPermissionPort } from "../ports/notification-permissio
 import type { PactJoyApi } from "../ports/pactjoy-api.ts";
 import type { PhotoUploader } from "../ports/photo-uploader.ts";
 import type { PushSubscriptionPort } from "../ports/push-subscription.ts";
+import type { ReminderNamesPort } from "../ports/reminder-names.ts";
 import type { Sharing } from "../ports/sharing.ts";
 import type { TokenStore } from "../ports/token-store.ts";
 
@@ -39,6 +40,8 @@ export interface AppDependencies {
   readonly notifications: NotificationPermissionPort;
   /** This device's Web Push subscription (ADR-0017); subscribed only after a granted permission. */
   readonly push: PushSubscriptionPort;
+  /** The own visible habit names reminder pushes may show (D2); forgotten when the session ends. */
+  readonly reminderNames: ReminderNamesPort;
   readonly sessions: SessionManager;
   /** The API adapter's `onUnauthorized` calls `sessionEvents.expire`. */
   readonly sessionEvents: SessionEvents;

@@ -30,9 +30,11 @@ function filesUnder(dir: string): string[] {
 
 /** feature -> the features it may reach (always through their index.ts). */
 const ALLOWED_FEATURE_DEPS: Readonly<Record<string, readonly string[]>> = {
+  // Today also leaves the habit names reminder pushes may show (D2) through notifications' index.
   today: [
     "entry",
     "habits",
+    "notifications",
     "pause",
     "review",
     "season-close",
@@ -40,7 +42,8 @@ const ALLOWED_FEATURE_DEPS: Readonly<Record<string, readonly string[]>> = {
     "season-week",
     "social",
   ],
-  habits: [],
+  // The wizard's done screen offers the new commitment's reminder (D2).
+  habits: ["notifications"],
   pact: ["habits", "review"],
   entry: [],
   auth: [],
@@ -54,7 +57,8 @@ const ALLOWED_FEATURE_DEPS: Readonly<Record<string, readonly string[]>> = {
   "season-member": ["habits", "season-progress-data"],
   season: ["circle", "habits", "season-progress-data"],
   "season-week": ["season-progress-data"],
-  "season-commitment": ["season-progress-data", "pause", "review"],
+  // The owner's reminder card (D2) comes from notifications.
+  "season-commitment": ["season-progress-data", "notifications", "pause", "review"],
   // Reads Today and the circle through the API port and their shared query keys, never their features.
   pause: [],
   // Reads Today and the review through the API port and the shared query keys, never other features.

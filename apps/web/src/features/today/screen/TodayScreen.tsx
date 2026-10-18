@@ -6,6 +6,7 @@ import { longDate } from "../../../shared/format.ts";
 import { toUiError } from "../../../shared/ui-error.ts";
 import { Button } from "../../../ui/Button.tsx";
 import { Icon } from "../../../ui/icon/Icon.tsx";
+import { useReminderNamesSync } from "../../notifications/index.ts";
 import { useToday } from "../queries.ts";
 import { TodayRowSeasonContext } from "../rows/row-navigation.ts";
 import { type TodayModel, toTodayModel } from "../today-view-model.ts";
@@ -94,6 +95,7 @@ function TodayFailure({
 export function TodayScreen() {
   const today = useToday();
   const online = useOnline();
+  useReminderNamesSync(today.data);
   if (today.data === undefined) {
     // Offline with nothing saved is an error, not an endless skeleton (TO-S13).
     if (today.isError || today.fetchStatus === "paused") {
