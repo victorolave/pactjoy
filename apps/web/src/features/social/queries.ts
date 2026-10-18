@@ -9,7 +9,7 @@ import { useMemo } from "react";
 import { usePactJoyApi } from "../../context/api-context.tsx";
 import type { DismissNudgeCommand, SendEncouragementCommand } from "../../ports/pactjoy-api.ts";
 import type { CircleFeedDto, ReactionCode, ReactionsDto } from "../../ports/wire.ts";
-import { feedKey } from "../../shared/query-keys.ts";
+import { feedKey, reactionMutationKey } from "../../shared/query-keys.ts";
 import { applyReaction } from "./reactions/apply-reaction.ts";
 
 /**
@@ -74,8 +74,6 @@ function reactionsIn(data: FeedData | undefined, itemKey: string): ReactionsDto 
   return undefined;
 }
 
-const REACT_KEY = ["social", "react"] as const;
-
 /**
  * The items with a reaction still in flight. Their chips wait: two writes on one item never
  * overlap, so a refusal can always restore what the item showed before (a snapshot per write
@@ -83,24 +81,25 @@ const REACT_KEY = ["social", "react"] as const;
  */
 export function usePendingReactionKeys(): ReadonlySet<string> {
   const keys = useMutationState({
-    filters: { mutationKey: REACT_KEY, status: "pending" },
+    filters: { mutationKey: reactionMutationKey, status: "pending" },
     select: (mutation) => (mutation.state.variables as ReactCommand).itemKey,
   });
   return useMemo(() => new Set(keys), [keys]);
 }
 
 /**
- * React to an item, change the reaction or take it back. The chip answers at once (optimistic) and
- * goes back to what it was when the server refuses; the server's counts replace the guess when the
- * feed is refetched after the mutation settles. Nothing else in the cache is touched, on the way
+ * React to an item, change the reaction or take it back. The chip answers at once (optimistic),
+ * takes the server's counts when the write succeeds (even if the feed read after it fails) and goes
+ * back to what it was when the server refuses. Nothing else in the cache is touched, on the way
  * in or on the way back: a refusal restores THAT item only, so another reaction made meanwhile
- * keeps its optimistic state.
+ * keeps its optimistic state, and the feed is not refetched until no reaction is in flight
+ * (`createQueryClient`).
  */
 export function useReact(seasonId: string) {
   const api = usePactJoyApi();
   const client = useQueryClient();
   return useMutation({
-    mutationKey: REACT_KEY,
+    mutationKey: reactionMutationKey,
     mutationFn: ({ itemKey, emoji }: ReactCommand) =>
       emoji === null
         ? api.removeFeedReaction(seasonId, itemKey)
@@ -115,6 +114,14 @@ export function useReact(seasonId: string) {
           mapReactions(cached, itemKey, (reactions) => applyReaction(reactions, emoji)),
         );
       return { previous };
+    },
+    onSuccess: (reactions, { itemKey }) => {
+      const current = client.getQueryData<FeedData>(feedKey);
+      if (current !== undefined)
+        client.setQueryData(
+          feedKey,
+          mapReactions(current, itemKey, () => reactions),
+        );
     },
     onError: (_error, { itemKey }, context) => {
       const current = client.getQueryData<FeedData>(feedKey);

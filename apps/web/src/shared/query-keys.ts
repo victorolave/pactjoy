@@ -61,3 +61,5 @@ export const profileSummaryKey = [...progressKey, "profile"] as const;
  */
 export const socialKey = ["social"] as const;
 export const feedKey = [...socialKey, "feed"] as const;
+/** The mutation key of every reaction write, so the client can tell when reactions are in flight. */
+export const reactionMutationKey = [...socialKey, "react"] as const;

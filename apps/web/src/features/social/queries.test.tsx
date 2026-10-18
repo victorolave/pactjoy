@@ -11,6 +11,7 @@ import {
   consistentWeekItemFixture,
   feedFixture,
   nudgeFixture,
+  reactionsFixture,
   seasonStartedItemFixture,
 } from "../../testing/fixtures/social.ts";
 import { renderInProviders } from "../../testing/render.tsx";
@@ -25,11 +26,13 @@ function Probe() {
   const dismiss = useDismissNudge("season-1");
   const item = feed.items[0];
   const mine = item !== undefined && "reactions" in item ? item.reactions.mine : "-";
+  const hearts = item !== undefined && "reactions" in item ? item.reactions.counts.heart : "-";
   return (
     <div>
       <p>status:{feed.status}</p>
       <p>items:{feed.items.map((i) => i.key).join(",")}</p>
       <p>mine:{String(mine)}</p>
+      <p>hearts:{String(hearts)}</p>
       <p>nudge:{feed.nudge === null ? "none" : String(feed.nudge.week)}</p>
       <p>more:{String(feed.hasNextPage)}</p>
       <p>reactError:{react.isError ? "yes" : "no"}</p>
@@ -180,6 +183,58 @@ describe("useReact: a refused reaction rolls back only its own item", () => {
       releaseRefetch();
       releaseWeek();
     });
+  });
+});
+
+describe("useReact: a feed read never undoes a reaction still in flight", () => {
+  it("keeps a successful reaction when another item's settle refetched first and its own refetch fails", async () => {
+    const { deps } = renderInProviders(<TwoItemsProbe />, {
+      feedPages: [feedFixture({ items: [RUN, consistentWeekItemFixture()] })],
+    });
+    await screen.findByText("run:null");
+    const releaseRun = deps.api.hold("reactToFeedItem");
+    await userEvent.click(screen.getByRole("button", { name: "heart run" }));
+    await waitFor(() => expect(deps.api.socialCommands).toHaveLength(1));
+    const releaseWeek = deps.api.hold("reactToFeedItem");
+    await userEvent.click(screen.getByRole("button", { name: "heart week" }));
+    expect(await screen.findByText("week:heart")).toBeInTheDocument();
+
+    // The run reaction settles first. Any feed read it starts is let through: the server has not
+    // taken the week reaction yet, so that read would say the week item is unreacted.
+    await act(async () => releaseRun());
+    await waitFor(() => expect(deps.api.calls.reactToFeedItem).toBe(1));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(screen.getByText("week:heart")).toBeInTheDocument();
+
+    // The week reaction then succeeds, and the read after it fails: what the server answered stays.
+    const readsBefore = deps.api.calls.feed;
+    deps.api.failNext("feed", new ApiError("NetworkError", 0, null));
+    await act(async () => releaseWeek());
+    await waitFor(() => expect(deps.api.calls.feed).toBeGreaterThan(readsBefore));
+    expect(screen.getByText("week:heart")).toBeInTheDocument();
+    expect(screen.getByText("run:heart")).toBeInTheDocument();
+  });
+
+  it("shows the counts the server answered even when the read after the write fails", async () => {
+    const { deps } = renderInProviders(<Probe />, { feedPages: [feedFixture({ items: [RUN] })] });
+    await screen.findByText("hearts:0");
+    // Another member reacted after the feed was read: only the server knows.
+    deps.api.setFeedPages([
+      feedFixture({
+        items: [
+          completedItemFixture({
+            reactions: reactionsFixture({ counts: { heart: 1, raisedHands: 0, fire: 0, clap: 0 } }),
+          }),
+        ],
+      }),
+    ]);
+    deps.api.failNext("feed", new ApiError("NetworkError", 0, null));
+    await userEvent.click(screen.getByRole("button", { name: "heart" }));
+    await waitFor(() => expect(deps.api.calls.feed).toBe(2));
+    expect(await screen.findByText("hearts:2")).toBeInTheDocument();
+    expect(screen.getByText("mine:heart")).toBeInTheDocument();
   });
 });
 
