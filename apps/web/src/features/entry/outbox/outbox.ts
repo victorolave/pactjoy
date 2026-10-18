@@ -71,9 +71,8 @@ export class Outbox {
   constructor(deps: OutboxDeps) {
     this.#deps = deps;
     this.#state = deps.store.load(deps.userId);
-    // For its whole life, subscribers or not: a replay that nobody watches must still hear that
-    // the session ended or that another tab queued something (OE-R3.S4, OE-R6).
-    this.#followStore();
+    // Nothing is subscribed yet: an instance React builds and then discards (a memo) must leave no
+    // trace. The owner calls `activate()` from an effect and `dispose()` from its cleanup.
   }
 
   /** Stable between changes, so it can back `useSyncExternalStore`. */
@@ -116,11 +115,15 @@ export class Outbox {
     this.#sent = [];
   }
 
-  /** Undoes `dispose()` (an effect cleanup that React runs and then re-runs, as in StrictMode). */
+  /**
+   * Starts following the store, for the whole time it stays active and whether or not anything
+   * on screen listens: a replay nobody watches must still hear that the session ended or that
+   * another tab queued something (OE-R3.S4, OE-R6). Also undoes `dispose()` (an effect cleanup that
+   * React runs and then re-runs, as in StrictMode). Safe to call twice.
+   */
   activate(): void {
-    if (!this.#disposed) return;
     this.#disposed = false;
-    this.#followStore();
+    if (this.#unsubscribeStore === null) this.#followStore();
   }
 
   /** Whether a replay with items to send is running (the "syncing" banner). Changes tell subscribers. */

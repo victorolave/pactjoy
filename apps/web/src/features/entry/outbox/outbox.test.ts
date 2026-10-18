@@ -60,12 +60,13 @@ function seeded(...steps: readonly (EnqueueInput | { readonly attempt: string })
   }, EMPTY_OUTBOX);
 }
 
-function setup(initial: OutboxState = EMPTY_OUTBOX) {
+function setup(initial: OutboxState = EMPTY_OUTBOX, activate = true) {
   const api = new FakePactJoyApi(noCircleTodayFixture());
   const store = new MemoryOutboxStore();
   store.save(USER, initial);
   const onReplayed = vi.fn();
   const outbox = new Outbox({ api, store, userId: USER, ids: new SequentialIds(), onReplayed });
+  if (activate) outbox.activate();
   const queue = (input: EnqueueInput) => {
     const result = outbox.enqueue(input);
     if (!result.ok) throw new Error(`refused: ${result.reason}`);
@@ -453,6 +454,7 @@ describe("Outbox: two tabs of the same user share one store (OE-R3.S4)", () => {
         ids: new SequentialIds(),
         onReplayed: () => undefined,
       });
+      outbox.activate();
       outbox.subscribe(() => undefined);
       return outbox;
     };
@@ -560,6 +562,17 @@ describe("Outbox state: notices, listeners, erasure", () => {
     expect(outbox.snapshot()).toEqual(EMPTY_OUTBOX);
   });
 
+  it("a constructed outbox holds no store subscription until it is activated, and none after dispose", () => {
+    const { store, outbox } = setup(EMPTY_OUTBOX, false);
+    expect(store.listenerCount).toBe(0);
+    outbox.activate();
+    expect(store.listenerCount).toBe(1);
+    outbox.dispose();
+    expect(store.listenerCount).toBe(0);
+    outbox.activate();
+    expect(store.listenerCount).toBe(1);
+  });
+
   it("follows the store with no subscribers at all", () => {
     const { store, outbox } = setup();
     store.emitExternal(USER, seeded(recordInput("x")));
@@ -575,6 +588,7 @@ describe("Outbox state: notices, listeners, erasure", () => {
       ids: new SequentialIds(),
       onReplayed: vi.fn(),
     });
+    idle.activate();
     queue(recordInput("a"));
     store.emitExternal(USER, store.load(USER));
     const release = api.hold("recordEntry");

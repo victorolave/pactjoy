@@ -26,6 +26,11 @@ export class MemoryOutboxStore implements OutboxStore {
     return () => this.#listeners.delete(onChange);
   }
 
+  /** How many subscriptions are open (an outbox that was never activated holds none). */
+  get listenerCount(): number {
+    return this.#listeners.size;
+  }
+
   /** Simulates another tab writing this user's state. */
   emitExternal(userId: string, state: OutboxState): void {
     this.#states.set(userId, state);
