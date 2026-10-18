@@ -8,6 +8,7 @@ import type {
   CreateCircleCommand,
   CreateHabitCommand,
   CreateSeasonCommand,
+  DismissNudgeCommand,
   EditCommitmentCommand,
   EditEntryCommand,
   EditSeasonCommand,
@@ -23,6 +24,7 @@ import type {
   RequestPauseCommand,
   RequestPhotoUploadCommand,
   ScoringPreview,
+  SendEncouragementCommand,
   SubmitClosureCommand,
   SubmitReviewCommand,
   UpdateHabitCommand,
@@ -30,6 +32,7 @@ import type {
 import type { DevicePushSubscription } from "../ports/push-subscription.ts";
 import type {
   CarryOverDto,
+  CircleFeedDto,
   CommitmentProgress,
   CommitmentReminderDto,
   CommitmentStageDto,
@@ -40,6 +43,8 @@ import type {
   PauseRequestDto,
   PhotoUploadDto,
   ProfileSummaryDto,
+  ReactionCode,
+  ReactionsDto,
   ReminderSettingCommand,
   ReviewDraftDto,
   SeasonDto,
@@ -72,6 +77,7 @@ import {
   isSeasonProgress,
   isWeekSummary,
 } from "./season-progress-guards.ts";
+import { isCircleFeed, isReactions, isSentEncouragement } from "./social-guards.ts";
 
 /** `{vapidPublicKey: string | null}` and nothing else (ADR-0017). */
 const isPushConfig = (data: unknown): data is PushConfigDto =>
@@ -177,6 +183,10 @@ const reviewPath = (seasonId: string, periodIndex: number): string =>
   `${seasonPath(seasonId)}/reviews/${periodIndex}`;
 
 const pausePath = (id: string): string => `/pause-requests/${encodeURIComponent(id)}`;
+
+/** The item key carries ":" (`session:<id>:<day>`); it travels as one encoded path segment. */
+const reactionPath = (seasonId: string, itemKey: string): string =>
+  `${seasonPath(seasonId)}/feed/${encodeURIComponent(itemKey)}/reaction`;
 
 const circlePath = (circleId: string): string => `/circles/${encodeURIComponent(circleId)}`;
 
@@ -547,6 +557,52 @@ export class HttpPactJoyApi implements PactJoyApi {
 
   async getProfileSummary(signal?: AbortSignal): Promise<ProfileSummaryDto> {
     return this.#read("/me/profile", isProfileSummary, signal);
+  }
+
+  async feed(cursor?: string | null, signal?: AbortSignal): Promise<CircleFeedDto> {
+    const path =
+      cursor === undefined || cursor === null
+        ? "/me/feed"
+        : `/me/feed/after/${encodeURIComponent(cursor)}`;
+    return this.#read(path, isCircleFeed, signal);
+  }
+
+  async reactToFeedItem(
+    seasonId: string,
+    itemKey: string,
+    emoji: ReactionCode,
+  ): Promise<ReactionsDto> {
+    return (await this.#request({
+      method: "PUT",
+      path: reactionPath(seasonId, itemKey),
+      body: { emoji },
+      valid: isReactions,
+    })) as ReactionsDto;
+  }
+
+  async removeFeedReaction(seasonId: string, itemKey: string): Promise<ReactionsDto> {
+    return (await this.#request({
+      method: "DELETE",
+      path: reactionPath(seasonId, itemKey),
+      valid: isReactions,
+    })) as ReactionsDto;
+  }
+
+  async sendEncouragement(seasonId: string, cmd: SendEncouragementCommand): Promise<void> {
+    await this.#request({
+      method: "POST",
+      path: `${seasonPath(seasonId)}/encouragements`,
+      body: cmd,
+      valid: isSentEncouragement,
+    });
+  }
+
+  async dismissNudge(seasonId: string, cmd: DismissNudgeCommand): Promise<void> {
+    await this.#request({
+      method: "POST",
+      path: `${seasonPath(seasonId)}/nudge-dismissals`,
+      body: cmd,
+    });
   }
 
   async getPushConfig(signal?: AbortSignal): Promise<PushConfigDto> {

@@ -8,8 +8,10 @@ import { Skeleton } from "../../../ui/Skeleton.tsx";
 import { StepBars } from "../../../ui/StepBars.tsx";
 import { type CloseFailure, closeFailure, loadFailure } from "../close-messages.ts";
 import { failureCopy, resultsCopy } from "../copy.ts";
+import { graduationNote } from "../graduation-note.ts";
 import {
   useCanOpenNextSeason,
+  useGraduationAudience,
   useRefetchResults,
   useSeasonCloseOffer,
   useSeasonResults,
@@ -42,6 +44,41 @@ interface FlowProps {
   /** The closing review's flow, when Today knows it is pending. */
   readonly reviewTarget: string | null;
   readonly onLeave: () => void;
+}
+
+interface CelebrationProps {
+  readonly seasonId: string;
+  readonly row: SeasonResultsDto["commitments"][number];
+  readonly weeks: number;
+  readonly hasNext: boolean;
+  readonly onNext: () => void;
+}
+
+/**
+ * The 38b celebration. The graduation audience (circle and season reads) is read here, so the
+ * results and decision steps never start requests only this note needs.
+ */
+function Celebration({ seasonId, row, weeks, hasNext, onNext }: CelebrationProps) {
+  const audience = useGraduationAudience(seasonId);
+  return (
+    <CelebrationStep
+      habitName={row.habitName}
+      weeks={weeks}
+      consistencyPercent={row.consistencyPercent}
+      note={
+        audience.loading
+          ? null
+          : graduationNote({
+              habit: row.habitName,
+              viewerName: audience.viewerName,
+              peers: audience.peers,
+              isPrivate: audience.isPrivate(row.commitmentId),
+            })
+      }
+      hasNext={hasNext}
+      onNext={onNext}
+    />
+  );
 }
 
 /** The steps over one set of results. Everything the member chooses lives here and nowhere else. */
@@ -130,10 +167,10 @@ function CloseFlow({ seasonId, results, reviewTarget, onLeave }: FlowProps) {
     const row = id === undefined ? undefined : names.get(id);
     if (row === undefined) return <Navigate to={TODAY} replace />;
     return (
-      <CelebrationStep
-        habitName={row.habitName}
+      <Celebration
+        seasonId={seasonId}
+        row={row}
         weeks={results.lengthWeeks}
-        consistencyPercent={row.consistencyPercent}
         hasNext={state.celebration + 1 < ids.length}
         onNext={() => dispatch({ type: "nextCelebration" })}
       />

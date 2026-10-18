@@ -16,19 +16,37 @@ const UNIT_LABELS = {
 } as const;
 
 export function unitLabel(measure: MeasureView): string | null {
-  if (measure.unit === "done") return null;
-  if (measure.unit === "custom") return measure.customLabel ?? "";
-  return UNIT_LABELS[measure.unit];
+  return measure.unit === "done" ? null : unitNameOf(measure.unit, measure.customLabel);
+}
+
+function unitNameOf(unit: keyof typeof UNIT_LABELS | "custom", customLabel: string | null): string {
+  return unit === "custom" ? (customLabel ?? "") : UNIT_LABELS[unit];
 }
 
 const SINGULAR: Readonly<Record<string, string>> = { veces: "vez", vasos: "vaso", "págs.": "pág." };
 
 /** "30 min", "1 vez", or just the number for a done measure. */
 export function quantityText(value: string, measure: MeasureView): string {
-  const label = unitLabel(measure);
-  const unit = value === "1" && label !== null ? (SINGULAR[label] ?? label) : label;
+  return amountText(
+    value,
+    measure.unit === "done" ? null : measure.unit,
+    measure.unit === "done" ? null : measure.customLabel,
+  );
+}
+
+/**
+ * The same text for a quantity known only by its unit (what the circle feed carries). A `null`
+ * unit is a done/not done commitment: the bare number.
+ */
+export function amountText(
+  value: string,
+  unit: keyof typeof UNIT_LABELS | "custom" | null,
+  customLabel: string | null,
+): string {
+  const label = unit === null ? null : unitNameOf(unit, customLabel);
+  const text = value === "1" && label !== null ? (SINGULAR[label] ?? label) : label;
   const number = formatDecimal(value);
-  return unit === null || unit === "" ? number : `${number} ${unit}`;
+  return text === null || text === "" ? number : `${number} ${text}`;
 }
 
 /** The exact sum of the quantities among `entries`, as a decimal string ("5.5"). */

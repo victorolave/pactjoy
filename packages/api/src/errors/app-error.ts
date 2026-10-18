@@ -3,6 +3,7 @@ import type {
   ApprovePactError,
   CancelPauseRequestError,
   CarryOverError,
+  CircleFeedError,
   CommitmentProgressError,
   CommitmentReminderError,
   CommitmentStageError,
@@ -10,6 +11,7 @@ import type {
   CreateHabitError,
   CreateSeasonError,
   DeleteEntryError,
+  DismissNudgeError,
   EditCommitmentError,
   EditEntryError,
   EditSeasonParamsError,
@@ -21,8 +23,10 @@ import type {
   PreviewInviteError,
   PreviewProgressError,
   PushSubscriptionError,
+  ReactionError,
   RecordEntryError,
   RemoveCommitmentError,
+  RemoveFeedReactionError,
   RenameCircleError,
   RenameMyDisplayNameError,
   RequestEntryPhotoUploadError,
@@ -33,6 +37,7 @@ import type {
   SeasonProgressError,
   SeasonResultsError,
   SeasonViewError,
+  SendEncouragementError,
   SetCommitmentReminderError,
   SkipBaselineError,
   StandingsError,
@@ -88,6 +93,11 @@ export type AppError =
   | SubmitSeasonClosureError
   | SeasonResultsError
   | CarryOverError
+  | CircleFeedError
+  | ReactionError
+  | RemoveFeedReactionError
+  | SendEncouragementError
+  | DismissNudgeError
   | PushSubscriptionError
   | CommitmentReminderError
   | SetCommitmentReminderError;

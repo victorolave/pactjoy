@@ -22,10 +22,10 @@ The forces:
 ### Outbox and kinds
 
 - **J1. Transactional outbox.** A use case that announces something adds plain rows to `notification_outbox` in its own transaction through `enqueueNotices(repos, drafts, now)`. The rows commit or roll back with the change. Nothing leaves the process inside `work`.
-- **J2. Closed kinds.** `NotificationKind` is `keyof NotificationParams`: `pauseRequested`, `pauseApproved`, `pauseRejected`, `pauseEndsTomorrow`, `pactPendingApproval`, `seasonStarted`, `reviewDue`, `seasonClosed`. `KIND_POLICY` gives each one its timing (`immediate` or `morning`) and whether it rolls over. An allowlist test pins the list and scans names for forbidden words; the database CHECK repeats it. Adding a kind is a deliberate edit in the test, the policy, a migration and the service-worker copy.
+- **J2. Closed kinds.** `NotificationKind` is `keyof NotificationParams`: `pauseRequested`, `pauseApproved`, `pauseRejected`, `pauseEndsTomorrow`, `pactPendingApproval`, `seasonStarted`, `reviewDue`, `seasonClosed`, and `encouragementNudge` (added by ADR-0018 F17 in migration `20261018000100`). `KIND_POLICY` gives each one its timing (`immediate` or `morning`) and whether it rolls over. An allowlist test pins the list and scans names for forbidden words; the database CHECK repeats it. Adding a kind is a deliberate edit in the test, the policy, a migration and the service-worker copy.
 - **J3. Choke point.** `repos.notifications` and `repos.pushSubscriptions` are used only inside `src/notifications/` (`notification-guard.test.ts`). Pause and review facts are read through their own modules' helpers (`pause-notices.ts`, `review-notices.ts`), never their repositories.
 - **J4. Ids only.** Outbox params and the push payload `{v: 1, kind, params}` carry ids and dates only: never a name, a note, a value, points or a position. The service worker turns them into Spanish copy and a destination. A deleted member or a private commitment therefore leaks nothing.
-- **J5. The dedupe key is the primary key.** `INSERT ... ON CONFLICT DO NOTHING` makes every enqueue site and every job re-runnable. Keys: `pauseRequested:{request}:{member}`, `pauseDecided:{request}` (approved or rejected, announced once), `pactPending:{season}:{member}:{localDate}`, and `{kind}:{season}[:{subject}]:{member}` for calendar notices.
+- **J5. The dedupe key is the primary key.** `INSERT ... ON CONFLICT DO NOTHING` makes every enqueue site and every job re-runnable. Keys: `pauseRequested:{request}:{member}`, `pauseDecided:{request}` (approved or rejected, announced once), `pactPending:{season}:{member}:{localDate}`, `encouragement:{encouragement}` (ADR-0018 F17), and `{kind}:{season}[:{subject}]:{member}` for calendar notices.
 
 ### Who is notified, and when
 
@@ -38,6 +38,7 @@ The forces:
 | `seasonStarted` | participants | planner, start day | 09:00-22:00, one rollover | the season is not active |
 | `reviewDue` | participants whose review is due | planner, first day of an interim review | 09:00-22:00, one rollover | the review is no longer due |
 | `seasonClosed` | participants | planner, results day (absorbs the closing review) | 09:00-22:00, one rollover | never |
+| `encouragementNudge` | the encouragement's recipient | `sendEncouragement` (ADR-0018 F17) | immediate, 24 h | the encouragement is gone, or its sender left |
 
 - A single reject in a circle of three decides nothing, so it notifies nothing; only a persisted transition does.
 - `pactPendingApproval` fires on approval, not on every edit: there is no "propose" step, an edit resets approvals, and the editor's re-approval is what asks the others.

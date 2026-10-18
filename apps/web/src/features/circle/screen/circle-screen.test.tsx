@@ -9,6 +9,11 @@ import {
   soloCircleFixture,
 } from "../../../testing/fixtures/circle.ts";
 import { myPauseRequestsFixture, pauseApprovalFixture } from "../../../testing/fixtures/pause.ts";
+import {
+  completedItemFixture,
+  feedFixture,
+  nudgeFixture,
+} from "../../../testing/fixtures/social.ts";
 import { renderApp } from "../../../testing/render.tsx";
 
 const ACTIVE = {
@@ -54,9 +59,23 @@ describe("Circle tab, no circle (31b)", () => {
       "/circle/join",
     );
   });
+
+  it("has no activity feed: there is nobody to share it with", async () => {
+    const { deps } = renderApp({ path: "/circle", myCircle: NO_CIRCLE, nameDraft: "Victor" });
+    await screen.findByRole("heading", { name: "Tu círculo empieza aquí." });
+    expect(screen.queryByRole("region", { name: "Actividad del círculo" })).not.toBeInTheDocument();
+    expect(deps.api.calls.feed).toBe(0);
+  });
 });
 
 describe("Circle tab, alone in the circle: the waiting room (7)", () => {
+  it("has no activity feed and never reads it", async () => {
+    const { deps } = renderApp({ path: "/circle", myCircle: soloCircleFixture() });
+    await screen.findByRole("heading", { name: "Esperando a que alguien se una" });
+    expect(screen.queryByRole("region", { name: "Actividad del círculo" })).not.toBeInTheDocument();
+    expect(deps.api.calls.feed).toBe(0);
+  });
+
   it("resumes habit selection directly while the pact is open", async () => {
     const { location, deps } = renderApp({
       path: "/circle",
@@ -243,13 +262,58 @@ describe("Circle tab with people (31a-lite)", () => {
     expect(await screen.findByText(/Todavía no hay temporada/)).toBeInTheDocument();
   });
 
-  it("has no habit summaries, feed, reactions or nudges (Q7)", async () => {
-    renderApp({ path: "/circle", myCircle: pairCircleFixture(ACTIVE) });
+  it("shows the circle activity with its reactions, and still no habit summaries (ADR-0018, was Q7)", async () => {
+    renderApp({
+      path: "/circle",
+      myCircle: pairCircleFixture(ACTIVE),
+      feedPages: [feedFixture({ items: [completedItemFixture({ onDate: "2026-10-03" })] })],
+    });
     await screen.findByText("Pacto activo");
-    expect(screen.queryByText("Actividad del círculo")).not.toBeInTheDocument();
-    expect(screen.queryByText(/ánimo/i)).not.toBeInTheDocument();
-    for (const emoji of ["❤️", "🙌", "🔥", "👏"])
-      expect(screen.queryByText(emoji)).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Actividad del círculo" })).toBeInTheDocument();
+    expect(await screen.findByText("Andrea completó Correr · 5 km.")).toBeInTheDocument();
+    for (const name of ["Me encanta", "Celebrar", "Fuego", "Aplaudir"])
+      expect(screen.getByRole("button", { name })).toBeInTheDocument();
+    // Out of scope for A3: a member's habits are not summarised in the member rows (31a follow-up).
+    const members = within(screen.getByRole("list", { name: "Miembros" }));
+    expect(members.queryByText(/Correr/)).not.toBeInTheDocument();
+  });
+
+  it("offers the encouragement nudge in the feed", async () => {
+    renderApp({
+      path: "/circle",
+      myCircle: pairCircleFixture(ACTIVE),
+      feedPages: [feedFixture({ items: [completedItemFixture()], nudge: nudgeFixture() })],
+    });
+    expect(
+      await screen.findByText("A Andrea le está costando más Correr estas semanas."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("¿Quieres enviarle ánimo?")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Ahora no" })).toBeInTheDocument();
+  });
+
+  it("says the circle starts here while no season has started", async () => {
+    renderApp({ path: "/circle", myCircle: pairCircleFixture() });
+    expect(await screen.findByText("Tu círculo empieza aquí.")).toBeInTheDocument();
+    expect(
+      screen.getByText("La actividad aparecerá cuando empiece la temporada."),
+    ).toBeInTheDocument();
+  });
+
+  it("sends a reaction on someone else's item through the API", async () => {
+    const { deps } = renderApp({
+      path: "/circle",
+      myCircle: pairCircleFixture(ACTIVE),
+      feedPages: [feedFixture({ items: [completedItemFixture({ onDate: "2026-10-03" })] })],
+    });
+    await userEvent.click(await screen.findByRole("button", { name: "Celebrar" }));
+    await waitFor(() =>
+      expect(deps.api.socialCommands).toEqual([
+        {
+          method: "reactToFeedItem",
+          args: ["season-1", "session:commitment-correr:2", "raisedHands"],
+        },
+      ]),
+    );
   });
 
   it("opens the invite screen from Invitar", async () => {
@@ -357,12 +421,15 @@ describe("Circle tab, pause requests (screen 28)", () => {
       ],
     });
 
-  it("lists a request awaiting the viewer, with a private Commitment unnamed, and no activity feed", async () => {
+  it("lists a request awaiting the viewer, with a private Commitment unnamed, and keeps the feed out of the approval list", async () => {
     const view = renderApp({ path: "/circle", myCircle: pairCircleFixture(ACTIVE) });
     view.deps.api.setMyPauseRequests(withRequest());
     expect(await screen.findByText("Andrea pidió pausar un objetivo privado")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Pausas por aprobar" })).toBeInTheDocument();
-    expect(screen.queryByText(/Actividad del círculo/)).not.toBeInTheDocument();
+    const approvals = screen.getByRole("region", { name: "Pausas por aprobar" });
+    expect(within(approvals).queryByText(/Actividad del círculo/)).not.toBeInTheDocument();
+    // The feed is its own section of the tab (ADR-0018), after the pause actions.
+    expect(screen.getByRole("region", { name: "Actividad del círculo" })).toBeInTheDocument();
   });
 
   it("answers from the card", async () => {

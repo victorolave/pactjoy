@@ -1,9 +1,11 @@
 import { type CommitmentId, type MemberId, seasonDay } from "@pactjoy/engine";
 import type { Circle, Invite, Member } from "../circle/circle.ts";
 import { type CommitmentRecord, commitmentId } from "../commitment/commitment.ts";
+import type { Encouragement, NudgeDismissal } from "../encouragement/encouragement.ts";
 import type { EntryPhoto } from "../entry-photo/entry-photo.ts";
 import type { Habit } from "../habit/habit.ts";
 import { AUTO_APPROVE_AFTER_MS, type PauseRequestRecord } from "../pause/pause-request.ts";
+import type { FeedReaction } from "../reaction/feed-reaction.ts";
 import type { ReviewRecord } from "../review/review.ts";
 import type { SeasonClosure } from "../season/closure/season-closure.ts";
 import type {
@@ -15,7 +17,9 @@ import type {
 } from "../season/season.ts";
 import {
   type CircleId,
+  encouragementId,
   entryPhotoId,
+  feedReactionId,
   type HabitId,
   pauseRequestId,
   reviewId,
@@ -209,6 +213,54 @@ export function seasonClosureFixture(overrides: Partial<SeasonClosure> = {}): Se
     decisions: [],
     decidedAt: DEFAULT_INSTANT,
     version: 0,
+    ...overrides,
+  };
+}
+
+/**
+ * Builds a {@link FeedReaction} for GIVEN-state setup: Victor's heart on a session of the first
+ * day. Every field is overridable.
+ */
+export function feedReactionFixture(overrides: Partial<FeedReaction> = {}): FeedReaction {
+  return {
+    id: feedReactionId("reaction-1"),
+    seasonId: seasonId("season-1"),
+    itemKey: "session:commitment-1:1",
+    memberId: "member-victor" as MemberId,
+    emoji: "heart",
+    reactedAt: DEFAULT_INSTANT,
+    version: 0,
+    ...overrides,
+  };
+}
+
+/**
+ * Builds an {@link Encouragement} for GIVEN-state setup: Victor's raised hands to Andrea for her
+ * 3rd week. Every field is overridable.
+ */
+export function encouragementFixture(overrides: Partial<Encouragement> = {}): Encouragement {
+  return {
+    id: encouragementId("encouragement-1"),
+    seasonId: seasonId("season-1"),
+    senderId: "member-victor" as MemberId,
+    recipientId: "member-andrea" as MemberId,
+    caseWeek: 3,
+    emoji: "raisedHands",
+    sentAt: DEFAULT_INSTANT,
+    sentOn: localDate("2026-10-22"),
+    ...overrides,
+  };
+}
+
+/** Builds a {@link NudgeDismissal} for GIVEN-state setup: Victor hid the nudge about Andrea's 3rd week. */
+export function nudgeDismissalFixture(overrides: Partial<NudgeDismissal> = {}): NudgeDismissal {
+  return {
+    seasonId: seasonId("season-1"),
+    viewerId: "member-victor" as MemberId,
+    targetId: "member-andrea" as MemberId,
+    caseWeek: 3,
+    dismissedAt: DEFAULT_INSTANT,
+    dismissedOn: localDate("2026-10-22"),
     ...overrides,
   };
 }

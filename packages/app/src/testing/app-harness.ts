@@ -16,6 +16,10 @@ import {
   type InMemoryCommitmentReminderRepository,
 } from "./in-memory-commitment-reminder-repository.ts";
 import {
+  createInMemoryEncouragementRepository,
+  type InMemoryEncouragementRepository,
+} from "./in-memory-encouragement-repository.ts";
+import {
   createInMemoryEntryPhotoRepository,
   type InMemoryEntryPhotoRepository,
 } from "./in-memory-entry-photo-repository.ts";
@@ -28,6 +32,10 @@ import {
   type InMemoryEvidenceStorage,
 } from "./in-memory-evidence-storage.ts";
 import {
+  createInMemoryFeedReactionRepository,
+  type InMemoryFeedReactionRepository,
+} from "./in-memory-feed-reaction-repository.ts";
+import {
   createInMemoryHabitRepository,
   type InMemoryHabitRepository,
 } from "./in-memory-habit-repository.ts";
@@ -35,6 +43,10 @@ import {
   createInMemoryNotificationOutbox,
   type InMemoryNotificationOutbox,
 } from "./in-memory-notification-outbox.ts";
+import {
+  createInMemoryNudgeDismissalRepository,
+  type InMemoryNudgeDismissalRepository,
+} from "./in-memory-nudge-dismissal-repository.ts";
 import {
   createInMemoryPauseRequestRepository,
   type InMemoryPauseRequestRepository,
@@ -74,12 +86,15 @@ export interface TestApp {
   readonly timeZone: TimeZone;
   readonly uow: UnitOfWork<Repositories>;
   readonly circles: InMemoryCircleRepository;
+  readonly encouragements: InMemoryEncouragementRepository;
   readonly entries: InMemoryEntryRepository;
   readonly entryPhotos: InMemoryEntryPhotoRepository;
   /** The fake object storage; `upload` plays the browser. Expiry follows the clock the app was created with. */
   readonly evidence: InMemoryEvidenceStorage;
+  readonly feedReactions: InMemoryFeedReactionRepository;
   readonly habits: InMemoryHabitRepository;
   readonly notifications: InMemoryNotificationOutbox;
+  readonly nudgeDismissals: InMemoryNudgeDismissalRepository;
   readonly pauses: InMemoryPauseRequestRepository;
   readonly pushSubscriptions: InMemoryPushSubscriptionRepository;
   readonly reminders: InMemoryCommitmentReminderRepository;
@@ -102,10 +117,13 @@ const DEFAULT_RANDOM_SEED = 42;
 /** Builds a fully deterministic {@link TestApp} for use-case tests. */
 export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
   const circles = createInMemoryCircleRepository();
+  const encouragements = createInMemoryEncouragementRepository();
   const entries = createInMemoryEntryRepository();
   const entryPhotos = createInMemoryEntryPhotoRepository();
+  const feedReactions = createInMemoryFeedReactionRepository();
   const habits = createInMemoryHabitRepository();
   const notifications = createInMemoryNotificationOutbox();
+  const nudgeDismissals = createInMemoryNudgeDismissalRepository();
   const pauses = createInMemoryPauseRequestRepository();
   const pushSubscriptions = createInMemoryPushSubscriptionRepository();
   const reminders = createInMemoryCommitmentReminderRepository();
@@ -114,10 +132,13 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
   const seasons = createInMemorySeasonRepository();
   const repositories: Repositories = {
     circles,
+    encouragements,
     entries,
     entryPhotos,
+    feedReactions,
     habits,
     notifications,
+    nudgeDismissals,
     pauses,
     pushSubscriptions,
     reminders,
@@ -134,10 +155,13 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
     random: createSeededRandomSource(options.randomSeed ?? DEFAULT_RANDOM_SEED),
     timeZone: options.timeZone ?? createIntlTimeZone(),
     circles,
+    encouragements,
     entries,
     entryPhotos,
+    feedReactions,
     habits,
     notifications,
+    nudgeDismissals,
     pauses,
     pushSubscriptions,
     reminders,
@@ -154,10 +178,13 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
       // makes this possible without a partial commit across repositories.
       beginTransaction: () => {
         const circleScope = circles.beginTransaction();
+        const encouragementScope = encouragements.beginTransaction();
         const entryScope = entries.beginTransaction();
         const entryPhotoScope = entryPhotos.beginTransaction();
+        const feedReactionScope = feedReactions.beginTransaction();
         const habitScope = habits.beginTransaction();
         const notificationScope = notifications.beginTransaction();
+        const nudgeDismissalScope = nudgeDismissals.beginTransaction();
         const pauseScope = pauses.beginTransaction();
         const pushSubscriptionScope = pushSubscriptions.beginTransaction();
         const reminderScope = reminders.beginTransaction();
@@ -167,10 +194,13 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
         return {
           repositories: {
             circles: circleScope.repository,
+            encouragements: encouragementScope.repository,
             entries: entryScope.repository,
             entryPhotos: entryPhotoScope.repository,
+            feedReactions: feedReactionScope.repository,
             habits: habitScope.repository,
             notifications: notificationScope.repository,
+            nudgeDismissals: nudgeDismissalScope.repository,
             pauses: pauseScope.repository,
             pushSubscriptions: pushSubscriptionScope.repository,
             reminders: reminderScope.repository,
@@ -180,10 +210,13 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
           },
           commit(): void {
             circleScope.validate();
+            encouragementScope.validate();
             entryScope.validate();
             entryPhotoScope.validate();
+            feedReactionScope.validate();
             habitScope.validate();
             notificationScope.validate();
+            nudgeDismissalScope.validate();
             pauseScope.validate();
             pushSubscriptionScope.validate();
             reminderScope.validate();
@@ -191,10 +224,13 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
             seasonClosureScope.validate();
             seasonScope.validate();
             circleScope.apply();
+            encouragementScope.apply();
             entryScope.apply();
             entryPhotoScope.apply();
+            feedReactionScope.apply();
             habitScope.apply();
             notificationScope.apply();
+            nudgeDismissalScope.apply();
             pauseScope.apply();
             pushSubscriptionScope.apply();
             reminderScope.apply();

@@ -2,6 +2,7 @@ import type { MeasureView, TodayEntry } from "@pactjoy/app";
 import { describe, expect, it } from "vitest";
 import { dayRowFixture } from "../testing/fixtures/today.ts";
 import {
+  amountText,
   entryText,
   formatDecimal,
   quantityText,
@@ -135,6 +136,24 @@ describe("entryText on another day (B-W1)", () => {
       "Registrado hoy",
     );
     expect(entryText(entry({ kind: "done" }, "2026-10-01"), done)).toBe("Registrado hoy");
+  });
+});
+
+describe("amountText (a quantity known only by its unit, as the feed carries it)", () => {
+  it("writes the amount with the unit, a comma for decimals and the singular for 1", () => {
+    expect(amountText("5", "km", null)).toBe("5 km");
+    expect(amountText("5.5", "km", null)).toBe("5,5 km");
+    expect(amountText("1", "times", null)).toBe("1 vez");
+    expect(amountText("30", "minutes", null)).toBe("30 min");
+  });
+
+  it("uses the commitment's own label for a custom unit and none for a bare number", () => {
+    expect(amountText("3", "custom", "tazas")).toBe("3 tazas");
+    expect(amountText("3", "custom", null)).toBe("3");
+  });
+
+  it("agrees with quantityText for the same measure", () => {
+    expect(amountText("30", "minutes", null)).toBe(quantityText("30", minutes));
   });
 });
 

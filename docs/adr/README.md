@@ -62,3 +62,4 @@ status to `Superseded by ADR-XXXX`, linking to the new one. Small fixes
 | [0015](0015-season-closure-and-graduation.md)                 | Season closure, lazy finalization and habit graduation        | Accepted | 2026-10-12 |
 | [0016](0016-evidence-storage-port-s3-adapter-upload-ledger.md) | Evidence storage: app-owned port, S3 adapter with hand-rolled SigV4 presigning, upload ledger | Proposed | 2026-10-13 |
 | [0017](0017-scheduled-jobs-and-web-push.md)                   | Scheduled jobs and Web Push: transactional outbox, job routes, hand-rolled Web Push | Proposed | 2026-10-17 |
+| [0018](0018-social-layer.md)                                   | Social layer: derived activity feed, reactions and encouragement nudges | Proposed | 2026-10-17 |

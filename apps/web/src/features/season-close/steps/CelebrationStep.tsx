@@ -16,6 +16,11 @@ export interface CelebrationStepProps {
   readonly habitName: string;
   readonly weeks: number;
   readonly consistencyPercent: number | null;
+  /**
+   * What the circle will read about this graduation (see `graduationNote`); `null` while it is
+   * not yet known whether the habit is private, when the line stays blank but keeps its height.
+   */
+  readonly note: string | null;
   /** More graduated habits follow: "Siguiente hábito"; otherwise "Continuar". */
   readonly hasNext: boolean;
   readonly onNext: () => void;
@@ -23,13 +28,15 @@ export interface CelebrationStepProps {
 
 /**
  * 38b: the graduation of one habit, on the ink background. Shown after the decisions are saved,
- * so it never celebrates something that could still be undone. Only the member sees it: no
- * activity is posted to the circle (ADR-0015).
+ * so it never celebrates something that could still be undone. The graduation is announced in the
+ * circle's activity (ADR-0018, superseding the private promise of ADR-0015); the note says what
+ * the circle will read, and a private habit is never named.
  */
 export function CelebrationStep({
   habitName,
   weeks,
   consistencyPercent,
+  note,
   hasNext,
   onNext,
 }: CelebrationStepProps) {
@@ -49,7 +56,13 @@ export function CelebrationStep({
         </span>
         <h1 className={styles.celebrateTitle}>{celebrationCopy.title(habitName)}</h1>
         <p className={styles.celebrateLead}>{graduationLead(weeks, consistencyPercent)}</p>
-        <p className={styles.celebrateNote}>{celebrationCopy.note}</p>
+        {note === null ? (
+          <p className={styles.celebrateNote} aria-hidden="true">
+            {" "}
+          </p>
+        ) : (
+          <p className={styles.celebrateNote}>{note}</p>
+        )}
       </div>
       <div className={styles.celebrateFooter}>
         <Button block variant="inverse" onClick={onNext}>

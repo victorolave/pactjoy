@@ -24,6 +24,7 @@ import { scoreRoutes } from "./scores.ts";
 import { scoringRoutes } from "./scoring.ts";
 import { seasonCloseRoutes } from "./season-close.ts";
 import { seasonRoutes } from "./seasons.ts";
+import { socialRoutes } from "./social.ts";
 import type { ApiDeps, Route } from "./support.ts";
 
 export type { ApiDeps } from "./support.ts";
@@ -40,6 +41,7 @@ const routeTable = (deps: ApiDeps): Route[] => [
   ...reviewRoutes(deps),
   ...reminderRoutes(deps),
   ...seasonCloseRoutes(deps),
+  ...socialRoutes(deps),
   ...photoRoutes(deps),
   ...entryRoutes(deps),
   ...scoreRoutes(deps),

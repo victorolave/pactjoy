@@ -2,6 +2,7 @@ import { expect, it } from "vitest";
 import {
   carryOverKey,
   commitmentProgressKey,
+  feedKey,
   habitsKey,
   memberProgressKey,
   profileSummaryKey,
@@ -14,6 +15,7 @@ import {
   seasonKey,
   seasonProgressKey,
   seasonResultsKey,
+  socialKey,
   stageKey,
   weekSummaryKey,
 } from "./query-keys.ts";
@@ -69,4 +71,11 @@ it("keys the Perfil summary under the progress root, so every settled mutation r
   for (const other of [stageKey("s1", "c1"), seasonProgressKey("s1"), seasonHistoryKey]) {
     expect(profileSummaryKey).not.toEqual(other);
   }
+});
+
+it("keeps the circle feed under its own social root, apart from the progress reads", () => {
+  expect(socialKey).toEqual(["social"]);
+  expect(feedKey.slice(0, 1)).toEqual(socialKey);
+  expect(feedKey).not.toEqual(socialKey);
+  expect(feedKey[0]).not.toBe(progressKey[0]);
 });

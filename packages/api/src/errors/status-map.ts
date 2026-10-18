@@ -6,7 +6,7 @@ import type { AppError, AppErrorKind } from "./app-error.ts";
  * kind AND an extra stale key a compile error.
  */
 export const APP_ERROR_STATUS = {
-  // 422 (49)
+  // 422 (51)
   AutomaticityIncomplete: 422,
   CategoryTooLong: 422,
   ClosureIncomplete: 422,
@@ -23,6 +23,7 @@ export const APP_ERROR_STATUS = {
   InvalidClientRequestId: 422,
   InvalidClosureDecision: 422,
   InvalidDisplayName: 422,
+  InvalidFeedCursor: 422,
   InvalidIcon: 422,
   InvalidLengthWeeks: 422,
   InvalidName: 422,
@@ -36,6 +37,7 @@ export const APP_ERROR_STATUS = {
   InvalidNote: 422,
   InvalidPrecision: 422,
   InvalidQuantity: 422,
+  InvalidReaction: 422,
   InvalidReviewCadenceWeeks: 422,
   InvalidStartDate: 422,
   InvalidTimesPerWeek: 422,
@@ -63,10 +65,11 @@ export const APP_ERROR_STATUS = {
   NotAMember: 403,
   NotOwner: 403,
   NotPauseRequester: 403,
-  // 404 (10)
+  // 404 (11)
   CircleNotFound: 404,
   CommitmentNotFound: 404,
   EntryNotFound: 404,
+  FeedItemNotFound: 404,
   HabitNotFound: 404,
   InviteNotFound: 404,
   MemberNotFound: 404,
@@ -74,7 +77,7 @@ export const APP_ERROR_STATUS = {
   PhotoNotFound: 404,
   ReviewPeriodNotFound: 404,
   SeasonNotFound: 404,
-  // 409 (36)
+  // 409 (39)
   AlreadyInActiveCircle: 409,
   BeforeSeasonStart: 409,
   CircleArchived: 409,
@@ -83,9 +86,12 @@ export const APP_ERROR_STATUS = {
   ClosureAlreadySubmitted: 409,
   CommitmentWeightsNotFull: 409,
   DisplayNameTaken: 409,
+  EncouragementAlreadySent: 409,
   EntryDeleted: 409,
+  FeedItemNotReactable: 409,
   FutureDay: 409,
   NothingToClose: 409,
+  NudgeNotAvailable: 409,
   OpportunityOnHold: 409,
   OpportunityPaused: 409,
   PactAlreadyClosed: 409,

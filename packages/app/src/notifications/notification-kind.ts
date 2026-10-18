@@ -1,5 +1,5 @@
 import type { CommitmentId } from "@pactjoy/engine";
-import type { PauseRequestId, SeasonId } from "../shared/ids.ts";
+import type { EncouragementId, PauseRequestId, SeasonId } from "../shared/ids.ts";
 import type { LocalDate } from "../time/local-date.ts";
 
 /**
@@ -26,6 +26,14 @@ export interface NotificationParams {
   readonly reviewDue: { readonly seasonId: SeasonId; readonly periodIndex: number };
   /** On the results day; it absorbs the closing review (no separate `reviewDue`). */
   readonly seasonClosed: { readonly seasonId: SeasonId };
+  /**
+   * To its recipient only, when someone sends them an encouragement (ADR-0018 F17). Never the
+   * week, the habit or the consistency behind it: the recipient must not learn it was a hard week.
+   */
+  readonly encouragementNudge: {
+    readonly seasonId: SeasonId;
+    readonly encouragementId: EncouragementId;
+  };
   /**
    * To the commitment's owner, at the time they chose, while that day is still open to register
    * (D2). Ids only, like every notice: the device names the habit for a visible commitment and
@@ -67,6 +75,7 @@ export const KIND_POLICY: Readonly<Record<NotificationKind, KindPolicy>> = {
   seasonStarted: { timing: "morning", rollover: true },
   reviewDue: { timing: "morning", rollover: true },
   seasonClosed: { timing: "morning", rollover: true },
+  encouragementNudge: { timing: "immediate", rollover: false },
   commitmentReminder: { timing: "chosenTime", rollover: false },
 };
 

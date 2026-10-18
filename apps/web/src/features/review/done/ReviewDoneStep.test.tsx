@@ -102,6 +102,24 @@ describe("ReviewDoneStep (35b)", () => {
     expect(screen.getByRole("heading", { name: "Revisión guardada." })).toBeInTheDocument();
   });
 
+  it("places the encouragement nudge it is given between the content and the way on", () => {
+    render(
+      <ReviewDoneStep
+        result={null}
+        names={names}
+        nudge={<p>Sugerencia de ánimo</p>}
+        onFinish={() => {}}
+      />,
+    );
+    expect(screen.getByText("Sugerencia de ánimo")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Seguir con mi día" })).toBeInTheDocument();
+  });
+
+  it("shows no nudge area when it is given none", () => {
+    render(<ReviewDoneStep result={null} names={names} onFinish={() => {}} />);
+    expect(screen.queryByText("Sugerencia de ánimo")).not.toBeInTheDocument();
+  });
+
   it("goes back to the day with 'Seguir con mi día'", async () => {
     const onFinish = vi.fn();
     render(

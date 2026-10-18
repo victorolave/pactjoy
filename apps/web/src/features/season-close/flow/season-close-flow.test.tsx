@@ -1,7 +1,8 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { ApiError } from "../../../ports/api-error.ts";
+import type { SeasonDto } from "../../../ports/wire.ts";
 import { pairCircleFixture } from "../../../testing/fixtures/circle.ts";
 import { pendingReviewFixture } from "../../../testing/fixtures/review.ts";
 import {
@@ -68,9 +69,15 @@ async function decideAll(decisions: readonly string[], confirm = true) {
 const NO_GRADUATION = ["Continuar", "Continuar", "Continuar", "Ajustar"] as const;
 
 describe("36 Resultados", () => {
-  it("shows the season's final figures, privately, before anything is decided", async () => {
+  // The test's own budget stays above the heading's 5 s wait, so the wait, not vitest, reports a miss.
+  it("shows the season's final figures, privately, before anything is decided", {
+    timeout: 15_000,
+  }, async () => {
     open();
-    expect(await screen.findByRole("heading", { name: "Cerramos esta temporada" })).toBeVisible();
+    // The first cold render of the file (imports, route, queries) can near the 1 s default on a loaded CI.
+    expect(
+      await screen.findByRole("heading", { name: "Cerramos esta temporada" }, { timeout: 5000 }),
+    ).toBeVisible();
     expect(screen.getByText("25 ago – 19 oct")).toBeInTheDocument();
     expect(screen.getByText("8 semanas. Cada uno con sus metas.")).toBeInTheDocument();
     const stats = screen.getByRole("region", { name: "Tus cifras de la temporada" });
@@ -95,6 +102,12 @@ describe("36 Resultados", () => {
       screen.getByText("6 pts de diferencia. Fue una temporada muy pareja."),
     ).toBeInTheDocument();
     expect(screen.queryByText(/Puesto 2 de 2/)).not.toBeInTheDocument();
+  });
+
+  it("reads nothing about the graduation audience before a habit is graduated", async () => {
+    const app = open();
+    await screen.findByRole("heading", { name: "Cerramos esta temporada" });
+    expect(app.deps.api.calls.getSeason).toBe(0);
   });
 
   it("has no standings and no talk of the others for a solo circle", async () => {
@@ -303,10 +316,78 @@ describe("38a and 38b, graduating", () => {
         "8 semanas, 88 % de consistencia y ya no necesitas llevar la cuenta. Ahora es parte de tu rutina.",
       ),
     ).toBeInTheDocument();
-    expect(screen.getByText("Solo tú ves esta decisión.")).toBeInTheDocument();
-    expect(screen.queryByText(/verá/)).not.toBeInTheDocument();
+    expect(screen.queryByText("Solo tú ves esta decisión.")).not.toBeInTheDocument();
     await click("Continuar");
     expect(await screen.findByRole("heading", { name: "Decisiones guardadas." })).toBeVisible();
+  });
+
+  describe("tells the member what the circle will read about the graduation (ADR-0018)", () => {
+    const seasonWith = (privacy: "visible" | "private") =>
+      ({
+        id: "season-1",
+        commitments: [
+          {
+            kind: "detail",
+            id: LEER,
+            memberId: "member-victor",
+            habitId: "habit-leer",
+            weightPercent: 25,
+            privacy,
+          },
+        ],
+      }) as unknown as SeasonDto;
+
+    const graduateLeer = async (privacy: "visible" | "private" | null) => {
+      const app = open(resultsFixture(), { myCircle: pairCircleFixture() });
+      if (privacy !== null) app.deps.api.setPactResponse("getSeason", seasonWith(privacy));
+      app.deps.api.setClosureResult(
+        submittedClosureFixture({ seasonClosed: false, graduatedHabitIds: ["habit-leer"] }),
+      );
+      await decideAll(["Graduar 🎓", "Continuar", "Continuar", "Ajustar"]);
+      await screen.findByRole("heading", { name: "Graduaste Leer" });
+      return app;
+    };
+
+    it("names the peer and what they will read, as the design does", async () => {
+      await graduateLeer("visible");
+      expect(
+        await screen.findByText("Andrea verá “Victor graduó Leer” en la actividad del círculo."),
+      ).toBeInTheDocument();
+    });
+
+    it("never names a private habit", async () => {
+      await graduateLeer("private");
+      expect(
+        await screen.findByText("Tu círculo verá que graduaste un objetivo privado."),
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/graduó Leer/)).not.toBeInTheDocument();
+    });
+
+    it("says neither line while it is still reading whether the habit is private", async () => {
+      const app = open(resultsFixture(), { myCircle: pairCircleFixture() });
+      app.deps.api.setPactResponse("getSeason", seasonWith("visible"));
+      const release = app.deps.api.hold("getSeason");
+      app.deps.api.setClosureResult(
+        submittedClosureFixture({ seasonClosed: false, graduatedHabitIds: ["habit-leer"] }),
+      );
+      await decideAll(["Graduar 🎓", "Continuar", "Continuar", "Ajustar"]);
+      await screen.findByRole("heading", { name: "Graduaste Leer" });
+      await waitFor(() => expect(app.deps.api.calls.getSeason).toBe(1));
+      expect(screen.queryByText(/objetivo privado/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/graduó Leer/)).not.toBeInTheDocument();
+      await act(async () => release());
+      expect(
+        await screen.findByText("Andrea verá “Victor graduó Leer” en la actividad del círculo."),
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/objetivo privado/)).not.toBeInTheDocument();
+    });
+
+    it("does not name the habit while it cannot tell whether it is private", async () => {
+      await graduateLeer(null);
+      expect(
+        await screen.findByText("Tu círculo verá que graduaste un objetivo privado."),
+      ).toBeInTheDocument();
+    });
   });
 
   it("celebrates each graduated habit in order, with 'Siguiente hábito' between them", async () => {

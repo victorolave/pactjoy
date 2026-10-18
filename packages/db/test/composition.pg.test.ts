@@ -47,10 +47,13 @@ describe("createPostgresUnitOfWork", () => {
     const names = await uow.read(async (repos) => Object.keys(repos).sort());
     expect(names).toEqual([
       "circles",
+      "encouragements",
       "entries",
       "entryPhotos",
+      "feedReactions",
       "habits",
       "notifications",
+      "nudgeDismissals",
       "pauses",
       "pushSubscriptions",
       "reviews",
