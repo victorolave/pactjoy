@@ -2,7 +2,12 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { pairCircleFixture } from "../../testing/fixtures/circle.ts";
-import { activeTodayFixture, dayRowFixture, weekRowFixture } from "../../testing/fixtures/today.ts";
+import {
+  activeTodayFixture,
+  dayRowFixture,
+  noSeasonTodayFixture,
+  weekRowFixture,
+} from "../../testing/fixtures/today.ts";
 import { renderApp } from "../../testing/render.tsx";
 
 /**
@@ -35,6 +40,12 @@ describe("reminder names on the device", () => {
     await deps.queryClient.invalidateQueries();
     await waitFor(() => expect(deps.api.calls.getToday).toBeGreaterThan(1));
     expect(deps.reminderNames.saves).toHaveLength(1);
+  });
+
+  it("a Today with no running season leaves no names behind", async () => {
+    const { deps } = renderApp({ path: "/", today: noSeasonTodayFixture() });
+    await waitFor(() => expect(deps.reminderNames.saves).toEqual([[]]));
+    expect(deps.reminderNames.current()).toEqual(new Map());
   });
 
   it("signing out forgets them", async () => {

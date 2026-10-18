@@ -6,8 +6,11 @@ import { CacheReminderNames, type CacheStorageLike } from "./cache-reminder-name
 class MemoryCaches implements CacheStorageLike {
   readonly stores = new Map<string, Map<string, string>>();
   failing = false;
+  /** When set, `open` waits for it: a slow device, so a `delete` can land in between. */
+  gate: Promise<void> | null = null;
 
   async open(name: string) {
+    if (this.gate) await this.gate;
     if (this.failing) throw new Error("SecurityError");
     const store = this.stores.get(name) ?? new Map<string, string>();
     this.stores.set(name, store);
@@ -50,6 +53,22 @@ describe("CacheReminderNames", () => {
     expect(caches.stored()).toEqual(new Map([["c-3", "Correr"]]));
     await names.clear();
     expect(caches.stores.size).toBe(0);
+  });
+
+  it("a sign-out right after a save still ends with no names (save and clear run in order)", async () => {
+    const caches = new MemoryCaches();
+    const names = new CacheReminderNames(caches);
+    let release = () => {};
+    caches.gate = new Promise((resolve) => {
+      release = resolve;
+    });
+    const saving = names.save([{ commitmentId: "c-1", habitName: "Leer", privacy: "visible" }]);
+    const clearing = names.clear();
+    await Promise.resolve();
+    caches.gate = null;
+    release();
+    await Promise.all([saving, clearing]);
+    expect(caches.stored()).toEqual(new Map());
   });
 
   it("never rejects: no Cache Storage, or one that throws, just keeps the generic copy", async () => {

@@ -22,12 +22,27 @@ function defaultCaches(): CacheStorageLike | undefined {
  */
 export class CacheReminderNames implements ReminderNamesPort {
   readonly #caches: CacheStorageLike | undefined;
+  /** Saves and clears run one after another, so a sign-out never lands under a pending save. */
+  #queue: Promise<void> = Promise.resolve();
 
   constructor(storage: CacheStorageLike | undefined = defaultCaches()) {
     this.#caches = storage;
   }
 
-  async save(commitments: readonly NamedCommitment[]): Promise<void> {
+  #inOrder(work: () => Promise<void>): Promise<void> {
+    this.#queue = this.#queue.then(work, work);
+    return this.#queue;
+  }
+
+  save(commitments: readonly NamedCommitment[]): Promise<void> {
+    return this.#inOrder(() => this.#save(commitments));
+  }
+
+  clear(): Promise<void> {
+    return this.#inOrder(() => this.#clear());
+  }
+
+  async #save(commitments: readonly NamedCommitment[]): Promise<void> {
     if (this.#caches === undefined) return;
     try {
       const cache = await this.#caches.open(REMINDER_NAMES_CACHE);
@@ -42,7 +57,7 @@ export class CacheReminderNames implements ReminderNamesPort {
     }
   }
 
-  async clear(): Promise<void> {
+  async #clear(): Promise<void> {
     if (this.#caches === undefined) return;
     try {
       await this.#caches.delete(REMINDER_NAMES_CACHE);
