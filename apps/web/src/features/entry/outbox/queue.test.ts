@@ -222,6 +222,39 @@ describe("coalescing", () => {
     expect(ids(state)).toEqual(["a", "d1"]);
   });
 
+  // W1: an edit whose direct send was cut off reaches the queue only when its request fails, which
+  // can be after the member acted again. When the member acted decides, not when it arrived.
+  describe("an edit queued late, after its direct send was cut off", () => {
+    const acted = <T extends EnqueueInput>(input: T, actedAt: number): T => ({ ...input, actedAt });
+
+    it("does not replace a later edit of the same entry", () => {
+      const later = acted(editInput("e2", "entry-1", "7"), 2_000);
+      const state = queueOf(later, acted(editInput("e1", "entry-1", "5"), 1_000));
+      expect(state.items).toEqual([later]);
+    });
+
+    it("is not appended after a later delete of the same entry", () => {
+      const removal = acted(deleteInput("d1", "entry-1"), 2_000);
+      const state = queueOf(removal, acted(editInput("e1", "entry-1", "5"), 1_000));
+      expect(state.items).toEqual([removal]);
+    });
+
+    it("still replaces an earlier edit of that entry where it stood", () => {
+      const state = queueOf(
+        acted(editInput("e0", "entry-1", "3"), 500),
+        acted(editInput("x", "entry-2"), 600),
+        acted(editInput("e1", "entry-1", "5"), 1_000),
+      );
+      expect(ids(state)).toEqual(["e1", "x"]);
+    });
+
+    it("leaves other entries' items alone", () => {
+      const other = acted(editInput("e2", "entry-2", "7"), 2_000);
+      const late = acted(editInput("e1", "entry-1", "5"), 1_000);
+      expect(queueOf(other, late).items).toEqual([other, late]);
+    });
+  });
+
   it("does not queue the same delete twice", () => {
     const state = queueOf(deleteInput("d1", "entry-1"), deleteInput("d2", "entry-1"));
     expect(ids(state)).toEqual(["d1"]);

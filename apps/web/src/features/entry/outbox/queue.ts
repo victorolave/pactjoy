@@ -120,6 +120,15 @@ function enqueueEdit(state: OutboxState, edit: QueuedEdit): EnqueueResult {
       };
     }
   }
+  // Queued late (its direct send was cut off) behind something the member did after it: what they
+  // did last stands, and an edit after a delete would only come back rejected.
+  const actedLater = state.items.some(
+    (item) =>
+      targetOf(item) === edit.target &&
+      item.kind !== "record" &&
+      (item.actedAt ?? 0) > (edit.actedAt ?? Number.POSITIVE_INFINITY),
+  );
+  if (actedLater) return { ok: true, state };
   // The latest edit of a target replaces the earlier one where it stood.
   const earlier = state.items.findIndex(isEditOf(edit.target));
   if (earlier === -1) return { ok: true, state: withItems(state, [...state.items, edit]) };

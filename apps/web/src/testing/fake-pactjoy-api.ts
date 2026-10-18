@@ -432,6 +432,9 @@ export class FakePactJoyApi implements PactJoyApi {
   }
 
   async editEntry(cmd: EditEntryCommand): Promise<void> {
+    // A held edit fails (or lands) only when released: a request cut off after the member moved on.
+    const gate = this.#takeGate("editEntry");
+    if (gate !== undefined) await gate;
     this.#enter("editEntry");
     this.edited.push(cmd);
   }

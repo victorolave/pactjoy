@@ -1,5 +1,6 @@
 import { type UseMutationOptions, useMutation } from "@tanstack/react-query";
 import { usePactJoyApi } from "../../context/api-context.tsx";
+import { useClock } from "../../context/clock-context.tsx";
 import { useConnectivity } from "../../context/connectivity-context.tsx";
 import { useIds } from "../../context/ids-context.tsx";
 import { ApiError } from "../../ports/api-error.ts";
@@ -52,10 +53,11 @@ function useSendOrQueue() {
   const outbox = useOutbox();
   const connectivity = useConnectivity();
   const ids = useIds();
+  const clock = useClock();
   // Asked when the write happens, not when the component rendered.
   const mustQueue = (box: Outbox): boolean =>
     connectivity?.isOnline() === false || box.snapshot().items.length > 0;
-  return { api, outbox, ids, mustQueue };
+  return { api, outbox, ids, clock, mustQueue };
 }
 
 const isNetworkError = (error: unknown): boolean => toUiError(error).code === "NetworkError";
@@ -106,10 +108,12 @@ export function useEditEntry(
   callbacks: WriteCallbacks<WriteOutcome, EditEntryCommand> | undefined,
   context: EntryContext,
 ) {
-  const { api, outbox, ids, mustQueue } = useSendOrQueue();
+  const { api, outbox, ids, clock, mustQueue } = useSendOrQueue();
   return useMutation<WriteOutcome, ApiError, EditEntryCommand>({
     mutationKey: ["entry", "edit"],
     mutationFn: async (command) => {
+      // Taken now: a send cut off later is queued late, behind what the member did meanwhile (W1).
+      const actedAt = clock.nowMs();
       const target = outbox?.resolve(command.entryId) ?? command.entryId;
       const withPhoto = command.photoId !== undefined;
       const direct = async (): Promise<WriteOutcome> => {
@@ -127,6 +131,7 @@ export function useEditEntry(
           forDate,
           value: command.value,
           note: command.note,
+          actedAt,
         }).ok;
       if (isLocalRef(target)) {
         // The record is still on the phone: only the outbox can reach it. A photo cannot ride along.
@@ -150,10 +155,11 @@ export function useDeleteEntry(
   callbacks: WriteCallbacks<WriteOutcome, string> | undefined,
   context: EntryContext,
 ) {
-  const { api, outbox, ids, mustQueue } = useSendOrQueue();
+  const { api, outbox, ids, clock, mustQueue } = useSendOrQueue();
   return useMutation<WriteOutcome, ApiError, string>({
     mutationKey: ["entry", "delete"],
     mutationFn: async (entryId) => {
+      const actedAt = clock.nowMs();
       const target = outbox?.resolve(entryId) ?? entryId;
       const direct = async (): Promise<WriteOutcome> => {
         await api.deleteEntry(target);
@@ -168,6 +174,7 @@ export function useDeleteEntry(
           target,
           habitName,
           forDate,
+          actedAt,
         }).ok;
       if (isLocalRef(target)) {
         if (queue()) return { queued: true };

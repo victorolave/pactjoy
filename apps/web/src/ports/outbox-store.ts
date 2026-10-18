@@ -37,6 +37,12 @@ export interface QueuedEdit {
   readonly forDate: string;
   readonly value: EntryValueInput;
   readonly note: string | null;
+  /**
+   * When the member acted (device clock, ms). An edit whose direct send was cut off is queued only
+   * when its request fails, possibly after a later edit or delete of the same entry; it must not
+   * override those. Absent on items stored before it existed: they count as earliest.
+   */
+  readonly actedAt?: number;
 }
 
 export interface QueuedDelete {
@@ -45,6 +51,8 @@ export interface QueuedDelete {
   readonly target: string;
   readonly habitName: string;
   readonly forDate: string;
+  /** When the member acted (see `QueuedEdit.actedAt`). */
+  readonly actedAt?: number;
 }
 
 export type OutboxItem = QueuedRecord | QueuedEdit | QueuedDelete;
