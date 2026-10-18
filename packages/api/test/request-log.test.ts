@@ -209,6 +209,7 @@ describe("full pipeline logging (createApi)", () => {
         evidence: app.evidence,
         push: null,
         jobsSecret: null,
+        identity: null,
         tokenVerifier: createFakeTokenVerifier({ andrea: userId(ANDREA_ID) }),
         logger: { info: vi.fn(), warn: vi.fn(), error },
         isUnavailable: (e) => e === boom,

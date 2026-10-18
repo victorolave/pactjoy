@@ -44,6 +44,7 @@ function composition() {
         evidence: app.evidence,
         push: null,
         jobsSecret: null,
+        identity: null,
         tokenVerifier: {
           verify: (token) => {
             verify(token);

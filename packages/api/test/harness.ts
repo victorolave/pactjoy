@@ -1,4 +1,4 @@
-import { type PushSender, userId } from "@pactjoy/app";
+import { type IdentityAdmin, type PushSender, userId } from "@pactjoy/app";
 import { createTestApp } from "@pactjoy/app/testing";
 import { vi } from "vitest";
 import { createApi } from "../src/routes/index.ts";
@@ -15,6 +15,11 @@ export interface SetupOptions {
   readonly push?: PushSender | null;
   /** The jobs secret; `null` (the default) leaves the `/jobs` routes unmounted. */
   readonly jobsSecret?: string | null;
+  /**
+   * The identity admin (default: the app's in-memory recording fake, `app.identity`); `null` is a
+   * server without `API_AUTH_ADMIN_KEY`.
+   */
+  readonly identity?: IdentityAdmin | null;
 }
 
 /** `createApi` over the in-memory app with spies on the unit of work (token `andrea` / `victor`). */
@@ -38,6 +43,7 @@ export function setup(options: SetupOptions = {}) {
       evidence: app.evidence,
       push: options.push ?? null,
       jobsSecret: options.jobsSecret ?? null,
+      identity: options.identity === undefined ? app.identity : options.identity,
       tokenVerifier: createFakeTokenVerifier({ andrea: ANDREA, victor: VICTOR, carla: CARLA }),
       logger: { info: () => undefined, warn: () => undefined, error: () => undefined },
     },

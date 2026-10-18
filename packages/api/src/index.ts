@@ -9,6 +9,7 @@ export type {
 export {
   type ApiEnv,
   type ApiEnvError,
+  type AuthAdminEnv,
   describeEnvError,
   loadApiEnv,
   type PushEnv,

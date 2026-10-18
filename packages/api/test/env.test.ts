@@ -40,7 +40,50 @@ describe("loadApiEnv", () => {
         },
         jobsSecret: null,
         push: null,
+        authAdmin: null,
       },
+    });
+  });
+
+  describe("identity administration (ADR-0019): optional, confined, never echoed", () => {
+    const KEY = "admin-key-must-never-leak-0123456789";
+
+    it("API_AUTH_ADMIN_KEY with the project URL builds the GoTrue admin target", () => {
+      const result = load({ ...BASE, API_AUTH_ADMIN_KEY: KEY });
+      expect(result.ok && result.value.authAdmin).toEqual({
+        authUrl: "https://abc.supabase.co/auth/v1",
+        key: KEY,
+      });
+      const local = load({ ...BASE, SUPABASE_URL: "http://kong:8000/", API_AUTH_ADMIN_KEY: KEY });
+      expect(local.ok && local.value.authAdmin).toEqual({
+        authUrl: "http://kong:8000/auth/v1",
+        key: KEY,
+      });
+    });
+
+    it("unset or blank leaves account deletion unconfigured (null), not a startup failure", () => {
+      for (const unset of [undefined, "", "   "]) {
+        const result = load({ ...BASE, API_AUTH_ADMIN_KEY: unset });
+        expect(result.ok && result.value.authAdmin).toBeNull();
+      }
+    });
+
+    it("a key that cannot be a credential is invalid by name, and its value is never in the error", () => {
+      for (const bad of ["short", "has a space inside the key 0123456789"]) {
+        const error = failure({ ...BASE, API_AUTH_ADMIN_KEY: bad });
+        expect(error).toEqual({ missing: [], invalid: ["API_AUTH_ADMIN_KEY"] });
+        expect(JSON.stringify(error)).not.toContain(bad);
+        expect(describeEnvError(error)).not.toContain(bad);
+      }
+      expect(describeEnvError(failure({ ...BASE, API_AUTH_ADMIN_KEY: "short" }))).toContain(
+        "API_AUTH_ADMIN_KEY",
+      );
+    });
+
+    it("an unrelated failure never carries the key either", () => {
+      const error = failure({ ...BASE, API_DATABASE_URL: undefined, API_AUTH_ADMIN_KEY: KEY });
+      expect(JSON.stringify(error)).not.toContain(KEY);
+      expect(describeEnvError(error)).not.toContain(KEY);
     });
   });
 
@@ -231,6 +274,7 @@ describe("loadApiEnv", () => {
     });
     expect(asked.sort()).toEqual([
       "ALLOWED_ORIGINS",
+      "API_AUTH_ADMIN_KEY",
       "API_DATABASE_URL",
       "API_JOBS_SECRET",
       "API_JWT_ISSUER",

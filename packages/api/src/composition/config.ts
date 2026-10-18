@@ -32,6 +32,16 @@ export interface PushEnv {
   readonly subject: string;
 }
 
+/**
+ * Where and how the server deletes an identity (ADR-0019). `key` is a secret with full project
+ * power: it stays in this object, goes only to the GoTrue adapter and is never logged.
+ */
+export interface AuthAdminEnv {
+  /** The GoTrue base URL (`<SUPABASE_URL>/auth/v1`), never client supplied. */
+  readonly authUrl: string;
+  readonly key: string;
+}
+
 /** Validated production configuration (ADR-0011). `databaseUrl` is a secret: never log it. */
 export interface ApiEnv {
   readonly databaseUrl: string;
@@ -46,9 +56,15 @@ export interface ApiEnv {
   readonly jobsSecret: string | null;
   /** `API_PUSH_VAPID_*`, all three or none; `null` turns Web Push off. */
   readonly push: PushEnv | null;
+  /**
+   * `API_AUTH_ADMIN_KEY`; `null` leaves account deletion unconfigured: `DELETE /me` answers 503
+   * before it writes anything, and the rest of the API is unaffected. A secret.
+   */
+  readonly authAdmin: AuthAdminEnv | null;
 }
 
 const MIN_JOBS_SECRET_LENGTH = 32;
+const MIN_AUTH_ADMIN_KEY_LENGTH = 16;
 const VAPID_PUBLIC_KEY = /^B[A-Za-z0-9_-]{86}$/;
 const VAPID_PRIVATE_KEY = /^[A-Za-z0-9_-]{43}$/;
 const isVapidSubject = (value: string): boolean =>
@@ -172,6 +188,15 @@ export function loadApiEnv(get: (name: string) => string | undefined): Result<Ap
     invalid.push("API_JOBS_SECRET");
   }
 
+  // Shape only (one token, not trivially short): the value is never echoed, just the name.
+  const authAdminKey = read("API_AUTH_ADMIN_KEY");
+  if (
+    authAdminKey !== undefined &&
+    (authAdminKey.length < MIN_AUTH_ADMIN_KEY_LENGTH || /\s/.test(authAdminKey))
+  ) {
+    invalid.push("API_AUTH_ADMIN_KEY");
+  }
+
   // The VAPID group: all three or none. Each variable is read once.
   const pushGroup = [
     ["API_PUSH_VAPID_PUBLIC_KEY", (v: string) => VAPID_PUBLIC_KEY.test(v)],
@@ -222,6 +247,8 @@ export function loadApiEnv(get: (name: string) => string | undefined): Result<Ap
       vapidPublicKey !== undefined && vapidPrivateKey !== undefined && vapidSubject !== undefined
         ? { publicKey: vapidPublicKey, privateKey: vapidPrivateKey, subject: vapidSubject }
         : null,
+    authAdmin:
+      authAdminKey === undefined ? null : { authUrl: `${supabaseUrl}/auth/v1`, key: authAdminKey },
   });
 }
 
