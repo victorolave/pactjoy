@@ -1,7 +1,13 @@
 import type { MemberId } from "@pactjoy/engine";
+import { activeMembers, type Circle } from "../circle/circle.ts";
+import { enqueueNotices } from "../notifications/enqueue-notices.ts";
+import type { NoticeDraft } from "../notifications/outbox-notice.ts";
 import type { Repositories } from "../ports/repositories.ts";
 import type { ReactionEmoji } from "../reaction/feed-reaction.ts";
+import type { Season } from "../season/season.ts";
 import type { EncouragementId, SeasonId, UserId } from "../shared/ids.ts";
+import { type Instant, instant } from "../time/instant.ts";
+import type { Encouragement } from "./encouragement.ts";
 
 /**
  * What the push for an encouragement needs, resolved at dispatch (ADR-0018, F17). It deliberately
@@ -16,15 +22,46 @@ export interface EncouragementNotice {
   readonly emoji: ReactionEmoji;
 }
 
+/** How long the push stays worth sending: past a day the feed item says it better. */
+const NOTICE_TTL_MS = 86_400_000;
+
 /**
- * The hook for job D (ADR-0018, F17; coordination contract of 2026-10-17). Whichever of this change and D1
- * lands second wires the `encouragementNudge` notification: it enqueues
- * `{kind: "encouragementNudge", recipient, params: {encouragementId}, dedupeKey: "encouragement:<id>"}`
- * inside `sendEncouragement`'s transaction, and the dispatcher calls this with the id to resolve
- * the names at send time. Nothing here enqueues, because D owns the outbox and the notification port.
+ * Enqueues the `encouragementNudge` push to the recipient (ADR-0018 F17, ADR-0017), inside
+ * `sendEncouragement`'s transaction so it commits or rolls back with the encouragement. One per
+ * encouragement (`encouragement:<id>`), ids only: nothing about the week, the habit, the
+ * consistency, the sender or the emoji enters the outbox. Quiet hours apply at dispatch.
+ */
+export async function enqueueEncouragementNudge(
+  repos: Pick<Repositories, "notifications">,
+  encouragement: Encouragement,
+  season: Season,
+  circle: Circle,
+  now: Instant,
+): Promise<void> {
+  const recipient = activeMembers(circle).find((m) => m.id === encouragement.recipientId);
+  if (!recipient) return;
+  const draft: NoticeDraft = {
+    dedupeKey: `encouragement:${encouragement.id}`,
+    kind: "encouragementNudge",
+    params: { seasonId: season.id, encouragementId: encouragement.id },
+    circleId: circle.id,
+    seasonId: season.id,
+    recipientMemberId: recipient.id,
+    recipientUserId: recipient.userId,
+    timeZone: season.timeZone,
+    notBefore: now,
+    expiresAt: instant(now + NOTICE_TTL_MS),
+    rolloversLeft: 0,
+  };
+  await enqueueNotices(repos, [draft], now);
+}
+
+/**
+ * What the dispatcher checks before sending an `encouragementNudge` (`relevanceOf`, ADR-0018 F17):
+ * it resolves the encouragement at send time.
  *
  * `null` when there is nothing to tell anyone: the encouragement is gone, or its recipient or
- * sender is no longer in the circle (no push to someone who left, and no name for a sender who did).
+ * sender is no longer in the circle (no push to someone who left, and none from a sender who did).
  * Reads only, and only the one row it was handed the id of.
  */
 export async function encouragementNotice(

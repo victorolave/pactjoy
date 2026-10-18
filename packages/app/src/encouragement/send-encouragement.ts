@@ -12,6 +12,8 @@ import { isReactionEmoji } from "../reaction/feed-reaction.ts";
 import type { Actor } from "../shared/actor.ts";
 import { encouragementId, type SeasonId } from "../shared/ids.ts";
 import { err, ok, type Result } from "../shared/result.ts";
+import type { Encouragement } from "./encouragement.ts";
+import { enqueueEncouragementNudge } from "./encouragement-notice.ts";
 import { loadNudgeActor, type NudgeActorError } from "./nudge-actor.ts";
 import { loadNudgeCase } from "./nudge-for-viewer.ts";
 
@@ -50,7 +52,8 @@ export type SendEncouragementError =
  *
  * A second send for the same case is `EncouragementAlreadySent`; two racing sends end at the unique
  * keys as one row and a `ConcurrencyConflict` for the loser. Nothing about points, standings or
- * consistency changes. Delivering a push is job D's business: see `encouragementNotice`.
+ * consistency changes. The recipient's `encouragementNudge` push is enqueued in the same
+ * transaction, ids only (`enqueueEncouragementNudge`, ADR-0018 F17).
  */
 export async function sendEncouragement(
   deps: SendEncouragementDeps,
@@ -86,7 +89,7 @@ export async function sendEncouragement(
         return err({ kind: "NudgeNotAvailable" });
       }
 
-      await repos.encouragements.add({
+      const encouragement: Encouragement = {
         id: encouragementId(deps.ids.next()),
         seasonId: season.id,
         senderId: viewer.id,
@@ -95,7 +98,9 @@ export async function sendEncouragement(
         emoji,
         sentAt: now,
         sentOn: context.todayDate,
-      });
+      };
+      await repos.encouragements.add(encouragement);
+      await enqueueEncouragementNudge(repos, encouragement, season, circle, now);
       return ok({ recipientId: input.recipientId, week: input.week });
     },
   );

@@ -1,4 +1,5 @@
 import { findActiveMember } from "../circle/circle.ts";
+import { encouragementNotice } from "../encouragement/encouragement-notice.ts";
 import { isPauseStillPending, pausesEndingTomorrow } from "../pause/pause-notices.ts";
 import type { Repositories } from "../ports/repositories.ts";
 import { isReviewDue } from "../review/review-notices.ts";
@@ -15,8 +16,9 @@ const drop = (outcome: "irrelevant" | "recipientLeft"): Relevance => ({ kind: "d
 
 /**
  * Whether a claimed notice is still worth sending at `now` (REQ-O9, REQ-O11): its recipient must
- * still be the active member it was addressed to, and what it announces must still hold. Pause and
- * review facts are read through their modules' own choke points, never their repositories.
+ * still be the active member it was addressed to, and what it announces must still hold. Pause,
+ * review and encouragement facts are read through their modules' own choke points, never their
+ * repositories.
  */
 export async function relevanceOf(
   repos: Repositories,
@@ -69,6 +71,15 @@ export async function relevanceOf(
         timeZone.localDateAt(now, season.timeZone),
       );
       break;
+    case "encouragementNudge": {
+      // Read through the encouragement module's hook: `null` once it is gone or either side left.
+      const encouragement = await encouragementNotice(repos, notice.params.encouragementId);
+      holds =
+        encouragement !== null &&
+        encouragement.seasonId === season.id &&
+        encouragement.recipient.memberId === notice.recipientMemberId;
+      break;
+    }
   }
   return holds ? RELEVANT : drop("irrelevant");
 }

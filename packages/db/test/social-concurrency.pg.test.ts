@@ -141,6 +141,29 @@ describe("social writes on Postgres: concurrency (ADR-0018, F13 to F15)", () => 
       expect(race.filter((r) => r.ok)).toHaveLength(1);
       const [encouragements] = await admin`select count(*)::int as n from pactjoy.encouragements`;
       expect(encouragements?.n).toBe(1);
+      // The loser's push rolled back with its encouragement.
+      const [notices] = await admin`select count(*)::int as n from pactjoy.notification_outbox`;
+      expect(notices?.n).toBe(1);
     }
+  });
+
+  it("SO-C3: a send stores the recipient's push in the same transaction, ids only (F17)", async () => {
+    await given();
+
+    expect((await send()).ok).toBe(true);
+
+    const [encouragement] = await admin`select id from pactjoy.encouragements`;
+    const notices = await admin`
+      select dedupe_key, kind, params, recipient_member_id, rollovers_left
+      from pactjoy.notification_outbox`;
+    expect(notices).toEqual([
+      {
+        dedupe_key: `encouragement:${encouragement?.id}`,
+        kind: "encouragementNudge",
+        params: { seasonId: SEASON.id, encouragementId: encouragement?.id },
+        recipient_member_id: ANDREA.id,
+        rollovers_left: 0,
+      },
+    ]);
   });
 });
