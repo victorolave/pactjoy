@@ -61,5 +61,6 @@ describe("dev seed on Postgres", () => {
       ok: true,
       value: { state: "active", calendar: { weekIndex: 2, dayOfWeek: 3 } },
     });
-  });
+    // Two full seed runs take ~17 s under the whole turbo run: a wider budget than the 30 s default.
+  }, 90_000);
 });
