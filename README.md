@@ -99,9 +99,11 @@ Design rules that keep the backend replaceable (e.g. by a NestJS API):
 
 - [x] Product specification and scoring rules
 - [x] MVP design (all views)
-- [ ] Scoring engine + acceptance tests
-- [ ] Database schema, use cases and API
-- [ ] PWA: Today & logging → Season → Pact → Pause, review & close → Onboarding & circle
+- [x] Scoring engine + acceptance tests
+- [x] Database schema, use cases and API
+- [x] PWA: Today & logging → Season → Pact → Pause, review & close → Onboarding & circle
+- [x] Scheduled jobs and Web Push, social feed and reactions, account deletion
+- [ ] Hosted setup and real-device checks
 - [ ] Season 1: dogfooding with two people
 
 ## Development
