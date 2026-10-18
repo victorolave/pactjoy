@@ -46,6 +46,7 @@ const circle: Circle = {
       status: "active",
       joinedAt: T,
       leftAt: null,
+      erasedAt: null,
     },
     {
       id: memberId("m2"),
@@ -54,6 +55,7 @@ const circle: Circle = {
       status: "left",
       joinedAt: T,
       leftAt: instant(0),
+      erasedAt: null,
     },
   ],
   invite,
