@@ -218,6 +218,28 @@ describe("join a circle: errors (design 6b)", () => {
     }
   });
 
+  it("too many attempts on preview: a calm message for the form, not the code, and no retry (ADR-0020)", async () => {
+    const { deps } = renderJoin();
+    deps.api.failNext("previewInvite", new ApiError("TooManyJoinAttempts", 429, null));
+    await typeCode();
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Hiciste muchos intentos seguidos. Espera unos minutos y vuelve a intentarlo.",
+    );
+    expect(await codeField()).not.toHaveAttribute("aria-invalid", "true");
+    expect(screen.queryByRole("button", { name: "Reintentar" })).not.toBeInTheDocument();
+    expect(joinButton()).toBeDisabled();
+  });
+
+  it("too many attempts on join: says so and stays on the screen (ADR-0020)", async () => {
+    const { deps, location } = renderJoin();
+    deps.api.failNext("joinCircle", new ApiError("TooManyJoinAttempts", 429, null));
+    await typeCode();
+    await myName();
+    await userEvent.click(joinButton());
+    expect(await screen.findByRole("alert")).toHaveTextContent("Hiciste muchos intentos seguidos.");
+    expect(location()).toBe("/circle/join");
+  });
+
   it("shows a join that fails with a code error under the boxes, keeping the preview", async () => {
     const { deps, location } = renderJoin();
     deps.api.failNext("joinCircle", new ApiError("CircleFull", 409, null));
