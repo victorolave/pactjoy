@@ -381,6 +381,18 @@ describe("toTodayModel: standings pair (TO-R7)", () => {
     });
   });
 
+  it("names a peer whose account was deleted generically, ahead or behind", () => {
+    const ahead = running(
+      activeTodayFixture({ standings: rows(["", 1, 620], ["Victor", 2, 540]) }),
+    ).standings;
+    const behind = running(
+      activeTodayFixture({ standings: rows(["Victor", 1, 700], ["", 2, 650]) }),
+    ).standings;
+
+    expect(ahead).toMatchObject({ kind: "pair", otherName: "Miembro que salió" });
+    expect(behind).toMatchObject({ kind: "pair", otherName: "Miembro que salió" });
+  });
+
   it("shows a zero gap when points are tied", () => {
     const { standings } = running(
       activeTodayFixture({ standings: rows(["Andrea", 1, 500], ["Victor", 1, 500]) }),
