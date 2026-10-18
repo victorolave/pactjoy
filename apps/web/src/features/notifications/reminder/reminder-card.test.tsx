@@ -100,6 +100,22 @@ describe("ReminderCard", () => {
     );
   });
 
+  it("reads the device state only after the start-up sync settles, so an active device is not told to turn them on", async () => {
+    const { deps } = given({ notificationPermission: "granted" });
+    deps.api.reminders.set(C, {
+      commitmentId: C,
+      enabled: true,
+      minuteOfDay: 1200,
+      weekdays: [0],
+      availableWeekdays: [0],
+    });
+    await screen.findByRole("combobox", { name: "Hora" });
+    await waitFor(() => expect(deps.api.pushDevices.size).toBe(1));
+    // Let any check that started before the sync finished resolve.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.queryByText("Activa las notificaciones en Ajustes para recibirlo.")).toBeNull();
+  });
+
   it("REQ-R14: offline, it cannot be changed", async () => {
     given({ online: false });
     expect(await screen.findByRole("switch", { name: "Recordatorio" })).toBeDisabled();

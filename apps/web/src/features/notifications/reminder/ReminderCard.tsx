@@ -6,7 +6,7 @@ import type { ReminderSettingCommand } from "../../../ports/wire.ts";
 import { Card } from "../../../ui/Card.tsx";
 import { Skeleton } from "../../../ui/Skeleton.tsx";
 import { usePushDevice } from "../PushSync.tsx";
-import { pushStatus } from "../push-device.ts";
+import { pushStatus, syncSettled } from "../push-device.ts";
 import { useCommitmentReminder, useSaveCommitmentReminder } from "../queries.ts";
 import styles from "./ReminderCard.module.css";
 
@@ -38,7 +38,9 @@ function usePushActive(): boolean | null {
   const [active, setActive] = useState<boolean | null>(null);
   useEffect(() => {
     let live = true;
-    pushStatus({ ...deps, installed })
+    // Like Ajustes: wait for a start-up sync still running, so a half-done state is not read.
+    syncSettled(deps.push)
+      .then(() => pushStatus({ ...deps, installed }))
       .then((status) => live && setActive(status === "active"))
       .catch(() => live && setActive(false));
     return () => {
