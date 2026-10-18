@@ -282,12 +282,12 @@ export async function givenAccountWorld(): Promise<AccountWorld> {
       pushSubscriptionFixture({
         id: pushSubscriptionId("device-andrea"),
         userId: world.andrea.userId,
-        endpoint: "https://web.push.apple.com/SENTINEL-andrea",
+        endpoint: "https://push.example/SENTINEL-andrea",
       }),
       pushSubscriptionFixture({
         id: pushSubscriptionId("device-victor"),
         userId: world.victor.userId,
-        endpoint: "https://web.push.apple.com/victor",
+        endpoint: "https://push.example/victor",
       }),
     ],
   });
