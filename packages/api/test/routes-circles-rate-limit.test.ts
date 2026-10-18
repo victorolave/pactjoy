@@ -2,7 +2,7 @@ import { instant } from "@pactjoy/app";
 import { describe, expect, it } from "vitest";
 import { createNetworkKeyer } from "../src/http/network-key.ts";
 import { createCircleBody, joinCircleBody } from "../src/testing/index.ts";
-import { setup } from "./harness.ts";
+import { setup, VICTOR } from "./harness.ts";
 
 /**
  * Rate limiting in front of `POST /circles/join/preview` and `POST /circles/join` (ADR-0011 Q17,
@@ -121,7 +121,8 @@ describe("join attempts are rate limited (ADR-0020)", () => {
         }),
       );
       const hashed = `network:${await createNetworkKeyer(RATE_LIMIT_KEY)("203.0.113.7")}`;
-      expect(await countsOf(app, [hashed])).toEqual([1]);
+      // The probe's own hit: 1 means no network counter; 2 means the user was counted.
+      expect(await countsOf(app, [hashed, `user:${VICTOR}`])).toEqual([1, 2]);
     }
   });
 

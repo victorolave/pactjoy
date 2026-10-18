@@ -25,7 +25,24 @@ describe("clientNetworkOf", () => {
     expect(of("2001:DB8:ABCD:0012:ffff::1")).toBe("2001:db8:abcd:12::/64");
     expect(of("2001:db8::1")).toBe("2001:db8:0:0::/64");
     expect(of("[2001:db8::1]:443")).toBe("2001:db8:0:0::/64");
-    expect(of("::1")).toBe("0:0:0:0::/64");
+  });
+
+  it("is null for loopback, unspecified and link-local addresses: they name no client network", () => {
+    // Shared buckets anyone could fill by forging them, so they never count (ADR-0020).
+    for (const value of [
+      "::",
+      "::1",
+      "::1.2.3.4",
+      "0.0.0.0",
+      "127.0.0.1",
+      "127.8.9.10",
+      "169.254.1.2",
+      "fe80::1",
+      "fe80::1%eth0",
+      "::ffff:127.0.0.1",
+    ]) {
+      expect(of(value), value).toBeNull();
+    }
   });
 
   it("is null without the header or for anything that is not an address", () => {
