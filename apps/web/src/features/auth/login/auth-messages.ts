@@ -10,6 +10,16 @@ const MESSAGES: Record<AuthErrorCode, string> = {
   Unknown: "Algo salió mal. Inténtalo de nuevo.",
 };
 
+/**
+ * What the login says when an expired session took unsent entries with it (OE-R6.S4). Placeholder
+ * Spanish copy, listed for owner approval.
+ */
+export function discardedText(count: number): string {
+  return count === 1
+    ? "Se borró 1 registro sin enviar al cerrarse la sesión."
+    : `Se borraron ${count} registros sin enviar al cerrarse la sesión.`;
+}
+
 const isCode = (value: unknown): value is AuthErrorCode =>
   typeof value === "string" && Object.hasOwn(MESSAGES, value);
 

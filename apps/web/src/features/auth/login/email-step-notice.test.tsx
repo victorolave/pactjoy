@@ -23,7 +23,7 @@ function EndButtons() {
   );
 }
 
-function setup() {
+function setup(unsent = 0) {
   const auth = new FakeAuth();
   const store = new MemoryTokenStore(fakeSession());
   render(
@@ -31,6 +31,7 @@ function setup() {
       auth={auth}
       store={store}
       manager={new SessionManager(auth, store, new FixedClock(0))}
+      unsentCount={() => unsent}
     >
       <MemoryRouter>
         <EndButtons />
@@ -47,6 +48,35 @@ describe("EmailStep notices", () => {
     await userEvent.click(screen.getByRole("button", { name: "cuenta borrada" }));
     expect(screen.getByText("Tu cuenta se eliminó")).toBeInTheDocument();
     expect(screen.queryByText("Tu sesión expiró. Entra de nuevo.")).not.toBeInTheDocument();
+  });
+
+  it("says how many unsent entries the expiry erased (OE-R6.S4)", async () => {
+    setup(2);
+    await userEvent.click(screen.getByRole("button", { name: "expirar" }));
+    expect(screen.getByText("Tu sesión expiró. Entra de nuevo.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Se borraron 2 registros sin enviar al cerrarse la sesión."),
+    ).toBeInTheDocument();
+  });
+
+  it("uses the singular for one", async () => {
+    setup(1);
+    await userEvent.click(screen.getByRole("button", { name: "expirar" }));
+    expect(
+      screen.getByText("Se borró 1 registro sin enviar al cerrarse la sesión."),
+    ).toBeInTheDocument();
+  });
+
+  it("says nothing about entries when none were lost, or when the account was deleted", async () => {
+    setup(0);
+    await userEvent.click(screen.getByRole("button", { name: "expirar" }));
+    expect(screen.queryByText(/sin enviar/)).not.toBeInTheDocument();
+  });
+
+  it("does not mention entries after an account deletion", async () => {
+    setup(2);
+    await userEvent.click(screen.getByRole("button", { name: "cuenta borrada" }));
+    expect(screen.queryByText(/sin enviar/)).not.toBeInTheDocument();
   });
 
   it("keeps saying the session expired when it only expired", async () => {

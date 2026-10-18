@@ -1,6 +1,13 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { type Persister, PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
-import { type ReactNode, useCallback, useMemo } from "react";
+import {
+  type MutableRefObject,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+} from "react";
 import { bustFor, persistOptionsFor } from "../adapters/query-persister.ts";
 import { ApiProvider } from "../context/api-context.tsx";
 import { AppInstallProvider } from "../context/app-install-context.tsx";
@@ -16,7 +23,7 @@ import { ReminderNamesProvider } from "../context/reminder-names-context.tsx";
 import { SharingProvider } from "../context/sharing-context.tsx";
 import { ToastProvider } from "../context/toast-context.tsx";
 import { SessionProvider, useSession } from "../features/auth/index.ts";
-import { OutboxProvider } from "../features/entry/index.ts";
+import { type Outbox, OutboxProvider, useOutbox } from "../features/entry/index.ts";
 import {
   dropThisDeviceLocally,
   PushSync,
@@ -44,11 +51,21 @@ export function AppProviders({
     void reminderNames.clear();
     outboxStore.clearAll();
   }, [queryClient, persister, device, reminderNames, outboxStore]);
-  // The device's push registration belongs to the person: removed before the session ends.
-  const { notifications, push, api } = deps;
+  // The outbox lives below the SessionProvider (it needs the user id), yet the session's own hooks
+  // must reach it: `SessionOutbox` registers it here.
+  const outboxRef = useRef<Outbox | null>(null);
+  const unsentCount = useCallback(() => outboxRef.current?.snapshot().items.length ?? 0, []);
+  // The device's push registration belongs to the person: removed before the session ends. The
+  // entries still queued get one last replay in the same grace (OE-R6.S3).
+  const { notifications, push, api, connectivity } = deps;
   const beforeSignOut = useCallback(
-    () => removeThisDevice({ permission: notifications, push, api }),
-    [notifications, push, api],
+    async () =>
+      void (await Promise.all([
+        removeThisDevice({ permission: notifications, push, api }),
+        // Without a connection there is nothing to send, and the grace is better spent signing out.
+        connectivity.isOnline() ? outboxRef.current?.drain() : undefined,
+      ])),
+    [notifications, push, api, connectivity],
   );
   // After a deletion only the browser's own subscription is left to drop (the server erased the rest).
   const onAccountDeleted = useCallback(() => dropThisDeviceLocally(push), [push]);
@@ -59,10 +76,11 @@ export function AppProviders({
       manager={deps.sessions}
       expired={deps.sessionEvents}
       onSessionEnd={onSessionEnd}
+      unsentCount={unsentCount}
       beforeSignOut={beforeSignOut}
       onAccountDeleted={onAccountDeleted}
     >
-      <SessionOutbox deps={deps}>
+      <SessionOutbox deps={deps} registry={outboxRef}>
         <PersistedQueries client={queryClient} persister={persister}>
           <ApiProvider api={deps.api}>
             <IdsProvider ids={deps.ids}>
@@ -105,9 +123,12 @@ export function AppProviders({
  */
 function SessionOutbox({
   deps,
+  registry,
   children,
 }: {
   readonly deps: AppDependencies;
+  /** Where the current outbox is published for the session's own hooks (sign-out, expiry). */
+  readonly registry: MutableRefObject<Outbox | null>;
   readonly children: ReactNode;
 }) {
   const { queryClient, api, outboxStore, ids, connectivity, visibility } = deps;
@@ -127,9 +148,22 @@ function SessionOutbox({
       visibility={visibility}
       onReplayed={onReplayed}
     >
+      <OutboxRegistrar registry={registry} />
       {children}
     </OutboxProvider>
   );
+}
+
+/** Publishes the current outbox, and withdraws it when it is replaced or the user leaves. */
+function OutboxRegistrar({ registry }: { readonly registry: MutableRefObject<Outbox | null> }) {
+  const outbox = useOutbox();
+  useEffect(() => {
+    registry.current = outbox;
+    return () => {
+      registry.current = null;
+    };
+  }, [outbox, registry]);
+  return null;
 }
 
 /** Re-syncs this device's push registration for the signed-in user (ADR-0017). */

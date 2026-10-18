@@ -7,6 +7,7 @@ import { useIds } from "../context/ids-context.tsx";
 import { useToasts } from "../context/toast-context.tsx";
 import { createSessionEvents, SessionManager, useSession } from "../features/auth/index.ts";
 import { type Outbox, useOutbox } from "../features/entry/index.ts";
+import { ApiError } from "../ports/api-error.ts";
 import type { OutboxState } from "../ports/outbox-store.ts";
 import { progressKey, socialKey, todayKey } from "../shared/query-keys.ts";
 import { FakeAppInstall } from "../testing/fake-app-install.ts";
@@ -190,6 +191,58 @@ describe("AppProviders", () => {
       const { outboxStore, store } = setup();
       act(() => store.emitExternal(null));
       expect(outboxStore.clears).toBe(1);
+    });
+  });
+
+  describe("unsent entries and the end of the session (OE-R6)", () => {
+    function Discarded() {
+      return <output aria-label="discarded">{useSession().discardedEntries}</output>;
+    }
+    function SignOut() {
+      const { signOut } = useSession();
+      return (
+        <button type="button" onClick={() => void signOut()}>
+          salir
+        </button>
+      );
+    }
+    const setup = (overrides: Partial<AppDependencies> = {}) => {
+      const outboxStore = new MemoryOutboxStore();
+      outboxStore.save("user-1", sampleOutbox());
+      const sessionEvents = createSessionEvents();
+      const base = deps({
+        outboxStore,
+        sessionEvents,
+        connectivity: new FakeConnectivity(false),
+        ...overrides,
+      });
+      render(
+        <AppProviders deps={base}>
+          <Who />
+          <Discarded />
+          <SignOut />
+        </AppProviders>,
+      );
+      return { base, outboxStore, sessionEvents };
+    };
+
+    it("an expiry reports how many entries it erased, counted before they are cleared (OE-R6.S4)", () => {
+      const { outboxStore, sessionEvents } = setup();
+      act(() => sessionEvents.expire());
+      expect(screen.getByLabelText("discarded")).toHaveTextContent("2");
+      expect(outboxStore.load("user-1").items).toEqual([]);
+    });
+
+    it("signing out tries one last replay of the queue within the grace (OE-R6.S3)", async () => {
+      const api = new FakePactJoyApi(noCircleTodayFixture());
+      // The replay that starts with the app fails, so the queue is still full at sign-out.
+      api.failNext("recordEntry", new ApiError("ServiceUnavailable", 503, null));
+      const { outboxStore } = setup({ api, connectivity: new FakeConnectivity(true) });
+      await waitFor(() => expect(api.recordAttempts).toHaveLength(1));
+      act(() => screen.getByRole("button", { name: "salir" }).click());
+      await waitFor(() => expect(screen.getByLabelText("who")).toHaveTextContent("none"));
+      expect(api.recorded.map((cmd) => cmd.clientRequestId)).toEqual(["req-1"]);
+      expect(outboxStore.load("user-1").items).toEqual([]);
     });
   });
 

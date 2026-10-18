@@ -4,14 +4,14 @@ import { Button } from "../../../ui/Button.tsx";
 import { InlineMessage } from "../../../ui/InlineMessage.tsx";
 import { TextField } from "../../../ui/TextField.tsx";
 import { useSession } from "../session/session-context.tsx";
-import { authMessage } from "./auth-messages.ts";
+import { authMessage, discardedText } from "./auth-messages.ts";
 import styles from "./LoginLayout.module.css";
 
 /** Deliberately loose: the server decides what a real address is; this only blocks obvious typos. */
 const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function EmailStep() {
-  const { notice, requestCode } = useSession();
+  const { notice, discardedEntries, requestCode } = useSession();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [fieldError, setFieldError] = useState<string | undefined>();
@@ -45,7 +45,9 @@ export function EmailStep() {
         <p className={styles.lead}>Te enviamos un código a tu correo. No necesitas contraseña.</p>
       </div>
       {notice === "sessionExpired" && (
-        <InlineMessage tone="info" title="Tu sesión expiró. Entra de nuevo." />
+        <InlineMessage tone="info" title="Tu sesión expiró. Entra de nuevo.">
+          {discardedEntries === 0 ? undefined : discardedText(discardedEntries)}
+        </InlineMessage>
       )}
       {notice === "accountDeleted" && <InlineMessage tone="info" title="Tu cuenta se eliminó" />}
       <form className={styles.form} onSubmit={submit} noValidate>

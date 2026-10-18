@@ -19,6 +19,11 @@ export type SessionNotice = "sessionExpired" | "accountDeleted";
 export interface SessionApi {
   readonly session: Session | null;
   readonly notice: SessionNotice | null;
+  /**
+   * How many unsent entries the last session EXPIRY erased (0 otherwise), for the login notice. Kept
+   * in memory only: it is a count, never the entries.
+   */
+  readonly discardedEntries: number;
   requestCode(email: string): Promise<void>;
   /** Resolves once the session is stored. Rejects with the port's AuthError. */
   verifyCode(email: string, code: string): Promise<void>;
@@ -52,6 +57,11 @@ export interface SessionProviderProps {
   readonly manager: SessionManager;
   /** Runs whenever the session ends, so the app can drop data that belongs to it (query cache). */
   readonly onSessionEnd?: () => void;
+  /**
+   * How many entries are waiting unsent on the device. Read at the moment a session EXPIRES, before
+   * `onSessionEnd` erases them, so the login screen can say how many were lost.
+   */
+  readonly unsentCount?: () => number;
   /** Lets code outside React (the API adapter) expire the session. */
   readonly expired?: SessionEvents;
   /**
@@ -73,6 +83,7 @@ export function SessionProvider({
   store,
   manager,
   onSessionEnd,
+  unsentCount,
   expired,
   beforeSignOut,
   onAccountDeleted,
@@ -80,6 +91,7 @@ export function SessionProvider({
 }: SessionProviderProps) {
   const [session, setSession] = useState<Session | null>(() => store.load());
   const [notice, setNotice] = useState<SessionNotice | null>(null);
+  const [discardedEntries, setDiscardedEntries] = useState(0);
 
   // Another tab refreshes or ends the session: follow it. Its sign out ends this tab's data too.
   const current = useRef(session);
@@ -102,12 +114,15 @@ export function SessionProvider({
     // must not replace the notice that ended it. The ref is cleared here, not only on render, so
     // two calls in the same tick see the first one.
     if (current.current === null) return;
+    // Counted first: `onSessionEnd` erases the entries this notice is about.
+    const unsent = unsentCount?.() ?? 0;
     store.clear();
     current.current = null;
     setNotice("sessionExpired");
+    setDiscardedEntries(unsent);
     setSession(null);
     onSessionEnd?.();
-  }, [store, onSessionEnd]);
+  }, [store, onSessionEnd, unsentCount]);
 
   const accountDeleted = useCallback(() => {
     store.clear();
@@ -124,24 +139,38 @@ export function SessionProvider({
     () => ({
       session,
       notice,
+      discardedEntries,
       requestCode: (email) => auth.requestCode(email),
       async verifyCode(email, code) {
         const next = await auth.verifyCode(email, code);
         store.save(next);
         setNotice(null);
+        setDiscardedEntries(0);
         setSession(next);
       },
       async signOut() {
         if (beforeSignOut) await withinGrace(beforeSignOut());
         await manager.signOut();
         setNotice(null);
+        setDiscardedEntries(0);
         setSession(null);
         onSessionEnd?.();
       },
       expire,
       accountDeleted,
     }),
-    [auth, store, manager, onSessionEnd, beforeSignOut, expire, accountDeleted, session, notice],
+    [
+      auth,
+      store,
+      manager,
+      onSessionEnd,
+      beforeSignOut,
+      expire,
+      accountDeleted,
+      session,
+      notice,
+      discardedEntries,
+    ],
   );
 
   return <SessionContext.Provider value={api}>{children}</SessionContext.Provider>;
