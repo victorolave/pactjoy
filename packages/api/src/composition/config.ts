@@ -65,6 +65,7 @@ export interface ApiEnv {
 
 const MIN_JOBS_SECRET_LENGTH = 32;
 const MIN_AUTH_ADMIN_KEY_LENGTH = 16;
+const JWT_SHAPE = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
 const VAPID_PUBLIC_KEY = /^B[A-Za-z0-9_-]{86}$/;
 const VAPID_PRIVATE_KEY = /^[A-Za-z0-9_-]{43}$/;
 const isVapidSubject = (value: string): boolean =>
@@ -188,11 +189,14 @@ export function loadApiEnv(get: (name: string) => string | undefined): Result<Ap
     invalid.push("API_JOBS_SECRET");
   }
 
-  // Shape only (one token, not trivially short): the value is never echoed, just the name.
+  // Shape only (one token, not trivially short, and never a JWT: only the opaque secret key is
+  // accepted, never a legacy JWT credential). The value is never echoed, just the name.
   const authAdminKey = read("API_AUTH_ADMIN_KEY");
   if (
     authAdminKey !== undefined &&
-    (authAdminKey.length < MIN_AUTH_ADMIN_KEY_LENGTH || /\s/.test(authAdminKey))
+    (authAdminKey.length < MIN_AUTH_ADMIN_KEY_LENGTH ||
+      /\s/.test(authAdminKey) ||
+      JWT_SHAPE.test(authAdminKey))
   ) {
     invalid.push("API_AUTH_ADMIN_KEY");
   }

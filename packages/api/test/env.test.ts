@@ -80,6 +80,15 @@ describe("loadApiEnv", () => {
       );
     });
 
+    it("a JWT-shaped key (three base64url segments) is invalid by name: only the opaque secret key is accepted", () => {
+      // Synthetic, built here; the shape of a legacy JWT credential.
+      const jwtShaped = ["eyJhbGciOiJIUzI1NiJ9", "eyJyb2xlIjoieCJ9", "c2ln"].join(".");
+      const error = failure({ ...BASE, API_AUTH_ADMIN_KEY: jwtShaped });
+      expect(error).toEqual({ missing: [], invalid: ["API_AUTH_ADMIN_KEY"] });
+      expect(JSON.stringify(error)).not.toContain(jwtShaped);
+      expect(describeEnvError(error)).not.toContain(jwtShaped);
+    });
+
     it("an unrelated failure never carries the key either", () => {
       const error = failure({ ...BASE, API_DATABASE_URL: undefined, API_AUTH_ADMIN_KEY: KEY });
       expect(JSON.stringify(error)).not.toContain(KEY);
