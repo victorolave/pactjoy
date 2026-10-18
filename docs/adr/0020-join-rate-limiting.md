@@ -17,6 +17,11 @@ Both routes share one budget of **join attempts**, counted in **fixed windows** 
 | User (`user:<user id>`) | 10 | 30 |
 | Client network (`network:<keyed hash>`) | 30 | 100 |
 
+- **Why these numbers.**
+  - A normal join is two attempts (one preview, one join), so 10 a minute leaves room for a few mistyped or expired codes without ever stopping an honest person.
+  - 30 an hour caps one account at about 3,400 years for the whole code space.
+  - The network limits are three times looser because people share an address (a home, an office, a carrier NAT).
+  - Lower values such as 5 a minute and 20 an hour were weighed. They add nothing against enumeration at this code-space size and make a retyping person hit the wall sooner.
 - **What counts.** Every well-formed attempt counts before the use case runs: unknown, expired and successful ones alike, and refused ones too. A malformed body is answered 422 by validation first. It says nothing about any code, so it is not counted and never touches the store. The lenient preview body takes any string, so a junk code on preview is an attempt like any other.
 - **The refusal.** A refused attempt is `429 TooManyJoinAttempts` with no details and a `Retry-After` in whole seconds until the furthest exceeded window ends. The code plays no part in the decision, so the refusal is byte-identical whether the code exists or not. A `retryAfterSeconds` on an app error becomes the header instead of a detail. On the web it is the form-level message "Hiciste muchos intentos seguidos. Espera unos minutos y vuelve a intentarlo." (derived copy, for the owner to approve), never shown under the code boxes and with no retry button.
 - **Layers.**
