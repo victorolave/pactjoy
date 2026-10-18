@@ -1,3 +1,5 @@
+import type { MemberId } from "@pactjoy/engine";
+import type { CircleId, UserId } from "../shared/ids.ts";
 import type { Instant } from "../time/instant.ts";
 import type { NoticeOutcome, OutboxNotice } from "./outbox-notice.ts";
 
@@ -48,4 +50,15 @@ export interface NotificationOutboxRepository {
   ): Promise<boolean>;
   /** Deletes up to `limit` final rows that finished before `finishedBefore`. @returns how many. */
   purgeFinished(finishedBefore: Instant, limit: number): Promise<number>;
+  /**
+   * Account erasure (ADR-0019): deletes every row addressed to the user (`recipientUserId`, the
+   * ORIGINAL account id) or to any of `memberIds`, in ANY state (a claimed row included: its
+   * fenced `finish` then simply changes nothing). `[]` still deletes by user. Idempotent.
+   */
+  deleteAddressedTo(userId: UserId, memberIds: readonly MemberId[]): Promise<void>;
+  /**
+   * Full-circle erasure: deletes every row of the circles, whatever its recipient or state. The
+   * outbox has no foreign keys, so nothing cascades to it. `[]` is a no-op.
+   */
+  deleteByCircles(circleIds: readonly CircleId[]): Promise<void>;
 }

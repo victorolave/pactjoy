@@ -33,6 +33,8 @@ export interface PushSubscriptionRepository {
   remove(userId: UserId, endpoint: string): Promise<void>;
   /** Removes one subscription by id (a 404/410 from its push service). Idempotent. */
   removeById(id: PushSubscriptionId): Promise<void>;
+  /** Account erasure (ADR-0019): removes every device of the user, and no one else's. Idempotent. */
+  removeAllOfUser(userId: UserId): Promise<void>;
   /** The user's subscriptions, most recently seen first. */
   listByUser(userId: UserId): Promise<readonly PushSubscriptionRecord[]>;
   /** Keeps only the user's `keep` most recently seen subscriptions. */

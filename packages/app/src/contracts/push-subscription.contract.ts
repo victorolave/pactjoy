@@ -121,5 +121,14 @@ export function describePushSubscriptionContract(
       expect((await s.list()).map((d) => d.id)).toEqual([device(3).id, device(2).id]);
       expect(await s.list(VICTOR)).toHaveLength(1);
     });
+
+    it("removeAllOfUser deletes every device of that user only, and is idempotent", async () => {
+      const s = await subject();
+      await s.upsert(device(1), device(2), device(3, { userId: VICTOR }));
+      await s.tx(({ pushSubscriptions }) => pushSubscriptions.removeAllOfUser(ANDREA));
+      await s.tx(({ pushSubscriptions }) => pushSubscriptions.removeAllOfUser(ANDREA));
+      expect(await s.list(ANDREA)).toEqual([]);
+      expect((await s.list(VICTOR)).map((d) => d.id)).toEqual([device(3).id]);
+    });
   });
 }

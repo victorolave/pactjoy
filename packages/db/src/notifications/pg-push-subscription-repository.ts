@@ -66,6 +66,10 @@ export function createPgPushSubscriptionRepository(exec: SqlExecutor): PushSubsc
       await exec.query("delete from pactjoy.push_subscriptions where id = $1", [id]);
     },
 
+    async removeAllOfUser(user) {
+      await exec.query("delete from pactjoy.push_subscriptions where user_id = $1", [user]);
+    },
+
     async listByUser(user) {
       const { rows } = await exec.query<SubscriptionRow>(
         `select ${COLUMNS} from pactjoy.push_subscriptions where user_id = $1 order by last_seen_at desc, id`,

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { memberId } from "../circle/circle.ts";
 import type { OutboxNotice } from "../notifications/outbox-notice.ts";
 import type { Repositories } from "../ports/repositories.ts";
-import { pauseRequestId, seasonId } from "../shared/ids.ts";
+import { circleId, pauseRequestId, seasonId, userId } from "../shared/ids.ts";
 import { err, ok } from "../shared/result.ts";
 import { outboxNoticeFixture } from "../testing/notification-fixtures.ts";
 import { instant } from "../time/instant.ts";
@@ -38,6 +38,7 @@ export function describeNotificationOutboxContract(
           .then((r) => (r.ok ? r.value : (undefined as T)));
       return {
         uow,
+        tx,
         enqueue: (...rows: OutboxNotice[]) =>
           tx(({ notifications }) => notifications.enqueue(rows)),
         claim: (now: number, lease: number, limit = 50) =>
@@ -203,6 +204,78 @@ export function describeNotificationOutboxContract(
       expect(await s.purge(1000)).toBe(1);
       // The live row is still claimable once its lease ends.
       expect((await s.claim(2000, 2005)).map((n) => n.dedupeKey)).toEqual(["live"]);
+    });
+
+    it("deleteAddressedTo deletes every row of the user or of those members, in every state, and no one else's", async () => {
+      const s = await subject();
+      const ANDREA_USER = userId(uuid(0xb1));
+      const PEER_USER = userId(uuid(0xb2));
+      const PEER_MEMBER = memberId(uuid(0xa2));
+      await s.enqueue(
+        notice("pending", { recipientUserId: ANDREA_USER, notBefore: at(500) }),
+        notice("sending", { recipientUserId: ANDREA_USER }),
+        notice("sent", { recipientUserId: ANDREA_USER }),
+        notice("by-member", {
+          recipientUserId: PEER_USER,
+          recipientMemberId: memberId(uuid(0xa5)),
+          notBefore: at(500),
+        }),
+        notice("peer", {
+          recipientUserId: PEER_USER,
+          recipientMemberId: PEER_MEMBER,
+          notBefore: at(500),
+        }),
+      );
+      await s.claim(1, 6);
+      await s.finish("sent", 1, "sent", 10);
+      await s.tx(({ notifications }) =>
+        notifications.deleteAddressedTo(ANDREA_USER, [memberId(uuid(0xa5))]),
+      );
+      await s.tx(({ notifications }) =>
+        notifications.deleteAddressedTo(ANDREA_USER, [memberId(uuid(0xa5))]),
+      );
+      expect((await s.claim(1000, 1005)).map((n) => n.dedupeKey)).toEqual(["peer"]);
+      expect(await s.purge(2000)).toBe(0);
+    });
+
+    it("deleteAddressedTo with no member ids still deletes the user's rows", async () => {
+      const s = await subject();
+      await s.enqueue(
+        notice("mine", { recipientUserId: userId(uuid(0xb1)) }),
+        notice("peer", { recipientUserId: userId(uuid(0xb2)) }),
+      );
+      await s.tx(({ notifications }) => notifications.deleteAddressedTo(userId(uuid(0xb1)), []));
+      expect((await s.claim(10, 15)).map((n) => n.dedupeKey)).toEqual(["peer"]);
+    });
+
+    it("deleteByCircles deletes every row of those circles and keeps the others", async () => {
+      const s = await subject();
+      const GONE = circleId(uuid(0xc1));
+      const KEPT = circleId(uuid(0xc2));
+      await s.enqueue(
+        notice("gone-1", { circleId: GONE }),
+        notice("gone-2", { circleId: GONE, seasonId: null }),
+        notice("kept", { circleId: KEPT }),
+      );
+      await s.claim(1, 6, 1);
+      await s.tx(({ notifications }) => notifications.deleteByCircles([]));
+      expect(
+        await s.tx(({ notifications }) => notifications.claimDue(at(100), at(105), 9)),
+      ).toHaveLength(3);
+      await s.tx(({ notifications }) => notifications.deleteByCircles([GONE]));
+      await s.tx(({ notifications }) => notifications.deleteByCircles([GONE]));
+      expect((await s.claim(1000, 1005)).map((n) => n.dedupeKey)).toEqual(["kept"]);
+    });
+
+    it("a rolled-back deletion leaves the rows", async () => {
+      const s = await subject();
+      await s.enqueue(notice("mine"));
+      await s.uow.transaction(async ({ notifications }) => {
+        await notifications.deleteAddressedTo(userId(uuid(0xb1)), []);
+        await notifications.deleteByCircles([circleId(uuid(0xc1))]);
+        return err("rollback");
+      });
+      expect((await s.claim(10, 15)).map((n) => n.dedupeKey)).toEqual(["mine"]);
     });
   });
 }

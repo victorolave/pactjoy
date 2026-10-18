@@ -45,6 +45,12 @@ function operations(view: () => Store, sink: Sink): PushSubscriptionRepository {
       if (view().has(id)) sink.drop(id);
     },
 
+    async removeAllOfUser(userId) {
+      for (const record of view().values()) {
+        if (record.userId === userId) sink.drop(record.id);
+      }
+    },
+
     listByUser,
 
     async trimOldest(userId, keep) {
