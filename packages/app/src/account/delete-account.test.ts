@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { createCircle } from "../circle/create-circle.ts";
 import { generateInvite } from "../circle/generate-invite.ts";
 import { leaveCircle } from "../circle/leave-circle.ts";
-import { storedPhoto } from "../entry-photo/photo-seed.ts";
+import { uploadedPhoto } from "../entry-photo/photo-fixtures.ts";
+import { releaseStoredPhoto, storedPhoto } from "../entry-photo/photo-seed.ts";
 import { seedNotifications } from "../notifications/notification-seed.ts";
 import { storedPause } from "../pause/pause-seed.ts";
 import type { Repositories } from "../ports/repositories.ts";
@@ -242,6 +243,21 @@ describe("deleteAccount after the data transaction", () => {
       status: "released",
     });
     expect(world.app.evidence.keys()).toHaveLength(1);
+  });
+
+  it("also deletes the object of a photo released earlier (a replaced one whose purge failed)", async () => {
+    const world = await givenAccountWorld();
+    const { app } = world;
+    const earlier = await uploadedPhoto(app, world.andrea, world, world.andreaCommitment);
+    await releaseStoredPhoto(app, earlier.photoId);
+    expect(app.evidence.keys()).toHaveLength(2);
+
+    const result = await deleteAccount(deps(app), world.andrea, CONFIRM);
+
+    expect(result).toEqual(ok(undefined));
+    expect(await storedPhoto(app, earlier.photoId)).toBeNull();
+    expect(await storedPhoto(app, world.attachedPhoto.photoId)).toBeNull();
+    expect(app.evidence.keys()).toEqual([]);
   });
 
   it.each(["unavailable", "rejected"] as const)(

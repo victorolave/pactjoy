@@ -11,7 +11,8 @@ export const PURGE_MAX_BATCHES = 4;
 
 /**
  * INSIDE the transaction (account erasure, ADR-0019): releases every pending and attached photo of
- * the members and returns the released rows, so the caller can purge their objects after the commit.
+ * the members and returns ALL their released rows, those released earlier by a replace, a remove or
+ * an entry delete included, so the caller can purge their objects after the commit.
  * The entries' own links are cleared by `entries.eraseEvidence`. Overrides "kept on leave" (ADR-0016)
  * for deletion only.
  */

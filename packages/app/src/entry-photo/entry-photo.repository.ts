@@ -47,9 +47,10 @@ export interface EntryPhotoRepository {
   purge(ids: readonly EntryPhotoId[]): Promise<void>;
   /**
    * Account erasure: moves every `pending` and `attached` row of `memberIds` to `released`, bumping
-   * its version, and returns them as released so the caller can purge their objects after the commit.
-   * Rows already released are left alone and not returned, so a repeat returns `[]`. One UPDATE ...
-   * RETURNING on a relational adapter. The entries' own links are cleared by `eraseEvidence`.
+   * its version, and returns EVERY released row of those members (the ones just moved and the ones
+   * released earlier by a replace, a remove or an entry delete, untouched) so the caller can purge
+   * their objects after the commit. A repeat bumps nothing and returns the same released rows. One
+   * statement on a relational adapter. The entries' own links are cleared by `eraseEvidence`.
    */
   releaseAllOfMembers(memberIds: readonly MemberId[]): Promise<readonly EntryPhoto[]>;
   /**

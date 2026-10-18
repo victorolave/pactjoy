@@ -232,7 +232,7 @@ export function describeEntryPhotoRepositoryContract(
       await repository.purge([]);
     });
 
-    it("releaseAllOfMembers releases the pending and attached photos of those members, bumped, and returns them", async () => {
+    it("releaseAllOfMembers releases the pending and attached photos of those members, bumped, and returns every released row of theirs", async () => {
       const repository = await setup();
       await repository.add(photo(1));
       await repository.add(attached(2));
@@ -240,7 +240,9 @@ export function describeEntryPhotoRepositoryContract(
       await repository.add(photo(4, { memberId: VICTOR }));
       await repository.add(attached(5, { memberId: VICTOR }));
       const done = await repository.releaseAllOfMembers([ANDREA]);
-      expect(ids(done)).toEqual([photo(1).id, attached(2).id]);
+      // The row released earlier comes back too, untouched: its object must go with the account.
+      expect(ids(done)).toEqual([photo(1).id, attached(2).id, released(3).id]);
+      expect(done.find((p) => p.id === released(3).id)).toEqual(released(3));
       expect(done.find((p) => p.id === photo(1).id)).toEqual({
         ...photo(1),
         status: "released",
@@ -259,14 +261,18 @@ export function describeEntryPhotoRepositoryContract(
       );
     });
 
-    it("releaseAllOfMembers is a safe repeat, and [] releases nothing", async () => {
+    it("releaseAllOfMembers is a safe repeat (no further bump, the released rows come back), and [] releases nothing", async () => {
       const repository = await setup();
       await repository.add(attached(1));
       expect(await repository.releaseAllOfMembers([])).toEqual([]);
       expect(await repository.get(attached(1).id)).toEqual(attached(1));
       expect(await repository.releaseAllOfMembers([ANDREA])).toHaveLength(1);
-      expect(await repository.releaseAllOfMembers([ANDREA])).toEqual([]);
+      const again = await repository.releaseAllOfMembers([ANDREA]);
+      expect(again.map((p) => [p.id, p.status, p.version])).toEqual([
+        [attached(1).id, "released", 2],
+      ]);
       expect((await repository.get(attached(1).id))?.version).toBe(2);
+      expect(await repository.releaseAllOfMembers([VICTOR])).toEqual([]);
     });
 
     it("deleteBySeasons deletes every photo of the seasons in any status and returns them", async () => {

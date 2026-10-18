@@ -193,6 +193,8 @@ const KEY = {
   soloAttached: `o/${HEX(0xa2)}.jpg`,
   soloPending: `o/${HEX(0xa3)}.jpg`,
   pastAttached: `o/${HEX(0xa4)}.jpg`,
+  /** Released earlier (a replaced photo whose purge failed): still has a row and an object. */
+  pastReleased: `o/${HEX(0xa5)}.jpg`,
 };
 const JPEG = (() => {
   const bytes = new Uint8Array(1024);
@@ -686,6 +688,16 @@ async function seedShared(world: World): Promise<void> {
         status: "attached",
       }),
     );
+    await repos.entryPhotos.add(
+      entryPhotoFixture({
+        id: entryPhotoId(uuid(0xc004)),
+        seasonId: SEASON.past,
+        memberId: M.andreaPast,
+        commitmentId: C.andreaPast,
+        objectKey: KEY.pastReleased,
+        status: "released",
+      }),
+    );
     await repos.entries.add(
       entry(1, SEASON.solo, M.andreaSolo, C.andreaSolo, 1, "SENTINEL-solo-note", {
         photoId: entryPhotoId(uuid(0xc001)),
@@ -743,6 +755,7 @@ async function seedShared(world: World): Promise<void> {
   await putObject(world, KEY.soloAttached);
   await putObject(world, KEY.soloPending);
   await putObject(world, KEY.pastAttached);
+  await putObject(world, KEY.pastReleased);
 
   // The active season, through the use cases, day by day (the free text goes through the real fingerprints).
   const { deps } = world;
@@ -927,10 +940,10 @@ describe("account deletion on Postgres: Andrea (sentinel)", () => {
     const before = await dump(admin);
     const herKeys = await keysOf(admin, [M.andrea, M.andreaSolo, M.andreaPast]);
     const victorKeys = await keysOf(admin, [M.victor]);
-    expect(herKeys).toHaveLength(5);
+    expect(herKeys).toHaveLength(6);
     expect(victorKeys).toHaveLength(1);
-    // Four of her objects exist (the fifth photo was reserved and never uploaded), and Victor's.
-    expect(world.evidence.keys()).toHaveLength(5);
+    // Five of her objects exist (the sixth photo was reserved and never uploaded), and Victor's.
+    expect(world.evidence.keys()).toHaveLength(6);
     expect(world.evidence.keys()).toEqual(expect.arrayContaining(victorKeys));
     const carlaBefore = [...rowsContaining(before, CARLA), ...rowsContaining(before, M.carla)];
     expect(carlaBefore.length).toBeGreaterThan(8);

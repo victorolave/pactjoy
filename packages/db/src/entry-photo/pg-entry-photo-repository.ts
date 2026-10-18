@@ -157,7 +157,9 @@ export function createPgEntryPhotoRepository(exec: SqlExecutor): EntryPhotoRepos
       if (memberIds.length === 0) return [];
       return (
         await rows(
-          `update pactjoy.entry_photos set status = 'released', version = version + 1 where member_id = any($1::uuid[]) and status <> 'released' returning ${COLUMNS}`,
+          // The select sees the snapshot from before the update, so it returns exactly the rows
+          // that were already released; the update returns the ones it moved.
+          `with moved as (update pactjoy.entry_photos set status = 'released', version = version + 1 where member_id = any($1::uuid[]) and status <> 'released' returning ${COLUMNS}) select * from moved union all select ${COLUMNS} from pactjoy.entry_photos where member_id = any($1::uuid[]) and status = 'released'`,
           [memberIds],
         )
       )

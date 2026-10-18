@@ -103,14 +103,15 @@ function operations(view: () => Store, sink: Sink): EntryPhotoRepository {
     },
 
     async releaseAllOfMembers(memberIds) {
-      const due = [...view().values()]
-        .filter((p) => p.status !== "released" && memberIds.includes(p.memberId))
+      const mine = [...view().values()].filter((p) => memberIds.includes(p.memberId));
+      return mine
+        .map((photo) => {
+          if (photo.status === "released") return photo;
+          const next: EntryPhoto = { ...photo, status: "released", version: photo.version + 1 };
+          sink.put(next, photo.version);
+          return next;
+        })
         .sort(byAge);
-      return due.map((photo) => {
-        const next: EntryPhoto = { ...photo, status: "released", version: photo.version + 1 };
-        sink.put(next, photo.version);
-        return next;
-      });
     },
 
     async deleteBySeasons(seasonIds) {

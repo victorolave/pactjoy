@@ -13,6 +13,16 @@ export async function seedPhotos(app: App, photos: readonly EntryPhoto[]): Promi
   });
 }
 
+/** Test setup: moves a stored row to `released` as an earlier replace or remove would (its object stays). */
+export async function releaseStoredPhoto(app: App, id: EntryPhotoId): Promise<void> {
+  await app.uow.transaction(async ({ entryPhotos }) => {
+    const row = await entryPhotos.get(id);
+    if (!row) throw new Error("setup: the photo row does not exist");
+    await entryPhotos.save({ ...row, status: "released", version: row.version + 1 }, row.version);
+    return { ok: true as const, value: undefined };
+  });
+}
+
 /** Test assertion: the persisted ledger row, or `null`. */
 export function storedPhoto(app: App, id: EntryPhotoId): Promise<EntryPhoto | null> {
   return app.uow.read((repos) => repos.entryPhotos.get(id));
