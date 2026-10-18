@@ -1,4 +1,4 @@
-import type { CommitmentId } from "@pactjoy/engine";
+import type { CommitmentId, MemberId } from "@pactjoy/engine";
 import type { SeasonId } from "../shared/ids.ts";
 import type { CommitmentReminder } from "./commitment-reminder.ts";
 
@@ -17,4 +17,11 @@ export interface CommitmentReminderRepository {
    * for an insert, the commitment already has one.
    */
   save(reminder: CommitmentReminder, expectedVersion: number | null): Promise<void>;
+  /**
+   * Account erasure (ADR-0019): deletes every setting of `memberIds`, enabled or not, in every
+   * season. `[]` and a member with none are no-ops.
+   */
+  deleteByMembers(memberIds: readonly MemberId[]): Promise<void>;
+  /** Full-circle erasure: deletes every setting of `seasonIds`. `[]` is a no-op. */
+  deleteBySeasons(seasonIds: readonly SeasonId[]): Promise<void>;
 }
