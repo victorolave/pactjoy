@@ -23,6 +23,8 @@ export interface SetupOptions {
   readonly identity?: IdentityAdmin | null;
   /** The logger (default: silent), to assert on log lines. */
   readonly logger?: Logger;
+  /** The client-network HMAC key; `null` (the default) counts join attempts per user only. */
+  readonly rateLimitKey?: string | null;
 }
 
 const SILENT: Logger = { info: () => undefined, warn: () => undefined, error: () => undefined };
@@ -49,6 +51,7 @@ export function setup(options: SetupOptions = {}) {
       push: options.push ?? null,
       jobsSecret: options.jobsSecret ?? null,
       identity: options.identity === undefined ? app.identity : options.identity,
+      rateLimitKey: options.rateLimitKey ?? null,
       tokenVerifier: createFakeTokenVerifier({ andrea: ANDREA, victor: VICTOR, carla: CARLA }),
       logger: options.logger ?? SILENT,
     },

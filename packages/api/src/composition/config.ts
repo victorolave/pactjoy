@@ -61,9 +61,15 @@ export interface ApiEnv {
    * before it writes anything, and the rest of the API is unaffected. A secret.
    */
   readonly authAdmin: AuthAdminEnv | null;
+  /**
+   * `API_RATE_LIMIT_KEY` (32+ characters, no whitespace): the HMAC key of the client networks the
+   * join attempts are counted against (ADR-0020). `null` leaves only the per-user limits on. A secret.
+   */
+  readonly rateLimitKey: string | null;
 }
 
 const MIN_JOBS_SECRET_LENGTH = 32;
+const MIN_RATE_LIMIT_KEY_LENGTH = 32;
 const MIN_AUTH_ADMIN_KEY_LENGTH = 16;
 const JWT_SHAPE = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
 const VAPID_PUBLIC_KEY = /^B[A-Za-z0-9_-]{86}$/;
@@ -201,6 +207,14 @@ export function loadApiEnv(get: (name: string) => string | undefined): Result<Ap
     invalid.push("API_AUTH_ADMIN_KEY");
   }
 
+  const rateLimitKey = read("API_RATE_LIMIT_KEY");
+  if (
+    rateLimitKey !== undefined &&
+    (rateLimitKey.length < MIN_RATE_LIMIT_KEY_LENGTH || /\s/.test(rateLimitKey))
+  ) {
+    invalid.push("API_RATE_LIMIT_KEY");
+  }
+
   // The VAPID group: all three or none. Each variable is read once.
   const pushGroup = [
     ["API_PUSH_VAPID_PUBLIC_KEY", (v: string) => VAPID_PUBLIC_KEY.test(v)],
@@ -253,6 +267,7 @@ export function loadApiEnv(get: (name: string) => string | undefined): Result<Ap
         : null,
     authAdmin:
       authAdminKey === undefined ? null : { authUrl: `${supabaseUrl}/auth/v1`, key: authAdminKey },
+    rateLimitKey: rateLimitKey ?? null,
   });
 }
 
