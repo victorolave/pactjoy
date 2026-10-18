@@ -49,6 +49,7 @@ const { spies, USE_CASE_NAMES } = vi.hoisted(() => ({
     "removeFeedReaction",
     "sendEncouragement",
     "dismissNudge",
+    "deleteAccount",
   ] as string[],
 }));
 
@@ -163,11 +164,12 @@ const TABLE: Row[] = [
     { recipientId: ID2, week: 2, emoji: "raisedHands" },
   ],
   ["dismissNudge", "POST", `/seasons/${ID}/nudge-dismissals`, { targetId: ID2, week: 2 }],
+  ["deleteAccount", "DELETE", "/me", { confirmation: "ELIMINAR" }],
 ];
 
 describe("route table completeness (RT-S4)", () => {
-  it("has 45 routes over exactly the 43 use cases, the score and feed ones routed twice", () => {
-    expect(TABLE).toHaveLength(45);
+  it("has 46 routes over exactly the 44 use cases, the score and feed ones routed twice", () => {
+    expect(TABLE).toHaveLength(46);
     expect(new Set(TABLE.map(([name]) => name))).toEqual(new Set(USE_CASE_NAMES));
     expect(TABLE.filter(([name]) => name === "memberScore")).toHaveLength(2);
     expect(TABLE.filter(([name]) => name === "circleFeed")).toHaveLength(2);
@@ -252,6 +254,11 @@ describe("route to use case wiring (AC-S8)", () => {
       }
       if (name === "sendEncouragement") {
         expect(args[2]).toEqual({ seasonId: ID, recipientId: ID2, week: 2, emoji: "raisedHands" });
+      }
+      if (name === "deleteAccount") {
+        expect(args[2]).toEqual({ confirmation: "ELIMINAR" });
+        expect(deps).toHaveProperty("identity");
+        expect(deps).toHaveProperty("evidence");
       }
       if (name === "dismissNudge") {
         expect(args[2]).toEqual({ seasonId: ID, targetId: ID2, week: 2 });

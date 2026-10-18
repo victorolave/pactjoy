@@ -1,6 +1,7 @@
 import { type IdentityAdmin, type PushSender, userId } from "@pactjoy/app";
 import { createTestApp } from "@pactjoy/app/testing";
 import { vi } from "vitest";
+import type { Logger } from "../src/composition/logger.ts";
 import { createApi } from "../src/routes/index.ts";
 import { createDeterministicUuidGenerator, createFakeTokenVerifier } from "../src/testing/index.ts";
 
@@ -20,7 +21,11 @@ export interface SetupOptions {
    * server without `API_AUTH_ADMIN_KEY`.
    */
   readonly identity?: IdentityAdmin | null;
+  /** The logger (default: silent), to assert on log lines. */
+  readonly logger?: Logger;
 }
+
+const SILENT: Logger = { info: () => undefined, warn: () => undefined, error: () => undefined };
 
 /** `createApi` over the in-memory app with spies on the unit of work (token `andrea` / `victor`). */
 export function setup(options: SetupOptions = {}) {
@@ -45,7 +50,7 @@ export function setup(options: SetupOptions = {}) {
       jobsSecret: options.jobsSecret ?? null,
       identity: options.identity === undefined ? app.identity : options.identity,
       tokenVerifier: createFakeTokenVerifier({ andrea: ANDREA, victor: VICTOR, carla: CARLA }),
-      logger: { info: () => undefined, warn: () => undefined, error: () => undefined },
+      logger: options.logger ?? SILENT,
     },
     { basePath: "/api", allowedOrigins: [] },
   );
