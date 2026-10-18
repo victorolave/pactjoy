@@ -38,6 +38,10 @@ export const string: Schema<string> = schema((v, path, sink) =>
   typeof v === "string" ? v : fail(sink, path, "type"),
 );
 
+export const boolean: Schema<boolean> = schema((v, path, sink) =>
+  typeof v === "boolean" ? v : fail(sink, path, "type"),
+);
+
 export const number: Schema<number> = schema((v, path, sink) =>
   typeof v === "number" && Number.isFinite(v) ? v : fail(sink, path, "type"),
 );

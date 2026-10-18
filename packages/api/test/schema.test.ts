@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   array,
+  boolean,
   integer,
   literal,
   nullable,
@@ -129,6 +130,12 @@ describe("combinators", () => {
     for (const bad of [Number.NaN, Number.POSITIVE_INFINITY, "1", null]) {
       expect(parse(s, { n: bad }).ok).toBe(false);
     }
+  });
+
+  it("boolean accepts true and false only", () => {
+    const s = object({ b: boolean });
+    expect(parse(s, { b: false })).toEqual({ ok: true, value: { b: false } });
+    for (const bad of [0, 1, "true", null]) expect(parse(s, { b: bad }).ok).toBe(false);
   });
 
   it("literal and oneOf", () => {

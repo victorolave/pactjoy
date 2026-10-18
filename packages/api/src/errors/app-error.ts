@@ -4,6 +4,7 @@ import type {
   CancelPauseRequestError,
   CarryOverError,
   CommitmentProgressError,
+  CommitmentReminderError,
   CommitmentStageError,
   CreateCircleError,
   CreateHabitError,
@@ -32,6 +33,7 @@ import type {
   SeasonProgressError,
   SeasonResultsError,
   SeasonViewError,
+  SetCommitmentReminderError,
   SkipBaselineError,
   StandingsError,
   SubmitReviewError,
@@ -86,6 +88,8 @@ export type AppError =
   | SubmitSeasonClosureError
   | SeasonResultsError
   | CarryOverError
-  | PushSubscriptionError;
+  | PushSubscriptionError
+  | CommitmentReminderError
+  | SetCommitmentReminderError;
 
 export type AppErrorKind = AppError["kind"];
