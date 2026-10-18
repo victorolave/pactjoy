@@ -11,7 +11,15 @@ export function useToday() {
   const clock = useClock();
   const client = useQueryClient();
   const [, onDayChange] = useState(0);
-  const query = useQuery({ queryKey: todayKey, queryFn: ({ signal }) => api.getToday(signal) });
+  const [confirmed, setConfirmed] = useState(0);
+  const query = useQuery({
+    queryKey: todayKey,
+    queryFn: async ({ signal }) => {
+      const view = await api.getToday(signal);
+      if (!signal.aborted) setConfirmed((count) => count + 1);
+      return view;
+    },
+  });
   const zone = query.data && "timeZone" in query.data ? query.data.timeZone : undefined;
   useEffect(() => {
     if (zone === undefined) return;
@@ -27,5 +35,9 @@ export function useToday() {
       },
     );
   }, [clock, client, zone]);
-  return { ...query, localToday: zone === undefined ? null : seasonDate(clock.nowMs(), zone) };
+  return {
+    ...query,
+    confirmed,
+    localToday: zone === undefined ? null : seasonDate(clock.nowMs(), zone),
+  };
 }
