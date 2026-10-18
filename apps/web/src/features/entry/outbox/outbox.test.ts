@@ -376,6 +376,92 @@ describe("Outbox.drain: idempotency and the day (OE-R4)", () => {
   });
 });
 
+describe("Outbox.replaying: the syncing flag (OE-R9)", () => {
+  it("is true from the start of a replay with items until it settles, and tells subscribers", async () => {
+    const { api, outbox, queue } = setup();
+    queue(recordInput("a"));
+    const listener = vi.fn();
+    outbox.subscribe(listener);
+    expect(outbox.replaying()).toBe(false);
+    const release = api.hold("recordEntry");
+    const done = outbox.drain();
+    await vi.waitFor(() => expect(api.recordAttempts).toHaveLength(1));
+    expect(outbox.replaying()).toBe(true);
+    release();
+    await done;
+    expect(outbox.replaying()).toBe(false);
+    expect(listener).toHaveBeenCalled();
+  });
+
+  it("stays false for a replay of an empty queue", async () => {
+    const { outbox } = setup();
+    const listener = vi.fn();
+    outbox.subscribe(listener);
+    await outbox.drain();
+    expect(outbox.replaying()).toBe(false);
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it("is false again when the replay stopped on a retryable error", async () => {
+    const { api, outbox, queue } = setup();
+    queue(recordInput("a"));
+    api.failNext("recordEntry", new ApiError("NetworkError", 0, null));
+    await outbox.drain();
+    expect(outbox.replaying()).toBe(false);
+  });
+});
+
+describe("Outbox: two tabs of the same user share one store (OE-R3.S4)", () => {
+  function twoTabs(initial: OutboxState) {
+    const api = new FakePactJoyApi(noCircleTodayFixture());
+    const store = new MemoryOutboxStore();
+    store.save(USER, initial);
+    const make = () => {
+      const outbox = new Outbox({
+        api,
+        store,
+        userId: USER,
+        ids: new SequentialIds(),
+        onReplayed: () => undefined,
+      });
+      outbox.subscribe(() => undefined);
+      return outbox;
+    };
+    return { api, store, tabA: make(), tabB: make() };
+  }
+
+  it("two replays at once create each entry once and leave both queues and the store empty", async () => {
+    const { api, store, tabA, tabB } = twoTabs(
+      seeded(recordInput("a"), recordInput("b"), editInput("e1", "entry-7")),
+    );
+    await Promise.all([tabA.drain(), tabB.drain()]);
+    // The same request ids reach the server twice at most; the server answers `replayed` and so
+    // never holds a duplicate entry.
+    const created = new Set(api.recorded.map((cmd) => cmd.clientRequestId));
+    expect([...created].sort()).toEqual(["req-a", "req-b"]);
+    expect(api.recorded.length).toBeGreaterThanOrEqual(2);
+    expect(api.recorded.length).toBeLessThanOrEqual(4);
+    expect(tabA.snapshot().items).toEqual([]);
+    expect(tabB.snapshot().items).toEqual([]);
+    expect(store.load(USER).items).toEqual([]);
+    expect(tabA.snapshot().notices).toEqual([]);
+    expect(tabB.snapshot().notices).toEqual([]);
+  });
+
+  it("an item another tab queues while this one replays is not lost", async () => {
+    const { api, store, tabA } = twoTabs(seeded(recordInput("a")));
+    const release = api.hold("recordEntry");
+    const done = tabA.drain();
+    await vi.waitFor(() => expect(api.recordAttempts).toHaveLength(1));
+    // The other tab saves its own item next to the one being sent.
+    store.emitExternal(USER, seeded(recordInput("a"), { attempt: "a" }, recordInput("c")));
+    release();
+    await done;
+    expect(api.recorded.map((cmd) => cmd.clientRequestId)).toEqual(["req-a", "req-c"]);
+    expect(tabA.snapshot().items).toEqual([]);
+  });
+});
+
 describe("Outbox state: notices, listeners, erasure", () => {
   it("keeps a notice across a restart until it is dismissed (OE-R5.S1)", async () => {
     const { api, store, outbox, queue } = setup();
@@ -442,6 +528,26 @@ describe("Outbox state: notices, listeners, erasure", () => {
     expect(api.recordAttempts).toHaveLength(1);
     expect(store.load(USER)).toEqual(EMPTY_OUTBOX);
     expect(outbox.snapshot()).toEqual(EMPTY_OUTBOX);
+  });
+
+  it("resolve() maps the local reference of a record that was sent to its server entry", async () => {
+    const { outbox, queue } = setup();
+    queue(recordInput("a"));
+    // Still queued: the reference is all there is.
+    expect(outbox.resolve(localRef("a"))).toBe(localRef("a"));
+    await outbox.drain();
+    // An undo toast that still holds the reference reaches the server entry.
+    expect(outbox.resolve(localRef("a"))).toBe("entry-1");
+    expect(outbox.resolve("entry-9")).toBe("entry-9");
+    expect(outbox.resolve(localRef("ghost"))).toBe(localRef("ghost"));
+  });
+
+  it("resolve() forgets the mapping when the session ends", async () => {
+    const { outbox, queue } = setup();
+    queue(recordInput("a"));
+    await outbox.drain();
+    outbox.clear();
+    expect(outbox.resolve(localRef("a"))).toBe(localRef("a"));
   });
 
   it("clear() forgets the items and notices in memory and in storage (OE-R6)", () => {

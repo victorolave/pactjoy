@@ -93,7 +93,7 @@ describe("delete failures (EN-R8)", () => {
 
   it("lets the user try again after a connection failure", async () => {
     const { deps } = renderToday([reading([quantity("25")])]);
-    deps.api.failNext("deleteEntry", new ApiError("NetworkError", 0, null));
+    deps.api.failNext("deleteEntry", new ApiError("ServiceUnavailable", 503, null));
     const dialog = await openEdit("Leer");
     await userEvent.click(within(dialog).getByRole("button", { name: "Borrar registro" }));
     await userEvent.click(within(dialog).getByRole("button", { name: "Borrar" }));

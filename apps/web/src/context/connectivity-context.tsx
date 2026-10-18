@@ -15,6 +15,14 @@ export function ConnectivityProvider({
   );
 }
 
+/**
+ * The connectivity port itself, to be asked at the moment of a write (not at render), or null when
+ * there is no provider. The entry writes decide there whether to send or to queue.
+ */
+export function useConnectivity(): Connectivity | null {
+  return useContext(ConnectivityContext);
+}
+
 /** Like useOnline, but "online" when there is no provider (for shared UI that may sit outside one). */
 export function useOptionalOnline(): boolean {
   const connectivity = useContext(ConnectivityContext);

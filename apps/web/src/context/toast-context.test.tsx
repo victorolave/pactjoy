@@ -161,6 +161,31 @@ describe("toast actions offline (no write queue)", () => {
   });
 });
 
+describe("toast actions that work offline (entry writes are queued)", () => {
+  it("keeps the action enabled offline when the toast says it works without a connection", async () => {
+    const connectivity = new FakeConnectivity(false);
+    const onAction = vi.fn();
+    render(
+      <ConnectivityProvider connectivity={connectivity}>
+        <ToastProvider>
+          <Trigger
+            toast={{
+              message: "Guardado",
+              actionLabel: "Deshacer",
+              actionWorksOffline: true,
+              onAction,
+            }}
+          />
+        </ToastProvider>
+      </ConnectivityProvider>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "mostrar" }));
+    expect(screen.getByRole("button", { name: "Deshacer" })).toBeEnabled();
+    await userEvent.click(screen.getByRole("button", { name: "Deshacer" }));
+    expect(onAction).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("useToasts", () => {
   it("fails loudly outside a provider", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});

@@ -123,9 +123,7 @@ describe("recording with a photo (entry sheet)", () => {
     await userEvent.click(within(dialog).getByRole("button", { name: "Añadir nota o foto" }));
 
     expect(within(dialog).getByRole("button", { name: "Añadir foto" })).toBeDisabled();
-    expect(
-      within(dialog).getByText("Sin conexión: las fotos no están disponibles"),
-    ).toBeInTheDocument();
+    expect(within(dialog).getByText("La foto necesita conexión.")).toBeInTheDocument();
   });
 
   it("the help under the note says who sees the photo too", async () => {

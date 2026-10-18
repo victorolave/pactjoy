@@ -1,5 +1,5 @@
 import type { TodayRow } from "@pactjoy/app";
-import { screen, waitFor } from "@testing-library/react";
+import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { ApiError } from "../../../ports/api-error.ts";
@@ -57,7 +57,7 @@ describe("one tap done (EN-R1)", () => {
 
   it("shows an error toast, and Reintentar sends the same clientRequestId (EN-S3)", async () => {
     const { deps } = renderRow(openDone());
-    deps.api.failNext("recordEntry", new ApiError("NetworkError", 0, null));
+    deps.api.failNext("recordEntry", new ApiError("ServiceUnavailable", 503, null));
     await tapDone();
     expect(await screen.findByRole("alert")).toHaveTextContent("No pudimos guardar el registro.");
     await userEvent.click(screen.getByRole("button", { name: "Reintentar" }));
@@ -107,7 +107,7 @@ describe("one tap done (EN-R1)", () => {
   it("tells an undo failure and offers to retry it", async () => {
     const { deps } = renderRow(openDone());
     await tapDone();
-    deps.api.failNext("deleteEntry", new ApiError("NetworkError", 0, null));
+    deps.api.failNext("deleteEntry", new ApiError("ServiceUnavailable", 503, null));
     await userEvent.click(await screen.findByRole("button", { name: "Deshacer" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("No pudimos deshacer el registro.");
     await userEvent.click(screen.getByRole("button", { name: "Reintentar" }));
@@ -245,5 +245,78 @@ describe("rows that cannot be written", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Registrar Correr" }));
     expect(await screen.findByRole("dialog", { name: "Correr" })).toBeInTheDocument();
     expect(deps.api.calls.recordEntry).toBe(0);
+  });
+});
+
+const QUEUED = "Guardado en este teléfono. Se enviará al volver la conexión.";
+
+describe("one tap without a connection (OE-R1, OE-R2, OE-R8)", () => {
+  const offline = (row: TodayRow = openDone()) =>
+    renderApp({ online: false, today: activeTodayFixture({ rows: [row] }) });
+  const stored = (app: ReturnType<typeof renderApp>) => app.deps.outboxStore.load("user-1").items;
+
+  it("keeps the tap on the phone and says so, with Deshacer and no retry toast (OE-R1.S1)", async () => {
+    const app = offline();
+    await tapDone();
+    expect(await screen.findByText(QUEUED)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Deshacer" })).toBeEnabled();
+    expect(screen.queryByRole("button", { name: "Reintentar" })).not.toBeInTheDocument();
+    expect(app.deps.api.calls.recordEntry).toBe(0);
+    expect(stored(app)).toEqual([
+      expect.objectContaining({
+        kind: "record",
+        habitName: "Meditar",
+        command: expect.objectContaining({ forDate: "2026-10-02", value: { kind: "done" } }),
+      }),
+    ]);
+  });
+
+  it("Deshacer on a pending tap takes it out of the outbox: nothing is ever sent (OE-R7.S3)", async () => {
+    const app = offline();
+    await tapDone();
+    await userEvent.click(await screen.findByRole("button", { name: "Deshacer" }));
+    expect(await screen.findByText("Registro deshecho.")).toBeInTheDocument();
+    expect(stored(app)).toEqual([]);
+    expect(app.deps.api.deleteAttempts).toEqual([]);
+    expect(app.deps.api.calls.recordEntry).toBe(0);
+  });
+
+  it("anota hoy no salió on the phone", async () => {
+    const app = offline();
+    await userEvent.click(await screen.findByRole("button", { name: "Hoy no salió: Meditar" }));
+    expect(await screen.findByText("Anotado en este teléfono: hoy no salió.")).toBeInTheDocument();
+    expect(stored(app)).toEqual([
+      expect.objectContaining({ command: expect.objectContaining({ value: { kind: "missed" } }) }),
+    ]);
+  });
+
+  it("a lost answer online is kept the same way, with no error toast (OE-R1.S2)", async () => {
+    const { deps } = renderRow(openDone());
+    deps.api.failNext("recordEntry", new ApiError("NetworkError", 0, null));
+    await tapDone();
+    expect(await screen.findByText(QUEUED)).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    // The replay that follows sends the same request id and the outbox empties.
+    await waitFor(() => expect(deps.api.recorded.map((c) => c.clientRequestId)).toEqual(["id-1"]));
+    await waitFor(() => expect(deps.outboxStore.load("user-1").items).toEqual([]));
+  });
+
+  it("Deshacer still works when the connection drops after a direct save", async () => {
+    const { deps } = renderRow(openDone());
+    await tapDone();
+    await screen.findByText(SAVED);
+    act(() => deps.connectivity.setOnline(false));
+    await userEvent.click(screen.getByRole("button", { name: "Deshacer" }));
+    expect(
+      await screen.findByText(
+        "Registro deshecho en este teléfono. Se enviará al volver la conexión.",
+      ),
+    ).toBeInTheDocument();
+    expect(deps.api.deleteAttempts).toEqual([]);
+    expect(deps.outboxStore.load("user-1").items).toEqual([
+      expect.objectContaining({ kind: "delete", target: "entry-1", habitName: "Meditar" }),
+    ]);
+    act(() => deps.connectivity.setOnline(true));
+    await waitFor(() => expect(deps.api.deleted).toEqual(["entry-1"]));
   });
 });

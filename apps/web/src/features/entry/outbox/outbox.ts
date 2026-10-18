@@ -16,6 +16,7 @@ import {
   enqueue,
   isLocalRef,
   itemId,
+  localRef,
   markAttempted,
   rejectItem,
   removeItem,
@@ -56,6 +57,9 @@ export class Outbox {
   #unsubscribeStore: (() => void) | null = null;
   #running: Promise<DrainStatus> | null = null;
   readonly #conflicts = new Map<string, number>();
+  /** `local:<id>` of records sent in this session -> the server's `entryId` (for stale references). */
+  readonly #resolved = new Map<string, string>();
+  #replaying = false;
 
   constructor(deps: OutboxDeps) {
     this.#deps = deps;
@@ -75,6 +79,20 @@ export class Outbox {
       this.#listeners.delete(listener);
       if (this.#listeners.size === 0) this.#unfollowStore();
     };
+  }
+
+  /** Whether a replay with items to send is running (the "syncing" banner). Changes tell subscribers. */
+  replaying(): boolean {
+    return this.#replaying;
+  }
+
+  /**
+   * The server entry a local reference stands for once its record was sent, else the target as it
+   * is. A toast or sheet opened before the sync still holds `local:<id>`: this is how it reaches
+   * the real entry. Memory only; it ends with the session.
+   */
+  resolve(target: string): string {
+    return this.#resolved.get(target) ?? target;
   }
 
   /** Called after every accepted `enqueue` (a trigger for the replay). */
@@ -98,6 +116,7 @@ export class Outbox {
   /** Forgets everything in memory and in storage (the session ended). */
   clear(): void {
     this.#conflicts.clear();
+    this.#resolved.clear();
     this.#commit(EMPTY_OUTBOX);
   }
 
@@ -118,6 +137,7 @@ export class Outbox {
       for (;;) {
         const item = this.#state.items[0];
         if (item === undefined) break;
+        this.#setReplaying(true);
         const id = itemId(item);
         // A record that may reach the server can no longer be rewritten: save that first.
         if (item.kind === "record" && !item.attempted) {
@@ -125,6 +145,9 @@ export class Outbox {
         }
         try {
           const entryId = await this.#send(item);
+          if (item.kind === "record" && entryId !== null) {
+            this.#resolved.set(localRef(item.localId), entryId);
+          }
           this.#commit(
             item.kind === "record" && entryId !== null
               ? resolveRecord(this.#state, item.localId, entryId)
@@ -159,9 +182,16 @@ export class Outbox {
         }
       }
     } finally {
+      this.#setReplaying(false);
       if (changed) this.#deps.onReplayed();
     }
     return status;
+  }
+
+  #setReplaying(value: boolean): void {
+    if (this.#replaying === value) return;
+    this.#replaying = value;
+    this.#notify();
   }
 
   /** The request for one item; a record answers its `entryId`, the others `null`. */

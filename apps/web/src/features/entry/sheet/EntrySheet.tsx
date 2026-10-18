@@ -16,6 +16,7 @@ import { Button } from "../../../ui/Button.tsx";
 import { InlineMessage } from "../../../ui/InlineMessage.tsx";
 import { Sheet } from "../../../ui/Sheet.tsx";
 import styles from "../entry.module.css";
+import { OFFLINE_SAVE_LINE, QUEUED_SAVED } from "../entry-messages.ts";
 import { Confirmation } from "../feedback/Confirmation.tsx";
 import { useEarnedGain } from "../feedback/use-earned-gain.ts";
 import { useSavedToast } from "../feedback/use-saved-toast.ts";
@@ -121,10 +122,14 @@ function RecordShell({
   onClose,
 }: ShellProps) {
   const [note, setNote] = useState("");
-  const entry = useQuantityEntry(row.commitmentId, seasonId, choice.forDate);
+  const entry = useQuantityEntry(row.commitmentId, seasonId, row.habitName, choice.forDate);
   const photo = usePhotoUpload(seasonId, row.commitmentId);
   const online = useOnline();
-  const showSaved = useSavedToast();
+  const dates = useTodayDates();
+  const showSaved = useSavedToast({
+    habitName: row.habitName,
+    forDate: choice.forDate ?? dates?.refDate ?? null,
+  });
   const todayGain = useEarnedGain(row.points.earned);
   // The server answers with today's points only: a registro of yesterday shows none here.
   const gain = choice.yesterday ? null : todayGain;
@@ -144,15 +149,24 @@ function RecordShell({
     closed.current = true;
     if (entry.saved !== null && entry.entryId !== null) {
       showSaved(
-        gain === null
-          ? `Registro guardado. ${entry.saved}`
-          : `Registro guardado. ${row.habitName} · ${pointsText(gain)}`,
+        entry.queued
+          ? QUEUED_SAVED
+          : gain === null
+            ? `Registro guardado. ${entry.saved}`
+            : `Registro guardado. ${row.habitName} · ${pointsText(gain)}`,
         entry.entryId,
       );
     }
     onClose();
   };
 
+  // Kept on the phone there are no points to show: the sheet closes with the toast (OE-R8.S1).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: runs once, when the registro is queued
+  useEffect(() => {
+    if (entry.queued) finish();
+  }, [entry.queued]);
+
+  if (entry.queued) return null;
   if (entry.saved !== null) {
     return (
       <Sheet open headless title={row.habitName} onClose={finish}>
@@ -199,11 +213,11 @@ function RecordShell({
           entry.problem.kind !== "photo" && (
             <InlineMessage tone="error" title={entry.problem.message} />
           )}
-        {!online && <InlineMessage tone="pending" title="Sin conexión: no se puede guardar." />}
+        {!online && <InlineMessage tone="pending" title={OFFLINE_SAVE_LINE} />}
         <div className={styles.actions}>
           <Button
             block
-            disabled={toSend === null || entry.pending || !online || isPhotoBusy(photo.state)}
+            disabled={toSend === null || entry.pending || isPhotoBusy(photo.state)}
             onClick={() =>
               toSend !== null &&
               entry.submit(

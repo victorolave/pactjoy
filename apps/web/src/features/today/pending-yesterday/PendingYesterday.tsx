@@ -1,5 +1,4 @@
 import type { PendingYesterdayItem, TodayEntry } from "@pactjoy/app";
-import { useOnline } from "../../../context/connectivity-context.tsx";
 import { weekdayDay } from "../../../shared/format.ts";
 import { quantityText } from "../../../shared/row-labels.ts";
 import { Card } from "../../../ui/Card.tsx";
@@ -17,10 +16,8 @@ function PendingItem({
   readonly item: PendingYesterdayItem;
   readonly seasonId: string;
 }) {
-  const oneTap = useOneTap(item.commitmentId, seasonId, item.forDate);
+  const oneTap = useOneTap(item.commitmentId, seasonId, item.habitName, item.forDate);
   const sheet = useEntrySheet();
-  // No write queue (P1): every write control is off until the network is back.
-  const online = useOnline();
   const isDone = item.measure.unit === "done";
   // Once the tap went out (or its entry exists) the item can take no second registro, whichever
   // button it came from: both controls rest while it is still listed (as `RowWithControls` does).
@@ -39,13 +36,13 @@ function PendingItem({
               <CheckCircle
                 label={`Registrar ${item.habitName} de ayer`}
                 pressed={sent}
-                disabled={!online || sent}
+                disabled={sent}
                 onClick={oneTap.done}
               />
               <IconButton
                 icon="x"
                 label={`Ayer no salió: ${item.habitName}`}
-                disabled={oneTap.pending || sent || !online}
+                disabled={oneTap.pending || sent}
                 onClick={oneTap.missed}
               />
             </>
@@ -54,7 +51,6 @@ function PendingItem({
               icon="plus"
               variant="outline"
               label={`Registrar ${item.habitName} de ayer`}
-              disabled={!online}
               onClick={() => sheet.open(item.commitmentId, undefined, { yesterday: true })}
             />
           )}
@@ -80,7 +76,6 @@ function stateOf(registered: YesterdayRegistered): string {
 
 function RegisteredItem({ registered }: { readonly registered: YesterdayRegistered }) {
   const sheet = useEntrySheet();
-  const online = useOnline();
   const { row, entry } = registered;
   const edited: TodayEntry = entry;
   return (
@@ -95,7 +90,6 @@ function RegisteredItem({ registered }: { readonly registered: YesterdayRegister
         <IconButton
           icon="pencil"
           label={`Editar registro de ${row.habitName} de ayer`}
-          disabled={!online}
           onClick={() => sheet.open(row.commitmentId, entry.entryId)}
         />
       </div>

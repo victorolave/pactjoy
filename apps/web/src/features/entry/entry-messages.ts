@@ -6,6 +6,17 @@ export interface EntryFailure {
   readonly retryable: boolean;
 }
 
+/** What the member is told when a write was kept on the phone to be sent later (OE-R8). */
+export const QUEUED_SAVED = "Guardado en este teléfono. Se enviará al volver la conexión.";
+export const QUEUED_MISSED = "Anotado en este teléfono: hoy no salió.";
+export const QUEUED_MISSED_YESTERDAY = "Anotado en este teléfono: ayer no salió.";
+export const QUEUED_UNDONE =
+  "Registro deshecho en este teléfono. Se enviará al volver la conexión.";
+/** The line in a sheet while there is no connection: the save goes to the phone, not the server. */
+export const OFFLINE_SAVE_LINE = "Sin conexión: se guardará en este teléfono.";
+export const QUEUED_DELETED =
+  "Registro borrado en este teléfono. Se enviará al volver la conexión.";
+
 /** Placeholder Spanish copy (P8): the design has no wording for these failures yet. */
 export function entryFailure(error: unknown, verb: "guardar" | "borrar" = "guardar"): EntryFailure {
   const { kind, code, retryable } = toUiError(error);

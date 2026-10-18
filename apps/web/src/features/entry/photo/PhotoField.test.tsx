@@ -135,7 +135,7 @@ describe("PhotoField", () => {
     field({ online: false });
 
     expect(screen.getByRole("button", { name: "Añadir foto" })).toBeDisabled();
-    expect(screen.getByText("Sin conexión: las fotos no están disponibles")).toBeTruthy();
+    expect(screen.getByText("La foto necesita conexión.")).toBeTruthy();
   });
 
   it("a missed entry disables the control and says why (SC-W3)", () => {
