@@ -64,3 +64,4 @@ status to `Superseded by ADR-XXXX`, linking to the new one. Small fixes
 | [0017](0017-scheduled-jobs-and-web-push.md)                   | Scheduled jobs and Web Push: transactional outbox, job routes, hand-rolled Web Push | Accepted | 2026-10-17 |
 | [0018](0018-social-layer.md)                                   | Social layer: derived activity feed, reactions and encouragement nudges | Accepted | 2026-10-17 |
 | [0019](0019-account-deletion.md)                            | Account deletion with tombstoned shared history               | Accepted | 2026-10-18 |
+| [0020](0020-join-rate-limiting.md)                          | Rate limiting of the join routes per user and per client network | Proposed | 2026-10-18 |
