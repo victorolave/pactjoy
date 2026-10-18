@@ -21,7 +21,7 @@ export interface RateLimitCounter {
 export interface RateLimitRepository {
   /**
    * Adds one hit to each counter (creating it at 1) and returns each count after the hit, in the
-   * order given.
+   * order given. The counters must be distinct (the database writes them in one statement).
    */
   hit(counters: readonly RateLimitCounter[]): Promise<readonly number[]>;
   /** Deletes every counter whose window ended at or before `now`. */

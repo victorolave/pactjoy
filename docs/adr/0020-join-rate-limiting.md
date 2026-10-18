@@ -26,7 +26,7 @@ Both routes share one budget of **join attempts**, counted in **fixed windows** 
   - The use case commits its counts in their own transaction before the join or preview runs, so a failed join never rolls its attempt back.
 - **Storage.**
   - `pactjoy.rate_limit_counters (action, subject, window_start, window_seconds, expires_at, hits)` has its primary key on `(action, subject, window_seconds, window_start)`. RLS is on with no policies, the client roles are revoked, and there is no foreign key.
-  - A hit is one atomic `insert ... on conflict ... do update set hits = hits + 1 returning hits`, so concurrent attempts never lose a count and never conflict.
+  - All of an attempt's counters are hit by ONE multi-row `insert ... select from unnest(...) on conflict ... do update set hits = hits + 1 returning ...`, with the rows in primary-key order. Concurrent attempts never lose a count and never conflict, and they lock shared counters in the same order, so they cannot deadlock.
   - Ended windows are deleted lazily by the next attempt (one indexed delete on `expires_at`). There is no job, no trigger and no SQL function.
 - **The client network.**
   - It is the **first** entry of `X-Forwarded-For`. IPv4 is used as it is; IPv6 is reduced to its /64, because one host or home usually holds a whole /64; an IPv4-mapped IPv6 address is read as IPv4.
@@ -82,7 +82,7 @@ Both routes share one budget of **join attempts**, counted in **fixed windows** 
 
 ### Negative
 
-- Two extra round trips per join attempt (a sweep and up to four upserts in one transaction).
+- Two extra statements per join attempt, a sweep and one upsert, in their own transaction.
 - People behind one NAT share the network budget: 30 attempts a minute is generous for a join, but a large event on one Wi-Fi could hit it.
 - The network limit is only as good as the gateway's `X-Forwarded-For` (see the owner check).
 - Refused attempts count in every window, the hour included. Someone who keeps trying through a refused minute can therefore be locked out for up to an hour, not a minute. `Retry-After` says so, but the web copy ("Espera unos minutos") does not read it. This is accepted: a person rarely retries 20 times in a minute, and counting only admitted attempts in the long window would need a second write per attempt. The owner may want the copy to say "un rato" instead.
