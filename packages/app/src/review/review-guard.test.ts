@@ -65,7 +65,7 @@ describe("reviews are read inside the review module only", () => {
   it("the port exposes no season-wide read (a peer read cannot be expressed)", () => {
     const port = String(SOURCES["./review.repository.ts"]);
     const methods = [...port.matchAll(/^\s{2}(\w+)\(/gm)].map((match) => match[1]);
-    expect(methods).toEqual(["listMine", "save"]);
+    expect(methods).toEqual(["listMine", "save", "deleteByMembers", "deleteBySeasons"]);
   });
 
   it.each([

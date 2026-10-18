@@ -22,4 +22,11 @@ export interface ReviewRepository {
    * for an insert, the id or the `(seasonId, memberId, periodIndex)` key already exists.
    */
   save(record: ReviewRecord, expectedVersion: number | null): Promise<void>;
+  /**
+   * Account erasure: deletes every review of `memberIds`; the automaticity answers go with them.
+   * `[]` and a member with no review are no-ops. The caller holds the circle and season guards.
+   */
+  deleteByMembers(memberIds: readonly MemberId[]): Promise<void>;
+  /** Full-circle erasure: deletes every review of `seasonIds`, answers included. `[]` is a no-op. */
+  deleteBySeasons(seasonIds: readonly SeasonId[]): Promise<void>;
 }

@@ -9,7 +9,8 @@ function keyOf(record: ReviewRecord): string {
 }
 
 interface StagedWrite {
-  readonly record: ReviewRecord;
+  /** `null` stages a deletion. */
+  readonly record: ReviewRecord | null;
   readonly expectedVersion: number | null;
 }
 
@@ -67,13 +68,39 @@ export function createInMemoryReviewRepository(): InMemoryReviewRepository {
       store.set(record.id, record);
     },
 
+    async deleteByMembers(memberIds) {
+      for (const [id, record] of store) {
+        if (memberIds.includes(record.memberId)) store.delete(id);
+      }
+    },
+
+    async deleteBySeasons(seasonIds) {
+      for (const [id, record] of store) {
+        if (seasonIds.includes(record.seasonId)) store.delete(id);
+      }
+    },
+
     beginTransaction(): ReviewTransactionScope {
       const staged = new Map<ReviewId, StagedWrite>();
 
       function view(): Map<ReviewId, ReviewRecord> {
         const merged = new Map(store);
-        for (const [id, { record }] of staged) merged.set(id, record);
+        for (const [id, { record }] of staged) {
+          if (record) merged.set(id, record);
+          else merged.delete(id);
+        }
         return merged;
+      }
+
+      function removeWhere(matches: (record: ReviewRecord) => boolean): void {
+        for (const [id, record] of view()) {
+          if (!matches(record)) continue;
+          const earlier = staged.get(id);
+          staged.set(id, {
+            record: null,
+            expectedVersion: earlier ? earlier.expectedVersion : record.version,
+          });
+        }
       }
 
       const repository: ReviewRepository = {
@@ -81,16 +108,22 @@ export function createInMemoryReviewRepository(): InMemoryReviewRepository {
           return listMine(view(), seasonId, memberId);
         },
         async save(record, expectedVersion) {
-          const current = staged.get(record.id)?.record ?? store.get(record.id);
+          const earlier = staged.get(record.id);
+          const current = earlier ? earlier.record : store.get(record.id);
           if ((current ? current.version : null) !== expectedVersion) {
             throw new ConcurrencyConflict();
           }
           if (keyTaken(view(), record)) throw new ConcurrencyConflict();
-          const earlier = staged.get(record.id);
           staged.set(record.id, {
             record,
             expectedVersion: earlier ? earlier.expectedVersion : expectedVersion,
           });
+        },
+        async deleteByMembers(memberIds) {
+          removeWhere((record) => memberIds.includes(record.memberId));
+        },
+        async deleteBySeasons(seasonIds) {
+          removeWhere((record) => seasonIds.includes(record.seasonId));
         },
       };
 
@@ -102,11 +135,14 @@ export function createInMemoryReviewRepository(): InMemoryReviewRepository {
             if ((existing ? existing.version : null) !== expectedVersion) {
               throw new ConcurrencyConflict();
             }
-            if (keyTaken(store, record)) throw new ConcurrencyConflict();
+            if (record && keyTaken(store, record)) throw new ConcurrencyConflict();
           }
         },
         apply(): void {
-          for (const [id, { record }] of staged) store.set(id, record);
+          for (const [id, { record }] of staged) {
+            if (record) store.set(id, record);
+            else store.delete(id);
+          }
         },
       };
     },

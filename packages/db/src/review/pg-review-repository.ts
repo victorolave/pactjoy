@@ -60,6 +60,21 @@ const maybeScore = (value: number | null): SrbaiScore | null =>
  */
 export function createPgReviewRepository(exec: SqlExecutor): ReviewRepository {
   return {
+    // The automaticity answers cascade from the review (reviews foreign key).
+    async deleteByMembers(memberIds) {
+      if (memberIds.length === 0) return;
+      await exec.query("delete from pactjoy.reviews where member_id = any($1::uuid[])", [
+        memberIds,
+      ]);
+    },
+
+    async deleteBySeasons(seasonIds) {
+      if (seasonIds.length === 0) return;
+      await exec.query("delete from pactjoy.reviews where season_id = any($1::uuid[])", [
+        seasonIds,
+      ]);
+    },
+
     async listMine(season, member) {
       const { rows } = await exec.query<ReviewRow>(
         `select ${COLUMNS} from pactjoy.reviews where season_id = $1 and member_id = $2 order by period_index`,

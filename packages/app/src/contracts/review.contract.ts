@@ -149,5 +149,43 @@ export function describeReviewRepositoryContract(
       );
       expect(await repository.listMine(SEASON.id, OWNER)).toEqual([first]);
     });
+
+    it("deleteByMembers deletes reviews and their automaticity answers of those members only, with safe repeats", async () => {
+      const repository = await setup();
+      const peer = record(1, { id: reviewId(uuid(0xf93)), memberId: OTHER });
+      await repository.save(record(1), null);
+      await repository.save(record(2, { srbai: "full" }), null);
+      await repository.save(peer, null);
+      await repository.deleteByMembers([]);
+      expect(await repository.listMine(SEASON.id, OWNER)).toHaveLength(2);
+      await repository.deleteByMembers([OWNER]);
+      await repository.deleteByMembers([OWNER]);
+      expect(await repository.listMine(SEASON.id, OWNER)).toEqual([]);
+      expect(await repository.listMine(SEASON.id, OTHER)).toEqual([peer]);
+    });
+
+    it("deleteBySeasons deletes every member's reviews of those seasons only", async () => {
+      const repository = await setup();
+      const peer = record(1, { id: reviewId(uuid(0xf94)), memberId: OTHER });
+      const mine = record(1);
+      await repository.save(mine, null);
+      await repository.save(peer, null);
+      await repository.deleteBySeasons([]);
+      await repository.deleteBySeasons([seasonId(uuid(0xe99))]);
+      expect(await repository.listMine(SEASON.id, OWNER)).toEqual([mine]);
+      await repository.deleteBySeasons([SEASON.id]);
+      await repository.deleteBySeasons([SEASON.id]);
+      expect(await repository.listMine(SEASON.id, OWNER)).toEqual([]);
+      expect(await repository.listMine(SEASON.id, OTHER)).toEqual([]);
+    });
+
+    it("a deleted review's key is free again for a new review", async () => {
+      const repository = await setup();
+      await repository.save(record(1), null);
+      await repository.deleteByMembers([OWNER]);
+      const again = record(1, { id: reviewId(uuid(0xf95)) });
+      await repository.save(again, null);
+      expect(await repository.listMine(SEASON.id, OWNER)).toEqual([again]);
+    });
   });
 }
