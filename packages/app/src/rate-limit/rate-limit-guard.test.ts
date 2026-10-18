@@ -70,7 +70,7 @@ describe("rate-limit counters are touched inside the rate-limit module only", ()
     for (const source of [
       "const admitted = await admitJoinAttempt(deps, actor, input);",
       "await eraseUserRateLimits(repos, userId);",
-      "await repos.reminders.get(a, b);",
+      "await repos.habits.get(id);",
     ]) {
       expect(FORBIDDEN.some(({ pattern }) => pattern.test(source))).toBe(false);
     }
