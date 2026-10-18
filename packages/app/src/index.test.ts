@@ -34,6 +34,14 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "generateInvite",
   "habitId",
   "pauseRequestId",
+  "pushSubscriptionId",
+  "KIND_POLICY",
+  "NOTIFICATION_KINDS",
+  "dispatchNotifications",
+  "planNotifications",
+  "pushConfig",
+  "removePushSubscription",
+  "savePushSubscription",
   "requestEntryPhotoUpload",
   "requestPause",
   "respondToPause",
@@ -96,7 +104,8 @@ const EXPECTED_RUNTIME_EXPORTS = [
 ].sort();
 
 describe("@pactjoy/app public API", () => {
-  it("exposes exactly the expected runtime exports", async () => {
+  // A cold import of the whole package: under a full `turbo run test` it can exceed the 5 s default.
+  it("exposes exactly the expected runtime exports", { timeout: 30_000 }, async () => {
     const app = await import("./index.ts");
     expect(Object.keys(app).sort()).toEqual(EXPECTED_RUNTIME_EXPORTS);
   });

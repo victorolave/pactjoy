@@ -1,5 +1,7 @@
 import type { Repositories } from "../ports/repositories.ts";
 import { loadEffectiveRequests, type PauseContext } from "./effective-pauses.ts";
+import { enqueuePauseDecided } from "./pause-notices.ts";
+import type { PauseRequestRecord } from "./pause-request.ts";
 
 /**
  * Persists every request of the season whose effective decision is no longer
@@ -12,22 +14,22 @@ import { loadEffectiveRequests, type PauseContext } from "./effective-pauses.ts"
  * @returns how many requests were settled.
  */
 export async function settleSeasonPauses(
-  repos: Pick<Repositories, "pauses">,
+  repos: Pick<Repositories, "pauses" | "notifications">,
   context: PauseContext,
 ): Promise<number> {
   let settled = 0;
   for (const { record, decision } of await loadEffectiveRequests(repos, context)) {
     if (record.status !== "pending" || decision.status === "pending") continue;
-    await repos.pauses.save(
-      {
-        ...record,
-        status: decision.status,
-        decidedAt: decision.decidedAt,
-        decidedOn: decision.decidedOn,
-        version: record.version + 1,
-      },
-      record.version,
-    );
+    const next: PauseRequestRecord = {
+      ...record,
+      status: decision.status,
+      decidedAt: decision.decidedAt,
+      decidedOn: decision.decidedOn,
+      version: record.version + 1,
+    };
+    await repos.pauses.save(next, record.version);
+    // The persisted transition is what the requester hears about (ADR-0017), at this write's clock.
+    await enqueuePauseDecided(repos, context.season, context.circle, record, next, context.now);
     settled += 1;
   }
   return settled;

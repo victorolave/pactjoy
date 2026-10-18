@@ -4,6 +4,8 @@ import type { BindMode, SqlExecutor } from "./client.ts";
 import { createPgEntryRepository } from "./entry/pg-entry-repository.ts";
 import { createPgEntryPhotoRepository } from "./entry-photo/pg-entry-photo-repository.ts";
 import { createPgHabitRepository } from "./habit/pg-habit-repository.ts";
+import { createPgNotificationOutboxRepository } from "./notifications/pg-notification-outbox-repository.ts";
+import { createPgPushSubscriptionRepository } from "./notifications/pg-push-subscription-repository.ts";
 import { createPgPauseRequestRepository } from "./pause/pg-pause-request-repository.ts";
 import { createPgReviewRepository } from "./review/pg-review-repository.ts";
 import { createPgSeasonClosureRepository } from "./season/pg-season-closure-repository.ts";
@@ -23,7 +25,9 @@ export function bindRepositories(exec: SqlExecutor, mode: BindMode): PgRepositor
     seasons: createPgSeasonRepository(exec, mode),
     entries: createPgEntryRepository(exec),
     entryPhotos: createPgEntryPhotoRepository(exec),
+    notifications: createPgNotificationOutboxRepository(exec),
     pauses: createPgPauseRequestRepository(exec),
+    pushSubscriptions: createPgPushSubscriptionRepository(exec),
     reviews: createPgReviewRepository(exec),
     seasonClosures: createPgSeasonClosureRepository(exec),
   };

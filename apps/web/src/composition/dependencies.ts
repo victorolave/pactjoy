@@ -12,6 +12,7 @@ import type { ImageProcessor } from "../ports/image-processor.ts";
 import type { NotificationPermissionPort } from "../ports/notification-permission.ts";
 import type { PactJoyApi } from "../ports/pactjoy-api.ts";
 import type { PhotoUploader } from "../ports/photo-uploader.ts";
+import type { PushSubscriptionPort } from "../ports/push-subscription.ts";
 import type { Sharing } from "../ports/sharing.ts";
 import type { TokenStore } from "../ports/token-store.ts";
 
@@ -34,8 +35,10 @@ export interface AppDependencies {
   readonly sharing: Sharing;
   /** Whether the app runs from the home screen; the welcome gate skips the carousel there. */
   readonly appInstall: AppInstall;
-  /** The notification permission; the permission step asks it from a tap (nothing is sent yet). */
+  /** The notification permission; the permission step and Ajustes ask it from a tap. */
   readonly notifications: NotificationPermissionPort;
+  /** This device's Web Push subscription (ADR-0017); subscribed only after a granted permission. */
+  readonly push: PushSubscriptionPort;
   readonly sessions: SessionManager;
   /** The API adapter's `onUnauthorized` calls `sessionEvents.expire`. */
   readonly sessionEvents: SessionEvents;

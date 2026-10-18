@@ -13,7 +13,8 @@
     "test:watch": "turbo run test:watch",
     "format": "biome format --write .",
     "format:check": "biome format .",
-    "seed:season": "pnpm --filter @pactjoy/db seed:season"
+    "seed:season": "pnpm --filter @pactjoy/db seed:season",
+    "jobs:tick": "pnpm --filter @pactjoy/api jobs:tick"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.14",

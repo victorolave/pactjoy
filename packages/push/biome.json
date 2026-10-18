@@ -1,0 +1,59 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.14/schema.json",
+  "extends": "//",
+  "linter": {
+    "rules": {
+      "correctness": {
+        "noNodejsModules": "error",
+        "useImportExtensions": {
+          "level": "error",
+          "options": {
+            "forceJsExtensions": false
+          }
+        }
+      },
+      "style": {
+        "noRestrictedGlobals": {
+          "level": "error",
+          "options": {
+            "deniedGlobals": {
+              "Buffer": "packages/push is standard TS/ESM that also runs on Deno (ADR-0017): use Uint8Array and TextEncoder.",
+              "process": "packages/push is standard TS/ESM that also runs on Deno (ADR-0017): take configuration as arguments.",
+              "Deno": "packages/push is runtime-neutral (ADR-0017): the Deno shell passes values in."
+            }
+          }
+        },
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "patterns": [
+              {
+                "group": ["@pactjoy/*/**"],
+                "message": "Import only package roots (their public index.ts) or the documented subpaths (CLAUDE.md, ADR-0008)."
+              },
+              {
+                "group": ["npm:*", "jsr:*"],
+                "message": "packages/push is standard TypeScript/ESM: Deno-specific specifiers are not portable (ADR-0007, ADR-0017)."
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["test/**", "scripts/**", "src/**/*.test.ts"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noNodejsModules": "off"
+          },
+          "style": {
+            "noRestrictedGlobals": "off"
+          }
+        }
+      }
+    }
+  ]
+}

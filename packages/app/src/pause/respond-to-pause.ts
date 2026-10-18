@@ -7,6 +7,7 @@ import type { Clock } from "../time/clock.port.ts";
 import type { TimeZone } from "../time/time-zone.port.ts";
 import { effectiveDecision } from "./effective-decision.ts";
 import { approversOf, seasonDayAt } from "./effective-pauses.ts";
+import { enqueuePauseDecided } from "./pause-notices.ts";
 import type { PauseRequestRecord, PauseResponseChoice } from "./pause-request.ts";
 import { loadPauseRequestForWrite, withDecision } from "./pause-write.ts";
 
@@ -49,7 +50,7 @@ export async function respondToPause(
     async (repos): Promise<Result<PauseRequestRecord, RespondToPauseError>> => {
       const loaded = await loadPauseRequestForWrite(deps, repos, actor, input.pauseRequestId);
       if (!loaded.ok) return loaded;
-      const { record, circle, member, context } = loaded.value;
+      const { record, season, circle, member, context } = loaded.value;
 
       if (record.memberId === member.id) return err({ kind: "CannotRespondToOwnPause" });
       if (record.status !== "pending") return err({ kind: "PauseAlreadyDecided" });
@@ -74,6 +75,7 @@ export async function respondToPause(
         }),
       );
       await repos.pauses.save(decided, record.version);
+      await enqueuePauseDecided(repos, season, circle, record, decided, context.now);
       return ok(decided);
     },
   );

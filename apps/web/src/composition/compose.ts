@@ -2,6 +2,7 @@ import { BrowserAppInstall } from "../adapters/browser-app-install.ts";
 import { BrowserConnectivity } from "../adapters/browser-connectivity.ts";
 import { BrowserHaptics } from "../adapters/browser-haptics.ts";
 import { BrowserNotificationPermission } from "../adapters/browser-notification-permission.ts";
+import { BrowserPushSubscription } from "../adapters/browser-push-subscription.ts";
 import { BrowserSharing } from "../adapters/browser-sharing.ts";
 import { CanvasImageProcessor } from "../adapters/canvas-image-processor.ts";
 import { CryptoIds } from "../adapters/crypto-ids.ts";
@@ -57,6 +58,7 @@ export function createDependencies(config: AppConfig, env: ComposeEnvironment): 
     sharing: new BrowserSharing(),
     appInstall: new BrowserAppInstall(),
     notifications: new BrowserNotificationPermission(),
+    push: new BrowserPushSubscription(),
     sessions,
     sessionEvents,
     queryClient: createQueryClient(),

@@ -11,9 +11,11 @@ import { HapticsProvider } from "../context/haptics-context.tsx";
 import { IdsProvider } from "../context/ids-context.tsx";
 import { NotificationPermissionProvider } from "../context/notification-permission-context.tsx";
 import { PhotoProvider } from "../context/photo-context.tsx";
+import { PushSubscriptionProvider } from "../context/push-subscription-context.tsx";
 import { SharingProvider } from "../context/sharing-context.tsx";
 import { ToastProvider } from "../context/toast-context.tsx";
 import { SessionProvider, useSession } from "../features/auth/index.ts";
+import { PushSync, removeThisDevice } from "../features/notifications/index.ts";
 import type { AppDependencies } from "./dependencies.ts";
 
 export function AppProviders({
@@ -32,6 +34,12 @@ export function AppProviders({
     void persister.removeClient();
     device.clearSession();
   }, [queryClient, persister, device]);
+  // The device's push registration belongs to the person: removed before the session ends.
+  const { notifications, push, api } = deps;
+  const beforeSignOut = useCallback(
+    () => removeThisDevice({ permission: notifications, push, api }),
+    [notifications, push, api],
+  );
   return (
     <SessionProvider
       auth={deps.auth}
@@ -39,6 +47,7 @@ export function AppProviders({
       manager={deps.sessions}
       expired={deps.sessionEvents}
       onSessionEnd={onSessionEnd}
+      beforeSignOut={beforeSignOut}
     >
       <PersistedQueries client={queryClient} persister={persister}>
         <ApiProvider api={deps.api}>
@@ -52,9 +61,12 @@ export function AppProviders({
                     <SharingProvider sharing={deps.sharing}>
                       <AppInstallProvider appInstall={deps.appInstall}>
                         <NotificationPermissionProvider notifications={deps.notifications}>
-                          <ClockProvider clock={deps.clock}>
-                            <ToastProvider>{children}</ToastProvider>
-                          </ClockProvider>
+                          <PushSubscriptionProvider push={deps.push}>
+                            <ClockProvider clock={deps.clock}>
+                              <SessionPushSync />
+                              <ToastProvider>{children}</ToastProvider>
+                            </ClockProvider>
+                          </PushSubscriptionProvider>
                         </NotificationPermissionProvider>
                       </AppInstallProvider>
                     </SharingProvider>
@@ -67,6 +79,11 @@ export function AppProviders({
       </PersistedQueries>
     </SessionProvider>
   );
+}
+
+/** Re-syncs this device's push registration for the signed-in user (ADR-0017). */
+function SessionPushSync() {
+  return <PushSync userId={useSession().session?.userId ?? null} />;
 }
 
 /** The saved Today is scoped to the signed-in user: another user's copy is never restored. */

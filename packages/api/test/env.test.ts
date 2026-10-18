@@ -38,7 +38,56 @@ describe("loadApiEnv", () => {
           secretAccessKey: S3_SECRET,
           bucket: "entry-photos",
         },
+        jobsSecret: null,
+        push: null,
       },
+    });
+  });
+
+  describe("scheduled jobs and Web Push (ADR-0017): optional, validated, never echoed", () => {
+    const JOBS_SECRET = `${"j".repeat(31)}!`;
+    const PUSH = {
+      API_PUSH_VAPID_PUBLIC_KEY: `B${"A".repeat(86)}`,
+      API_PUSH_VAPID_PRIVATE_KEY: "k".repeat(43),
+      API_PUSH_VAPID_SUBJECT: "mailto:ops@example.com",
+    };
+
+    it("reads the jobs secret and the VAPID group when set", () => {
+      const result = load({ ...BASE, API_JOBS_SECRET: JOBS_SECRET, ...PUSH });
+      expect(result.ok && result.value.jobsSecret).toBe(JOBS_SECRET);
+      expect(result.ok && result.value.push).toEqual({
+        publicKey: PUSH.API_PUSH_VAPID_PUBLIC_KEY,
+        privateKey: PUSH.API_PUSH_VAPID_PRIVATE_KEY,
+        subject: PUSH.API_PUSH_VAPID_SUBJECT,
+      });
+    });
+
+    it("accepts an https subject", () => {
+      const result = load({ ...BASE, ...PUSH, API_PUSH_VAPID_SUBJECT: "https://pactjoy.example" });
+      expect(result.ok).toBe(true);
+    });
+
+    it("a jobs secret shorter than 32 characters is invalid, and its value is never in the error", () => {
+      const error = failure({ ...BASE, API_JOBS_SECRET: "short-secret-hunter2" });
+      expect(error).toEqual({ missing: [], invalid: ["API_JOBS_SECRET"] });
+      expect(describeEnvError(error)).not.toContain("hunter2");
+    });
+
+    it("the VAPID variables come all together or not at all", () => {
+      expect(
+        failure({ ...BASE, API_PUSH_VAPID_PUBLIC_KEY: PUSH.API_PUSH_VAPID_PUBLIC_KEY }),
+      ).toEqual({ missing: ["API_PUSH_VAPID_PRIVATE_KEY", "API_PUSH_VAPID_SUBJECT"], invalid: [] });
+    });
+
+    it.each([
+      ["API_PUSH_VAPID_PUBLIC_KEY", "not-a-point"],
+      ["API_PUSH_VAPID_PRIVATE_KEY", "has+slash/="],
+      ["API_PUSH_VAPID_SUBJECT", "ops@example.com"],
+    ])("%s of the wrong shape is invalid", (name, value) => {
+      expect(failure({ ...BASE, ...PUSH, [name]: value })).toEqual({
+        missing: [],
+        invalid: [name],
+      });
     });
   });
 
@@ -183,7 +232,11 @@ describe("loadApiEnv", () => {
     expect(asked.sort()).toEqual([
       "ALLOWED_ORIGINS",
       "API_DATABASE_URL",
+      "API_JOBS_SECRET",
       "API_JWT_ISSUER",
+      "API_PUSH_VAPID_PRIVATE_KEY",
+      "API_PUSH_VAPID_PUBLIC_KEY",
+      "API_PUSH_VAPID_SUBJECT",
       "API_STORAGE_BUCKET",
       "API_STORAGE_S3_ACCESS_KEY_ID",
       "API_STORAGE_S3_ENDPOINT",

@@ -10,6 +10,7 @@ export {
   type ApiEnvError,
   describeEnvError,
   loadApiEnv,
+  type PushEnv,
   type StorageEnv,
 } from "./composition/config.ts";
 export { createLazyHandler } from "./composition/lazy-handler.ts";
