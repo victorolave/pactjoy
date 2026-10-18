@@ -17,10 +17,8 @@ export function createGoTrueIdentityAdmin(options: GoTrueIdentityAdminOptions): 
     apikey: options.adminKey,
     "content-type": "application/json",
   };
-  // Opaque gateway keys are not JWTs. Only JWT-shaped credentials can be bearer tokens.
-  if (/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(options.adminKey)) {
-    headers.Authorization = `Bearer ${options.adminKey}`;
-  }
+  // The opaque secret key travels in `apikey` only; there is no bearer form of it (config rejects
+  // a JWT-shaped key, so a legacy JWT credential can never reach this point).
 
   return {
     async deleteUser(userId) {
@@ -37,12 +35,51 @@ export function createGoTrueIdentityAdmin(options: GoTrueIdentityAdminOptions): 
       } catch {
         throw new IdentityAdminError("unavailable");
       }
-      // Never parse/log the upstream body; release it without allowing cleanup to change the result.
+      // Only a 404 body is ever inspected, and only to learn the user was already absent; it is
+      // never propagated or logged. Every other body is released unread.
+      const alreadyAbsent = response.status === 404 && (await isUserNotFound(response));
       await response.body?.cancel().catch(() => {});
-      if (response.status === 200 || response.status === 204 || response.status === 404) return;
+      if (response.status === 200 || response.status === 204 || alreadyAbsent) return;
       throw new IdentityAdminError(
         response.status === 401 || response.status === 403 ? "rejected" : "unavailable",
       );
     },
   };
+}
+
+/** A GoTrue error body is tiny; anything past this is not one. */
+const MAX_NOT_FOUND_BODY_BYTES = 4_096;
+
+/**
+ * A 404 means "already deleted" only when GoTrue says so: `error_code: "user_not_found"` or, on
+ * older versions, a `msg` of "User not found". A wrong URL or a gateway route miss also answers 404
+ * and must stay an error, or the auth user would silently survive.
+ */
+async function isUserNotFound(response: Response): Promise<boolean> {
+  try {
+    const reader = response.body?.getReader();
+    if (!reader) return false;
+    const chunks: Uint8Array[] = [];
+    let size = 0;
+    while (size < MAX_NOT_FOUND_BODY_BYTES) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      size += value.byteLength;
+    }
+    const bytes = new Uint8Array(size);
+    let offset = 0;
+    for (const chunk of chunks) {
+      bytes.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    const body: unknown = JSON.parse(
+      new TextDecoder().decode(bytes.subarray(0, MAX_NOT_FOUND_BODY_BYTES)),
+    );
+    if (typeof body !== "object" || body === null) return false;
+    const { error_code: code, msg } = body as { error_code?: unknown; msg?: unknown };
+    return code === "user_not_found" || (typeof msg === "string" && /user not found/i.test(msg));
+  } catch {
+    return false;
+  }
 }

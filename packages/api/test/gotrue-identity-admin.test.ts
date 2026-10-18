@@ -73,7 +73,7 @@ describe("GoTrue identity deletion contract (local HTTP only)", () => {
     });
   });
 
-  it("builds both headers for a synthetic JWT-shaped admin credential", async () => {
+  it("never builds a Bearer header, whatever shape the credential has", async () => {
     const syntheticJwt = ["synthetic", "header", "signature"].join(".");
     const received: object[] = [];
     const authUrl = await stub((req, res) => {
@@ -81,10 +81,10 @@ describe("GoTrue identity deletion contract (local HTTP only)", () => {
       res.writeHead(204).end();
     });
     await createGoTrueIdentityAdmin({ authUrl, adminKey: syntheticJwt, fetch }).deleteUser(ID);
-    expect(received).toEqual([{ key: syntheticJwt, authorization: `Bearer ${syntheticJwt}` }]);
+    expect(received).toEqual([{ key: syntheticJwt, authorization: undefined }]);
   });
 
-  it.each([200, 204, 404])("treats %i as success, including idempotent repeats", async (status) => {
+  it.each([200, 204])("treats %i as success, including idempotent repeats", async (status) => {
     let calls = 0;
     const authUrl = await stub((_req, res) => {
       calls++;
@@ -94,6 +94,49 @@ describe("GoTrue identity deletion contract (local HTTP only)", () => {
     await admin.deleteUser(ID);
     await admin.deleteUser(ID);
     expect(calls).toBe(2);
+  });
+
+  it.each([
+    ["error_code", { error_code: "user_not_found", msg: "User not found" }],
+    ["older msg only", { code: 404, msg: "User not found" }],
+  ])(
+    "treats a GoTrue user-not-found 404 (%s) as success, including repeats",
+    async (_name, body) => {
+      let calls = 0;
+      const authUrl = await stub((_req, res) => {
+        calls++;
+        res.writeHead(404, { "content-type": "application/json" }).end(JSON.stringify(body));
+      });
+      const admin = createGoTrueIdentityAdmin({ authUrl, adminKey: KEY, fetch });
+      await admin.deleteUser(ID);
+      await admin.deleteUser(ID);
+      expect(calls).toBe(2);
+    },
+  );
+
+  it.each([
+    ["an empty body", ""],
+    ["an HTML page", "<html><body>404 Not Found</body></html>"],
+    ["another error code", JSON.stringify({ error_code: "no_authorization", msg: "nope" })],
+    ["a gateway route miss", JSON.stringify({ message: "no Route matched with those values" })],
+    ["a truncated JSON", '{"error_code":"user_not_fo'],
+  ])("rejects a 404 with %s as unavailable", async (_name, body) => {
+    const authUrl = await stub((_req, res) => {
+      res.writeHead(404).end(body);
+    });
+    const admin = createGoTrueIdentityAdmin({ authUrl, adminKey: KEY, fetch });
+    const failure = await admin.deleteUser(ID).catch((error: unknown) => error);
+    expect(failure).toMatchObject({ name: "IdentityAdminError", code: "unavailable" });
+    expect(failure).not.toHaveProperty("cause");
+  });
+
+  it("does not read an unbounded 404 body to decide", async () => {
+    const authUrl = await stub((_req, res) => {
+      // user_not_found sits beyond any sane bound: the decision must not wait for it.
+      res.writeHead(404).end(`${" ".repeat(100_000)}{"error_code":"user_not_found"}`);
+    });
+    const admin = createGoTrueIdentityAdmin({ authUrl, adminKey: KEY, fetch });
+    await expect(admin.deleteUser(ID)).rejects.toMatchObject({ code: "unavailable" });
   });
 
   it.each([401, 403, 400, 429, 500, 503])(
