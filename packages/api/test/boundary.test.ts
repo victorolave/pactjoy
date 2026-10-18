@@ -43,6 +43,7 @@ describe("package boundary", () => {
     expect(Object.keys(index).sort()).toEqual([
       "createApi",
       "createConsoleLogger",
+      "createGoTrueIdentityAdmin",
       "createJwksTokenVerifier",
       "createLazyHandler",
       "describeEnvError",

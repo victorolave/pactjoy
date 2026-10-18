@@ -1,4 +1,5 @@
 // Public surface of @pactjoy/api (ADR-0011). The router, schemas and presenters stay internal.
+export { createGoTrueIdentityAdmin } from "./adapters/gotrue-identity-admin.ts";
 export { createJwksTokenVerifier } from "./adapters/jose-token-verifier.ts";
 export type {
   TokenRejection,
