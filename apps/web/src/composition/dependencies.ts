@@ -17,6 +17,7 @@ import type { PushSubscriptionPort } from "../ports/push-subscription.ts";
 import type { ReminderNamesPort } from "../ports/reminder-names.ts";
 import type { Sharing } from "../ports/sharing.ts";
 import type { TokenStore } from "../ports/token-store.ts";
+import type { Visibility } from "../ports/visibility.ts";
 
 /** Everything the composition root wires: ports implemented by adapters (or by fakes in tests). */
 export interface AppDependencies {
@@ -45,6 +46,8 @@ export interface AppDependencies {
   readonly reminderNames: ReminderNamesPort;
   /** Entry writes made without a connection, per user; erased when the session ends (OE-R6). */
   readonly outboxStore: OutboxStore;
+  /** Whether the app is on screen; coming back to it retries what the outbox could not send. */
+  readonly visibility: Visibility;
   readonly sessions: SessionManager;
   /** The API adapter's `onUnauthorized` calls `sessionEvents.expire`. */
   readonly sessionEvents: SessionEvents;

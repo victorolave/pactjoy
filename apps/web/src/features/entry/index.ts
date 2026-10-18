@@ -5,6 +5,8 @@
 export { useUndoEntry } from "./feedback/use-undo-entry.ts";
 export { CheckCircle } from "./one-tap/CheckCircle.tsx";
 export { useOneTap } from "./one-tap/use-one-tap.ts";
+export type { Outbox } from "./outbox/outbox.ts";
+export { OutboxProvider, useOutbox, useOutboxState } from "./outbox/use-outbox.tsx";
 export { EntrySheetHost } from "./sheet/EntrySheetHost.tsx";
 export { limitMeasureOf, quantityMeasureOf } from "./sheet/entry-form.ts";
 export { useEntrySheet } from "./sheet/use-entry-sheet.ts";

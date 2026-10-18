@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { EMPTY_OUTBOX, type OutboxState, type OutboxStore } from "../ports/outbox-store.ts";
 
 /** A small state with one of each kind of content, so a round trip proves nothing is dropped. */
@@ -70,10 +70,21 @@ export function describeOutboxStoreContract(name: string, make: () => OutboxStor
       expect(store.load("user-2")).toEqual(EMPTY_OUTBOX);
     });
 
+    it("clearAll tells subscribers, so an outbox in this tab forgets what it holds (OE-R6.S5)", () => {
+      const store = make();
+      const onChange = vi.fn();
+      store.subscribe(onChange);
+      store.clearAll();
+      expect(onChange).toHaveBeenCalledTimes(1);
+    });
+
     it("stops calling a listener once it unsubscribed", () => {
       const store = make();
-      const unsubscribe = store.subscribe(() => undefined);
-      expect(() => unsubscribe()).not.toThrow();
+      const onChange = vi.fn();
+      const unsubscribe = store.subscribe(onChange);
+      unsubscribe();
+      store.clearAll();
+      expect(onChange).not.toHaveBeenCalled();
     });
   });
 }

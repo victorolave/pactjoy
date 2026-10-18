@@ -20,6 +20,7 @@ import { FakePhotoUploader } from "../testing/fake-photo-uploader.ts";
 import { FakePushSubscription } from "../testing/fake-push-subscription.ts";
 import { FakeReminderNames } from "../testing/fake-reminder-names.ts";
 import { FakeSharing } from "../testing/fake-sharing.ts";
+import { FakeVisibility } from "../testing/fake-visibility.ts";
 import { FixedClock } from "../testing/fixed-clock.ts";
 import { MemoryOutboxStore } from "../testing/memory-outbox-store.ts";
 import { MemoryStorage } from "../testing/memory-storage.ts";
@@ -56,6 +57,7 @@ function dependenciesFor(scenario: Scenario): AppDependencies {
     push: new FakePushSubscription(),
     reminderNames: new FakeReminderNames(),
     outboxStore: new MemoryOutboxStore(),
+    visibility: new FakeVisibility(),
     clock: new FixedClock(0),
     sessions: new SessionManager(auth, store, new FixedClock(0)),
     sessionEvents: createSessionEvents(),

@@ -18,6 +18,7 @@ export class MemoryOutboxStore implements OutboxStore {
   clearAll(): void {
     this.clears += 1;
     this.#states.clear();
+    for (const listener of [...this.#listeners]) listener();
   }
 
   subscribe(onChange: () => void): () => void {

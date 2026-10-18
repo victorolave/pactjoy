@@ -24,6 +24,7 @@ import { FakePhotoUploader } from "./fake-photo-uploader.ts";
 import { FakePushSubscription } from "./fake-push-subscription.ts";
 import { FakeReminderNames } from "./fake-reminder-names.ts";
 import { FakeSharing } from "./fake-sharing.ts";
+import { FakeVisibility } from "./fake-visibility.ts";
 import { FixedClock } from "./fixed-clock.ts";
 import { soloCircleFixture } from "./fixtures/circle.ts";
 import { activeTodayFixture } from "./fixtures/today.ts";
@@ -122,6 +123,7 @@ export interface RenderedApp extends RenderResult {
     readonly push: FakePushSubscription;
     readonly reminderNames: FakeReminderNames;
     readonly outboxStore: MemoryOutboxStore;
+    readonly visibility: FakeVisibility;
     readonly clock: FixedClock;
   };
 }
@@ -190,6 +192,7 @@ function createFakeDeps({
     push,
     reminderNames: new FakeReminderNames(),
     outboxStore: new MemoryOutboxStore(),
+    visibility: new FakeVisibility(),
     clock,
     sessions: new SessionManager(auth, store, new FixedClock(0)),
     sessionEvents: createSessionEvents(),

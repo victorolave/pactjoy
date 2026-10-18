@@ -4,6 +4,7 @@ import { BrowserHaptics } from "../adapters/browser-haptics.ts";
 import { BrowserNotificationPermission } from "../adapters/browser-notification-permission.ts";
 import { BrowserPushSubscription } from "../adapters/browser-push-subscription.ts";
 import { BrowserSharing } from "../adapters/browser-sharing.ts";
+import { BrowserVisibility } from "../adapters/browser-visibility.ts";
 import { CacheReminderNames } from "../adapters/cache-reminder-names.ts";
 import { CanvasImageProcessor } from "../adapters/canvas-image-processor.ts";
 import { CryptoIds } from "../adapters/crypto-ids.ts";
@@ -63,6 +64,7 @@ export function createDependencies(config: AppConfig, env: ComposeEnvironment): 
     push: new BrowserPushSubscription(),
     reminderNames: new CacheReminderNames(),
     outboxStore: new LocalStorageOutboxStore(),
+    visibility: new BrowserVisibility(),
     sessions,
     sessionEvents,
     queryClient: createQueryClient(),

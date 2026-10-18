@@ -65,8 +65,11 @@ export interface OutboxStore {
   /** Empty when nothing is stored or the stored value is corrupt. */
   load(userId: string): OutboxState;
   save(userId: string, state: OutboxState): void;
-  /** Forgets every user's state, in storage and in memory (the session ended). */
+  /**
+   * Forgets every user's state, in storage and in memory (the session ended), and tells this tab's
+   * subscribers, so an outbox that is mid-replay stops and does not write its state back.
+   */
   clearAll(): void;
-  /** Called when another tab changes the stored state. Returns the unsubscribe. */
+  /** Called when another tab changes the stored state, and after `clearAll`. Returns the unsubscribe. */
   subscribe(onChange: () => void): () => void;
 }

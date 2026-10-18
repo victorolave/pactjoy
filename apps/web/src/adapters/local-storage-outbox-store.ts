@@ -35,6 +35,7 @@ export class LocalStorageOutboxStore implements OutboxStore {
   readonly #events: StorageEvents | null;
   /** Only holds a user's state while storage refused to take it. */
   readonly #memory = new Map<string, OutboxState>();
+  readonly #listeners = new Set<() => void>();
 
   constructor(
     storage: Storage | null = defaultStorage(),
@@ -77,27 +78,31 @@ export class LocalStorageOutboxStore implements OutboxStore {
     this.#memory.clear();
     try {
       const storage = this.#storage;
-      if (storage === null) return;
       const keys: string[] = [];
-      for (let index = 0; index < storage.length; index += 1) {
+      for (let index = 0; storage !== null && index < storage.length; index += 1) {
         const key = storage.key(index);
         if (key?.startsWith(PREFIX)) keys.push(key);
       }
-      for (const key of keys) storage.removeItem(key);
+      for (const key of keys) storage?.removeItem(key);
     } catch {
       // Nothing more to remove if storage is unavailable.
     }
+    // The browser only fires `storage` in OTHER tabs: tell this tab's outbox it holds nothing now.
+    for (const listener of [...this.#listeners]) listener();
   }
 
   subscribe(onChange: () => void): () => void {
+    this.#listeners.add(onChange);
     const events = this.#events;
-    if (events === null) return () => undefined;
     // `key` is null when another tab called `storage.clear()`.
     const listener = (event: Event) => {
       const { key } = event as StorageEvent;
       if (key === null || key.startsWith(PREFIX)) onChange();
     };
-    events.addEventListener("storage", listener);
-    return () => events.removeEventListener("storage", listener);
+    events?.addEventListener("storage", listener);
+    return () => {
+      this.#listeners.delete(onChange);
+      events?.removeEventListener("storage", listener);
+    };
   }
 }

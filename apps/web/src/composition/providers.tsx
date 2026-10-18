@@ -16,11 +16,13 @@ import { ReminderNamesProvider } from "../context/reminder-names-context.tsx";
 import { SharingProvider } from "../context/sharing-context.tsx";
 import { ToastProvider } from "../context/toast-context.tsx";
 import { SessionProvider, useSession } from "../features/auth/index.ts";
+import { OutboxProvider } from "../features/entry/index.ts";
 import {
   dropThisDeviceLocally,
   PushSync,
   removeThisDevice,
 } from "../features/notifications/index.ts";
+import { progressKey, socialKey, todayKey } from "../shared/query-keys.ts";
 import type { AppDependencies } from "./dependencies.ts";
 
 export function AppProviders({
@@ -60,37 +62,73 @@ export function AppProviders({
       beforeSignOut={beforeSignOut}
       onAccountDeleted={onAccountDeleted}
     >
-      <PersistedQueries client={queryClient} persister={persister}>
-        <ApiProvider api={deps.api}>
-          <IdsProvider ids={deps.ids}>
-            <PhotoProvider
-              tools={{ imageProcessor: deps.imageProcessor, photoUploader: deps.photoUploader }}
-            >
-              <HapticsProvider haptics={deps.haptics}>
-                <ConnectivityProvider connectivity={deps.connectivity}>
-                  <DeviceStoreProvider device={deps.device}>
-                    <SharingProvider sharing={deps.sharing}>
-                      <AppInstallProvider appInstall={deps.appInstall}>
-                        <NotificationPermissionProvider notifications={deps.notifications}>
-                          <PushSubscriptionProvider push={deps.push}>
-                            <ReminderNamesProvider reminderNames={reminderNames}>
-                              <ClockProvider clock={deps.clock}>
-                                <SessionPushSync />
-                                <ToastProvider>{children}</ToastProvider>
-                              </ClockProvider>
-                            </ReminderNamesProvider>
-                          </PushSubscriptionProvider>
-                        </NotificationPermissionProvider>
-                      </AppInstallProvider>
-                    </SharingProvider>
-                  </DeviceStoreProvider>
-                </ConnectivityProvider>
-              </HapticsProvider>
-            </PhotoProvider>
-          </IdsProvider>
-        </ApiProvider>
-      </PersistedQueries>
+      <SessionOutbox deps={deps}>
+        <PersistedQueries client={queryClient} persister={persister}>
+          <ApiProvider api={deps.api}>
+            <IdsProvider ids={deps.ids}>
+              <PhotoProvider
+                tools={{ imageProcessor: deps.imageProcessor, photoUploader: deps.photoUploader }}
+              >
+                <HapticsProvider haptics={deps.haptics}>
+                  <ConnectivityProvider connectivity={deps.connectivity}>
+                    <DeviceStoreProvider device={deps.device}>
+                      <SharingProvider sharing={deps.sharing}>
+                        <AppInstallProvider appInstall={deps.appInstall}>
+                          <NotificationPermissionProvider notifications={deps.notifications}>
+                            <PushSubscriptionProvider push={deps.push}>
+                              <ReminderNamesProvider reminderNames={reminderNames}>
+                                <ClockProvider clock={deps.clock}>
+                                  <SessionPushSync />
+                                  <ToastProvider>{children}</ToastProvider>
+                                </ClockProvider>
+                              </ReminderNamesProvider>
+                            </PushSubscriptionProvider>
+                          </NotificationPermissionProvider>
+                        </AppInstallProvider>
+                      </SharingProvider>
+                    </DeviceStoreProvider>
+                  </ConnectivityProvider>
+                </HapticsProvider>
+              </PhotoProvider>
+            </IdsProvider>
+          </ApiProvider>
+        </PersistedQueries>
+      </SessionOutbox>
     </SessionProvider>
+  );
+}
+
+/**
+ * The entries queued without a connection belong to the signed-in user: one outbox per user id. After
+ * a replay that changed anything the server's truth is read again (Today, the season progress reads
+ * and the circle feed), as after any settled mutation.
+ */
+function SessionOutbox({
+  deps,
+  children,
+}: {
+  readonly deps: AppDependencies;
+  readonly children: ReactNode;
+}) {
+  const { queryClient, api, outboxStore, ids, connectivity, visibility } = deps;
+  const userId = useSession().session?.userId ?? null;
+  const onReplayed = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: todayKey });
+    void queryClient.invalidateQueries({ queryKey: progressKey });
+    void queryClient.invalidateQueries({ queryKey: socialKey });
+  }, [queryClient]);
+  return (
+    <OutboxProvider
+      userId={userId}
+      api={api}
+      store={outboxStore}
+      ids={ids}
+      connectivity={connectivity}
+      visibility={visibility}
+      onReplayed={onReplayed}
+    >
+      {children}
+    </OutboxProvider>
   );
 }
 
