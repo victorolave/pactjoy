@@ -16,8 +16,9 @@ import styles from "./SettingsScreen.module.css";
 const PROFILE_PATH = "/profile";
 
 /**
- * How long "Cerrar sesión" waits for the queued entries to be sent before it asks: the one
- * sign-out grace (OE-R6), not a second window on top of it.
+ * How long "Cerrar sesión" waits for the queued entries to be sent before it asks: as long as the
+ * sign-out grace (OE-R6). The sign-out that follows has its own grace for the push removal, which
+ * cannot start sooner because the member may still cancel; the worst case is about 4 s in all.
  */
 const SEND_BEFORE_SIGN_OUT_MS = SIGN_OUT_GRACE_MS;
 
