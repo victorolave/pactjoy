@@ -10,7 +10,8 @@ import { createSessionEvents } from "./session-events.ts";
 import { SessionManager } from "./session-manager.ts";
 
 function Probe() {
-  const { session, notice, requestCode, verifyCode, signOut, expire } = useSession();
+  const { session, notice, requestCode, verifyCode, signOut, expire, accountDeleted } =
+    useSession();
   return (
     <div>
       <output aria-label="user">{session?.userId ?? "none"}</output>
@@ -35,6 +36,9 @@ function Probe() {
       </button>
       <button type="button" onClick={expire}>
         expirar
+      </button>
+      <button type="button" onClick={accountDeleted}>
+        cuenta borrada
       </button>
     </div>
   );
@@ -114,6 +118,40 @@ describe("SessionProvider", () => {
     expect(screen.getByLabelText("notice")).toHaveTextContent("sessionExpired");
     expect(store.load()).toBeNull();
     expect(auth.signedOut).toEqual([]);
+    expect(onSessionEnd).toHaveBeenCalledTimes(1);
+  });
+
+  it("accountDeleted clears the session, flags its own notice and tells the app, without a remote call", async () => {
+    const { store, auth, onSessionEnd } = setup();
+    await userEvent.click(screen.getByRole("button", { name: "cuenta borrada" }));
+    expect(user()).toHaveTextContent("none");
+    expect(screen.getByLabelText("notice")).toHaveTextContent("accountDeleted");
+    expect(store.load()).toBeNull();
+    expect(auth.signedOut).toEqual([]);
+    expect(onSessionEnd).toHaveBeenCalledTimes(1);
+  });
+
+  it("accountDeleted lets the app drop this device's push subscription, and a failure changes nothing", async () => {
+    const auth = new FakeAuth();
+    const store = new MemoryTokenStore(fakeSession());
+    const onAccountDeleted = vi.fn(async () => {
+      throw new Error("push is gone already");
+    });
+    const onSessionEnd = vi.fn();
+    render(
+      <SessionProvider
+        auth={auth}
+        store={store}
+        manager={new SessionManager(auth, store, new FixedClock(0))}
+        onSessionEnd={onSessionEnd}
+        onAccountDeleted={onAccountDeleted}
+      >
+        <Probe />
+      </SessionProvider>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "cuenta borrada" }));
+    expect(onAccountDeleted).toHaveBeenCalledTimes(1);
+    expect(user()).toHaveTextContent("none");
     expect(onSessionEnd).toHaveBeenCalledTimes(1);
   });
 

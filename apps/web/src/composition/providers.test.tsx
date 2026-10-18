@@ -100,6 +100,34 @@ describe("AppProviders", () => {
     ).toEqual(["1", "1", "1"]);
   });
 
+  it("a deleted account drops the cache, the saved copy and this device's push subscription, with no remote sign-out", async () => {
+    const queryClient = new QueryClient();
+    queryClient.setQueryData(["today"], { state: "noCircle" });
+    const push = new FakePushSubscription();
+    await push.subscribe("BFAKE-VAPID-KEY");
+    const base = deps({ queryClient, push });
+    const auth = base.auth as FakeAuth;
+    function Delete() {
+      const { accountDeleted } = useSession();
+      return (
+        <button type="button" onClick={accountDeleted}>
+          borrar
+        </button>
+      );
+    }
+    render(
+      <AppProviders deps={base}>
+        <Who />
+        <Delete />
+      </AppProviders>,
+    );
+    act(() => screen.getByRole("button", { name: "borrar" }).click());
+    expect(screen.getByLabelText("who")).toHaveTextContent("none");
+    expect(queryClient.getQueryData(["today"])).toBeUndefined();
+    await waitFor(() => expect(push.device).toBeNull());
+    expect(auth.signedOut).toEqual([]);
+  });
+
   it("provides the ids port and the toast host to the tree", () => {
     function Probe() {
       const id = useIds().newId();

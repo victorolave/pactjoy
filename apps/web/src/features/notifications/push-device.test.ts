@@ -4,6 +4,7 @@ import { FakeNotificationPermission } from "../../testing/fake-notification-perm
 import { FakePactJoyApi } from "../../testing/fake-pactjoy-api.ts";
 import { FakePushSubscription } from "../../testing/fake-push-subscription.ts";
 import {
+  dropThisDeviceLocally,
   enablePush,
   pushStatus,
   removeThisDevice,
@@ -124,6 +125,34 @@ describe("removeThisDevice (sign-out)", () => {
     deps.api.failNext("removePushSubscription", new Error("offline") as never);
     await expect(removeThisDevice(deps)).resolves.toBeUndefined();
     expect(deps.push.device).toBeNull();
+  });
+});
+
+describe("dropThisDeviceLocally (the account was deleted)", () => {
+  it("drops the browser subscription without calling the API: the server already erased the user", async () => {
+    const deps = given("granted");
+    await syncPush(deps);
+    const calls = deps.api.calls.removePushSubscription;
+    await dropThisDeviceLocally(deps.push);
+    expect(deps.push.device).toBeNull();
+    expect(deps.api.calls.removePushSubscription).toBe(calls);
+  });
+
+  it("does nothing where push is not supported", async () => {
+    const deps = given("granted");
+    await syncPush(deps);
+    deps.push.isSupported = false;
+    await dropThisDeviceLocally(deps.push);
+    expect(deps.push.device).not.toBeNull();
+  });
+
+  it("never throws when the browser refuses", async () => {
+    const deps = given("granted");
+    await syncPush(deps);
+    deps.push.unsubscribe = async () => {
+      throw new Error("blocked");
+    };
+    await expect(dropThisDeviceLocally(deps.push)).resolves.toBeUndefined();
   });
 });
 

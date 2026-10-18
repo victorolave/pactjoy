@@ -14,7 +14,7 @@ import type { SessionEvents } from "./session-events.ts";
 import type { SessionManager } from "./session-manager.ts";
 
 /** Why the user is signed out, when it was not their own choice. */
-export type SessionNotice = "sessionExpired";
+export type SessionNotice = "sessionExpired" | "accountDeleted";
 
 export interface SessionApi {
   readonly session: Session | null;
@@ -25,6 +25,11 @@ export interface SessionApi {
   signOut(): Promise<void>;
   /** The server rejected the session (401 after one refresh): clear it without a remote call. */
   expire(): void;
+  /**
+   * The server deleted the account (ADR-0019): end the session here like `expire`, with its own
+   * notice. There is no remote sign-out, because the user no longer exists.
+   */
+  accountDeleted(): void;
 }
 
 const SessionContext = createContext<SessionApi | null>(null);
@@ -55,6 +60,11 @@ export interface SessionProviderProps {
    * and the sign-out goes on after two seconds whatever it is still waiting for.
    */
   readonly beforeSignOut?: () => Promise<void>;
+  /**
+   * Runs once the account is deleted, for what only this device can still do (drop its push
+   * subscription in the browser). Best effort and not awaited: a rejection is swallowed.
+   */
+  readonly onAccountDeleted?: () => Promise<void>;
   readonly children: ReactNode;
 }
 
@@ -65,6 +75,7 @@ export function SessionProvider({
   onSessionEnd,
   expired,
   beforeSignOut,
+  onAccountDeleted,
   children,
 }: SessionProviderProps) {
   const [session, setSession] = useState<Session | null>(() => store.load());
@@ -93,6 +104,14 @@ export function SessionProvider({
     onSessionEnd?.();
   }, [store, onSessionEnd]);
 
+  const accountDeleted = useCallback(() => {
+    store.clear();
+    setNotice("accountDeleted");
+    setSession(null);
+    onSessionEnd?.();
+    onAccountDeleted?.().catch(() => undefined);
+  }, [store, onSessionEnd, onAccountDeleted]);
+
   useEffect(() => expired?.onExpire(expire), [expired, expire]);
 
   const api = useMemo<SessionApi>(
@@ -114,8 +133,9 @@ export function SessionProvider({
         onSessionEnd?.();
       },
       expire,
+      accountDeleted,
     }),
-    [auth, store, manager, onSessionEnd, beforeSignOut, expire, session, notice],
+    [auth, store, manager, onSessionEnd, beforeSignOut, expire, accountDeleted, session, notice],
   );
 
   return <SessionContext.Provider value={api}>{children}</SessionContext.Provider>;

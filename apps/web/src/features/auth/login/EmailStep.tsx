@@ -47,6 +47,7 @@ export function EmailStep() {
       {notice === "sessionExpired" && (
         <InlineMessage tone="info" title="Tu sesión expiró. Entra de nuevo." />
       )}
+      {notice === "accountDeleted" && <InlineMessage tone="info" title="Tu cuenta se eliminó" />}
       <form className={styles.form} onSubmit={submit} noValidate>
         <TextField
           label="Correo"

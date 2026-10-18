@@ -621,6 +621,10 @@ export class HttpPactJoyApi implements PactJoyApi {
     });
   }
 
+  async deleteAccount(): Promise<void> {
+    await this.#request({ method: "DELETE", path: "/me", body: { confirmation: "ELIMINAR" } });
+  }
+
   async getSeasonProgress(seasonId: string, signal?: AbortSignal): Promise<SeasonProgress> {
     return this.#read(progressApiPaths.season(seasonId), isSeasonProgress, signal);
   }

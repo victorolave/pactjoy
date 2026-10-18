@@ -97,6 +97,7 @@ type ExistingMethod =
   | "getPushConfig"
   | "savePushSubscription"
   | "removePushSubscription"
+  | "deleteAccount"
   | ProgressMethod;
 type ProgressMethod = keyof SeasonProgressApi;
 
@@ -171,6 +172,7 @@ export class FakePactJoyApi implements PactJoyApi {
     getPushConfig: 0,
     savePushSubscription: 0,
     removePushSubscription: 0,
+    deleteAccount: 0,
     getSeasonProgress: 0,
     getMemberProgress: 0,
     getCommitmentProgress: 0,
@@ -694,6 +696,13 @@ export class FakePactJoyApi implements PactJoyApi {
   async removePushSubscription(endpoint: string) {
     this.#enter("removePushSubscription");
     this.pushDevices.delete(endpoint);
+  }
+
+  /** Honours `hold` and `failNext`; the call count is what tests assert on. */
+  async deleteAccount() {
+    const gate = this.#takeGate("deleteAccount");
+    this.#enter("deleteAccount");
+    await gate;
   }
 
   async getSeasonProgress(seasonId: string, signal?: AbortSignal) {

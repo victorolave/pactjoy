@@ -7,6 +7,7 @@
 export { NotificationsCard } from "./NotificationsCard.tsx";
 export { PushSync, usePushDevice } from "./PushSync.tsx";
 export {
+  dropThisDeviceLocally,
   enablePush,
   type PushStatus,
   type PushStep,
