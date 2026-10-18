@@ -119,6 +119,7 @@ export function TodayScreen() {
     <TodayWithData
       data={today.data}
       localToday={today.localToday}
+      fetchStartedAt={today.fetchStartedAt}
       connectionLost={connectionLost}
     />
   );
@@ -131,14 +132,16 @@ export function TodayScreen() {
 function TodayWithData({
   data,
   localToday,
+  fetchStartedAt,
   connectionLost,
 }: {
   readonly data: TodayView;
   readonly localToday: string | null;
+  readonly fetchStartedAt: number | null;
   readonly connectionLost: boolean;
 }) {
   const sending = useOutboxReplaying();
-  const { view, marks } = useOverlayToday(data);
+  const { view, marks } = useOverlayToday(data, fetchStartedAt);
   return (
     <div className={styles.screen}>
       {connectionLost ? <OfflineBanner /> : sending && <SyncingBanner />}

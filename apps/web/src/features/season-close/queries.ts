@@ -11,11 +11,12 @@ import {
   seasonsKey,
   todayKey,
 } from "../../shared/query-keys.ts";
+import { fetchToday } from "../../shared/today-fetch.ts";
 
 /** What Today says about the end of the season, through the query Today itself uses (no second request). */
 export function useSeasonCloseOffer() {
   const api = usePactJoyApi();
-  const query = useQuery({ queryKey: todayKey, queryFn: ({ signal }) => api.getToday(signal) });
+  const query = useQuery({ queryKey: todayKey, queryFn: ({ signal }) => fetchToday(api, signal) });
   const today = query.data;
   if (today === undefined || !("seasonClose" in today)) return null;
   return {

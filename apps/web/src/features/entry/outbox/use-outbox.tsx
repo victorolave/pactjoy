@@ -93,19 +93,22 @@ const NO_SENT: readonly SentRecord[] = [];
 
 /**
  * The server's Today with what is waiting on the phone laid over it, plus the records that were
- * sent but are not in this fetch yet (they stay laid over it until a fetch holds them, so the row
- * never looks open in between). Tells the outbox which entries the fetch already has.
+ * sent but may not be in this fetch yet (they stay laid over it until a fetch that started after
+ * their send has resolved, so the row never looks open in between and never keeps a phantom entry
+ * afterwards). `fetchStartedAt` is the `tick()` the data's fetch started at.
  */
-export function useOverlayToday(data: TodayView): ReturnType<typeof overlayToday> {
+export function useOverlayToday(
+  data: TodayView,
+  fetchStartedAt: number | null,
+): ReturnType<typeof overlayToday> {
   const outbox = useOutbox();
   const { items } = useOutboxState();
   const sent = useSyncExternalStore(useSubscribe(outbox), () => outbox?.sentRecords() ?? NO_SENT);
   useEffect(() => {
-    if (outbox === null || !("rows" in data)) return;
-    outbox.acknowledge(
-      new Set(data.rows.flatMap((row) => row.entries.map((entry) => entry.entryId as string))),
-    );
-  }, [outbox, data]);
+    // A restored copy (null) was fetched in an earlier session: it settles nothing.
+    if (outbox === null || fetchStartedAt === null) return;
+    outbox.acknowledge(fetchStartedAt);
+  }, [outbox, fetchStartedAt]);
   return useMemo(() => overlayToday(data, items, sent), [data, items, sent]);
 }
 

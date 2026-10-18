@@ -9,6 +9,7 @@ import {
   seasonsKey,
   todayKey,
 } from "../../shared/query-keys.ts";
+import { fetchToday } from "../../shared/today-fetch.ts";
 
 /**
  * The viewer's pause requests, the ones awaiting their answer, their budgets and the 30b
@@ -28,7 +29,7 @@ export function useMyPauseRequests() {
  */
 export function useTodayForPause() {
   const api = usePactJoyApi();
-  return useQuery({ queryKey: todayKey, queryFn: ({ signal }) => api.getToday(signal) });
+  return useQuery({ queryKey: todayKey, queryFn: ({ signal }) => fetchToday(api, signal) });
 }
 
 export function useCircleForPause() {

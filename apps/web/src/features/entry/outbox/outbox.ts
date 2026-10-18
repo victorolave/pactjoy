@@ -7,6 +7,7 @@ import type {
   SentRecord,
 } from "../../../ports/outbox-store.ts";
 import type { PactJoyApi } from "../../../ports/pactjoy-api.ts";
+import { tick } from "../../../shared/ordering.ts";
 import { classify } from "./classify.ts";
 import { dismissNotices, rejectWithNotice } from "./notices.ts";
 import {
@@ -93,9 +94,13 @@ export class Outbox {
     return this.#sent;
   }
 
-  /** The fetched Today holds these entries now: they no longer need to be laid over it. */
-  acknowledge(entryIds: ReadonlySet<string>): void {
-    this.#setSent(this.#sent.filter((record) => !entryIds.has(record.entryId)));
+  /**
+   * A Today fetch that started at `fetchStartedAt` (a `tick()`) has resolved. Every record sent
+   * before it is settled whether that Today holds the entry or not: it may be outside the edit
+   * window or deleted elsewhere, and a row must not keep a phantom pending entry for either.
+   */
+  acknowledge(fetchStartedAt: number): void {
+    this.#setSent(this.#sent.filter((record) => record.sentAt >= fetchStartedAt));
   }
 
   /**
@@ -234,7 +239,7 @@ export class Outbox {
       if (entryId === null) return;
       this.#resolved.set(localRef(item.localId), entryId);
       const { habitName, command } = item;
-      this.#setSent([...this.#sent, { entryId, habitName, command }]);
+      this.#setSent([...this.#sent, { entryId, habitName, command, sentAt: tick() }]);
     } else if (item.kind === "edit") {
       this.#setSent(
         this.#sent.map((record) =>

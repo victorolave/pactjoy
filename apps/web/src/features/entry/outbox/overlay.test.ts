@@ -91,6 +91,7 @@ describe("overlayToday: a record sent but not yet in the fetched Today", () => {
   const sent = (entryId: string, commitmentId = "commitment-1") => ({
     entryId,
     habitName: "Meditar",
+    sentAt: 1,
     command: {
       seasonId: "season-1",
       commitmentId,

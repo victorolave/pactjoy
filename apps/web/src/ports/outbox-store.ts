@@ -24,6 +24,8 @@ export interface SentRecord {
   readonly entryId: string;
   readonly habitName: string;
   readonly command: QueuedRecord["command"];
+  /** `tick()` when the send finished: a Today fetch that started after it has settled the row. */
+  readonly sentAt: number;
 }
 
 /** A full-state edit (`PUT`). `target` is a server `entryId` or a local reference `local:<id>`. */

@@ -412,7 +412,9 @@ export class FakePactJoyApi implements PactJoyApi {
   }
 
   async getToday(_signal?: AbortSignal): Promise<TodayView> {
+    const gate = this.#takeGate("getToday");
     this.#enter("getToday");
+    await gate;
     return this.#today;
   }
 

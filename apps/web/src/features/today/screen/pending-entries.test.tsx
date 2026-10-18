@@ -175,9 +175,11 @@ describe("Today shows what is waiting on the phone (OE-R7, design 15g)", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Registrar Leer" }));
     await waitFor(() => expect(app.deps.outboxStore.load("user-1").items).toHaveLength(2));
     const fetchesBefore = app.deps.api.calls.getToday;
+    // The fetch the replay asks for once it is done is held, so the window between the send and
+    // the refetch can be looked at.
+    const releaseToday = app.deps.api.hold("getToday");
     act(() => app.deps.connectivity.setOnline(true));
     await waitFor(() => expect(app.deps.api.recorded).toHaveLength(2));
-    // The replay ended and Today was fetched again, but that Today does not have the entries yet.
     await waitFor(() => expect(app.deps.api.calls.getToday).toBeGreaterThan(fetchesBefore));
     await waitFor(() => expect(app.deps.outboxStore.load("user-1").items).toEqual([]));
     for (const name of ["Registrar Meditar", "Registrar Leer"]) {
@@ -185,5 +187,16 @@ describe("Today shows what is waiting on the phone (OE-R7, design 15g)", () => {
     }
     await userEvent.click(screen.getByRole("button", { name: "Registrar Meditar" }));
     expect(app.deps.api.recordAttempts).toHaveLength(2);
+    // The refetch comes back without the entries (outside the window, or deleted elsewhere): the
+    // phone keeps no phantom entry once the server has answered.
+    releaseToday();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Registrar Meditar" })).toHaveAttribute(
+        "aria-pressed",
+        "false",
+      ),
+    );
+    expect(screen.queryByText(BADGE)).not.toBeInTheDocument();
+    expect(screen.queryByText(FOOTNOTE)).not.toBeInTheDocument();
   });
 });

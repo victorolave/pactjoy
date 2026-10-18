@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { ApiError } from "../../../ports/api-error.ts";
 import { EMPTY_OUTBOX, type OutboxState } from "../../../ports/outbox-store.ts";
 import type { RecordEntryCommand } from "../../../ports/pactjoy-api.ts";
+import { tick } from "../../../shared/ordering.ts";
 import { FakePactJoyApi } from "../../../testing/fake-pactjoy-api.ts";
 import { noCircleTodayFixture } from "../../../testing/fixtures/today.ts";
 import { MemoryOutboxStore } from "../../../testing/memory-outbox-store.ts";
@@ -634,9 +635,20 @@ describe("Outbox state: notices, listeners, erasure", () => {
     await outbox.drain();
     expect(outbox.sentRecords().map((record) => record.entryId)).toEqual(["entry-1", "entry-3"]);
     expect(outbox.sentRecords()[0]?.command.value).toEqual({ kind: "quantity", value: "45" });
-    outbox.acknowledge(new Set(["entry-1"]));
-    expect(outbox.sentRecords().map((record) => record.entryId)).toEqual(["entry-3"]);
     outbox.dispose();
+    expect(outbox.sentRecords()).toEqual([]);
+  });
+
+  it("drops a sent record once a fetch that started after its send has resolved, found or not", async () => {
+    const { outbox, queue } = setup();
+    queue(recordInput("a"));
+    // A fetch already under way when the record is sent may not have it.
+    const earlier = tick();
+    await outbox.drain();
+    outbox.acknowledge(earlier);
+    expect(outbox.sentRecords().map((record) => record.entryId)).toEqual(["entry-1"]);
+    // One that started afterwards settles the matter, even if its Today lacks the entry.
+    outbox.acknowledge(tick());
     expect(outbox.sentRecords()).toEqual([]);
   });
 

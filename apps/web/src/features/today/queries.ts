@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { usePactJoyApi } from "../../context/api-context.tsx";
 import { useClock } from "../../context/clock-context.tsx";
 import { progressKey, todayKey } from "../../shared/query-keys.ts";
+import { fetchToday, lastTodayFetchStart } from "../../shared/today-fetch.ts";
 import { seasonDate, watchSeasonDay } from "../season-progress-data/index.ts";
 
 /** Today for the signed-in viewer: one read, recomputed by the server on every refetch. */
@@ -11,7 +12,7 @@ export function useToday() {
   const clock = useClock();
   const client = useQueryClient();
   const [, onDayChange] = useState(0);
-  const query = useQuery({ queryKey: todayKey, queryFn: ({ signal }) => api.getToday(signal) });
+  const query = useQuery({ queryKey: todayKey, queryFn: ({ signal }) => fetchToday(api, signal) });
   const zone = query.data && "timeZone" in query.data ? query.data.timeZone : undefined;
   useEffect(() => {
     if (zone === undefined) return;
@@ -27,5 +28,11 @@ export function useToday() {
       },
     );
   }, [clock, client, zone]);
-  return { ...query, localToday: zone === undefined ? null : seasonDate(clock.nowMs(), zone) };
+  return {
+    ...query,
+    localToday: zone === undefined ? null : seasonDate(clock.nowMs(), zone),
+    // When the fetch behind the data on screen started (null before any finished: a copy restored
+    // from storage). The outbox settles the entries it sent with it.
+    fetchStartedAt: lastTodayFetchStart(),
+  };
 }
