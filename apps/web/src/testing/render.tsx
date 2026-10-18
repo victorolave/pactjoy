@@ -27,6 +27,7 @@ import { FakeSharing } from "./fake-sharing.ts";
 import { FixedClock } from "./fixed-clock.ts";
 import { soloCircleFixture } from "./fixtures/circle.ts";
 import { activeTodayFixture } from "./fixtures/today.ts";
+import { MemoryOutboxStore } from "./memory-outbox-store.ts";
 import { MemoryStorage } from "./memory-storage.ts";
 import { MemoryTokenStore } from "./memory-token-store.ts";
 import { SequentialIds } from "./sequential-ids.ts";
@@ -120,6 +121,7 @@ export interface RenderedApp extends RenderResult {
     readonly notifications: FakeNotificationPermission;
     readonly push: FakePushSubscription;
     readonly reminderNames: FakeReminderNames;
+    readonly outboxStore: MemoryOutboxStore;
     readonly clock: FixedClock;
   };
 }
@@ -187,6 +189,7 @@ function createFakeDeps({
     notifications: new FakeNotificationPermission(notificationPermission),
     push,
     reminderNames: new FakeReminderNames(),
+    outboxStore: new MemoryOutboxStore(),
     clock,
     sessions: new SessionManager(auth, store, new FixedClock(0)),
     sessionEvents: createSessionEvents(),

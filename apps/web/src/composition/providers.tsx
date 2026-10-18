@@ -30,17 +30,18 @@ export function AppProviders({
   readonly deps: AppDependencies;
   readonly children: ReactNode;
 }) {
-  const { queryClient, persister, device, reminderNames } = deps;
+  const { queryClient, persister, device, reminderNames, outboxStore } = deps;
   // Cached data belongs to the signed-in user: drop it, and the saved copy, whenever the session
-  // ends. So do the name draft and the habit names reminders show. The device flags (welcome seen,
-  // install and permission steps) are about this phone, not the person, so they stay: the carousel
-  // does not return on every login.
+  // ends. So do the name draft, the habit names reminders show and the entries queued without a
+  // connection. The device flags (welcome seen, install and permission steps) are about this phone,
+  // not the person, so they stay: the carousel does not return on every login.
   const onSessionEnd = useCallback(() => {
     queryClient.clear();
     void persister.removeClient();
     device.clearSession();
     void reminderNames.clear();
-  }, [queryClient, persister, device, reminderNames]);
+    outboxStore.clearAll();
+  }, [queryClient, persister, device, reminderNames, outboxStore]);
   // The device's push registration belongs to the person: removed before the session ends.
   const { notifications, push, api } = deps;
   const beforeSignOut = useCallback(

@@ -11,6 +11,7 @@ import { FetchPhotoUploader } from "../adapters/fetch-photo-uploader.ts";
 import { GoTrueAuth, type GoTrueAuthOptions } from "../adapters/gotrue-auth.ts";
 import { HttpPactJoyApi } from "../adapters/http-pactjoy-api.ts";
 import { LocalStorageDeviceStore } from "../adapters/local-storage-device-store.ts";
+import { LocalStorageOutboxStore } from "../adapters/local-storage-outbox-store.ts";
 import { LocalStorageTokenStore } from "../adapters/local-storage-token-store.ts";
 import { createTodayPersister } from "../adapters/query-persister.ts";
 import { SystemClock } from "../adapters/system-clock.ts";
@@ -61,6 +62,7 @@ export function createDependencies(config: AppConfig, env: ComposeEnvironment): 
     notifications: new BrowserNotificationPermission(),
     push: new BrowserPushSubscription(),
     reminderNames: new CacheReminderNames(),
+    outboxStore: new LocalStorageOutboxStore(),
     sessions,
     sessionEvents,
     queryClient: createQueryClient(),

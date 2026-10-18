@@ -21,6 +21,7 @@ import { FakePushSubscription } from "../testing/fake-push-subscription.ts";
 import { FakeReminderNames } from "../testing/fake-reminder-names.ts";
 import { FakeSharing } from "../testing/fake-sharing.ts";
 import { FixedClock } from "../testing/fixed-clock.ts";
+import { MemoryOutboxStore } from "../testing/memory-outbox-store.ts";
 import { MemoryStorage } from "../testing/memory-storage.ts";
 import { MemoryTokenStore } from "../testing/memory-token-store.ts";
 import { SequentialIds } from "../testing/sequential-ids.ts";
@@ -54,6 +55,7 @@ function dependenciesFor(scenario: Scenario): AppDependencies {
     notifications: new FakeNotificationPermission(),
     push: new FakePushSubscription(),
     reminderNames: new FakeReminderNames(),
+    outboxStore: new MemoryOutboxStore(),
     clock: new FixedClock(0),
     sessions: new SessionManager(auth, store, new FixedClock(0)),
     sessionEvents: createSessionEvents(),

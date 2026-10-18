@@ -10,6 +10,7 @@ import type { Haptics } from "../ports/haptics.ts";
 import type { IdSource } from "../ports/ids.ts";
 import type { ImageProcessor } from "../ports/image-processor.ts";
 import type { NotificationPermissionPort } from "../ports/notification-permission.ts";
+import type { OutboxStore } from "../ports/outbox-store.ts";
 import type { PactJoyApi } from "../ports/pactjoy-api.ts";
 import type { PhotoUploader } from "../ports/photo-uploader.ts";
 import type { PushSubscriptionPort } from "../ports/push-subscription.ts";
@@ -42,6 +43,8 @@ export interface AppDependencies {
   readonly push: PushSubscriptionPort;
   /** The own visible habit names reminder pushes may show (D2); forgotten when the session ends. */
   readonly reminderNames: ReminderNamesPort;
+  /** Entry writes made without a connection, per user; erased when the session ends (OE-R6). */
+  readonly outboxStore: OutboxStore;
   readonly sessions: SessionManager;
   /** The API adapter's `onUnauthorized` calls `sessionEvents.expire`. */
   readonly sessionEvents: SessionEvents;

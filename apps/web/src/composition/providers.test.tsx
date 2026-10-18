@@ -19,8 +19,10 @@ import { FakeReminderNames } from "../testing/fake-reminder-names.ts";
 import { FakeSharing } from "../testing/fake-sharing.ts";
 import { FixedClock } from "../testing/fixed-clock.ts";
 import { noCircleTodayFixture } from "../testing/fixtures/today.ts";
+import { MemoryOutboxStore } from "../testing/memory-outbox-store.ts";
 import { MemoryStorage } from "../testing/memory-storage.ts";
 import { MemoryTokenStore } from "../testing/memory-token-store.ts";
+import { sampleOutbox } from "../testing/outbox-store-contract.ts";
 import { SequentialIds } from "../testing/sequential-ids.ts";
 import type { AppDependencies } from "./dependencies.ts";
 import { AppProviders } from "./providers.tsx";
@@ -44,6 +46,7 @@ function deps(overrides: Partial<AppDependencies> = {}): AppDependencies {
     notifications: new FakeNotificationPermission(),
     push: new FakePushSubscription(),
     reminderNames: new FakeReminderNames(),
+    outboxStore: new MemoryOutboxStore(),
     clock: new FixedClock(0),
     sessions: new SessionManager(auth, store, new FixedClock(0)),
     sessionEvents: createSessionEvents(),
@@ -126,6 +129,63 @@ describe("AppProviders", () => {
     expect(queryClient.getQueryData(["today"])).toBeUndefined();
     await waitFor(() => expect(push.device).toBeNull());
     expect(auth.signedOut).toEqual([]);
+  });
+
+  describe("the outbox is erased with the session (OE-R6)", () => {
+    function setup() {
+      const outboxStore = new MemoryOutboxStore();
+      outboxStore.save("user-1", sampleOutbox());
+      const store = new MemoryTokenStore(fakeSession());
+      const sessionEvents = createSessionEvents();
+      const base = deps({ outboxStore, store, sessionEvents });
+      function Controls() {
+        const { signOut, accountDeleted } = useSession();
+        return (
+          <>
+            <button type="button" onClick={() => void signOut()}>
+              salir
+            </button>
+            <button type="button" onClick={accountDeleted}>
+              borrar
+            </button>
+          </>
+        );
+      }
+      render(
+        <AppProviders deps={base}>
+          <Who />
+          <Controls />
+        </AppProviders>,
+      );
+      return { outboxStore, store, sessionEvents };
+    }
+
+    it("clears it on sign-out", async () => {
+      const { outboxStore } = setup();
+      act(() => screen.getByRole("button", { name: "salir" }).click());
+      await waitFor(() => expect(outboxStore.clears).toBe(1));
+      expect(outboxStore.load("user-1").items).toEqual([]);
+    });
+
+    it("clears it when the session expires", () => {
+      const { outboxStore, sessionEvents } = setup();
+      act(() => sessionEvents.expire());
+      expect(outboxStore.clears).toBe(1);
+      expect(outboxStore.load("user-1").items).toEqual([]);
+    });
+
+    it("clears it when the account is deleted (OE-R6.S1)", () => {
+      const { outboxStore } = setup();
+      act(() => screen.getByRole("button", { name: "borrar" }).click());
+      expect(outboxStore.clears).toBe(1);
+      expect(outboxStore.load("user-1").items).toEqual([]);
+    });
+
+    it("clears it when another tab signs out (OE-R6.S5)", () => {
+      const { outboxStore, store } = setup();
+      act(() => store.emitExternal(null));
+      expect(outboxStore.clears).toBe(1);
+    });
   });
 
   it("provides the ids port and the toast host to the tree", () => {
