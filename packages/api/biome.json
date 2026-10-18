@@ -144,6 +144,19 @@
       }
     },
     {
+      "includes": ["scripts/**"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noNodejsModules": "off"
+          },
+          "style": {
+            "noRestrictedGlobals": "off"
+          }
+        }
+      }
+    },
+    {
       "includes": ["test/jose-token-verifier.test.ts"],
       "linter": {
         "rules": {

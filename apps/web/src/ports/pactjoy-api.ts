@@ -11,6 +11,7 @@ import type {
   TodayView,
   UpdateHabitInput,
 } from "@pactjoy/app";
+import type { DevicePushSubscription } from "./push-subscription.ts";
 import type { SeasonProgressApi } from "./season-progress-api.ts";
 import type {
   CarryOverDto,
@@ -249,4 +250,14 @@ export interface PactJoyApi extends SeasonProgressApi {
   sendEncouragement(seasonId: string, cmd: SendEncouragementCommand): Promise<void>;
   /** "Ahora no": the nudge is not offered again for this case. Idempotent. */
   dismissNudge(seasonId: string, cmd: DismissNudgeCommand): Promise<void>;
+  /** The server's public VAPID key; null when Web Push is not configured (ADR-0017). */
+  getPushConfig(signal?: AbortSignal): Promise<PushConfigDto>;
+  /** Registers this device for the signed-in user (idempotent by endpoint). */
+  savePushSubscription(subscription: DevicePushSubscription): Promise<void>;
+  /** Removes this device for the signed-in user; removing a missing one succeeds. */
+  removePushSubscription(endpoint: string): Promise<void>;
+}
+
+export interface PushConfigDto {
+  readonly vapidPublicKey: string | null;
 }

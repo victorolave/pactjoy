@@ -4,6 +4,8 @@ import type { NudgeDismissalRepository } from "../encouragement/nudge-dismissal.
 import type { EntryRepository } from "../entry/entry.repository.ts";
 import type { EntryPhotoRepository } from "../entry-photo/entry-photo.repository.ts";
 import type { HabitRepository } from "../habit/habit.repository.ts";
+import type { NotificationOutboxRepository } from "../notifications/notification-outbox.repository.ts";
+import type { PushSubscriptionRepository } from "../notifications/push-subscription.repository.ts";
 import type { PauseRequestRepository } from "../pause/pause-request.repository.ts";
 import type { FeedReactionRepository } from "../reaction/feed-reaction.repository.ts";
 import type { ReviewRepository } from "../review/review.repository.ts";
@@ -25,10 +27,14 @@ export interface Repositories {
   /** Reactions to feed items (ADR-0018). Counts are public, so no guard confines it; the sentinels cover what leaves. */
   readonly feedReactions: FeedReactionRepository;
   readonly habits: HabitRepository;
+  /** Confined to `src/notifications/` (`notification-guard.test.ts`): others call `enqueueNotices` (ADR-0017). */
+  readonly notifications: NotificationOutboxRepository;
   /** Owner-only: use it only from `src/encouragement/` (`encouragement-guard.test.ts`), never for a peer. */
   readonly nudgeDismissals: NudgeDismissalRepository;
   /** Read it through `loadEffectivePauses`, never directly (ADR-0013). */
   readonly pauses: PauseRequestRepository;
+  /** Confined to `src/notifications/` (`notification-guard.test.ts`): an endpoint and its keys stay there. */
+  readonly pushSubscriptions: PushSubscriptionRepository;
   /** Owner-only: read it only from `src/review/` (`review-guard.test.ts`), never for a peer. */
   readonly reviews: ReviewRepository;
   /** Decisions are owner-only: use it only from `src/season/closure/` (`closure-guard.test.ts`). */

@@ -5,6 +5,8 @@ import type { Instant } from "../time/instant.ts";
 import type { TimeZone } from "../time/time-zone.port.ts";
 import { effectiveDecision } from "./effective-decision.ts";
 import { approversOf, type PauseContext, seasonDayAt } from "./effective-pauses.ts";
+import { enqueuePauseDecided } from "./pause-notices.ts";
+import type { PauseRequestRecord } from "./pause-request.ts";
 import { settleSeasonPauses } from "./settle.ts";
 
 export interface SettleOnLeaveInput {
@@ -33,7 +35,7 @@ export interface SettleOnLeaveInput {
  * Runs in the leave's own transaction, so it commits or rolls back with it.
  */
 export async function settlePausesOnLeave(
-  repos: Pick<Repositories, "pauses">,
+  repos: Pick<Repositories, "pauses" | "notifications">,
   input: SettleOnLeaveInput,
 ): Promise<void> {
   const { season, before, after, leaver, now, timeZone } = input;
@@ -62,15 +64,14 @@ export async function settlePausesOnLeave(
       dayOf: (at) => seasonDayAt(context, at),
     });
     if (decision.status === "pending") continue;
-    await repos.pauses.save(
-      {
-        ...record,
-        status: decision.status,
-        decidedAt: now,
-        decidedOn: today,
-        version: record.version + 1,
-      },
-      record.version,
-    );
+    const next: PauseRequestRecord = {
+      ...record,
+      status: decision.status,
+      decidedAt: now,
+      decidedOn: today,
+      version: record.version + 1,
+    };
+    await repos.pauses.save(next, record.version);
+    await enqueuePauseDecided(repos, season, after, record, next, now);
   }
 }

@@ -45,8 +45,11 @@ const ALLOWED_FEATURE_DEPS: Readonly<Record<string, readonly string[]>> = {
   entry: [],
   auth: [],
   circle: ["onboarding", "pause", "social"],
-  onboarding: [],
-  profile: ["auth", "circle", "habits", "review"],
+  // The permission step turns Web Push on from its tap (ADR-0017).
+  onboarding: ["notifications"],
+  // This device's Web Push lifecycle; the session reaches it through the composition, not auth.
+  notifications: [],
+  profile: ["auth", "circle", "habits", "notifications", "review"],
   "season-progress-data": [],
   "season-member": ["habits", "season-progress-data"],
   season: ["circle", "habits", "season-progress-data"],

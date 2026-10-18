@@ -1,4 +1,5 @@
 import type { CircleId, SeasonId } from "../shared/ids.ts";
+import type { LocalDate } from "../time/local-date.ts";
 import type { Season } from "./season.ts";
 
 /**
@@ -22,6 +23,12 @@ export interface SeasonRepository {
    * one of those exists.
    */
   findLatestByCircle(circleId: CircleId): Promise<Season | null>;
+  /**
+   * The seasons the notification planner looks at (ADR-0017), across every circle, in no
+   * particular order: every `"active"` season, plus the `"closed"` ones whose `actualStart` is on or
+   * after `startedOnOrAfter` (a season finalized lazily on its results day still gets its notice).
+   */
+  listForPlanning(startedOnOrAfter: LocalDate): Promise<readonly Season[]>;
   /**
    * Read-set guard (D5) for a season this transaction only READ: at commit,
    * the transaction fails with `ConcurrencyConflict` if the stored version

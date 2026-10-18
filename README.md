@@ -74,6 +74,7 @@ packages/engine      Pure domain: scoring, pauses, proration, streaks. Zero depe
                      Exact fractions with BigInt. Injected clock.
 packages/app         Use cases (log entry, request pause, approve pact, close week…) behind ports.
 packages/db          Postgres adapter.
+packages/push        Web Push adapter: VAPID + RFC 8291 encryption on WebCrypto, no SDK.
 supabase/functions   Thin HTTP adapter (Edge Functions): validate JWT → call a use case.
 apps/web             Installable PWA. Talks to its own API interface, never to tables directly.
 ```
@@ -118,6 +119,21 @@ pnpm format:check  # biome format (check only)
 
 CI additionally runs `biome ci .` (format + lint + import order, read-only)
 before `turbo run lint typecheck test`.
+
+### Scheduled jobs and push notifications
+
+The jobs (settle due pauses, sweep photos, plan and dispatch notifications) are HTTP routes under
+`/api/jobs`, enabled only when the function has `API_JOBS_SECRET` (32+ characters). Web Push needs
+`API_PUSH_VAPID_PUBLIC_KEY`, `API_PUSH_VAPID_PRIVATE_KEY` and `API_PUSH_VAPID_SUBJECT`; without
+them the app works the same and sends nothing. Locally:
+
+```bash
+pnpm --filter @pactjoy/push generate-vapid-keys   # prints a VAPID key pair (stdout only)
+JOBS_BASE_URL=http://127.0.0.1:54321/functions/v1/api API_JOBS_SECRET=... pnpm jobs:tick --watch 60
+```
+
+See [ADR-0017](docs/adr/0017-scheduled-jobs-and-web-push.md) for the hosted trigger and the ops
+checklist.
 
 Architecture decisions are recorded as ADRs in [`docs/adr/`](docs/adr/README.md).
 

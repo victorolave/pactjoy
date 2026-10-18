@@ -22,7 +22,9 @@ import {
   describeSeasonGuardContract,
 } from "./guard-version.contract.ts";
 import { describeHabitRepositoryContract } from "./habit.contract.ts";
+import { describeNotificationOutboxContract } from "./notification-outbox.contract.ts";
 import { describePauseRequestRepositoryContract } from "./pause.contract.ts";
+import { describePushSubscriptionContract } from "./push-subscription.contract.ts";
 import { describeReviewRepositoryContract } from "./review.contract.ts";
 import { describeSeasonRepositoryContract } from "./season.contract.ts";
 import { describeSeasonClosureRepositoryContract } from "./season-closure.contract.ts";
@@ -40,6 +42,8 @@ describeEntryPhotoRepositoryContract("in-memory", async () => ({
 }));
 describeSeasonRepositoryContract("in-memory", inMemory);
 describePauseRequestRepositoryContract("in-memory", inMemory);
+describeNotificationOutboxContract("in-memory", inMemory);
+describePushSubscriptionContract("in-memory", inMemory);
 describeReviewRepositoryContract("in-memory", async () => ({
   repository: createInMemoryReviewRepository(),
 }));

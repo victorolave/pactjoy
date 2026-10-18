@@ -242,6 +242,38 @@ export function describeSeasonRepositoryContract(
       expect((await list(OTHER_CIRCLE.id)).map((s) => s.id)).toEqual([season(2).id]);
     });
 
+    it("listForPlanning returns every active season and the closed ones started on or after the date, across circles", async () => {
+      const { uow } = await subject();
+      const list = (date: string) =>
+        uow.read(({ seasons }) => seasons.listForPlanning(localDate(date)));
+      expect(await list("2026-01-01")).toEqual([]);
+      await saveSeason(uow, season(1, { status: "pactOpen" }), null);
+      await saveSeason(
+        uow,
+        season(2, { status: "active", actualStart: localDate("2025-06-01") }),
+        null,
+      );
+      await saveSeason(
+        uow,
+        season(3, {
+          circleId: OTHER_CIRCLE.id,
+          status: "closed",
+          actualStart: localDate("2026-01-01"),
+        }),
+        null,
+      );
+      await saveSeason(
+        uow,
+        season(4, { status: "closed", actualStart: localDate("2025-12-31") }),
+        null,
+      );
+      const ids = async (date: string) => (await list(date)).map((s) => s.id).sort();
+      expect(await ids("2026-01-01")).toEqual([season(2).id, season(3).id]);
+      expect(await ids("2026-01-02")).toEqual([season(2).id]);
+      const [active] = await list("2026-01-02");
+      expect(active).toEqual(season(2, { status: "active", actualStart: localDate("2025-06-01") }));
+    });
+
     it("SP-S10: no seasons gives null and other circles' seasons are ignored", async () => {
       const { uow, latest } = await subject();
       expect(await latest()).toBeNull();

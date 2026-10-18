@@ -50,9 +50,9 @@ function errorCoverageGaps(index: string, source: string) {
 }
 
 describe("app error status map", () => {
-  it("EM-S1..S5: 104 kinds, 49x422 6x403 11x404 37x409 1x410", () => {
-    expect(KINDS).toHaveLength(104);
-    expect(kindsWith(422)).toHaveLength(49);
+  it("EM-S1..S5: 106 kinds, 50x422 6x403 11x404 38x409 1x410", () => {
+    expect(KINDS).toHaveLength(106);
+    expect(kindsWith(422)).toHaveLength(50);
     expect(kindsWith(403)).toEqual([
       "CannotRespondToOwnPause",
       "CommitmentNotOwned",
@@ -74,7 +74,7 @@ describe("app error status map", () => {
       "ReviewPeriodNotFound",
       "SeasonNotFound",
     ]);
-    expect(kindsWith(409)).toHaveLength(37);
+    expect(kindsWith(409)).toHaveLength(38);
     expect(kindsWith(410)).toEqual(["InviteExpired"]);
   });
 
@@ -97,6 +97,11 @@ describe("app error status map", () => {
     ] as const) {
       expect(APP_ERROR_STATUS[k]).toBe(409);
     }
+  });
+
+  it("PU: a malformed subscription is 422; push not configured on the server is 409", () => {
+    expect(APP_ERROR_STATUS.InvalidPushSubscription).toBe(422);
+    expect(APP_ERROR_STATUS.PushNotConfigured).toBe(409);
   });
 
   it("PH: the seven photo kinds map to 422 / 404 / 409 (a state cap is a conflict, not a 429)", () => {
@@ -207,7 +212,7 @@ describe("app error status map", () => {
     const index = readFileSync(resolve(import.meta.dirname, "../../app/src/index.ts"), "utf8");
     const source = readFileSync(resolve(import.meta.dirname, "../src/errors/app-error.ts"), "utf8");
     expect(errorCoverageGaps(index, source)).toEqual({ imports: [], union: [] });
-    expect(exportedErrorNames(index).length).toBe(48);
+    expect(exportedErrorNames(index).length).toBe(49);
   });
 
   it("EM-S16: the scan compares exact names, so a new CircleError is detected", () => {

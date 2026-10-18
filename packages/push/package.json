@@ -1,0 +1,24 @@
+{
+  "name": "@pactjoy/push",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Web Push adapter for the PushSender port of @pactjoy/app: hand-rolled VAPID (ES256) and RFC 8291 aes128gcm on WebCrypto. Standard TS/ESM: runs on Node and Deno.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "biome lint .",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "generate-vapid-keys": "node --experimental-transform-types --no-warnings scripts/generate-vapid-keys.ts"
+  },
+  "dependencies": {
+    "@pactjoy/app": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "vitest": "^5.0.1"
+  }
+}

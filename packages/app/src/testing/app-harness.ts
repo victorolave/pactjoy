@@ -36,6 +36,10 @@ import {
   type InMemoryHabitRepository,
 } from "./in-memory-habit-repository.ts";
 import {
+  createInMemoryNotificationOutbox,
+  type InMemoryNotificationOutbox,
+} from "./in-memory-notification-outbox.ts";
+import {
   createInMemoryNudgeDismissalRepository,
   type InMemoryNudgeDismissalRepository,
 } from "./in-memory-nudge-dismissal-repository.ts";
@@ -43,6 +47,10 @@ import {
   createInMemoryPauseRequestRepository,
   type InMemoryPauseRequestRepository,
 } from "./in-memory-pause-request-repository.ts";
+import {
+  createInMemoryPushSubscriptionRepository,
+  type InMemoryPushSubscriptionRepository,
+} from "./in-memory-push-subscription-repository.ts";
 import {
   createInMemoryReviewRepository,
   type InMemoryReviewRepository,
@@ -81,8 +89,10 @@ export interface TestApp {
   readonly evidence: InMemoryEvidenceStorage;
   readonly feedReactions: InMemoryFeedReactionRepository;
   readonly habits: InMemoryHabitRepository;
+  readonly notifications: InMemoryNotificationOutbox;
   readonly nudgeDismissals: InMemoryNudgeDismissalRepository;
   readonly pauses: InMemoryPauseRequestRepository;
+  readonly pushSubscriptions: InMemoryPushSubscriptionRepository;
   readonly reviews: InMemoryReviewRepository;
   readonly seasonClosures: InMemorySeasonClosureRepository;
   readonly seasons: InMemorySeasonRepository;
@@ -107,8 +117,10 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
   const entryPhotos = createInMemoryEntryPhotoRepository();
   const feedReactions = createInMemoryFeedReactionRepository();
   const habits = createInMemoryHabitRepository();
+  const notifications = createInMemoryNotificationOutbox();
   const nudgeDismissals = createInMemoryNudgeDismissalRepository();
   const pauses = createInMemoryPauseRequestRepository();
+  const pushSubscriptions = createInMemoryPushSubscriptionRepository();
   const reviews = createInMemoryReviewRepository();
   const seasonClosures = createInMemorySeasonClosureRepository();
   const seasons = createInMemorySeasonRepository();
@@ -119,8 +131,10 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
     entryPhotos,
     feedReactions,
     habits,
+    notifications,
     nudgeDismissals,
     pauses,
+    pushSubscriptions,
     reviews,
     seasonClosures,
     seasons,
@@ -139,8 +153,10 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
     entryPhotos,
     feedReactions,
     habits,
+    notifications,
     nudgeDismissals,
     pauses,
+    pushSubscriptions,
     reviews,
     seasonClosures,
     seasons,
@@ -159,8 +175,10 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
         const entryPhotoScope = entryPhotos.beginTransaction();
         const feedReactionScope = feedReactions.beginTransaction();
         const habitScope = habits.beginTransaction();
+        const notificationScope = notifications.beginTransaction();
         const nudgeDismissalScope = nudgeDismissals.beginTransaction();
         const pauseScope = pauses.beginTransaction();
+        const pushSubscriptionScope = pushSubscriptions.beginTransaction();
         const reviewScope = reviews.beginTransaction();
         const seasonClosureScope = seasonClosures.beginTransaction();
         const seasonScope = seasons.beginTransaction();
@@ -172,8 +190,10 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
             entryPhotos: entryPhotoScope.repository,
             feedReactions: feedReactionScope.repository,
             habits: habitScope.repository,
+            notifications: notificationScope.repository,
             nudgeDismissals: nudgeDismissalScope.repository,
             pauses: pauseScope.repository,
+            pushSubscriptions: pushSubscriptionScope.repository,
             reviews: reviewScope.repository,
             seasonClosures: seasonClosureScope.repository,
             seasons: seasonScope.repository,
@@ -185,8 +205,10 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
             entryPhotoScope.validate();
             feedReactionScope.validate();
             habitScope.validate();
+            notificationScope.validate();
             nudgeDismissalScope.validate();
             pauseScope.validate();
+            pushSubscriptionScope.validate();
             reviewScope.validate();
             seasonClosureScope.validate();
             seasonScope.validate();
@@ -196,8 +218,10 @@ export function createTestApp(options: CreateTestAppOptions = {}): TestApp {
             entryPhotoScope.apply();
             feedReactionScope.apply();
             habitScope.apply();
+            notificationScope.apply();
             nudgeDismissalScope.apply();
             pauseScope.apply();
+            pushSubscriptionScope.apply();
             reviewScope.apply();
             seasonClosureScope.apply();
             seasonScope.apply();

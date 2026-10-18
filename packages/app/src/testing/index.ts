@@ -47,10 +47,14 @@ export type { InMemoryFeedReactionRepository } from "./in-memory-feed-reaction-r
 export { createInMemoryFeedReactionRepository } from "./in-memory-feed-reaction-repository.ts";
 export type { InMemoryHabitRepository } from "./in-memory-habit-repository.ts";
 export { createInMemoryHabitRepository } from "./in-memory-habit-repository.ts";
+export type { InMemoryNotificationOutbox } from "./in-memory-notification-outbox.ts";
+export { createInMemoryNotificationOutbox } from "./in-memory-notification-outbox.ts";
 export type { InMemoryNudgeDismissalRepository } from "./in-memory-nudge-dismissal-repository.ts";
 export { createInMemoryNudgeDismissalRepository } from "./in-memory-nudge-dismissal-repository.ts";
 export type { InMemoryPauseRequestRepository } from "./in-memory-pause-request-repository.ts";
 export { createInMemoryPauseRequestRepository } from "./in-memory-pause-request-repository.ts";
+export type { InMemoryPushSubscriptionRepository } from "./in-memory-push-subscription-repository.ts";
+export { createInMemoryPushSubscriptionRepository } from "./in-memory-push-subscription-repository.ts";
 export type { InMemoryReviewRepository } from "./in-memory-review-repository.ts";
 export { createInMemoryReviewRepository } from "./in-memory-review-repository.ts";
 export type { InMemorySeasonClosureRepository } from "./in-memory-season-closure-repository.ts";
@@ -59,5 +63,12 @@ export type { InMemorySeasonRepository } from "./in-memory-season-repository.ts"
 export { createInMemorySeasonRepository } from "./in-memory-season-repository.ts";
 export type { InMemoryUnitOfWorkOptions } from "./in-memory-unit-of-work.ts";
 export { createInMemoryUnitOfWork } from "./in-memory-unit-of-work.ts";
+export { outboxNoticeFixture, pushSubscriptionFixture } from "./notification-fixtures.ts";
+export type {
+  RecordedPush,
+  RecordingPushSender,
+  RecordingPushSenderOptions,
+} from "./recording-push-sender.ts";
+export { createRecordingPushSender } from "./recording-push-sender.ts";
 export { createSeededRandomSource } from "./seeded-random.ts";
 export { createSequentialIdGenerator } from "./sequential-ids.ts";

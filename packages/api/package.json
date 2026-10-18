@@ -12,7 +12,8 @@
     "lint": "biome lint .",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "jobs:tick": "node --experimental-transform-types --no-warnings scripts/jobs-tick.ts"
   },
   "dependencies": {
     "@pactjoy/app": "workspace:*",

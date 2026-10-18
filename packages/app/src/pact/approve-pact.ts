@@ -10,6 +10,7 @@ import { err, ok, type Result } from "../shared/result.ts";
 import type { Clock } from "../time/clock.port.ts";
 import type { TimeZone } from "../time/time-zone.port.ts";
 import { closeSeason, isUnanimouslyApproved } from "./close-pact.ts";
+import { enqueuePactPending } from "./pact-notices.ts";
 
 export interface ApprovePactDeps {
   readonly uow: UnitOfWork<Repositories>;
@@ -101,6 +102,7 @@ export async function approvePact(
     }
 
     await repos.seasons.save(updated, season.version);
+    await enqueuePactPending(repos, updated, circle, now, deps.timeZone);
     return ok({ season: updated, viewerId: member.id });
   });
 }

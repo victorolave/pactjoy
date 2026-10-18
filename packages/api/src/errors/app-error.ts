@@ -21,6 +21,7 @@ import type {
   MemberScoreError,
   PreviewInviteError,
   PreviewProgressError,
+  PushSubscriptionError,
   ReactionError,
   RecordEntryError,
   RemoveCommitmentError,
@@ -94,6 +95,7 @@ export type AppError =
   | ReactionError
   | RemoveFeedReactionError
   | SendEncouragementError
-  | DismissNudgeError;
+  | DismissNudgeError
+  | PushSubscriptionError;
 
 export type AppErrorKind = AppError["kind"];

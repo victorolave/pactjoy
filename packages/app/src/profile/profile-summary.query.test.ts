@@ -235,6 +235,7 @@ describe("profileSummary: one instant, per-season zone, pauses (REQ-C8, P2, P3)"
     };
     const { createFixedOffsetTimeZone } = await import("../testing/fixed-time-zone.ts");
     const zones = {
+      ...createFixedOffsetTimeZone({ offsetMinutes: 0 }),
       localDateAt: (
         at: Parameters<ReturnType<typeof createFixedOffsetTimeZone>["localDateAt"]>[0],
         zone: string,

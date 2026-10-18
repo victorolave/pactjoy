@@ -1,0 +1,5 @@
+.hint {
+  margin: 0;
+  font: var(--font-small);
+  color: var(--text-secondary);
+}

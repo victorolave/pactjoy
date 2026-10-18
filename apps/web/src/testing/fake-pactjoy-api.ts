@@ -26,6 +26,7 @@ import type {
   SubmitReviewCommand,
   UpdateHabitCommand,
 } from "../ports/pactjoy-api.ts";
+import type { DevicePushSubscription } from "../ports/push-subscription.ts";
 import type { SeasonProgressApi } from "../ports/season-progress-api.ts";
 import type {
   CarryOverDto,
@@ -89,6 +90,9 @@ type ExistingMethod =
   | "removeFeedReaction"
   | "sendEncouragement"
   | "dismissNudge"
+  | "getPushConfig"
+  | "savePushSubscription"
+  | "removePushSubscription"
   | ProgressMethod;
 type ProgressMethod = keyof SeasonProgressApi;
 
@@ -158,6 +162,9 @@ export class FakePactJoyApi implements PactJoyApi {
     removeFeedReaction: 0,
     sendEncouragement: 0,
     dismissNudge: 0,
+    getPushConfig: 0,
+    savePushSubscription: 0,
+    removePushSubscription: 0,
     getSeasonProgress: 0,
     getMemberProgress: 0,
     getCommitmentProgress: 0,
@@ -618,6 +625,26 @@ export class FakePactJoyApi implements PactJoyApi {
   async dismissNudge(seasonId: string, cmd: DismissNudgeCommand): Promise<void> {
     await this.#socialCall("dismissNudge", [seasonId, cmd]);
     this.#clearNudge();
+  }
+
+  /** The server's public VAPID key the fake hands out; null is a server without push. */
+  vapidPublicKey: string | null = "BFAKE-VAPID-KEY";
+  /** The devices registered through the fake, by endpoint. */
+  readonly pushDevices = new Map<string, DevicePushSubscription>();
+
+  async getPushConfig(_signal?: AbortSignal) {
+    this.#enter("getPushConfig");
+    return { vapidPublicKey: this.vapidPublicKey };
+  }
+
+  async savePushSubscription(subscription: DevicePushSubscription) {
+    this.#enter("savePushSubscription");
+    this.pushDevices.set(subscription.endpoint, subscription);
+  }
+
+  async removePushSubscription(endpoint: string) {
+    this.#enter("removePushSubscription");
+    this.pushDevices.delete(endpoint);
   }
 
   async getSeasonProgress(seasonId: string, signal?: AbortSignal) {

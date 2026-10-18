@@ -26,6 +26,7 @@ import {
   type PauseContext,
   seasonDayAt,
 } from "./effective-pauses.ts";
+import { enqueuePauseRequested } from "./pause-notices.ts";
 import { overlapsExisting } from "./pause-overlap.ts";
 import {
   AUTO_APPROVE_AFTER_MS,
@@ -239,6 +240,7 @@ export async function requestPause(
       });
       const decided = withDecision(record, decision);
       await repos.pauses.save(decided, null);
+      await enqueuePauseRequested(repos, season, circle, decided, now);
       return ok(decided);
     },
   );

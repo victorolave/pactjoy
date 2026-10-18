@@ -166,3 +166,17 @@ it: how an `Instant` actually becomes a `SeasonDay`.
   extends to `TimeZone`
 - `packages/engine/src/entry/grace-period.ts` -- `graceDeadline`, newly
   exported from `packages/engine/src/index.ts` by this slice
+
+## Addendum: local wall-clock time (change `scheduled-jobs-notifications`, ADR-0017)
+
+`TimeZone` gains two methods, still implemented only in `src/adapters/intl-time-zone.ts` and the
+fixed-offset fake:
+
+- `localTimeAt(at, zone) -> { date, minuteOfDay }`: the civil date and the floored minute of day.
+- `instantAt(date, minuteOfDay, zone) -> Instant`: the instant a local time happens. A time inside
+  a spring-forward gap is shifted forward by the gap; a time repeated by a fall-back takes the
+  earlier instant. The Intl adapter resolves it in two passes (the offsets a day before and after
+  give the only two candidates) and is tested on the Madrid and Santiago transitions.
+
+Notification timing (09:00 sends, 22:00 expiry, quiet hours 22:00-08:00) is computed with these in
+the season's timezone; no use case touches `Date` or `Intl`.
