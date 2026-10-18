@@ -10,20 +10,82 @@ Account deletion is immediate after typing `ELIMINAR`, with no undo or grace
 period. One app transaction leaves the active circle, erases private data,
 hides shared commitments, tombstones every membership, and removes fully
 erased circle trees. Photo object deletion and auth identity deletion run
-**after commit**, with identity deletion last. These are the agreed target
-semantics; the foundation commit does not yet expose a deletion endpoint.
+**after commit**, with identity deletion last.
 
 | Data | Disposition |
 | --- | --- |
-| Auth identity, habits, reviews/SRBAI, closures/decisions, subscriptions | Delete |
+| Auth identity, habits, reviews/SRBAI, closures/decisions | Delete |
+| Push subscriptions (D1) and commitment reminders (D2) | Delete |
 | Graduation feed items and all reactions targeting them | Disappear/delete, including peers' reactions; no pseudonymous graduation record |
 | Invites created by the member | Delete (owner decision overrides the earlier keep proposal) |
 | Entry values, dates, scoring history | Keep; erase notes, photos, request fingerprints and client request IDs, including tombstones |
 | Membership | Keep stable member ID, rotate auth user ID, empty display name, `left` status and `erasedAt` |
-| Commitments and pauses | Hide commitment detail with version-checked privacy saves; clear pause note/reason without changing scoring |
-| Received encouragements, viewer/target dismissals, recipient outbox | Delete; all outbox states, not just pending |
-| Sent encouragements and other shared reactions | Keep anonymously |
-| Circle whose every member is erased, including earlier leavers | Delete entire tree in FK-safe order |
+| Commitments | Hide detail with a version-checked season save: privacy `private` and the typed `customLabel` of the measure set to null; scoring fields unchanged |
+| Pauses | Clear note and set reason `other` with a version-checked save; scoring unchanged |
+| Received encouragements, viewer/target dismissals, outbox rows addressed to the member | Delete; all outbox states, not just pending |
+| Sent encouragements and the member's own reactions to peers' items | Keep, pseudonymous |
+| Circle whose every member row has `erasedAt` (earlier leavers included) | Delete the entire tree in FK-safe order; a non-erased earlier leaver keeps the circle (spec A1) |
+
+### Use case and order
+
+`deleteAccount(deps, actor, {confirmation})` (`packages/app/src/account/`)
+checks `confirmation.trim() === "ELIMINAR"` before any I/O, then runs one unit
+of work (`eraseAccount`): list every non-erased membership, leave the active
+circle through `leaveCircleCore` (today's leave semantics), tombstone each
+membership with its invite removed, hard-delete each fully erased circle
+(`hardDeleteCircle`: entries, photo ledger, pauses, reviews, closures, outbox
+by circle, reminders, reactions, encouragements and dismissals, seasons, then
+the circle), then the member-wide helpers. Each helper lives inside its
+owning module, so the existing guards stay intact. Entries are erased before
+photos are released (`entries.photo_id` is RESTRICT). After commit,
+`IdentityAdmin.deleteUser(originalUserId)` runs first; once it succeeds, a
+second small transaction repeats the user-level deletes (devices, habits,
+outbox rows by the original user id), so nothing the still-valid access token
+wrote in between survives. Then the member's released photos (including ones
+released before the deletion) are purged in bounded batches and the objects
+of dropped rows deleted, best effort and never thrown; leftovers stay
+`released` for the global sweep job.
+
+Peers' points are unchanged: the erased member is a left member, exactly as
+after `leaveCircle`, so the standings drop her like any leaver and her own
+scores stay readable as "Miembro que salió" with hidden commitments. The
+Postgres sentinel compares every peer read model with an ordinary leave.
+
+### HTTP
+
+`DELETE /me` with the JSON body `{confirmation}` (a route-level opt-in lets
+this one DELETE carry a body; every other DELETE still rejects one). 200
+`{data: null}`; 422 `InvalidRequest` (missing, wrong type or unknown field)
+or `ConfirmationMismatch`; 409 `ConcurrencyConflict`; 503
+`IdentityUnavailable` when the data is erased but the identity call failed
+(a retry repeats only that call). `API_AUTH_ADMIN_KEY` is optional: without
+it the route answers 503 `ServiceUnavailable` before any write, so the rest
+of the API keeps working until the owner sets the secret. Only the user JWT
+strategy reaches the route; the jobs secret never does.
+
+### Web
+
+Ajustes has a danger row "Eliminar cuenta" (disabled offline) that opens a
+sheet: the button stays disabled until the field reads `ELIMINAR` after
+trimming, while the request is pending and offline; an error keeps the word
+and offers "Reintentar" with the same call. On success the session ends
+locally with no remote logout (the identity is gone): store, query cache,
+persisted client and device session keys are cleared, this device's Web Push
+subscription is dropped best effort, and the login screen says "Tu cuenta se
+eliminó". An empty (or null) display name renders as "Miembro que salió"
+through one helper, `shared/member-name.ts`, at every peer-name site; the feed
+keeps its "Un miembro que salió" copy. `CACHE_VERSION` does not change.
+
+### Coverage guard
+
+`packages/db/test/erasure-coverage.ts` registers every person column and
+every free-text or JSON column of every migration with a rule (`delete`,
+`anonymize`, `keep`) and the reason. The guard parses all migrations, ALTERs
+included, and fails on an unregistered or stale column, or on a table the
+sentinel does not seed. `account-deletion.pg.test.ts` seeds every table with
+`SENTINEL-` strings and proves on Postgres that no row keeps the original
+user id, a sentinel string or an object key afterwards, that a retry writes
+nothing, and that peers' read models equal an ordinary leave.
 
 ## Context
 
@@ -42,14 +104,16 @@ identity deletion. An identity failure is sanitized and reported as
 The adapter receives the Edge Function's `API_AUTH_ADMIN_KEY` by dependency
 injection. It sends `DELETE /auth/v1/admin/users/<id>` with JSON
 `{"should_soft_delete":false}` and `Content-Type: application/json`.
-The `apikey` header always carries the injected value. Opaque keys are not
-JWTs and are never sent as Bearer tokens; only a JWT-shaped injected value
-also produces `Authorization: Bearer <value>`. This compatibility branch is
-tested with a deliberately synthetic string, not a real credential.
+The `apikey` header carries the injected value, and nothing else does: the
+key must be the project's opaque secret key. A JWT-shaped value (a legacy
+service-role key) is refused by `loadApiEnv` with a name-only error, so the
+legacy key can never be used for this.
 
 | Outcome | Adapter result |
 | --- | --- |
-| 200, 204, 404 | Success; absent user counts as done on retry |
+| 200, 204 | Success |
+| 404 whose body is GoTrue's user-not-found | Success; an absent user counts as done on retry |
+| Any other 404 (wrong URL, gateway route missing) | `IdentityAdminError("unavailable")` |
 | 401, 403 | `IdentityAdminError("rejected")` |
 | Other status, network failure, timeout, redirect | `IdentityAdminError("unavailable")` |
 
@@ -68,6 +132,8 @@ Owner-only release checks (also required in the eventual PR body):
 - [ ] Append the `API_AUTH_ADMIN_KEY` name to the function environment example and configure the secret securely.
 - [ ] Verify hosted admin/gateway integration and refresh-token rejection after deletion.
 - [ ] Verify the flow on a real iPhone and approve the Spanish confirmation/error copy.
+- [ ] Use the opaque secret key (not a legacy JWT key) as `API_AUTH_ADMIN_KEY`; confirm a repeat delete answers GoTrue's user-not-found 404 through the gateway.
+- [ ] Trigger `POST /api/jobs/sweep-entry-photos` on a schedule, and add a bucket lifecycle rule for objects with no ledger row.
 
 ## Alternatives considered
 
@@ -83,9 +149,20 @@ Owner-only release checks (also required in the eventual PR body):
 ## Consequences
 
 - Shared scoring IDs remain stable; peers lose personal detail, not points.
+- Notices queued to peers stay: their params are ids only, and dispatch drops
+  the ones whose subject is gone or whose sender left (ADR-0017, ADR-0018 F17).
 - The access JWT can remain cryptographically valid until expiration. Rotated
-  memberships remove access to old circle data. A denylist is out of scope;
-  creating fresh resources under a stale token remains a documented residual.
+  memberships remove access to old circle data, and the post-identity cleanup
+  removes what the token wrote before the identity was gone. A write after
+  that cleanup (a new habit or device under the dead uuid, until the token
+  expires) remains a documented residual; a denylist is out of scope.
+- `DELETE /me` asks for no recent login: a stolen access token plus the
+  constant word is enough. Accepted for the MVP (the word guards against
+  mistakes, not attackers); re-authentication is a follow-up.
+- A presigned upload that lands after its pending ledger row was released and
+  purged leaves an opaque object with no row. A bucket lifecycle rule for
+  objects with no ledger row (or an upload TTL shorter than the purge) closes
+  it; it is on the ops checklist.
 - The client clears its session and caches without a remote logout call.
 - Storage deletion is best effort. Released ledger rows are retried by the
   sweep; a failed object delete after full-tree removal can leave an opaque,

@@ -116,3 +116,8 @@ The design wins over the spec where they differ, except where an owner decision 
 ## References
 
 - ADR-0008 (ports, addendum), ADR-0010 (Postgres adapter, addendum), ADR-0011 (API layer, addendum), ADR-0013 (pause choke point), ADR-0014, ADR-0015 (graduation, addendum), ADR-0016.
+
+## Addendum: account deletion (change `account-deletion`, ADR-0019)
+
+- Deleting an account deletes the member's season closures, so their graduation items disappear from peers' feeds, and every reaction aimed at those items is deleted too, peers' included (owner decision, option A). No pseudonymous graduation fact is kept.
+- The member's other items stay as a left member's (`displayName: null`), with commitments hidden as private. Received encouragements and dismissals on either side are deleted; sent encouragements and the member's own reactions on peers' items stay, pseudonymous. A queued `encouragementNudge` from the erased member is dropped at dispatch because its sender left.

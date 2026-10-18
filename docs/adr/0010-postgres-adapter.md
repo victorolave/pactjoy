@@ -158,3 +158,10 @@ Both URL types ran the same scratch Edge Function, with `prepare: false` and the
 - No foreign keys at all: members and commitments are replaced wholesale by their aggregate's save, a pact-open season can be discarded, and erasure (change E) deletes these rows itself. Dispatch drops a row whose season or pause is gone. RLS on, no policies, client roles revoked, no triggers, no functions.
 - `enqueue` is `INSERT ... ON CONFLICT (dedupe_key) DO NOTHING` and `upsert` is `ON CONFLICT (endpoint) DO UPDATE`, so neither raises and neither needs an entry in `CONFLICT_CONSTRAINTS`.
 - The claim is one `UPDATE ... RETURNING` over a `FOR UPDATE SKIP LOCKED` selection (no SQL function), committed on its own; `finish` and `reschedule` are fenced `WHERE state = 'sending' AND attempts = $claimed`. Sending happens between those transactions, never inside one. `notifications.pg.test.ts` covers every CHECK, two concurrent claims taking disjoint rows, the absence of foreign keys and a full dispatch over Postgres.
+
+## Addendum: account deletion (change `account-deletion`, ADR-0019)
+
+- `20261019000000_circle_members_erased_at.sql` adds `circle_members.erased_at` with the CHECK `erased_at is null or status = 'left'`. A tombstoned member keeps its id (engine references stay valid), gets a fresh unlinked `user_id` and an empty `display_name`.
+- Erasure is set-based DELETE/UPDATE under the transaction's row locks, or version-checked domain saves where a concurrent wholesale save could otherwise re-insert erased detail (season commitments, pause requests). There are still no SQL functions or triggers.
+- `entries.photo_id` references `entry_photos` with RESTRICT, so entries are erased (or deleted, for a full tree) before the photo ledger is released or dropped.
+- `packages/db/test/erasure-coverage.ts` is the registry of every person column and every free-text or JSON column with its erasure rule; `erasure-coverage.test.ts` parses all migrations and fails on an unregistered or stale column, so a future table must declare its rule. `account-deletion.pg.test.ts` is the sentinel proof over real Postgres.

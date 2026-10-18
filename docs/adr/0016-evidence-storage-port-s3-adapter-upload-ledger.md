@@ -191,3 +191,7 @@ Chosen: `chrislusf/seaweedfs:4.48@sha256:4e61d15fd35994cb1e43e1e553dff106794841f
 
 - ADR-0008 (ports, addendum), ADR-0009 (time model), ADR-0010 (Postgres adapter, addendum), ADR-0011 (API layer, addendum Q24), ADR-0014, ADR-0015.
 - AWS Signature Version 4 query-string authentication: https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-query-string-auth.html
+
+## Addendum: account deletion (change `account-deletion`, ADR-0019)
+
+"Kept when the member leaves" does not hold for account deletion: every photo of the person is deleted. Inside the transaction the entries lose their `photo_id` and the ledger rows become `released`; after commit they are purged in bounded batches (50 rows, at most 4 batches), and anything left stays `released` for the global sweep. A fully erased circle drops its ledger rows in the transaction and deletes their objects after commit; a failed object delete there can leave an unreachable orphan (no row, no URL), counted only.
