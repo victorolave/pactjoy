@@ -4,7 +4,8 @@ import { ConcurrencyConflict } from "../shared/errors.ts";
 import type { HabitId, UserId } from "../shared/ids.ts";
 
 interface StagedWrite {
-  readonly habit: Habit;
+  /** `null` stages a deletion. */
+  readonly habit: Habit | null;
   readonly expectedVersion: number | null;
 }
 
@@ -61,6 +62,12 @@ export function createInMemoryHabitRepository(): InMemoryHabitRepository {
       return pick(ids, (id) => store.get(id) ?? null);
     },
 
+    async deleteByOwner(ownerId: UserId): Promise<void> {
+      for (const [id, habit] of store) {
+        if (habit.ownerId === ownerId) store.delete(id);
+      }
+    },
+
     async save(habit: Habit, expectedVersion: number | null): Promise<void> {
       const existing = store.get(habit.id);
       const currentVersion = existing ? existing.version : null;
@@ -74,7 +81,17 @@ export function createInMemoryHabitRepository(): InMemoryHabitRepository {
       const staged = new Map<HabitId, StagedWrite>();
 
       function view(id: HabitId): Habit | null {
-        return staged.get(id)?.habit ?? store.get(id) ?? null;
+        const write = staged.get(id);
+        return write ? write.habit : (store.get(id) ?? null);
+      }
+
+      function merged(): Map<HabitId, Habit> {
+        const all = new Map(store);
+        for (const [id, { habit }] of staged) {
+          if (habit) all.set(id, habit);
+          else all.delete(id);
+        }
+        return all;
       }
 
       const repository: HabitRepository = {
@@ -87,9 +104,18 @@ export function createInMemoryHabitRepository(): InMemoryHabitRepository {
         },
 
         async listByOwner(ownerId: UserId): Promise<readonly Habit[]> {
-          const merged = new Map(store);
-          for (const [id, { habit }] of staged) merged.set(id, habit);
-          return [...merged.values()].filter((h) => h.ownerId === ownerId).sort(newestFirst);
+          return [...merged().values()].filter((h) => h.ownerId === ownerId).sort(newestFirst);
+        },
+
+        async deleteByOwner(ownerId: UserId): Promise<void> {
+          for (const [id, habit] of merged()) {
+            if (habit.ownerId !== ownerId) continue;
+            const earlier = staged.get(id);
+            staged.set(id, {
+              habit: null,
+              expectedVersion: earlier ? earlier.expectedVersion : habit.version,
+            });
+          }
         },
 
         async save(habit: Habit, expectedVersion: number | null): Promise<void> {
@@ -110,7 +136,8 @@ export function createInMemoryHabitRepository(): InMemoryHabitRepository {
         },
         apply(): void {
           for (const [id, { habit }] of staged) {
-            store.set(id, habit);
+            if (habit) store.set(id, habit);
+            else store.delete(id);
           }
         },
       };

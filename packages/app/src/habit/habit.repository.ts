@@ -21,4 +21,6 @@ export interface HabitRepository {
   listByOwner(ownerId: UserId): Promise<readonly Habit[]>;
   /** @throws {ConcurrencyConflict} if the stored version no longer matches `expectedVersion` (D5). */
   save(habit: Habit, expectedVersion: number | null): Promise<void>;
+  /** Account erasure: deletes every habit `ownerId` owns, graduated or not. No habit is a safe no-op. */
+  deleteByOwner(ownerId: UserId): Promise<void>;
 }

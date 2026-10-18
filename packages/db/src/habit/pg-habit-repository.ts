@@ -67,6 +67,10 @@ export function createPgHabitRepository(exec: SqlExecutor): HabitRepository {
       return rows.map(toHabit);
     },
 
+    async deleteByOwner(ownerId) {
+      await exec.query("delete from pactjoy.habits where owner_id = $1", [ownerId]);
+    },
+
     async save(habit: Habit, expectedVersion) {
       const createdAt = new Date(habit.createdAt).toISOString();
       const graduatedAt =
