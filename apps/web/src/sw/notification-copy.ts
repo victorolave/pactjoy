@@ -90,6 +90,16 @@ const KINDS: Readonly<
       url: "/",
     }),
   },
+  encouragementNudge: {
+    needs: ["seasonId", "encouragementId"],
+    // To the recipient only (ADR-0018 F17). It never says why it was sent: the recipient must not
+    // learn it followed a hard week. Who sent which emoji is in the Circle tab's activity.
+    view: () => ({
+      title: "Alguien te envió ánimo",
+      body: "Míralo en la actividad de tu círculo.",
+      url: "/circle",
+    }),
+  },
 };
 
 /** Params that are whole numbers; every other param is a non-empty string (an id or a date). */

@@ -26,12 +26,16 @@ import type { TestApp } from "./app-harness.ts";
  * `pauseOn: "entries"` moves the pause point to the first idempotency
  * lookup (`entries.findByClientRequest`) instead, so two duplicate
  * `recordEntry` calls both miss before either commits (T1).
+ *
+ * `pauseOn: "feedReactions"` pauses after the first reaction lookup
+ * (`feedReactions.find`), so two racing reaction writes both hold the row
+ * they read before either commits.
  */
 export async function raceTransactions<W, L>(
   app: TestApp,
   winner: (app: TestApp) => Promise<W>,
   loser: (app: TestApp) => Promise<L>,
-  pauseOn: "seasons" | "entries" | "circles" = "seasons",
+  pauseOn: "seasons" | "entries" | "circles" | "feedReactions" = "seasons",
 ): Promise<{ readonly winner: PromiseSettledResult<W>; readonly loser: PromiseSettledResult<L> }> {
   let arrived = 0;
   let releaseBoth!: () => void;
@@ -93,6 +97,16 @@ export async function raceTransactions<W, L>(
                       clientRequestId,
                     ),
                   ),
+              },
+            });
+          }
+          if (pauseOn === "feedReactions") {
+            return work({
+              ...repos,
+              feedReactions: {
+                ...repos.feedReactions,
+                find: async (seasonId, itemKey, memberId) =>
+                  pauseAfterFirstRead(await repos.feedReactions.find(seasonId, itemKey, memberId)),
               },
             });
           }

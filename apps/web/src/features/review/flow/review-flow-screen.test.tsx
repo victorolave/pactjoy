@@ -16,6 +16,7 @@ import {
   submittedFixture,
 } from "../../../testing/fixtures/review.ts";
 import { seasonCloseFixture } from "../../../testing/fixtures/season-close.ts";
+import { feedFixture, nudgeFixture } from "../../../testing/fixtures/social.ts";
 import { activeTodayFixture } from "../../../testing/fixtures/today.ts";
 import { renderApp } from "../../../testing/render.tsx";
 
@@ -199,6 +200,57 @@ describe("the review route", () => {
     // The flow watches Today (the grace day decides where the closing review leads), so the
     // invalidation refetches it at once instead of leaving it stale.
     await waitFor(() => expect(app.deps.api.calls.getToday).toBeGreaterThan(before));
+  });
+});
+
+describe("the review route and the encouragement nudge (ADR-0018)", () => {
+  const withNudge = { feedPages: [feedFixture({ nudge: nudgeFixture() })] };
+  const nudgeText = "A Andrea le está costando más Correr estas semanas.";
+
+  it("offers the nudge on the saved screen, as part of it and not as a new step", async () => {
+    open(interimItemOneFixture({ status: "completed" }), 2, withNudge);
+    await screen.findByRole("heading", { name: "Revisión guardada." });
+    expect(await screen.findByText(nudgeText)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Seguir con mi día" })).toBeInTheDocument();
+  });
+
+  it("sends the encouragement after a full walk, and the card goes away", async () => {
+    const app = open(interimItemOneFixture(), 2, withNudge);
+    await screen.findByRole("heading", { name: "Así fueron tus dos últimas semanas" });
+    await click("Continuar");
+    await click("Continuar");
+    for (const phrase of [0, 1, 2, 3]) await answer(phrase, 5);
+    await click("Terminar revisión");
+    await screen.findByText(nudgeText);
+    await click("Enviar Celebrar");
+    await waitFor(() =>
+      expect(app.deps.api.socialCommands).toEqual([
+        {
+          method: "sendEncouragement",
+          args: ["season-1", { recipientId: "member-andrea", week: 2, emoji: "raisedHands" }],
+        },
+      ]),
+    );
+    await waitFor(() => expect(screen.queryByText(nudgeText)).not.toBeInTheDocument());
+  });
+
+  it("skipping it changes nothing: the member still goes on with their day", async () => {
+    const app = open(interimItemOneFixture({ status: "completed" }), 2, withNudge);
+    await screen.findByText(nudgeText);
+    await click("Ahora no");
+    await waitFor(() => expect(screen.queryByText(nudgeText)).not.toBeInTheDocument());
+    await click("Seguir con mi día");
+    await waitFor(() => expect(app.location()).toBe("/"));
+    expect(app.deps.api.reviewCommands).toEqual([]);
+  });
+
+  it("shows no nudge when the feed has none", async () => {
+    const app = open(interimItemOneFixture({ status: "completed" }), 2, {
+      feedPages: [feedFixture()],
+    });
+    await screen.findByRole("heading", { name: "Revisión guardada." });
+    await waitFor(() => expect(app.deps.api.calls.feed).toBe(1));
+    expect(screen.queryByText(nudgeText)).not.toBeInTheDocument();
   });
 });
 

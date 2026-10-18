@@ -5,6 +5,7 @@ import type { ReviewDraftDto, SubmittedReviewDto } from "../../../ports/wire.ts"
 import { FlowScreen } from "../../../ui/FlowScreen.tsx";
 import { Skeleton } from "../../../ui/Skeleton.tsx";
 import { StepBars } from "../../../ui/StepBars.tsx";
+import { NudgeSlot } from "../../social/index.ts";
 import type { StepChrome } from "../chrome.ts";
 import { ReviewDoneStep } from "../done/ReviewDoneStep.tsx";
 import { useResultsOpenOn, useReview, useSubmitReview } from "../queries.ts";
@@ -86,6 +87,7 @@ function ReviewFlow({ seasonId, periodIndex, draft }: FlowProps) {
         names={names}
         closing={draft.kind === "closing"}
         resultsOpenOn={resultsOpenOn}
+        nudge={<NudgeSlot />}
         onFinish={finish}
       />
     );
@@ -264,6 +266,7 @@ function ReviewGate({ seasonId, periodIndex, onLeave }: GateProps) {
         names={new Map()}
         closing={draft.kind === "closing"}
         resultsOpenOn={resultsOpenOn}
+        nudge={<NudgeSlot />}
         onFinish={
           draft.kind === "closing" && resultsOpenOn === null
             ? () => void navigate(closeRoute(seasonId), { replace: true })

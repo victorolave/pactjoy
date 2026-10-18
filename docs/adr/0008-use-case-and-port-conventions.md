@@ -211,6 +211,12 @@ that ADR-0009 will build on.
 - A new outbound port, `EvidenceStorage { signUpload, signDownloads, stat, readHead, delete }`, is NOT part of `Repositories`: it has no transaction. Use cases receive it as `deps.evidence`, call it only OUTSIDE a unit of work (verification before, deletion after the commit), and let its `EvidenceStorageError { code }` escape as infrastructure. The adapter is `packages/storage`; the app ships an in-memory fake and one contract suite.
 - `EntryRecord` gains `photoId: EntryPhotoId | null` (a tombstone's is `null`); the request fingerprint appends it only when present.
 
+## Addendum: the social ports (change `social-reactions`, ADR-0018)
+
+- `Repositories` gains three ports in the style of `ReviewRepository` (ADR-0014). `feedReactions: FeedReactionRepository { listBySeason, find, save, remove }` keeps one reaction per `(season, item key, member)`; `save` takes the expected version (`null` for an insert) and a duplicate key or a stale write is a `ConcurrencyConflict`. Reactions are not private (a peer sees the counts), so the port has no guard test; the sentinel tests cover it instead.
+- `encouragements: EncouragementRepository { listSent, listReceived, get, add }` is owner-scoped: it has NO season-wide read, only what the sender or the recipient may see, and `get` is by id for the push hook (`encouragementNotice`). `add` enforces the two unique keys (one per `(season, sender, recipient, case week)`, one per `(sender, recipient, day)`) as a `ConcurrencyConflict`. `nudgeDismissals: NudgeDismissalRepository { listMine, add }` is owner-only and `add` is idempotent (a duplicate keeps the first). `encouragement-guard.test.ts` confines both to `src/encouragement/` and pins the method lists.
+- The feed itself is NOT a port: it is derived on every read from the existing repositories (`feed-guard.test.ts` forbids `src/feed/` from touching reviews, closures, photos, notes and photo ids). The three ports have an in-memory adapter, a contract suite exported from `@pactjoy/app/contracts` and a Postgres adapter.
+
 ## Addendum: the notification ports (change `scheduled-jobs-notifications`, ADR-0017)
 
 - `Repositories` gains `notifications: NotificationOutboxRepository { enqueue, claimDue, reschedule, finish, purgeFinished }` and `pushSubscriptions: PushSubscriptionRepository { upsert, remove, removeById, listByUser, trimOldest }`. Both are confined to `src/notifications/` (`notification-guard.test.ts`); other modules add notices only through `enqueueNotices(repos, drafts, now)`, inside their own transaction.

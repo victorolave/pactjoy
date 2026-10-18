@@ -7,6 +7,7 @@ import type {
   CreateCircleCommand,
   CreateHabitCommand,
   CreateSeasonCommand,
+  DismissNudgeCommand,
   EditCommitmentCommand,
   EditEntryCommand,
   EditSeasonCommand,
@@ -20,6 +21,7 @@ import type {
   RecordedEntry,
   RequestPauseCommand,
   RequestPhotoUploadCommand,
+  SendEncouragementCommand,
   SubmitClosureCommand,
   SubmitReviewCommand,
   UpdateHabitCommand,
@@ -28,12 +30,15 @@ import type { DevicePushSubscription } from "../ports/push-subscription.ts";
 import type { SeasonProgressApi } from "../ports/season-progress-api.ts";
 import type {
   CarryOverDto,
+  CircleFeedDto,
   CommitmentStageDto,
   MyPauseRequests,
   PauseApprovalDto,
   PauseRequestDto,
   PhotoUploadDto,
   ProfileSummaryDto,
+  ReactionCode,
+  ReactionsDto,
   ReviewDraftDto,
   SeasonDto,
   SeasonHistoryDto,
@@ -50,6 +55,7 @@ import {
 } from "./fixtures/pause.ts";
 import { profileSummaryFixture } from "./fixtures/profile.ts";
 import { carryOverFixture, seasonHistoryFixture } from "./fixtures/season-close.ts";
+import { emptyFeedFixture } from "./fixtures/social.ts";
 
 type ExistingMethod =
   | "getToday"
@@ -79,6 +85,11 @@ type ExistingMethod =
   | "getCarryOver"
   | "getSeasonHistory"
   | "getProfileSummary"
+  | "feed"
+  | "reactToFeedItem"
+  | "removeFeedReaction"
+  | "sendEncouragement"
+  | "dismissNudge"
   | "getPushConfig"
   | "savePushSubscription"
   | "removePushSubscription"
@@ -146,6 +157,11 @@ export class FakePactJoyApi implements PactJoyApi {
     getCarryOver: 0,
     getSeasonHistory: 0,
     getProfileSummary: 0,
+    feed: 0,
+    reactToFeedItem: 0,
+    removeFeedReaction: 0,
+    sendEncouragement: 0,
+    dismissNudge: 0,
     getPushConfig: 0,
     savePushSubscription: 0,
     removePushSubscription: 0,
@@ -165,6 +181,8 @@ export class FakePactJoyApi implements PactJoyApi {
   /** What the season closure was asked to do, in order, including the calls scripted to fail. */
   readonly closureCommands: { readonly seasonId: string; readonly cmd: SubmitClosureCommand }[] =
     [];
+  /** What the social mutations were asked to do, in order, including the ones scripted to fail. */
+  readonly socialCommands: { readonly method: Method; readonly args: readonly unknown[] }[] = [];
   /** Every recordEntry call, including the ones that were scripted to fail. */
   readonly recordAttempts: RecordEntryCommand[] = [];
   /** Every deleteEntry call, including the ones that were scripted to fail. */
@@ -191,6 +209,7 @@ export class FakePactJoyApi implements PactJoyApi {
   readonly #carryOvers = new Map<string, CarryOverDto>();
   #seasonHistory: SeasonHistoryDto = seasonHistoryFixture();
   #profileSummary: ProfileSummaryDto = profileSummaryFixture();
+  #feedPages: CircleFeedDto[] = [emptyFeedFixture()];
   #closureResult: SubmittedClosureDto | null = null;
   #submitResult: SubmittedReviewDto = {
     status: "completed",
@@ -244,6 +263,18 @@ export class FakePactJoyApi implements PactJoyApi {
 
   setProfileSummary(view: ProfileSummaryDto): void {
     this.#profileSummary = view;
+  }
+
+  /**
+   * The feed pages `feed` serves: the first without a cursor, the rest by the `page-N` cursors the
+   * fake hands out. Cursors are assigned here, and only the first page keeps its nudge.
+   */
+  setFeedPages(pages: readonly CircleFeedDto[]): void {
+    this.#feedPages = pages.map((page, index) => ({
+      ...page,
+      nextCursor: index < pages.length - 1 ? `page-${index + 1}` : null,
+      nudge: index === 0 ? page.nudge : null,
+    }));
   }
 
   /** What `submitSeasonClosure` answers; by default it echoes the decisions it was given. */
@@ -565,6 +596,37 @@ export class FakePactJoyApi implements PactJoyApi {
     return this.#profileSummary;
   }
 
+  async feed(cursor?: string | null, _signal?: AbortSignal): Promise<CircleFeedDto> {
+    const gate = this.#takeGate("feed");
+    this.#enter("feed");
+    await gate;
+    if (cursor === undefined || cursor === null) return this.#feedPages[0] ?? emptyFeedFixture();
+    const index = /^page-(\d+)$/.test(cursor) ? Number(cursor.slice("page-".length)) : -1;
+    const page = index >= 1 ? this.#feedPages[index] : undefined;
+    if (page === undefined) throw new ApiError("InvalidFeedCursor", 422, null);
+    return page;
+  }
+
+  async reactToFeedItem(seasonId: string, itemKey: string, emoji: ReactionCode) {
+    await this.#socialCall("reactToFeedItem", [seasonId, itemKey, emoji]);
+    return this.#react(itemKey, emoji);
+  }
+
+  async removeFeedReaction(seasonId: string, itemKey: string) {
+    await this.#socialCall("removeFeedReaction", [seasonId, itemKey]);
+    return this.#react(itemKey, null);
+  }
+
+  async sendEncouragement(seasonId: string, cmd: SendEncouragementCommand): Promise<void> {
+    await this.#socialCall("sendEncouragement", [seasonId, cmd]);
+    this.#clearNudge();
+  }
+
+  async dismissNudge(seasonId: string, cmd: DismissNudgeCommand): Promise<void> {
+    await this.#socialCall("dismissNudge", [seasonId, cmd]);
+    this.#clearNudge();
+  }
+
   /** The server's public VAPID key the fake hands out; null is a server without push. */
   vapidPublicKey: string | null = "BFAKE-VAPID-KEY";
   /** The devices registered through the fake, by endpoint. */
@@ -627,6 +689,47 @@ export class FakePactJoyApi implements PactJoyApi {
     this.reviewCommands.push({ method, args });
     this.#enter(method);
     await gate;
+  }
+
+  /**
+   * Records the call, waits on a held gate, THEN counts it and throws a scripted failure: a held
+   * call can fail after the screen has already shown its optimistic state.
+   */
+  async #socialCall(method: Method, args: readonly unknown[]): Promise<void> {
+    const gate = this.#takeGate(method);
+    this.socialCommands.push({ method, args });
+    await gate;
+    this.#enter(method);
+  }
+
+  /**
+   * Like the server: one reaction per member per item, counts only. `code` null takes it back.
+   * The stored item changes too, so the next read of the feed shows it.
+   */
+  #react(itemKey: string, code: ReactionCode | null): ReactionsDto {
+    for (const [pageIndex, page] of this.#feedPages.entries()) {
+      const at = page.items.findIndex((item) => item.key === itemKey);
+      const found = page.items[at];
+      if (found === undefined) continue;
+      if (!("reactions" in found) || !found.reactions.reactable) {
+        throw new ApiError("FeedItemNotReactable", 409, null);
+      }
+      const { counts, mine } = found.reactions;
+      const next = { ...counts };
+      if (mine !== null) next[mine] -= 1;
+      if (code !== null) next[code] += 1;
+      const reactions: ReactionsDto = { counts: next, mine: code, reactable: true };
+      const items = page.items.map((item, index) => (index === at ? { ...item, reactions } : item));
+      this.#feedPages[pageIndex] = { ...page, items: items as CircleFeedDto["items"] };
+      return reactions;
+    }
+    throw new ApiError("FeedItemNotFound", 404, null);
+  }
+
+  /** Like the server: a sent or dismissed case is no longer offered. */
+  #clearNudge(): void {
+    const first = this.#feedPages[0];
+    if (first !== undefined) this.#feedPages[0] = { ...first, nudge: null };
   }
 
   /** Like the server: reading a saved review afterwards says it is saved, not due. */

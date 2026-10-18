@@ -14,6 +14,8 @@ export type EntryPhotoId = string & { readonly __brand: "EntryPhotoId" };
 export type PauseRequestId = string & { readonly __brand: "PauseRequestId" };
 export type ReviewId = string & { readonly __brand: "ReviewId" };
 export type SeasonClosureId = string & { readonly __brand: "SeasonClosureId" };
+export type FeedReactionId = string & { readonly __brand: "FeedReactionId" };
+export type EncouragementId = string & { readonly __brand: "EncouragementId" };
 export type PushSubscriptionId = string & { readonly __brand: "PushSubscriptionId" };
 
 function brand<Brand extends string>(
@@ -64,6 +66,16 @@ export function reviewId(value: string): ReviewId {
 /** @throws {RangeError} if `value` is empty. */
 export function seasonClosureId(value: string): SeasonClosureId {
   return brand("SeasonClosureId", value) as SeasonClosureId;
+}
+
+/** @throws {RangeError} if `value` is empty. */
+export function feedReactionId(value: string): FeedReactionId {
+  return brand("FeedReactionId", value) as FeedReactionId;
+}
+
+/** @throws {RangeError} if `value` is empty. */
+export function encouragementId(value: string): EncouragementId {
+  return brand("EncouragementId", value) as EncouragementId;
 }
 
 /** @throws {RangeError} if `value` is empty. */

@@ -15,6 +15,8 @@ const ALLOWED: readonly NotificationKind[] = [
   "seasonStarted",
   "reviewDue",
   "seasonClosed",
+  // ADR-0018 F17: to the recipient only; it never says why (no week, habit or consistency).
+  "encouragementNudge",
 ];
 
 const FORBIDDEN_WORDS = [
@@ -58,6 +60,7 @@ describe("KIND_POLICY", () => {
       "pauseApproved",
       "pauseRejected",
       "pactPendingApproval",
+      "encouragementNudge",
     ]);
   });
 

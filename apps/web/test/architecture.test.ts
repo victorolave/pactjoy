@@ -38,12 +38,13 @@ const ALLOWED_FEATURE_DEPS: Readonly<Record<string, readonly string[]>> = {
     "season-close",
     "season-progress-data",
     "season-week",
+    "social",
   ],
   habits: [],
   pact: ["habits", "review"],
   entry: [],
   auth: [],
-  circle: ["onboarding", "pause"],
+  circle: ["onboarding", "pause", "social"],
   // The permission step turns Web Push on from its tap (ADR-0017).
   onboarding: ["notifications"],
   // This device's Web Push lifecycle; the session reaches it through the composition, not auth.
@@ -57,7 +58,11 @@ const ALLOWED_FEATURE_DEPS: Readonly<Record<string, readonly string[]>> = {
   // Reads Today and the circle through the API port and their shared query keys, never their features.
   pause: [],
   // Reads Today and the review through the API port and the shared query keys, never other features.
-  review: [],
+  // Only the Review closing step places the encouragement nudge (ADR-0018), through social's index.
+  review: ["social"],
+  // The social layer (the circle feed, reactions and the nudge) reads everything through the API
+  // port and the shared query keys; Today, the circle and the review place its pieces.
+  social: [],
   // The closing review comes before the decisions; Today, the circle and the habits are read through
   // the API port and the shared query keys, never their features. The final standings (36) reuse the
   // season's standings card and its progress read, the same peer-visible rows.
@@ -188,6 +193,20 @@ describe("the folder architecture", () => {
     expect(violationsOf("shell/routes.tsx", ["../features/season-close/index.ts"])).toEqual([]);
     expect(violationsOf("features/circle/Foo.tsx", ["../season-close/index.ts"])).toHaveLength(1);
     expect(violationsOf("features/review/Foo.tsx", ["../season-close/index.ts"])).toHaveLength(1);
+  });
+
+  it("lets Today, the circle and the review reach social only through its index, and social reach no feature", () => {
+    for (const from of ["today", "circle", "review"]) {
+      expect(violationsOf(`features/${from}/Foo.tsx`, ["../social/index.ts"])).toEqual([]);
+      expect(violationsOf(`features/${from}/Foo.tsx`, ["../social/queries.ts"])).toHaveLength(1);
+    }
+    for (const other of ["today", "circle", "review", "pause", "season-close", "profile"]) {
+      expect(violationsOf("features/social/Foo.tsx", [`../${other}/index.ts`])).toHaveLength(1);
+    }
+    // The rest of the app does not know the feed: it reaches it through Today or the circle.
+    for (const from of ["pause", "pact", "entry", "season", "season-close", "profile"]) {
+      expect(violationsOf(`features/${from}/Foo.tsx`, ["../social/index.ts"])).toHaveLength(1);
+    }
   });
 
   it("keeps every import inside the dependency rules", () => {

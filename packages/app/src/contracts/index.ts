@@ -7,11 +7,21 @@
  */
 
 export { describeCircleRepositoryContract } from "./circle.contract.ts";
+export type {
+  EncouragementContractSubject,
+  NudgeDismissalContractSubject,
+} from "./encouragement.contract.ts";
+export {
+  describeEncouragementRepositoryContract,
+  describeNudgeDismissalRepositoryContract,
+} from "./encouragement.contract.ts";
 export { describeEntryRepositoryContract } from "./entry.contract.ts";
 export type { EntryPhotoContractSubject } from "./entry-photo.contract.ts";
 export { describeEntryPhotoRepositoryContract } from "./entry-photo.contract.ts";
 export type { EvidenceStorageContractSubject } from "./evidence-storage.contract.ts";
 export { describeEvidenceStorageContract } from "./evidence-storage.contract.ts";
+export type { FeedReactionContractSubject } from "./feed-reaction.contract.ts";
+export { describeFeedReactionRepositoryContract } from "./feed-reaction.contract.ts";
 export type { ContractSubject } from "./fixtures.ts";
 export {
   describeCircleGuardContract,

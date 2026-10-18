@@ -3,7 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { ApiError } from "../ports/api-error.ts";
-import { seasonProgressKey, todayKey } from "../shared/query-keys.ts";
+import { feedKey, seasonProgressKey, todayKey } from "../shared/query-keys.ts";
 import { FakePactJoyApi } from "../testing/fake-pactjoy-api.ts";
 import { activeSeasonProgress } from "../testing/fixtures/season-progress.ts";
 import { activeTodayFixture } from "../testing/fixtures/today.ts";
@@ -110,6 +110,25 @@ describe("createQueryClient progress invalidation (AC-PG-A03)", () => {
     release();
 
     await waitFor(() => expect(api.calls.getSeasonProgress).toBe(2));
+  });
+});
+
+describe("createQueryClient social invalidation (ADR-0018)", () => {
+  it("every settled mutation marks the circle feed stale: an entry, a pause or a closure changes it", async () => {
+    const api = new FakePactJoyApi(activeTodayFixture());
+    const client = createQueryClient();
+    client.setQueryData(feedKey, { pages: [], pageParams: [] });
+    render(
+      <QueryClientProvider client={client}>
+        <Probe api={api} />
+      </QueryClientProvider>,
+    );
+    await screen.findByText("state:active");
+    expect(client.getQueryState(feedKey)?.isInvalidated).toBe(false);
+
+    await userEvent.click(screen.getByRole("button", { name: "record" }));
+
+    await waitFor(() => expect(client.getQueryState(feedKey)?.isInvalidated).toBe(true));
   });
 });
 

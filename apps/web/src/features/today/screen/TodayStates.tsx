@@ -10,6 +10,7 @@ import { EntrySheetHost } from "../../entry/index.ts";
 import { EndsTomorrowBanner, PauseTodayAction } from "../../pause/index.ts";
 import { ReviewTodayCard } from "../../review/index.ts";
 import { SeasonCloseTodayCard } from "../../season-close/index.ts";
+import { TodayActivity } from "../activity/TodayActivity.tsx";
 import { PendingYesterday } from "../pending-yesterday/PendingYesterday.tsx";
 import { RowWithControls } from "../rows/RowWithControls.tsx";
 import { SeasonCard } from "../season/SeasonCard.tsx";
@@ -260,6 +261,7 @@ export function RunningToday({
         </Section>
       )}
       {showDayState && <PauseTodayAction />}
+      <TodayActivity />
       <SeasonCard model={model.season} />
       {model.standings !== null && (
         <StandingsPair model={model.standings} viewerName={model.greetingName} />

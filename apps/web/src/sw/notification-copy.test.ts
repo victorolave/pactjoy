@@ -35,6 +35,13 @@ describe("notificationFor", () => {
     ["reviewDue", { seasonId: S, periodIndex: 2 }, "Tu revisión está lista", "/review/season-1/2"],
     // Today's season-close card leads to the closing review or the close flow, whichever is next.
     ["seasonClosed", { seasonId: S }, "Terminó la temporada", "/"],
+    // The received encouragement is a feed item of the Circle tab (ADR-0018 F17).
+    [
+      "encouragementNudge",
+      { seasonId: S, encouragementId: "encouragement-1" },
+      "Alguien te envió ánimo",
+      "/circle",
+    ],
   ])("REQ-W6: %s shows %j and opens %s", (kind, params, title, url) => {
     const notice = show(payload(kind, params));
     expect(notice.title).toBe(title);
@@ -48,6 +55,17 @@ describe("notificationFor", () => {
     );
     expect(notice.body).toBe("Mañana es el último día de tu pausa.");
     expect(notice.body).not.toMatch(/retomas/);
+  });
+
+  it("encouragementNudge never says why it was sent: no week, habit or consistency (ADR-0018 F17)", () => {
+    const notice = show(
+      payload("encouragementNudge", { seasonId: S, encouragementId: "encouragement-1" }),
+    );
+    expect(notice.body).toBe("Míralo en la actividad de tu círculo.");
+    expect(`${notice.title} ${notice.body}`).not.toMatch(
+      /semana|difícil|dura|consisten|hábito|objetivo|ánimo para/i,
+    );
+    expect(notice.tag).toBe("encouragementNudge:season-1:encouragement-1");
   });
 
   it("tags a notice by kind and subject, so a repeat replaces it on the device", () => {
@@ -64,6 +82,7 @@ describe("notificationFor", () => {
     ["not JSON", "{oops"],
     ["no data", null],
     ["a non-string id", payload("seasonStarted", { seasonId: 42 })],
+    ["an encouragement without its id", payload("encouragementNudge", { seasonId: S })],
   ])("REQ-K2: %s shows the generic notice and opens /", (_name, text) => {
     expect(show(text)).toEqual(GENERIC_NOTIFICATION);
     expect(GENERIC_NOTIFICATION.url).toBe("/");
@@ -88,6 +107,7 @@ describe("notificationFor", () => {
       ["seasonStarted", { seasonId: S }],
       ["reviewDue", { seasonId: S, periodIndex: 1 }],
       ["seasonClosed", { seasonId: S }],
+      ["encouragementNudge", { seasonId: S, encouragementId: "encouragement-1" }],
     ];
     for (const [kind, params] of kinds) {
       const { title, body } = show(payload(kind, params));

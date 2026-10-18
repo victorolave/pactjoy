@@ -128,11 +128,10 @@ export const graduateCopy = {
 export const celebrationCopy = {
   title: (habit: string) => `Graduaste ${habit}`,
   /**
-   * DERIVED: the design says the other member will see "{You} graduó {habit}" in the circle's
-   * activity. There is no activity feed, and a graduation is private (ADR-0015, SC-G4), so the
-   * line says the opposite.
+   * The note under the title is built by `graduationNote`: the design says the other member will
+   * see "{You} graduó {habit}" in the circle's activity, and since A3 it does (ADR-0018, which
+   * supersedes the private promise ADR-0015 made while there was no feed).
    */
-  note: "Solo tú ves esta decisión.",
   nextHabit: "Siguiente hábito",
   /** DERIVED: after the last graduated habit (the design note guesses "Continuar"). */
   onward: "Continuar",

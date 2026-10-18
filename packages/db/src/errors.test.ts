@@ -20,6 +20,12 @@ const CONFLICT_CONSTRAINTS = [
   "reviews_season_member_period_key",
   "season_closures_pkey",
   "season_closures_season_member_key",
+  "feed_reactions_pkey",
+  "feed_reactions_season_item_member_key",
+  "encouragements_pkey",
+  "encouragements_case_key",
+  "encouragements_daily_key",
+  "nudge_dismissals_pkey",
   "circle_members_active_user_key",
 ];
 

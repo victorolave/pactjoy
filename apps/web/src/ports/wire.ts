@@ -1,17 +1,22 @@
 import type {
   CarryOverView,
+  CircleFeed,
   ClosureDecision,
   CommitmentProgressView,
   CommitmentRecord,
+  FeedSubject,
   Habit,
   Instant,
   MeasureView,
   MemberProgressView,
+  NudgeSuggestion,
   PauseApprovalView,
   PauseBudgetView,
   PauseRedistribution,
   PauseRequestView,
   ProfileSummaryView,
+  ReactionEmoji,
+  Reactions,
   ResumePreview,
   ReviewDraftView,
   ReviewImprovement,
@@ -153,6 +158,25 @@ export type SeasonHistoryDto = Serialized<SeasonHistoryView>;
 export type SeasonHistoryItemDto = SeasonHistoryDto["seasons"][number];
 /** The Perfil consistency and the habit stages (`GET /me/profile`, ADR-0011 Q23). */
 export type ProfileSummaryDto = Serialized<ProfileSummaryView>;
+
+/**
+ * The social layer as it arrives over the wire (change social-reactions, ADR-0018). The feed is
+ * what the VIEWER may see: a private commitment is `{kind: "private"}`, reactions are counts only
+ * and no reactor id, note or photo appears anywhere in it.
+ */
+export type CircleFeedDto = Serialized<CircleFeed>;
+export type FeedItemDto = CircleFeedDto["items"][number];
+export type FeedMemberDto = CircleFeedDto["members"][number];
+export type FeedSubjectDto = Serialized<FeedSubject>;
+export type NudgeDto = Serialized<NudgeSuggestion>;
+/** The viewer's reaction code on one item; the glyph lives in the UI. */
+export type ReactionCode = ReactionEmoji;
+export type ReactionsDto = Serialized<Reactions>;
+/** `POST /seasons/:id/encouragements` (201). */
+export interface SentEncouragementDto {
+  readonly recipientId: string;
+  readonly week: number;
+}
 
 /**
  * `POST /seasons/:id/commitments/:id/photos` (201, ADR-0016): the signed request the browser runs
