@@ -1,6 +1,7 @@
 import type { MemberId } from "@pactjoy/engine";
 import { graduationKey } from "../../feed/feed-key.ts";
 import type { Repositories } from "../../ports/repositories.ts";
+import type { SeasonId } from "../../shared/ids.ts";
 import type { Season } from "../season.ts";
 
 /**
@@ -29,4 +30,15 @@ export async function eraseMemberClosures(
     }
   }
   await repos.seasonClosures.deleteByMembers(memberIds);
+}
+
+/**
+ * INSIDE the transaction (a fully erased circle): deletes every closure of the seasons with its
+ * decisions. Their reactions go with `dropSeasonReactions`.
+ */
+export async function dropSeasonClosures(
+  repos: Pick<Repositories, "seasonClosures">,
+  seasonIds: readonly SeasonId[],
+): Promise<void> {
+  await repos.seasonClosures.deleteBySeasons(seasonIds);
 }

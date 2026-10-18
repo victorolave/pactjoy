@@ -7,7 +7,7 @@ import { feedReactionId, habitId, seasonClosureId, seasonId } from "../../shared
 import { ok } from "../../shared/result.ts";
 import { seasonClosureFixture } from "../../testing/builders.ts";
 import { seedClosure } from "./closure-seed.ts";
-import { eraseMemberClosures } from "./erase.ts";
+import { dropSeasonClosures, eraseMemberClosures } from "./erase.ts";
 
 async function givenGraduationAndReactions() {
   const world = await givenReviewWorld({ lengthWeeks: 4 });
@@ -99,5 +99,28 @@ describe("account erasure of closure sources and graduation reactions", () => {
       await world.app.seasonClosures.getMine(season.id, memberId("member-andrea")),
     ).not.toBeNull();
     expect(await world.app.feedReactions.listBySeason(season.id)).toHaveLength(2);
+  });
+});
+
+describe("dropSeasonClosures (a fully erased circle)", () => {
+  it("deletes every closure of the seasons whoever owns it and keeps other seasons", async () => {
+    const { world, season } = await givenGraduationAndReactions();
+    await seedClosure(
+      world.app,
+      seasonClosureFixture({
+        id: seasonClosureId("other-season-closure"),
+        seasonId: seasonId("season-other"),
+        memberId: memberId("member-andrea"),
+      }),
+    );
+    await world.app.uow.transaction(async (repos) => {
+      await dropSeasonClosures(repos, [season.id]);
+      return ok(undefined);
+    });
+    expect(await world.app.seasonClosures.getMine(season.id, memberId("member-andrea"))).toBeNull();
+    expect(await world.app.seasonClosures.getMine(season.id, memberId("member-victor"))).toBeNull();
+    expect(
+      await world.app.seasonClosures.getMine(seasonId("season-other"), memberId("member-andrea")),
+    ).not.toBeNull();
   });
 });
