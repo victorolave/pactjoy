@@ -35,6 +35,11 @@ export function useInvitePreview(code: string) {
     enabled: code.length === 6,
     retry: false,
     gcTime: 0,
+    // Every preview spends a join attempt (ADR-0020): only a new code or Reintentar fetches again,
+    // never a focus, a reconnect or the age of the answer.
+    staleTime: Number.POSITIVE_INFINITY,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
     // Offline, a paused query would leave the screen searching forever: fail fast with NetworkError.
     networkMode: "always",
   });
