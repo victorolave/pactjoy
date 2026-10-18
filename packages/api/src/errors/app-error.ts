@@ -10,6 +10,7 @@ import type {
   CreateCircleError,
   CreateHabitError,
   CreateSeasonError,
+  DeleteAccountError,
   DeleteEntryError,
   DismissNudgeError,
   EditCommitmentError,
@@ -100,6 +101,7 @@ export type AppError =
   | DismissNudgeError
   | PushSubscriptionError
   | CommitmentReminderError
-  | SetCommitmentReminderError;
+  | SetCommitmentReminderError
+  | DeleteAccountError;
 
 export type AppErrorKind = AppError["kind"];

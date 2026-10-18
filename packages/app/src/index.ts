@@ -7,10 +7,11 @@
  * the separate `./testing` subpath (`src/testing/index.ts`), never here.
  */
 
-// `DeleteAccountError` is exported with the API wiring: `packages/api` pins every exported
-// `*Error` against its status table (status-map.test.ts, EM-S16), so the type joins the index in
-// the commit that maps `ConfirmationMismatch` and `IdentityUnavailable`.
-export type { DeleteAccountDeps, DeleteAccountInput } from "./account/delete-account.ts";
+export type {
+  DeleteAccountDeps,
+  DeleteAccountError,
+  DeleteAccountInput,
+} from "./account/delete-account.ts";
 export { ACCOUNT_DELETION_CONFIRMATION, deleteAccount } from "./account/delete-account.ts";
 export { createCryptoRandomSource } from "./adapters/crypto-random-source.ts";
 export { createIntlTimeZone } from "./adapters/intl-time-zone.ts";

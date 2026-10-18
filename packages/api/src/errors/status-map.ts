@@ -6,10 +6,11 @@ import type { AppError, AppErrorKind } from "./app-error.ts";
  * kind AND an extra stale key a compile error.
  */
 export const APP_ERROR_STATUS = {
-  // 422 (51)
+  // 422 (52)
   AutomaticityIncomplete: 422,
   CategoryTooLong: 422,
   ClosureIncomplete: 422,
+  ConfirmationMismatch: 422,
   CustomLabelBlank: 422,
   CustomLabelHasInvisibleCharacters: 422,
   CustomLabelMalformed: 422,
@@ -119,7 +120,9 @@ export const APP_ERROR_STATUS = {
   WindowClosed: 409,
   // 410 (1)
   InviteExpired: 410,
-} as const satisfies Record<AppErrorKind, 403 | 404 | 409 | 410 | 422>;
+  // 503 (1): the data is erased, only the identity step is left to repeat (ADR-0019).
+  IdentityUnavailable: 503,
+} as const satisfies Record<AppErrorKind, 403 | 404 | 409 | 410 | 422 | 503>;
 
 /**
  * The app error as an API result. `details` is the app error minus `kind`, when it has any
