@@ -323,6 +323,7 @@ export const SEEDED_TABLES: ReadonlySet<string> = new Set([
   "pause_requests",
   "pause_responses",
   "push_subscriptions",
+  "rate_limit_counters",
   "reviews",
   "season_approvals",
   "season_closure_decisions",
@@ -501,6 +502,10 @@ export const ERASURE_COVERAGE: Readonly<Record<string, ErasureEntry>> = {
   "commitment_reminders.member_id": del(
     "eraseMemberReminders: reminders.deleteByMembers; a fully erased circle deletes by season",
     "The owner's reminder setting",
+  ),
+  "rate_limit_counters.subject": del(
+    "eraseUserRateLimits: rateLimits.deleteBySubjects of `user:<id>`; a `network:` row is a keyed hash nothing ties to the account and is swept within the hour (ADR-0020)",
+    "A `user:` subject carries the account id; a `network:` subject is an HMAC of the client network, never the address",
   ),
 
   "feed_reactions.member_id": keep(

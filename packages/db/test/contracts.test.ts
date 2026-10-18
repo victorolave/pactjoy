@@ -7,6 +7,7 @@ import {
   describeNotificationOutboxContract,
   describePauseRequestRepositoryContract,
   describePushSubscriptionContract,
+  describeRateLimitContract,
   describeSeasonGuardContract,
   describeSeasonRepositoryContract,
   describeUnitOfWorkContract,
@@ -41,5 +42,6 @@ describePauseRequestRepositoryContract("postgres", postgres);
 describeNotificationOutboxContract("postgres", postgres);
 describePushSubscriptionContract("postgres", postgres);
 describeCommitmentReminderContract("postgres", postgres);
+describeRateLimitContract("postgres", postgres);
 describeSeasonRepositoryContract("postgres", postgres);
 describeUnitOfWorkContract("postgres", postgres);
