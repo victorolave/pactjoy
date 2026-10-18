@@ -14,7 +14,8 @@ export function FirstFullWeekCelebration({
   fresh,
 }: {
   readonly view: TodayView;
-  readonly fresh: number;
+  /** The view is the server's settled answer, online (never a restored or locally written one). */
+  readonly fresh: boolean;
 }) {
   if (view.state !== "active" && view.state !== "ended") return null;
   const week = view.firstFullWeek;
@@ -31,7 +32,7 @@ function Milestone({
 }: {
   readonly flag: DeviceKey;
   readonly week: number;
-  readonly fresh: number;
+  readonly fresh: boolean;
 }) {
   const device = useDeviceStore();
   const haptics = useHaptics();
@@ -39,10 +40,24 @@ function Milestone({
   const [closed, setClosed] = useState(false);
   useEffect(() => {
     if (!fresh || shown || device.get(flag) === "1") return;
-    if (document.querySelector('[role="dialog"]')) return;
-    // Opening consumes the flag, like the weekly summary; refetch cannot reopen it.
-    device.set(flag, "1");
-    setShown(true);
+    const open = () => {
+      // Opening consumes the flag, like the weekly summary; refetch cannot reopen it.
+      device.set(flag, "1");
+      setShown(true);
+    };
+    const blocked = () => document.querySelector('[role="dialog"]') !== null;
+    if (!blocked()) {
+      open();
+      return;
+    }
+    // Another dialog holds it back: it opens as soon as the last one leaves, with no refetch.
+    const observer = new MutationObserver(() => {
+      if (blocked()) return;
+      observer.disconnect();
+      open();
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
   }, [device, flag, fresh, shown]);
   return (
     <Sheet open={shown && !closed} title={TITLE} headless onClose={() => setClosed(true)}>

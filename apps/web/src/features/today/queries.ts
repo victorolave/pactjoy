@@ -1,7 +1,8 @@
 import { focusManager, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { usePactJoyApi } from "../../context/api-context.tsx";
 import { useClock } from "../../context/clock-context.tsx";
+import { isServerToday, todayQuery } from "../../shared/fetch-today.ts";
 import { progressKey, todayKey } from "../../shared/query-keys.ts";
 import { seasonDate, watchSeasonDay } from "../season-progress-data/index.ts";
 
@@ -11,15 +12,7 @@ export function useToday() {
   const clock = useClock();
   const client = useQueryClient();
   const [, onDayChange] = useState(0);
-  const confirmed = useRef(0);
-  const query = useQuery({
-    queryKey: todayKey,
-    queryFn: async ({ signal }) => {
-      const view = await api.getToday(signal);
-      if (!signal.aborted) confirmed.current += 1;
-      return view;
-    },
-  });
+  const query = useQuery(todayQuery(api));
   const zone = query.data && "timeZone" in query.data ? query.data.timeZone : undefined;
   useEffect(() => {
     if (zone === undefined) return;
@@ -37,7 +30,8 @@ export function useToday() {
   }, [clock, client, zone]);
   return {
     ...query,
-    confirmed: confirmed.current,
+    /** The shown view is the server's answer, not one restored or written locally (ADR-0012). */
+    fromServer: isServerToday(query.data),
     localToday: zone === undefined ? null : seasonDate(clock.nowMs(), zone),
   };
 }

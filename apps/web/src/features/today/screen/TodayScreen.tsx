@@ -117,7 +117,7 @@ export function TodayScreen() {
       {connectionLost && <OfflineBanner />}
       <FirstFullWeekCelebration
         view={today.data}
-        fresh={!today.isError && !today.isFetching && !connectionLost ? today.confirmed : 0}
+        fresh={!today.isError && !today.isFetching && !connectionLost && today.fromServer}
       />
       <TodayContent
         model={toTodayModel(today.data)}
