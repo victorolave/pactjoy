@@ -1,8 +1,8 @@
 # ADR-0019: Account deletion with tombstoned shared history
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-18
-- **Deciders:** Product owner
+- **Deciders:** Victor Olave
 
 ## Decision
 

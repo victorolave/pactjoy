@@ -1,6 +1,6 @@
 # ADR-0018: Social layer: derived activity feed, reactions and encouragement nudges
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-17
 - **Deciders:** Victor Olave
 
