@@ -14,6 +14,7 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "createInMemoryEvidenceStorage",
   "createInMemoryFeedReactionRepository",
   "createInMemoryHabitRepository",
+  "createInMemoryIdentityAdmin",
   "createInMemoryNotificationOutbox",
   "createInMemoryNudgeDismissalRepository",
   "createInMemoryPauseRequestRepository",

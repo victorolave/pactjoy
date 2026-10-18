@@ -17,6 +17,7 @@ const EXPECTED_RUNTIME_EXPORTS = [
   "commitmentToEngine",
   "ConcurrencyConflict",
   "EvidenceStorageError",
+  "IdentityAdminError",
   "createCircle",
   "createHabit",
   "createIntlTimeZone",
