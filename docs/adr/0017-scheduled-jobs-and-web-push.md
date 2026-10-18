@@ -1,6 +1,6 @@
 # ADR-0017: Scheduled jobs and Web Push: transactional outbox, job routes, hand-rolled Web Push
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-17
 - **Deciders:** Victor Olave
 
