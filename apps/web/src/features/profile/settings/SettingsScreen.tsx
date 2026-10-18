@@ -1,19 +1,21 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
+import { useOnline } from "../../../context/connectivity-context.tsx";
 import { Card } from "../../../ui/Card.tsx";
 import { FlowScreen } from "../../../ui/FlowScreen.tsx";
 import { ListRow } from "../../../ui/ListRow.tsx";
 import { useSession } from "../../auth/index.ts";
 import { LeaveCircleSheet, useMyCircle } from "../../circle/index.ts";
 import { NotificationsCard } from "../../notifications/index.ts";
+import { DeleteAccountSheet } from "../delete-account/DeleteAccountSheet.tsx";
 import styles from "./SettingsScreen.module.css";
 
 const PROFILE_PATH = "/profile";
 
 /**
  * Ajustes (design 40), minimal (Q6): the email, "Salir del círculo" (only with a circle),
- * "Cerrar sesión", and this device's notifications (ADR-0017). Appearance, per-kind notification
- * switches, reminders and deleting the account come with their own changes, so they are not here.
+ * "Cerrar sesión", "Eliminar cuenta" (ADR-0019) and this device's notifications (ADR-0017).
+ * Appearance and per-kind notification switches come with their own changes, so they are not here.
  */
 export function SettingsScreen() {
   const { session, signOut } = useSession();
@@ -21,6 +23,8 @@ export function SettingsScreen() {
   const navigate = useNavigate();
   const [leaving, setLeaving] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const online = useOnline();
 
   const circle = data?.circle ?? null;
 
@@ -42,6 +46,12 @@ export function SettingsScreen() {
             <ListRow label="Salir del círculo" onClick={() => setLeaving(true)} />
           )}
           <ListRow label="Cerrar sesión" onClick={endSession} disabled={signingOut} />
+          <ListRow
+            label="Eliminar cuenta"
+            tone="danger"
+            onClick={() => setDeleting(true)}
+            disabled={!online}
+          />
         </Card>
       </div>
       <section className={styles.group} aria-labelledby="settings-notifications">
@@ -50,6 +60,7 @@ export function SettingsScreen() {
         </h2>
         <NotificationsCard />
       </section>
+      <DeleteAccountSheet open={deleting} onClose={() => setDeleting(false)} />
       {circle !== null && (
         <LeaveCircleSheet
           circle={circle}

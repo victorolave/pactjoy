@@ -1,6 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { usePactJoyApi } from "../../context/api-context.tsx";
 import { habitsKey, profileSummaryKey, seasonHistoryKey } from "../../shared/query-keys.ts";
+import { useSession } from "../auth/index.ts";
 
 /**
  * The viewer's own habits, read through the API port and the shared key (profile reaches no other
@@ -17,6 +18,21 @@ export function useSeasonHistory() {
   return useQuery({
     queryKey: seasonHistoryKey,
     queryFn: ({ signal }) => api.getSeasonHistory(signal),
+  });
+}
+
+/**
+ * Deletes the account, then ends the session here. Nothing is invalidated or refetched: the whole
+ * cache belongs to a user that no longer exists, so `accountDeleted` drops it with the session. A
+ * failure leaves the session alone, and a retry sends the same call (the server finishes what the
+ * first one left undone).
+ */
+export function useDeleteAccount() {
+  const api = usePactJoyApi();
+  const { accountDeleted } = useSession();
+  return useMutation({
+    mutationFn: () => api.deleteAccount(),
+    onSuccess: accountDeleted,
   });
 }
 
