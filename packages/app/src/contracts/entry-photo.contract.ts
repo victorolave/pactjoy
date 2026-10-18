@@ -4,7 +4,7 @@ import { commitmentId } from "../commitment/commitment.ts";
 import type { EntryPhotoRepository } from "../entry-photo/entry-photo.repository.ts";
 import type { EntryPhoto } from "../entry-photo/entry-photo.ts";
 import { ConcurrencyConflict } from "../shared/errors.ts";
-import { entryPhotoId } from "../shared/ids.ts";
+import { entryPhotoId, seasonId } from "../shared/ids.ts";
 import { entryPhotoFixture } from "../testing/builders.ts";
 import { instant } from "../time/instant.ts";
 import { SEASON } from "./fixtures.ts";
@@ -230,6 +230,58 @@ export function describeEntryPhotoRepositoryContract(
       expect((await repository.get(photo(2).id))?.status).toBe("pending");
       expect((await repository.get(attached(3).id))?.status).toBe("attached");
       await repository.purge([]);
+    });
+
+    it("releaseAllOfMembers releases the pending and attached photos of those members, bumped, and returns them", async () => {
+      const repository = await setup();
+      await repository.add(photo(1));
+      await repository.add(attached(2));
+      await repository.add(released(3));
+      await repository.add(photo(4, { memberId: VICTOR }));
+      await repository.add(attached(5, { memberId: VICTOR }));
+      const done = await repository.releaseAllOfMembers([ANDREA]);
+      expect(ids(done)).toEqual([photo(1).id, attached(2).id]);
+      expect(done.find((p) => p.id === photo(1).id)).toEqual({
+        ...photo(1),
+        status: "released",
+        version: 1,
+      });
+      expect(done.find((p) => p.id === attached(2).id)).toEqual({
+        ...attached(2),
+        status: "released",
+        version: 2,
+      });
+      expect(await repository.get(released(3).id)).toEqual(released(3));
+      expect((await repository.get(photo(4).id))?.status).toBe("pending");
+      expect((await repository.get(attached(5).id))?.status).toBe("attached");
+      expect(ids(await repository.listReleased(ANDREA, 10))).toEqual(
+        ids([photo(1), attached(2), released(3)]),
+      );
+    });
+
+    it("releaseAllOfMembers is a safe repeat, and [] releases nothing", async () => {
+      const repository = await setup();
+      await repository.add(attached(1));
+      expect(await repository.releaseAllOfMembers([])).toEqual([]);
+      expect(await repository.get(attached(1).id)).toEqual(attached(1));
+      expect(await repository.releaseAllOfMembers([ANDREA])).toHaveLength(1);
+      expect(await repository.releaseAllOfMembers([ANDREA])).toEqual([]);
+      expect((await repository.get(attached(1).id))?.version).toBe(2);
+    });
+
+    it("deleteBySeasons deletes every photo of the seasons in any status and returns them", async () => {
+      const repository = await setup();
+      await repository.add(photo(1));
+      await repository.add(attached(2, { memberId: VICTOR }));
+      await repository.add(released(3));
+      expect(await repository.deleteBySeasons([])).toEqual([]);
+      expect(await repository.deleteBySeasons([seasonId(uuid(0xe99))])).toEqual([]);
+      expect(await repository.get(photo(1).id)).toEqual(photo(1));
+      const gone = await repository.deleteBySeasons([SEASON.id]);
+      expect(ids(gone)).toEqual(ids([photo(1), attached(2, { memberId: VICTOR }), released(3)]));
+      expect(gone.find((p) => p.id === released(3).id)?.objectKey).toBe(keyOf(3));
+      expect(await repository.getMany(ids(gone))).toEqual([]);
+      expect(await repository.deleteBySeasons([SEASON.id])).toEqual([]);
     });
   });
 }

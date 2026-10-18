@@ -30,7 +30,7 @@ function keyTaken(store: Store, photo: EntryPhoto): boolean {
   return false;
 }
 
-/** The only two writes the operations below need: put a row, or drop a released one. */
+/** The only two writes the operations below need: put a row, or drop one (the callers decide which may go). */
 interface Sink {
   put(record: EntryPhoto, expectedVersion: number | null): void;
   drop(id: EntryPhotoId, expectedVersion: number): void;
@@ -100,6 +100,23 @@ function operations(view: () => Store, sink: Sink): EntryPhotoRepository {
         const photo = view().get(id);
         if (photo?.status === "released") sink.drop(id, photo.version);
       }
+    },
+
+    async releaseAllOfMembers(memberIds) {
+      const due = [...view().values()]
+        .filter((p) => p.status !== "released" && memberIds.includes(p.memberId))
+        .sort(byAge);
+      return due.map((photo) => {
+        const next: EntryPhoto = { ...photo, status: "released", version: photo.version + 1 };
+        sink.put(next, photo.version);
+        return next;
+      });
+    },
+
+    async deleteBySeasons(seasonIds) {
+      const gone = [...view().values()].filter((p) => seasonIds.includes(p.seasonId)).sort(byAge);
+      for (const photo of gone) sink.drop(photo.id, photo.version);
+      return gone;
     },
   };
 }

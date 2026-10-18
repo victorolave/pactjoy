@@ -153,6 +153,30 @@ export function createPgEntryPhotoRepository(exec: SqlExecutor): EntryPhotoRepos
       ).map(toPhoto);
     },
 
+    async releaseAllOfMembers(memberIds) {
+      if (memberIds.length === 0) return [];
+      return (
+        await rows(
+          `update pactjoy.entry_photos set status = 'released', version = version + 1 where member_id = any($1::uuid[]) and status <> 'released' returning ${COLUMNS}`,
+          [memberIds],
+        )
+      )
+        .map(toPhoto)
+        .sort((a, b) => a.createdAt - b.createdAt || (a.id < b.id ? -1 : 1));
+    },
+
+    async deleteBySeasons(seasonIds) {
+      if (seasonIds.length === 0) return [];
+      return (
+        await rows(
+          `delete from pactjoy.entry_photos where season_id = any($1::uuid[]) returning ${COLUMNS}`,
+          [seasonIds],
+        )
+      )
+        .map(toPhoto)
+        .sort((a, b) => a.createdAt - b.createdAt || (a.id < b.id ? -1 : 1));
+    },
+
     async purge(ids) {
       if (ids.length === 0) return;
       await exec.query(

@@ -89,6 +89,8 @@ const repository: EntryPhotoRepository = {
   listReleased: (member, limit) =>
     uow.read(({ entryPhotos }) => entryPhotos.listReleased(member, limit)),
   purge: (ids) => write((r) => r.purge(ids)),
+  releaseAllOfMembers: (members) => write((r) => r.releaseAllOfMembers(members)),
+  deleteBySeasons: (seasons) => write((r) => r.deleteBySeasons(seasons)),
 };
 
 describeEntryPhotoRepositoryContract("postgres", async () => {
