@@ -111,6 +111,22 @@ describe("a saved Today whose day is over on the phone (C1)", () => {
     expect(await screen.findByRole("button", { name: "Registrar Meditar" })).toBeEnabled();
   });
 
+  it("keeps the rows closed online while the day-change refetch is out, then opens them (S-A)", async () => {
+    const app = renderApp({ today: day(), now: SAME_DAY });
+    await screen.findByRole("button", { name: "Registrar Meditar" });
+    await waitFor(() => expect(app.deps.queryClient.isFetching()).toBe(0));
+    const release = app.deps.api.hold("getToday");
+    app.deps.clock.advanceSeconds(22 * 60 * 60);
+    act(() => void app.deps.queryClient.invalidateQueries({ queryKey: todayKey }));
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "Registrar Meditar" })).not.toBeInTheDocument(),
+    );
+    // Asking the server is not "not loaded": nothing is said while it answers.
+    expect(screen.queryByText(NOT_LOADED)).not.toBeInTheDocument();
+    release();
+    expect(await screen.findByRole("button", { name: "Registrar Meditar" })).toBeEnabled();
+  });
+
   it("keeps recording open offline while the saved day is still today on the phone", async () => {
     const storage = new MemoryStorage();
     seedPersistedToday(storage, day());

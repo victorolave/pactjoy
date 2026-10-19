@@ -150,7 +150,12 @@ export function TodayScreen() {
       fetchStartedAt={today.fetchStartedAt}
       connectionLost={connectionLost}
       fresh={!today.isError && !today.isFetching && !connectionLost && today.fromServer}
-      stale={isStaleDay(today.data, today.localToday, today.fromServer && online && !today.isError)}
+      stale={isStaleDay(
+        today.data,
+        today.localToday,
+        // A refetch in flight (the day-change one) has not vouched for the day yet (S-A).
+        today.fromServer && online && !today.isError && !today.isFetching,
+      )}
       loadingDay={online && today.isFetching}
     />
   );
