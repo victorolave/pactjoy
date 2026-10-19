@@ -543,7 +543,16 @@ describe("Outbox: two tabs of the same user share one store (OE-R3.S4)", () => {
 });
 
 describe("Outbox: writes that reached the server directly (W1)", () => {
-  const late = (actedAt: number): EnqueueInput => ({ ...editInput("e1", "entry-7"), actedAt });
+  const late = (actedAt: number): EnqueueInput => ({
+    kind: "edit",
+    id: "e1",
+    target: "entry-7",
+    habitName: "Leer",
+    forDate: "2026-10-13",
+    value: { kind: "quantity", value: "45" },
+    note: null,
+    actedAt,
+  });
 
   it("drops an edit queued late when a later direct write of that entry already landed", () => {
     const { outbox, store } = setup();
