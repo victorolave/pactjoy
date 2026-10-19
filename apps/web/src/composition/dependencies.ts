@@ -45,7 +45,10 @@ export interface AppDependencies {
   readonly push: PushSubscriptionPort;
   /** The own visible habit names reminder pushes may show (D2); forgotten when the session ends. */
   readonly reminderNames: ReminderNamesPort;
-  /** Entry writes made without a connection, per user; erased when the session ends (OE-R6). */
+  /**
+   * Entry writes made without a connection, per user; erased on sign-out, account deletion or
+   * another user's sign-in, kept across an expiry (OE-R6, W4).
+   */
   readonly outboxStore: OutboxStore;
   /** Whether the app is on screen; coming back to it retries what the outbox could not send. */
   readonly visibility: Visibility;

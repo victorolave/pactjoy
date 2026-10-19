@@ -16,14 +16,15 @@ import type { SessionManager } from "./session-manager.ts";
 /** Why the user is signed out, when it was not their own choice. */
 export type SessionNotice = "sessionExpired" | "accountDeleted";
 
+/**
+ * How a session ended: the member signed out, it expired, the account was deleted, or another tab
+ * ended or replaced it (which of these, this tab cannot tell; that tab ran its own rules).
+ */
+export type SessionEndReason = "signedOut" | "expired" | "accountDeleted" | "elsewhere";
+
 export interface SessionApi {
   readonly session: Session | null;
   readonly notice: SessionNotice | null;
-  /**
-   * How many unsent entries the last session EXPIRY erased (0 otherwise), for the login notice. Kept
-   * in memory only: it is a count, never the entries.
-   */
-  readonly discardedEntries: number;
   requestCode(email: string): Promise<void>;
   /** Resolves once the session is stored. Rejects with the port's AuthError. */
   verifyCode(email: string, code: string): Promise<void>;
@@ -56,12 +57,12 @@ export interface SessionProviderProps {
   readonly store: TokenStore;
   readonly manager: SessionManager;
   /** Runs whenever the session ends, so the app can drop data that belongs to it (query cache). */
-  readonly onSessionEnd?: () => void;
+  readonly onSessionEnd?: (reason: SessionEndReason) => void;
   /**
-   * How many entries are waiting unsent on the device. Read at the moment a session EXPIRES, before
-   * `onSessionEnd` erases them, so the login screen can say how many were lost.
+   * Runs when a user signs in, here or in another tab, before this tab saves or shows the session,
+   * so the app can drop what belongs to anyone else (an unsent queue kept from an expiry).
    */
-  readonly unsentCount?: () => number;
+  readonly onSessionStart?: (userId: string) => void;
   /** Lets code outside React (the API adapter) expire the session. */
   readonly expired?: SessionEvents;
   /**
@@ -83,7 +84,7 @@ export function SessionProvider({
   store,
   manager,
   onSessionEnd,
-  unsentCount,
+  onSessionStart,
   expired,
   beforeSignOut,
   onAccountDeleted,
@@ -91,7 +92,6 @@ export function SessionProvider({
 }: SessionProviderProps) {
   const [session, setSession] = useState<Session | null>(() => store.load());
   const [notice, setNotice] = useState<SessionNotice | null>(null);
-  const [discardedEntries, setDiscardedEntries] = useState(0);
 
   // Another tab refreshes or ends the session: follow it. Its sign out ends this tab's data too.
   const current = useRef(session);
@@ -103,10 +103,11 @@ export function SessionProvider({
         setSession(next);
         // A sign out, or a different user, means the cached data is no longer this user's.
         if (next === null || (previous !== null && next.userId !== previous.userId)) {
-          onSessionEnd?.();
+          onSessionEnd?.("elsewhere");
         }
+        if (next !== null && next.userId !== previous?.userId) onSessionStart?.(next.userId);
       }),
-    [store, onSessionEnd],
+    [store, onSessionEnd, onSessionStart],
   );
 
   const expire = useCallback(() => {
@@ -114,22 +115,19 @@ export function SessionProvider({
     // must not replace the notice that ended it. The ref is cleared here, not only on render, so
     // two calls in the same tick see the first one.
     if (current.current === null) return;
-    // Counted first: `onSessionEnd` erases the entries this notice is about.
-    const unsent = unsentCount?.() ?? 0;
     store.clear();
     current.current = null;
     setNotice("sessionExpired");
-    setDiscardedEntries(unsent);
     setSession(null);
-    onSessionEnd?.();
-  }, [store, onSessionEnd, unsentCount]);
+    onSessionEnd?.("expired");
+  }, [store, onSessionEnd]);
 
   const accountDeleted = useCallback(() => {
     store.clear();
     current.current = null;
     setNotice("accountDeleted");
     setSession(null);
-    onSessionEnd?.();
+    onSessionEnd?.("accountDeleted");
     onAccountDeleted?.().catch(() => undefined);
   }, [store, onSessionEnd, onAccountDeleted]);
 
@@ -139,22 +137,20 @@ export function SessionProvider({
     () => ({
       session,
       notice,
-      discardedEntries,
       requestCode: (email) => auth.requestCode(email),
       async verifyCode(email, code) {
         const next = await auth.verifyCode(email, code);
+        onSessionStart?.(next.userId);
         store.save(next);
         setNotice(null);
-        setDiscardedEntries(0);
         setSession(next);
       },
       async signOut() {
         if (beforeSignOut) await withinGrace(beforeSignOut());
         await manager.signOut();
         setNotice(null);
-        setDiscardedEntries(0);
         setSession(null);
-        onSessionEnd?.();
+        onSessionEnd?.("signedOut");
       },
       expire,
       accountDeleted,
@@ -164,12 +160,12 @@ export function SessionProvider({
       store,
       manager,
       onSessionEnd,
+      onSessionStart,
       beforeSignOut,
       expire,
       accountDeleted,
       session,
       notice,
-      discardedEntries,
     ],
   );
 

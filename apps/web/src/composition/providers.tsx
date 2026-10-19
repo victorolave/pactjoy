@@ -22,7 +22,7 @@ import { PushSubscriptionProvider } from "../context/push-subscription-context.t
 import { ReminderNamesProvider } from "../context/reminder-names-context.tsx";
 import { SharingProvider } from "../context/sharing-context.tsx";
 import { ToastProvider } from "../context/toast-context.tsx";
-import { SessionProvider, useSession } from "../features/auth/index.ts";
+import { type SessionEndReason, SessionProvider, useSession } from "../features/auth/index.ts";
 import { type Outbox, OutboxProvider, useOutbox } from "../features/entry/index.ts";
 import {
   dropThisDeviceLocally,
@@ -41,20 +41,29 @@ export function AppProviders({
 }) {
   const { queryClient, persister, device, reminderNames, outboxStore } = deps;
   // Cached data belongs to the signed-in user: drop it, and the saved copy, whenever the session
-  // ends. So do the name draft, the habit names reminders show and the entries queued without a
-  // connection. The device flags (welcome seen, install and permission steps) are about this phone,
-  // not the person, so they stay: the carousel does not return on every login.
-  const onSessionEnd = useCallback(() => {
-    queryClient.clear();
-    void persister.removeClient();
-    device.clearSession();
-    void reminderNames.clear();
-    outboxStore.clearAll();
-  }, [queryClient, persister, device, reminderNames, outboxStore]);
+  // ends. So do the name draft and the habit names reminders show. The device flags (welcome seen,
+  // install and permission steps) are about this phone, not the person, so they stay: the carousel
+  // does not return on every login.
+  // The entries queued without a connection are erased only when the member signs out or the
+  // account is deleted. A session that expired on its own keeps them for the same user's next
+  // sign-in (W4, owner decision 2026-10-18); a different user's sign-in erases them first.
+  const onSessionEnd = useCallback(
+    (reason: SessionEndReason) => {
+      queryClient.clear();
+      void persister.removeClient();
+      device.clearSession();
+      void reminderNames.clear();
+      if (reason === "signedOut" || reason === "accountDeleted") outboxStore.clearAll();
+    },
+    [queryClient, persister, device, reminderNames, outboxStore],
+  );
+  const onSessionStart = useCallback(
+    (userId: string) => outboxStore.clearExcept(userId),
+    [outboxStore],
+  );
   // The outbox lives below the SessionProvider (it needs the user id), yet the session's own hooks
   // must reach it: `SessionOutbox` registers it here.
   const outboxRef = useRef<Outbox | null>(null);
-  const unsentCount = useCallback(() => outboxRef.current?.snapshot().items.length ?? 0, []);
   // The device's push registration belongs to the person: removed before the session ends. The
   // entries still queued get one last replay in the same grace (OE-R6.S3).
   const { notifications, push, api, connectivity } = deps;
@@ -76,7 +85,7 @@ export function AppProviders({
       manager={deps.sessions}
       expired={deps.sessionEvents}
       onSessionEnd={onSessionEnd}
-      unsentCount={unsentCount}
+      onSessionStart={onSessionStart}
       beforeSignOut={beforeSignOut}
       onAccountDeleted={onAccountDeleted}
     >
@@ -127,7 +136,7 @@ function SessionOutbox({
   children,
 }: {
   readonly deps: AppDependencies;
-  /** Where the current outbox is published for the session's own hooks (sign-out, expiry). */
+  /** Where the current outbox is published for the session's own hooks (the sign-out replay). */
   readonly registry: MutableRefObject<Outbox | null>;
   readonly children: ReactNode;
 }) {

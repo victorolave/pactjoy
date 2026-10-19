@@ -7,6 +7,7 @@ export { EmailStep } from "./login/EmailStep.tsx";
 export { LoginLayout } from "./login/LoginLayout.tsx";
 export { RedirectIfSignedIn, RequireSession } from "./session/RequireSession.tsx";
 export {
+  type SessionEndReason,
   SessionProvider,
   SIGN_OUT_GRACE_MS,
   useSession,

@@ -180,11 +180,12 @@ describe("AppProviders", () => {
       expect(outboxStore.load("user-1").items).toEqual([]);
     });
 
-    it("clears it when the session expires", () => {
+    it("keeps it when the session expires on its own (W4, owner decision)", () => {
       const { outboxStore, sessionEvents } = setup();
       act(() => sessionEvents.expire());
-      expect(outboxStore.clears).toBe(1);
-      expect(outboxStore.load("user-1").items).toEqual([]);
+      expect(screen.getByLabelText("who")).toHaveTextContent("none");
+      expect(outboxStore.clears).toBe(0);
+      expect(outboxStore.load("user-1")).toEqual(sampleOutbox());
     });
 
     it("clears it when the account is deleted (OE-R6.S1)", () => {
@@ -194,17 +195,88 @@ describe("AppProviders", () => {
       expect(outboxStore.load("user-1").items).toEqual([]);
     });
 
-    it("clears it when another tab signs out (OE-R6.S5)", () => {
+    it("leaves it to the tab that ended the session when another tab signs out (OE-R6.S5)", () => {
+      // That tab cleared the shared storage on a sign-out, or kept it on an expiry; this tab cannot
+      // tell which, and its outbox follows the storage either way.
       const { outboxStore, store } = setup();
       act(() => store.emitExternal(null));
-      expect(outboxStore.clears).toBe(1);
+      expect(outboxStore.clears).toBe(0);
+      expect(outboxStore.load("user-1")).toEqual(sampleOutbox());
+    });
+  });
+
+  describe("a queue kept from an expired session (W4, owner decision)", () => {
+    const queued = (): OutboxState => ({
+      v: 1,
+      items: [
+        {
+          kind: "record",
+          localId: "a",
+          attempted: false,
+          habitName: "Leer",
+          command: {
+            seasonId: "s1",
+            commitmentId: "c1",
+            forDate: "2026-10-13",
+            value: { kind: "done" },
+            note: null,
+            clientRequestId: "req-a",
+          },
+        },
+      ],
+      notices: [],
+    });
+    function SignIn() {
+      const { verifyCode } = useSession();
+      return (
+        <button type="button" onClick={() => void verifyCode("andrea@example.com", "123456")}>
+          entrar
+        </button>
+      );
+    }
+    /** Starts offline with user-1's queue, expires the session, then reconnects while signed out. */
+    async function expiredWithQueue() {
+      const outboxStore = new MemoryOutboxStore();
+      outboxStore.save("user-1", queued());
+      const sessionEvents = createSessionEvents();
+      const connectivity = new FakeConnectivity(false);
+      const base = deps({ outboxStore, sessionEvents, connectivity });
+      render(
+        <AppProviders deps={base}>
+          <Who />
+          <SignIn />
+        </AppProviders>,
+      );
+      act(() => sessionEvents.expire());
+      act(() => connectivity.setOnline(true));
+      await act(async () => {});
+      const api = base.api as FakePactJoyApi;
+      expect(api.recordAttempts).toEqual([]);
+      return { outboxStore, api, auth: base.auth as FakeAuth };
+    }
+
+    it("is not replayed while signed out, and is replayed when the same user signs in again", async () => {
+      const { outboxStore, api } = await expiredWithQueue();
+      act(() => screen.getByRole("button", { name: "entrar" }).click());
+      await waitFor(() => expect(screen.getByLabelText("who")).toHaveTextContent("user-1"));
+      await waitFor(() =>
+        expect(api.recorded.map((cmd) => cmd.clientRequestId)).toEqual(["req-a"]),
+      );
+      expect(outboxStore.load("user-1").items).toEqual([]);
+    });
+
+    it("is cleared, and never replayed, when a different user signs in", async () => {
+      const { outboxStore, api, auth } = await expiredWithQueue();
+      auth.session = fakeSession({ userId: "user-2" });
+      act(() => screen.getByRole("button", { name: "entrar" }).click());
+      await waitFor(() => expect(screen.getByLabelText("who")).toHaveTextContent("user-2"));
+      await act(async () => {});
+      expect(outboxStore.load("user-1").items).toEqual([]);
+      expect(api.recordAttempts).toEqual([]);
     });
   });
 
   describe("unsent entries and the end of the session (OE-R6)", () => {
-    function Discarded() {
-      return <output aria-label="discarded">{useSession().discardedEntries}</output>;
-    }
     function SignOut() {
       const { signOut } = useSession();
       return (
@@ -226,19 +298,11 @@ describe("AppProviders", () => {
       render(
         <AppProviders deps={base}>
           <Who />
-          <Discarded />
           <SignOut />
         </AppProviders>,
       );
       return { base, outboxStore, sessionEvents };
     };
-
-    it("an expiry reports how many entries it erased, counted before they are cleared (OE-R6.S4)", () => {
-      const { outboxStore, sessionEvents } = setup();
-      act(() => sessionEvents.expire());
-      expect(screen.getByLabelText("discarded")).toHaveTextContent("2");
-      expect(outboxStore.load("user-1").items).toEqual([]);
-    });
 
     it("signing out tries one last replay of the queue within the grace (OE-R6.S3)", async () => {
       const api = new FakePactJoyApi(noCircleTodayFixture());
