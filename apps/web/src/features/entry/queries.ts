@@ -118,6 +118,8 @@ export function useEditEntry(
       const withPhoto = command.photoId !== undefined;
       const direct = async (): Promise<WriteOutcome> => {
         await api.editEntry({ ...command, entryId: target });
+        // An earlier edit still in flight must not be queued over this one if it fails later.
+        outbox?.noteDirect(target, actedAt);
         return { queued: false };
       };
       const { forDate, habitName } = context;
@@ -163,6 +165,7 @@ export function useDeleteEntry(
       const target = outbox?.resolve(entryId) ?? entryId;
       const direct = async (): Promise<WriteOutcome> => {
         await api.deleteEntry(target);
+        outbox?.noteDirect(target, actedAt);
         return { queued: false };
       };
       const { forDate, habitName } = context;

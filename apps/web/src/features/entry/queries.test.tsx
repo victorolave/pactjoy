@@ -230,6 +230,23 @@ describe("editing and deleting (OE-R2)", () => {
     expect(queue()).toBe("delete:entry-9");
   });
 
+  it("an edit cut off mid-send is not queued over a later edit that already went through (W1)", async () => {
+    const app = renderInProviders(<Probe />);
+    const release = app.deps.api.hold("editEntry");
+    await click("edit");
+    app.deps.clock.advanceSeconds(5);
+    await click("edit");
+    await waitFor(() => expect(app.deps.api.edited).toHaveLength(1));
+    app.deps.api.failNext("editEntry", network());
+    release();
+    await waitFor(() => expect(app.deps.queryClient.isMutating()).toBe(0));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(queue()).toBe("");
+    // Only the later edit reached the server: the cut-off one was never replayed over it.
+    expect(app.deps.api.edited).toHaveLength(1);
+    expect(app.deps.api.calls.editEntry).toBe(2);
+  });
+
   it("does not queue an edit that carries a photo (OE-R1.S4)", async () => {
     const app = renderInProviders(<Probe editPhoto="photo-2" />);
     app.deps.api.failNext("editEntry", network());

@@ -72,6 +72,8 @@ export class Outbox {
   readonly #conflicts = new Map<string, number>();
   /** `local:<id>` of records sent in this session -> the server's `entryId` (for stale references). */
   readonly #resolved = new Map<string, string>();
+  /** Server entry -> latest `actedAt` of a write that reached it directly (see `noteDirect`). */
+  readonly #directAt = new Map<string, number>();
   #replaying = false;
 
   #disposed = false;
@@ -122,6 +124,7 @@ export class Outbox {
     this.#unfollowStore();
     this.#conflicts.clear();
     this.#resolved.clear();
+    this.#directAt.clear();
     this.#sent = [];
   }
 
@@ -156,8 +159,24 @@ export class Outbox {
     return () => this.#enqueueListeners.delete(listener);
   }
 
+  /**
+   * A write of `target` (a server entry) that the member made at `actedAt` reached the server
+   * directly. An edit whose send was cut off before it, and that fails only now, must not be queued
+   * over it (W1). Memory only; it ends with the session.
+   */
+  noteDirect(target: string, actedAt: number): void {
+    this.#directAt.set(target, Math.max(actedAt, this.#directAt.get(target) ?? actedAt));
+  }
+
   enqueue(input: EnqueueInput): EnqueueResult {
-    const result = enqueue(this.#stored(), input);
+    // The session is over: saying "queued" now would lose the write silently.
+    if (this.#ended()) return { ok: false, reason: "ended" };
+    const current = this.#stored();
+    if (input.kind === "edit" && (this.#directAt.get(input.target) ?? 0) > (input.actedAt ?? 0)) {
+      // Something the member did later already reached the server: that stands.
+      return { ok: true, state: current };
+    }
+    const result = enqueue(current, input);
     if (!result.ok) return result;
     this.#commit(result.state);
     for (const listener of [...this.#enqueueListeners]) listener();

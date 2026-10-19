@@ -41,10 +41,11 @@ export type EnqueueInput =
   | QueuedDelete;
 
 /**
- * Why a command is not queued: it carries a photo (needs a server-signed slot), it has no day, or it
- * aims at a local reference that is no longer in the queue (the record was already sent).
+ * Why a command is not queued: it carries a photo (needs a server-signed slot), it has no day, it
+ * aims at a local reference that is no longer in the queue (the record was already sent), or the
+ * outbox's session is over (`ended`, said by the `Outbox`, never by the pure model).
  */
-export type EnqueueRefusal = "photo" | "noDay" | "unknownLocal";
+export type EnqueueRefusal = "photo" | "noDay" | "unknownLocal" | "ended";
 
 export type EnqueueResult =
   | { readonly ok: true; readonly state: OutboxState }

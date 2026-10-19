@@ -542,6 +542,36 @@ describe("Outbox: two tabs of the same user share one store (OE-R3.S4)", () => {
   });
 });
 
+describe("Outbox: writes that reached the server directly (W1)", () => {
+  const late = (actedAt: number): EnqueueInput => ({ ...editInput("e1", "entry-7"), actedAt });
+
+  it("drops an edit queued late when a later direct write of that entry already landed", () => {
+    const { outbox, store } = setup();
+    outbox.noteDirect("entry-7", 2_000);
+    expect(outbox.enqueue(late(1_000)).ok).toBe(true);
+    expect(store.load(USER).items).toEqual([]);
+  });
+
+  it("still queues one the member made after that direct write", () => {
+    const { outbox, store } = setup();
+    outbox.noteDirect("entry-7", 2_000);
+    outbox.enqueue(late(3_000));
+    expect(store.load(USER).items).toHaveLength(1);
+  });
+});
+
+describe("Outbox: an ended outbox refuses to queue (no silent loss)", () => {
+  it("answers not queued once disposed, and tells no enqueue listener", () => {
+    const { outbox, store } = setup();
+    const listener = vi.fn();
+    outbox.onEnqueue(listener);
+    outbox.dispose();
+    expect(outbox.enqueue(recordInput("a")).ok).toBe(false);
+    expect(listener).not.toHaveBeenCalled();
+    expect(store.load(USER).items).toEqual([]);
+  });
+});
+
 describe("Outbox: the signed-in user changed under it (S1)", () => {
   it("stops before the next send when another user is signed in", async () => {
     const api = new FakePactJoyApi(noCircleTodayFixture());
