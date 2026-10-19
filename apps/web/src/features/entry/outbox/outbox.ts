@@ -340,8 +340,11 @@ export class Outbox {
   }
 
   /**
-   * What the store holds now: the base of every change (read-modify-write in one synchronous step,
-   * so nothing can write in between). An ended outbox only has its own copy left.
+   * What the store holds now: the base of every change, read and saved in one synchronous step, so
+   * nothing in this tab can write in between. Across tabs this narrows the race, it does not remove
+   * it: browsers do not lock `localStorage` between tabs, and `enqueue` does not take the replay's
+   * lock (a replay holds it across network requests, and a save must not wait on them). An ended
+   * outbox only has its own copy left.
    */
   #stored(): OutboxState {
     return this.#ended() ? this.#state : this.#deps.store.load(this.#deps.userId);
