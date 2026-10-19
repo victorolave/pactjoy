@@ -25,6 +25,12 @@ export type SessionEndReason = "signedOut" | "expired" | "accountDeleted" | "els
 export interface SessionApi {
   readonly session: Session | null;
   readonly notice: SessionNotice | null;
+  /**
+   * Who is signed in right now, kept in step with every sign-in and session end as it happens, not
+   * on the next render: code outside the render (a replay) must see an ended session as ended at
+   * once. Stable across renders.
+   */
+  currentUserId(): string | null;
   requestCode(email: string): Promise<void>;
   /** Resolves once the session is stored. Rejects with the port's AuthError. */
   verifyCode(email: string, code: string): Promise<void>;
@@ -100,6 +106,7 @@ export function SessionProvider({
     () =>
       store.subscribe((next) => {
         const previous = current.current;
+        current.current = next;
         setSession(next);
         // A sign out, or a different user, means the cached data is no longer this user's.
         if (next === null || (previous !== null && next.userId !== previous.userId)) {
@@ -133,21 +140,26 @@ export function SessionProvider({
 
   useEffect(() => expired?.onExpire(expire), [expired, expire]);
 
+  const currentUserId = useCallback(() => current.current?.userId ?? null, []);
+
   const api = useMemo<SessionApi>(
     () => ({
       session,
       notice,
+      currentUserId,
       requestCode: (email) => auth.requestCode(email),
       async verifyCode(email, code) {
         const next = await auth.verifyCode(email, code);
         onSessionStart?.(next.userId);
         store.save(next);
+        current.current = next;
         setNotice(null);
         setSession(next);
       },
       async signOut() {
         if (beforeSignOut) await withinGrace(beforeSignOut());
         await manager.signOut();
+        current.current = null;
         setNotice(null);
         setSession(null);
         onSessionEnd?.("signedOut");
@@ -166,6 +178,7 @@ export function SessionProvider({
       accountDeleted,
       session,
       notice,
+      currentUserId,
     ],
   );
 

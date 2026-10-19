@@ -141,13 +141,18 @@ function SessionOutbox({
   readonly children: ReactNode;
 }) {
   const { queryClient, api, outboxStore, ids, connectivity, visibility, locks, store } = deps;
-  const userId = useSession().session?.userId ?? null;
+  const session = useSession();
+  const userId = session.session?.userId ?? null;
   // The stored session, not React's: another tab can switch the user before this tree catches up.
   // When the store reads nothing (blocked or full storage keeps the session in memory only), the
-  // live session's user stands, or the outbox would turn itself off for the whole session (S-C).
-  const sessionUser = useRef(userId);
-  sessionUser.current = userId;
-  const currentUserId = useCallback(() => store.load()?.userId ?? sessionUser.current, [store]);
+  // session provider's user stands, or the outbox would turn itself off for the whole session
+  // (S-C). That user is kept in step as the session ends, not on the next render, so an expiry or
+  // another tab's sign-out reads as ended at once (F2-1).
+  const sessionUserId = session.currentUserId;
+  const currentUserId = useCallback(
+    () => store.load()?.userId ?? sessionUserId(),
+    [store, sessionUserId],
+  );
   const onReplayed = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: todayKey });
     void queryClient.invalidateQueries({ queryKey: progressKey });

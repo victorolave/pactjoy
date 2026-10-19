@@ -1,6 +1,6 @@
 # ADR-0020: Rate limiting of the join routes per user and per client network
 
-- **Status:** Proposed
+- **Status:** Accepted (2026-10-18)
 - **Date:** 2026-10-18
 - **Deciders:** Victor Olave
 

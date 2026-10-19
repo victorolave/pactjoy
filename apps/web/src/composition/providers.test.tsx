@@ -425,6 +425,68 @@ describe("AppProviders", () => {
       expect(screen.getByLabelText("who")).toHaveTextContent("user-1");
     });
 
+    describe("an ended session reads as ended at once, before React re-renders (F2-1)", () => {
+      const record = {
+        kind: "record" as const,
+        localId: "late",
+        habitName: "Leer",
+        command: {
+          seasonId: "s1",
+          commitmentId: "c1",
+          forDate: "2026-10-13",
+          value: { kind: "done" as const },
+          note: null,
+          clientRequestId: "req-late",
+        },
+      };
+      function mount() {
+        const outboxStore = new MemoryOutboxStore();
+        const store = new MemoryTokenStore(fakeSession());
+        const sessionEvents = createSessionEvents();
+        const base = deps({
+          outboxStore,
+          store,
+          sessionEvents,
+          connectivity: new FakeConnectivity(false),
+        });
+        let outbox: Outbox | null = null;
+        function Probe() {
+          outbox = useOutbox();
+          return null;
+        }
+        render(
+          <AppProviders deps={base}>
+            <Probe />
+          </AppProviders>,
+        );
+        return { outboxStore, store, sessionEvents, outbox: () => outbox as unknown as Outbox };
+      }
+
+      it("after an expiry", () => {
+        const { outboxStore, sessionEvents, outbox } = mount();
+        const live = outbox();
+        let result: ReturnType<Outbox["enqueue"]> | undefined;
+        act(() => {
+          sessionEvents.expire();
+          result = live.enqueue(record);
+        });
+        expect(result).toEqual({ ok: false, reason: "ended" });
+        expect(outboxStore.load("user-1").items).toEqual([]);
+      });
+
+      it("after another tab signs out", () => {
+        const { outboxStore, store, outbox } = mount();
+        const live = outbox();
+        let result: ReturnType<Outbox["enqueue"]> | undefined;
+        act(() => {
+          store.emitExternal(null);
+          result = live.enqueue(record);
+        });
+        expect(result).toEqual({ ok: false, reason: "ended" });
+        expect(outboxStore.load("user-1").items).toEqual([]);
+      });
+    });
+
     it("never replays another user's items with this user's token (OE-R3.S2)", async () => {
       const outboxStore = new MemoryOutboxStore();
       outboxStore.save("user-1", queuedRecord());

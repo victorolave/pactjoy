@@ -71,7 +71,9 @@ function publicV4(octets: readonly number[]): string | null {
  * would throttle all users together. If the gateway appends to a client-supplied header instead of
  * overwriting it, the first entry is forgeable: a client escapes the per-network limit (the
  * per-user one still holds) or fills another network's budget. Hence the hosted check before the
- * key is set (ADR-0020). Loopback, unspecified and link-local addresses are `null`.
+ * key is set (ADR-0020). Every non-global IPv4 address (private, shared, loopback, link-local,
+ * documentation, multicast, reserved; also when written as an IPv4-mapped IPv6 address) and every
+ * IPv6 address outside global unicast `2000::/3` is `null`.
  */
 export function clientNetworkOf(headers: Headers): string | null {
   const first = headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "";
