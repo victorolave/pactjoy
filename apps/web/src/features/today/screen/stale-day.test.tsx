@@ -1,4 +1,4 @@
-import { act, screen, waitFor } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { ApiError } from "../../../ports/api-error.ts";
@@ -76,7 +76,33 @@ describe("a saved Today whose day is over on the phone (C1)", () => {
       path: "/?entry=commitment-2&day=ayer",
       todayFailures: failures,
     });
-    expect(await screen.findByRole("dialog", { name: "Leer" })).toBeInTheDocument();
+    const sheet = await screen.findByRole("dialog", { name: "Leer" });
+    // Hoy would fall back to the saved day: on a stale day the sheet offers only Ayer.
+    expect(within(sheet).queryByRole("radio", { name: "Hoy" })).not.toBeInTheDocument();
+    expect(within(sheet).getByText(/Se guardará para el/)).toBeInTheDocument();
+  });
+
+  it("closes the day too when the new day's refetch fails with a server error, online", async () => {
+    const app = renderApp({ today: day(), now: SAME_DAY });
+    await screen.findByRole("button", { name: "Registrar Meditar" });
+    app.deps.api.failNext("getToday", new ApiError("Internal", 500, null));
+    app.deps.clock.advanceSeconds(22 * 60 * 60);
+    await act(() => app.deps.queryClient.invalidateQueries({ queryKey: todayKey }));
+    expect(await screen.findByText(NOT_LOADED)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Registrar Meditar" })).not.toBeInTheDocument();
+  });
+
+  it("does not say the day is not loaded while it is loading online; it opens once the server answers", async () => {
+    const storage = new MemoryStorage();
+    seedPersistedToday(storage, day());
+    const app = renderApp({ storage, today: day(), now: NEXT_MORNING });
+    const release = app.deps.api.hold("getToday");
+    await screen.findByRole("heading", { name: "Meditar" });
+    expect(screen.queryByText(NOT_LOADED)).not.toBeInTheDocument();
+    // Still closed until the server vouches for the day.
+    expect(screen.queryByRole("button", { name: "Registrar Meditar" })).not.toBeInTheDocument();
+    release();
+    expect(await screen.findByRole("button", { name: "Registrar Meditar" })).toBeEnabled();
   });
 
   it("keeps recording open offline while the saved day is still today on the phone", async () => {

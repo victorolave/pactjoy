@@ -1,6 +1,7 @@
 import type { PendingYesterdayItem, TodayRow } from "@pactjoy/app";
 import { type ReactNode, useRef, useState } from "react";
 import { weekdayDay } from "../../../shared/format.ts";
+import { useTodayDates } from "../../../shared/today-date-context.tsx";
 import { Icon } from "../../../ui/icon/Icon.tsx";
 import { SegmentedControl } from "../../../ui/SegmentedControl.tsx";
 import styles from "../entry.module.css";
@@ -28,7 +29,9 @@ export function useDayChoice(
   pending: PendingYesterdayItem | undefined,
   startOnYesterday: boolean,
 ): DayChoice {
-  const todayAllowed = !(row.kind === "day" && !row.scheduledToday);
+  // A saved day that is over on this phone has no Hoy: it would land on that day (C1).
+  const stale = useTodayDates()?.stale === true;
+  const todayAllowed = !stale && !(row.kind === "day" && !row.scheduledToday);
   const [day, setDay] = useState<Day>(() =>
     pending !== undefined && (startOnYesterday || !todayAllowed) ? "ayer" : "hoy",
   );

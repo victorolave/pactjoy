@@ -24,10 +24,12 @@ function TodayContent({
   model,
   banner,
   stale,
+  staleNotice,
 }: {
   readonly model: TodayModel;
   readonly banner: ReactNode;
   readonly stale: boolean;
+  readonly staleNotice: boolean;
 }) {
   switch (model.kind) {
     case "noCircle":
@@ -42,7 +44,7 @@ function TodayContent({
     case "ended":
       return (
         <TodayRowSeasonContext.Provider value={model.seasonId}>
-          <RunningToday model={model} banner={banner} stale={stale} />
+          <RunningToday model={model} banner={banner} stale={stale} staleNotice={staleNotice} />
         </TodayRowSeasonContext.Provider>
       );
   }
@@ -136,7 +138,8 @@ export function TodayScreen() {
       fetchStartedAt={today.fetchStartedAt}
       connectionLost={connectionLost}
       fresh={!today.isError && !today.isFetching && !connectionLost && today.fromServer}
-      stale={isStaleDay(today.data, today.localToday, today.fromServer && !connectionLost)}
+      stale={isStaleDay(today.data, today.localToday, today.fromServer && online && !today.isError)}
+      loadingDay={online && today.isFetching}
     />
   );
 }
@@ -154,6 +157,7 @@ function TodayWithData({
   connectionLost,
   fresh,
   stale,
+  loadingDay,
 }: {
   readonly data: TodayView;
   readonly localToday: string | null;
@@ -163,6 +167,8 @@ function TodayWithData({
   readonly fresh: boolean;
   /** The view's day is over on this phone and the server cannot be asked (see `isStaleDay`). */
   readonly stale: boolean;
+  /** The server is being asked right now: the rows stay closed, but nothing is said yet. */
+  readonly loadingDay: boolean;
 }) {
   const sending = useOutboxReplaying();
   const { view, marks } = useOverlayToday(data, fetchStartedAt);
@@ -176,6 +182,7 @@ function TodayWithData({
           model={toTodayModel(view)}
           banner={<TodayClosedWeek view={view} localToday={localToday} />}
           stale={stale}
+          staleNotice={stale && !loadingDay}
         />
       </PendingMarksContext.Provider>
     </div>

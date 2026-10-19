@@ -214,11 +214,14 @@ export function RunningToday({
   model,
   banner,
   stale = false,
+  staleNotice = stale,
 }: {
   readonly model: RunningModel;
   readonly banner?: ReactNode;
   /** The rows are a saved day already over on this phone (see `TodayDates.stale`). */
   readonly stale?: boolean;
+  /** Whether to say so; not while the new day is still being asked for online. */
+  readonly staleNotice?: boolean;
 }) {
   const { forToday, otherDays, week } = model.sections;
   const showDayState = model.kind === "active";
@@ -226,7 +229,7 @@ export function RunningToday({
   return (
     <TodayDateContext.Provider value={{ today: model.today, refDate: model.refDate, stale }}>
       <RunningHeader model={model} />
-      {stale && (
+      {staleNotice && (
         <InlineMessage tone="info" title="Hoy todavía no se cargó; conéctate para registrar." />
       )}
       {showDayState && <EndsTomorrowBanner rows={model.sheetRows} />}
