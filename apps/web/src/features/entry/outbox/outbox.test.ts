@@ -658,7 +658,43 @@ describe("Outbox state: notices, listeners, erasure", () => {
     expect(listener).toHaveBeenCalled();
   });
 
-  it("a session that ends mid-replay leaves nothing behind: the replay stops and nothing is written back (OE-R6)", async () => {
+  it("a session that expires mid-replay keeps the attempted record, resent once when the same user signs in again (W4, F2-2)", async () => {
+    const api = new FakePactJoyApi(noCircleTodayFixture());
+    const store = new MemoryOutboxStore();
+    store.save(USER, seeded(recordInput("a")));
+    let current: string | null = USER;
+    const deps = {
+      api,
+      store,
+      userId: USER,
+      ids: new SequentialIds(),
+      onReplayed: () => undefined,
+      currentUserId: () => current,
+    };
+    const first = new Outbox(deps);
+    first.activate();
+    const release = api.hold("recordEntry");
+    const done = first.drain();
+    await vi.waitFor(() => expect(api.recordAttempts).toHaveLength(1));
+    // The expiry empties the token store at once; React disposes the outbox on its next render.
+    current = null;
+    first.dispose();
+    release();
+    await expect(done).resolves.toBe("session");
+    expect(store.load(USER).items).toEqual([
+      expect.objectContaining({ kind: "record", localId: "a", attempted: true }),
+    ]);
+
+    current = USER;
+    const next = new Outbox(deps);
+    next.activate();
+    await expect(next.drain()).resolves.toBe("done");
+    expect(api.recordAttempts.map((cmd) => cmd.clientRequestId)).toEqual(["req-a", "req-a"]);
+    expect(next.resolve(localRef("a"))).toBe("entry-1");
+    expect(store.load(USER)).toEqual(EMPTY_OUTBOX);
+  });
+
+  it("a sign-out mid-replay leaves nothing behind: the replay stops and nothing is written back (OE-R6)", async () => {
     const { api, store, outbox, queue } = setup();
     queue(recordInput("a"));
     queue(recordInput("b"));
