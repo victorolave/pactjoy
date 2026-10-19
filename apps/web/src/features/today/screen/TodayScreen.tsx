@@ -112,6 +112,18 @@ function isStaleDay(view: TodayView, localToday: string | null, serverVouches: b
   return localToday > view.today;
 }
 
+/**
+ * On a stale view, the De ayer items are the saved day's yesterday: their grace is over on this
+ * phone, so each one would only come back rejected (N1). They are not offered.
+ */
+function withoutExpiredYesterday(view: TodayView, localToday: string | null): TodayView {
+  if (localToday === null || !("pendingYesterday" in view)) return view;
+  return {
+    ...view,
+    pendingYesterday: view.pendingYesterday.filter((item) => item.graceUntil >= localToday),
+  };
+}
+
 export function TodayScreen() {
   const today = useToday();
   const online = useOnline();
@@ -171,7 +183,8 @@ function TodayWithData({
   readonly loadingDay: boolean;
 }) {
   const sending = useOutboxReplaying();
-  const { view, marks } = useOverlayToday(data, fetchStartedAt);
+  const { view: overlaid, marks } = useOverlayToday(data, fetchStartedAt);
+  const view = stale ? withoutExpiredYesterday(overlaid, localToday) : overlaid;
   return (
     <div className={styles.screen}>
       {connectionLost ? <OfflineBanner /> : sending && <SyncingBanner />}

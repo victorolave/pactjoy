@@ -52,7 +52,13 @@ describe("a saved Today whose day is over on the phone (C1)", () => {
     const storage = new MemoryStorage();
     const view = activeTodayFixture({
       rows: [weekRowFixture()],
-      pendingYesterday: [pendingItemFixture({ commitmentId: "commitment-2" as never })],
+      // Still inside its grace on the phone, so De ayer may offer it (an expired one is hidden, N1).
+      pendingYesterday: [
+        pendingItemFixture({
+          commitmentId: "commitment-2" as never,
+          graceUntil: "2026-10-03" as never,
+        }),
+      ],
     });
     seedPersistedToday(storage, view);
     const failures = [offline, offline];
@@ -127,11 +133,34 @@ describe("a saved Today whose day is over on the phone (C1)", () => {
     expect(screen.queryByText(NOT_LOADED)).not.toBeInTheDocument();
   });
 
-  it("leaves the explicit De ayer choice to the member", async () => {
+  it("does not offer a De ayer item whose grace is over on the phone (N1)", async () => {
+    // The saved day's yesterday (2026-10-01) closed with 2026-10-02; the phone is at 2026-10-03.
     const storage = new MemoryStorage();
     const view = activeTodayFixture({
       rows: [dayRowFixture({ habitName: "Meditar" })],
       pendingYesterday: [pendingItemFixture()],
+    });
+    seedPersistedToday(storage, view);
+    const app = renderApp({
+      online: false,
+      storage,
+      today: view,
+      now: NEXT_MORNING,
+      todayFailures: [offline, offline],
+    });
+    await screen.findByText(NOT_LOADED);
+    expect(
+      screen.queryByRole("button", { name: "Registrar Dibujar de ayer" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Dibujar")).not.toBeInTheDocument();
+    expect(app.deps.outboxStore.load("user-1").items).toEqual([]);
+  });
+
+  it("leaves a De ayer item still inside its grace to the member", async () => {
+    const storage = new MemoryStorage();
+    const view = activeTodayFixture({
+      rows: [dayRowFixture({ habitName: "Meditar" })],
+      pendingYesterday: [pendingItemFixture({ graceUntil: "2026-10-03" as never })],
     });
     seedPersistedToday(storage, view);
     renderApp({
