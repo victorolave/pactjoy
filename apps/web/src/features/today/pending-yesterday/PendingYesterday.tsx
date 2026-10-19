@@ -1,12 +1,13 @@
 import type { PendingYesterdayItem, TodayEntry } from "@pactjoy/app";
-import { useOnline } from "../../../context/connectivity-context.tsx";
 import { weekdayDay } from "../../../shared/format.ts";
 import { quantityText } from "../../../shared/row-labels.ts";
+import { Badge } from "../../../ui/Badge.tsx";
 import { Card } from "../../../ui/Card.tsx";
 import { IconButton } from "../../../ui/IconButton.tsx";
 import { InlineMessage } from "../../../ui/InlineMessage.tsx";
 import { Icon } from "../../../ui/icon/Icon.tsx";
-import { CheckCircle, useEntrySheet, useOneTap } from "../../entry/index.ts";
+import { CheckCircle, PENDING_BADGE, useEntrySheet, useOneTap } from "../../entry/index.ts";
+import { usePendingMarks } from "../pending-marks.ts";
 import type { YesterdayRegistered } from "../today-view-model.ts";
 import styles from "./PendingYesterday.module.css";
 
@@ -17,10 +18,8 @@ function PendingItem({
   readonly item: PendingYesterdayItem;
   readonly seasonId: string;
 }) {
-  const oneTap = useOneTap(item.commitmentId, seasonId, item.forDate);
+  const oneTap = useOneTap(item.commitmentId, seasonId, item.habitName, item.forDate);
   const sheet = useEntrySheet();
-  // No write queue (P1): every write control is off until the network is back.
-  const online = useOnline();
   const isDone = item.measure.unit === "done";
   // Once the tap went out (or its entry exists) the item can take no second registro, whichever
   // button it came from: both controls rest while it is still listed (as `RowWithControls` does).
@@ -39,13 +38,13 @@ function PendingItem({
               <CheckCircle
                 label={`Registrar ${item.habitName} de ayer`}
                 pressed={sent}
-                disabled={!online || sent}
+                disabled={sent}
                 onClick={oneTap.done}
               />
               <IconButton
                 icon="x"
                 label={`Ayer no salió: ${item.habitName}`}
-                disabled={oneTap.pending || sent || !online}
+                disabled={oneTap.pending || sent}
                 onClick={oneTap.missed}
               />
             </>
@@ -54,7 +53,6 @@ function PendingItem({
               icon="plus"
               variant="outline"
               label={`Registrar ${item.habitName} de ayer`}
-              disabled={!online}
               onClick={() => sheet.open(item.commitmentId, undefined, { yesterday: true })}
             />
           )}
@@ -80,9 +78,10 @@ function stateOf(registered: YesterdayRegistered): string {
 
 function RegisteredItem({ registered }: { readonly registered: YesterdayRegistered }) {
   const sheet = useEntrySheet();
-  const online = useOnline();
   const { row, entry } = registered;
   const edited: TodayEntry = entry;
+  // Queued on the phone: it is not on the server yet.
+  const pending = usePendingMarks().entries.get(entry.entryId);
   return (
     <div className={styles.entry}>
       <div className={styles.line}>
@@ -91,11 +90,15 @@ function RegisteredItem({ registered }: { readonly registered: YesterdayRegister
           <div
             className={styles.day}
           >{`${weekdayDay(edited.forDate)} · ${stateOf(registered)}`}</div>
+          {pending !== undefined && (
+            <Badge tone="pending" icon="cloud-off">
+              {PENDING_BADGE}
+            </Badge>
+          )}
         </div>
         <IconButton
           icon="pencil"
           label={`Editar registro de ${row.habitName} de ayer`}
-          disabled={!online}
           onClick={() => sheet.open(row.commitmentId, entry.entryId)}
         />
       </div>

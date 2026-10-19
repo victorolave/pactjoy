@@ -1,9 +1,14 @@
 import { InlineMessage } from "../../ui/InlineMessage.tsx";
 import { Illustration } from "../../ui/Placeholder.tsx";
 
-/** Copy is placeholder (P8). It never says writes are waiting: there is no write queue (P1). */
-export const OFFLINE_MESSAGE =
-  "Sin conexión. Estás viendo lo último que se guardó; para registrar necesitas conexión.";
+/**
+ * Design 15g. Entry writes are kept on the phone while there is no connection (ADR-0012 addendum),
+ * so the banner says the member can still register.
+ */
+export const OFFLINE_MESSAGE = "Sin conexión. Puedes registrar; se enviará al volver.";
+
+/** Online again with entries still on the phone: they are being sent. */
+export const SYNCING_MESSAGE = "Enviando lo que registraste sin conexión…";
 
 export function OfflineBanner() {
   return (
@@ -12,4 +17,8 @@ export function OfflineBanner() {
       <InlineMessage tone="pending" title={OFFLINE_MESSAGE} />
     </>
   );
+}
+
+export function SyncingBanner() {
+  return <InlineMessage tone="pending" title={SYNCING_MESSAGE} />;
 }

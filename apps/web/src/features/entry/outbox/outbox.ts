@@ -1,0 +1,385 @@
+import { ApiError } from "../../../ports/api-error.ts";
+import type { ExclusiveLock } from "../../../ports/exclusive-lock.ts";
+import type { IdSource } from "../../../ports/ids.ts";
+import type {
+  OutboxItem,
+  OutboxState,
+  OutboxStore,
+  SentRecord,
+} from "../../../ports/outbox-store.ts";
+import type { PactJoyApi } from "../../../ports/pactjoy-api.ts";
+import { tick } from "../../../shared/ordering.ts";
+import { classify } from "./classify.ts";
+import { dismissNotices, rejectWithNotice } from "./notices.ts";
+import {
+  dependantsOf,
+  type EnqueueInput,
+  type EnqueueResult,
+  enqueue,
+  isLocalRef,
+  itemId,
+  localRef,
+  markAttempted,
+  rejectItem,
+  removeItem,
+  resolveRecord,
+} from "./queue.ts";
+
+/** A concurrency conflict is retried this many times before the item is rejected. */
+const MAX_CONFLICT_RETRIES = 3;
+/** The wait before each of those retries: the other writer needs a moment to finish. */
+const CONFLICT_RETRY_DELAY_MS = 500;
+
+export interface OutboxDeps {
+  /** Only the entry writes: the outbox never reads. */
+  readonly api: Pick<PactJoyApi, "recordEntry" | "editEntry" | "deleteEntry">;
+  readonly store: OutboxStore;
+  /** The signed-in user: the outbox only ever touches this user's state. */
+  readonly userId: string;
+  readonly ids: IdSource;
+  /** Called once after a replay that changed anything, so the server's truth is read again. */
+  readonly onReplayed: () => void;
+  /** Keeps two tabs of the user from replaying at once (W2). Without it, the replay just runs. */
+  readonly lock?: ExclusiveLock;
+  /**
+   * Who is signed in right now, read before every send. Another tab can switch the user before this
+   * outbox is disposed; it then stops instead of sending with the new user's token (S1).
+   */
+  readonly currentUserId?: () => string | null;
+}
+
+/**
+ * How a replay ended: `done` (nothing left to send, or only rejections happened), `retry` (a
+ * retryable failure stopped it with items still queued) or `session` (the session is gone).
+ */
+export type DrainStatus = "done" | "retry" | "session";
+
+/**
+ * The per-user queue of entry writes made without a connection (OE-R1..R6). It keeps a copy of the
+ * state for the screen, but every change starts from what the `OutboxStore` holds (another tab may
+ * have written it, and its event may not have arrived yet) and is saved before it is acted on. It
+ * replays the queue one item at a time in order, one tab at a time. The server decides: nothing here
+ * computes points or overrides an answer, and a rejected item becomes a notice that stays until the
+ * member dismisses it.
+ */
+export class Outbox {
+  readonly #deps: OutboxDeps;
+  #state: OutboxState;
+  readonly #listeners = new Set<() => void>();
+  readonly #enqueueListeners = new Set<() => void>();
+  #unsubscribeStore: (() => void) | null = null;
+  #running: Promise<DrainStatus> | null = null;
+  readonly #conflicts = new Map<string, number>();
+  /** `local:<id>` of records sent in this session -> the server's `entryId` (for stale references). */
+  readonly #resolved = new Map<string, string>();
+  /** Server entry -> latest `actedAt` of a write that reached it directly (see `noteDirect`). */
+  readonly #directAt = new Map<string, number>();
+  #replaying = false;
+
+  #disposed = false;
+  /** Records the server accepted whose entry the fetched Today does not show yet (memory only). */
+  #sent: readonly SentRecord[] = [];
+
+  constructor(deps: OutboxDeps) {
+    this.#deps = deps;
+    this.#state = deps.store.load(deps.userId);
+    // Nothing is subscribed yet: an instance React builds and then discards (a memo) must leave no
+    // trace. The owner calls `activate()` from an effect and `dispose()` from its cleanup.
+  }
+
+  /** Stable between changes, so it can back `useSyncExternalStore`. */
+  snapshot(): OutboxState {
+    return this.#state;
+  }
+
+  /** Tells `listener` when the queue, the notices or the replaying flag change. */
+  subscribe(listener: () => void): () => void {
+    this.#listeners.add(listener);
+    return () => {
+      this.#listeners.delete(listener);
+    };
+  }
+
+  /** Stable between changes (it backs `useSyncExternalStore`). */
+  sentRecords(): readonly SentRecord[] {
+    return this.#sent;
+  }
+
+  /**
+   * A Today fetch that started at `fetchStartedAt` (a `tick()`) has resolved. Every record sent
+   * before it is settled whether that Today holds the entry or not: it may be outside the edit
+   * window or deleted elsewhere, and a row must not keep a phantom pending entry for either.
+   */
+  acknowledge(fetchStartedAt: number): void {
+    this.#setSent(this.#sent.filter((record) => record.sentAt >= fetchStartedAt));
+  }
+
+  /**
+   * Ends this outbox: it stops following the store, stops replaying and never writes again. Its
+   * owner (the signed-in user) is gone. Safe to call twice; `activate()` brings it back.
+   */
+  dispose(): void {
+    if (this.#disposed) return;
+    this.#disposed = true;
+    this.#unfollowStore();
+    this.#conflicts.clear();
+    this.#resolved.clear();
+    this.#directAt.clear();
+    this.#sent = [];
+  }
+
+  /**
+   * Starts following the store, for the whole time it stays active and whether or not anything
+   * on screen listens: a replay nobody watches must still hear that the session ended or that
+   * another tab queued something (OE-R3.S4, OE-R6). Also undoes `dispose()` (an effect cleanup that
+   * React runs and then re-runs, as in StrictMode). Safe to call twice.
+   */
+  activate(): void {
+    this.#disposed = false;
+    if (this.#unsubscribeStore === null) this.#followStore();
+  }
+
+  /** Whether a replay with items to send is running (the "syncing" banner). Changes tell subscribers. */
+  replaying(): boolean {
+    return this.#replaying;
+  }
+
+  /**
+   * The server entry a local reference stands for once its record was sent, else the target as it
+   * is. A toast or sheet opened before the sync still holds `local:<id>`: this is how it reaches
+   * the real entry. Memory only; it ends with the session.
+   */
+  resolve(target: string): string {
+    return this.#resolved.get(target) ?? target;
+  }
+
+  /** Called after every accepted `enqueue` (a trigger for the replay). */
+  onEnqueue(listener: () => void): () => void {
+    this.#enqueueListeners.add(listener);
+    return () => this.#enqueueListeners.delete(listener);
+  }
+
+  /**
+   * A write of `target` (a server entry) that the member made at `actedAt` reached the server
+   * directly. An edit whose send was cut off before it, and that fails only now, must not be queued
+   * over it (W1). Memory only; it ends with the session.
+   */
+  noteDirect(target: string, actedAt: number): void {
+    this.#directAt.set(target, Math.max(actedAt, this.#directAt.get(target) ?? actedAt));
+  }
+
+  enqueue(input: EnqueueInput): EnqueueResult {
+    // The session is over: saying "queued" now would lose the write silently.
+    if (this.#ended()) return { ok: false, reason: "ended" };
+    const current = this.#stored();
+    if (input.kind === "edit" && (this.#directAt.get(input.target) ?? 0) > (input.actedAt ?? 0)) {
+      // Something the member did later already reached the server: that stands.
+      return { ok: true, state: current };
+    }
+    const result = enqueue(current, input);
+    if (!result.ok) return result;
+    this.#commit(result.state);
+    for (const listener of [...this.#enqueueListeners]) listener();
+    return result;
+  }
+
+  dismissNotices(): void {
+    this.#commit(dismissNotices(this.#stored()));
+  }
+
+  /**
+   * Sends the queue in order. A second call while one runs joins it, and another tab's replay is
+   * waited for under the user's lock: it may already have sent what this tab still holds.
+   */
+  drain(): Promise<DrainStatus> {
+    if (this.#running !== null) return this.#running;
+    const { lock, userId } = this.#deps;
+    const replay = () => this.#replay();
+    const run = (
+      lock === undefined ? replay() : lock.run(`pactjoy.outbox:${userId}`, replay)
+    ).finally(() => {
+      this.#running = null;
+    });
+    this.#running = run;
+    return run;
+  }
+
+  async #replay(): Promise<DrainStatus> {
+    let changed = false;
+    let status: DrainStatus = "done";
+    try {
+      for (;;) {
+        if (this.#ended()) {
+          status = "session";
+          break;
+        }
+        const item = this.#stored().items[0];
+        if (item === undefined) break;
+        this.#setReplaying(true);
+        const id = itemId(item);
+        // A record that may reach the server can no longer be rewritten: save that first.
+        if (item.kind === "record" && !item.attempted) {
+          this.#commit(markAttempted(this.#stored(), item.localId));
+        }
+        try {
+          const entryId = await this.#send(item);
+          if (!this.#ended()) this.#remember(item, entryId);
+          this.#commit(
+            item.kind === "record" && entryId !== null
+              ? resolveRecord(this.#stored(), item.localId, entryId)
+              : removeItem(this.#stored(), id),
+          );
+          this.#conflicts.delete(id);
+          changed = true;
+        } catch (error) {
+          const outcome = classify(item, error, {
+            dependentDelete:
+              item.kind === "record" &&
+              dependantsOf(this.#stored(), item).some((dependant) => dependant.kind === "delete"),
+          });
+          if (outcome === "retryable") {
+            status = "retry";
+            break;
+          }
+          if (outcome === "session") {
+            status = "session";
+            break;
+          }
+          if (outcome === "conflict") {
+            const retries = (this.#conflicts.get(id) ?? 0) + 1;
+            this.#conflicts.set(id, retries);
+            if (retries <= MAX_CONFLICT_RETRIES) {
+              await new Promise<void>((resolve) => setTimeout(resolve, CONFLICT_RETRY_DELAY_MS));
+              continue;
+            }
+          }
+          if (outcome === "sent") {
+            if (item.kind === "delete") this.#remember(item, null);
+            this.#commit(removeItem(this.#stored(), id));
+          } else if (outcome === "sentAll") this.#commit(rejectItem(this.#stored(), id).state);
+          else this.#reject(id, error);
+          this.#conflicts.delete(id);
+          changed = true;
+        }
+      }
+    } finally {
+      this.#setReplaying(false);
+      if (changed) this.#deps.onReplayed();
+    }
+    return status;
+  }
+
+  /**
+   * What the server accepted, until the Today fetched afterwards shows it: a sent record's local
+   * reference and its row (W2); an edit changes what that row shows, a delete removes it.
+   */
+  #remember(item: OutboxItem, entryId: string | null): void {
+    if (item.kind === "record") {
+      if (entryId === null) return;
+      this.#resolved.set(localRef(item.localId), entryId);
+      const { habitName, command } = item;
+      this.#setSent([...this.#sent, { entryId, habitName, command, sentAt: tick() }]);
+    } else if (item.kind === "edit") {
+      this.#setSent(
+        this.#sent.map((record) =>
+          record.entryId === item.target
+            ? { ...record, command: { ...record.command, value: item.value, note: item.note } }
+            : record,
+        ),
+      );
+    } else {
+      this.#setSent(this.#sent.filter((record) => record.entryId !== item.target));
+    }
+  }
+
+  #setSent(next: readonly SentRecord[]): void {
+    const same = next.length === this.#sent.length && next.every((r, i) => r === this.#sent[i]);
+    if (same) return;
+    this.#sent = next;
+    this.#notify();
+  }
+
+  #setReplaying(value: boolean): void {
+    if (this.#replaying === value) return;
+    this.#replaying = value;
+    this.#notify();
+  }
+
+  /** The request for one item; a record answers its `entryId`, the others `null`. */
+  async #send(item: OutboxItem): Promise<string | null> {
+    const { api } = this.#deps;
+    switch (item.kind) {
+      case "record":
+        return (await api.recordEntry(item.command)).entryId;
+      case "edit":
+        // The full new state and no `photoId`: the entry keeps its photo.
+        await api.editEntry({
+          entryId: this.#serverTarget(item.target),
+          value: item.value,
+          note: item.note,
+        });
+        return null;
+      case "delete":
+        await api.deleteEntry(this.#serverTarget(item.target));
+        return null;
+    }
+  }
+
+  /**
+   * An edit or delete reaches the head of the queue only after its record was sent (its target was
+   * then rewritten) or removed (it went with it). A local reference here means that invariant broke:
+   * it is rejected as an entry that no longer exists, never sent to the server.
+   */
+  #serverTarget(target: string): string {
+    if (isLocalRef(target)) throw new ApiError("EntryNotFound", 404, null);
+    return target;
+  }
+
+  #reject(id: string, error: unknown): void {
+    this.#commit(rejectWithNotice(this.#stored(), id, error, this.#deps.ids.newId()).state);
+  }
+
+  /**
+   * What the store holds now: the base of every change, read and saved in one synchronous step, so
+   * nothing in this tab can write in between. Across tabs this narrows the race, it does not remove
+   * it: browsers do not lock `localStorage` between tabs, and `enqueue` does not take the replay's
+   * lock (a replay holds it across network requests, and a save must not wait on them). An ended
+   * outbox only has its own copy left.
+   */
+  #stored(): OutboxState {
+    return this.#ended() ? this.#state : this.#deps.store.load(this.#deps.userId);
+  }
+
+  /** Disposed, or another user is signed in now: this outbox's session is over. */
+  #ended(): boolean {
+    if (this.#disposed) return true;
+    const current = this.#deps.currentUserId;
+    return current !== undefined && current() !== this.#deps.userId;
+  }
+
+  #commit(next: OutboxState): void {
+    // An ended outbox belongs to a session that is over: it must not write that session's state back.
+    if (this.#ended() || next === this.#state) return;
+    this.#deps.store.save(this.#deps.userId, next);
+    this.#state = next;
+    this.#notify();
+  }
+
+  #notify(): void {
+    for (const listener of [...this.#listeners]) listener();
+  }
+
+  #followStore(): void {
+    // The stored state may have moved while it was not followed.
+    this.#state = this.#deps.store.load(this.#deps.userId);
+    this.#unsubscribeStore = this.#deps.store.subscribe(() => {
+      this.#state = this.#deps.store.load(this.#deps.userId);
+      this.#notify();
+    });
+  }
+
+  #unfollowStore(): void {
+    this.#unsubscribeStore?.();
+    this.#unsubscribeStore = null;
+  }
+}

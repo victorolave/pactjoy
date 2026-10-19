@@ -234,7 +234,7 @@ describe("failures (EN-R2, EN-R8)", () => {
 
   it("retrying the same entry reuses its request id, and a changed entry gets a new one", async () => {
     const { deps } = open([weekRowFixture()], "commitment-2");
-    deps.api.failNext("recordEntry", new ApiError("NetworkError", 0, null));
+    deps.api.failNext("recordEntry", new ApiError("ServiceUnavailable", 503, null));
     const dialog = await dialogFor("Leer");
     await userEvent.click(within(dialog).getByRole("button", { name: "Registrar 20 min" }));
     expect(await within(dialog).findByRole("alert")).toHaveTextContent(
@@ -247,7 +247,7 @@ describe("failures (EN-R2, EN-R8)", () => {
 
   it("uses a new request id when the value changed after a failure", async () => {
     const { deps } = open([weekRowFixture()], "commitment-2");
-    deps.api.failNext("recordEntry", new ApiError("NetworkError", 0, null));
+    deps.api.failNext("recordEntry", new ApiError("ServiceUnavailable", 503, null));
     const dialog = await dialogFor("Leer");
     await userEvent.click(within(dialog).getByRole("button", { name: "Registrar 20 min" }));
     await within(dialog).findByRole("alert");

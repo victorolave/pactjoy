@@ -67,7 +67,7 @@ describe("the one-tap motion (design 16)", () => {
 
   it("reverts the fill and shows the retry toast when the server fails", async () => {
     const { deps } = render(open());
-    deps.api.failNext("recordEntry", new ApiError("NetworkError", 0, null));
+    deps.api.failNext("recordEntry", new ApiError("ServiceUnavailable", 503, null));
     const button = await circle();
     await userEvent.click(button);
     expect(await screen.findByRole("alert")).toHaveTextContent("No pudimos guardar el registro.");

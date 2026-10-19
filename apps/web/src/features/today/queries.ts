@@ -4,6 +4,7 @@ import { usePactJoyApi } from "../../context/api-context.tsx";
 import { useClock } from "../../context/clock-context.tsx";
 import { isServerToday, todayQuery } from "../../shared/fetch-today.ts";
 import { progressKey, todayKey } from "../../shared/query-keys.ts";
+import { lastTodayFetchStart } from "../../shared/today-fetch.ts";
 import { seasonDate, watchSeasonDay } from "../season-progress-data/index.ts";
 
 /** Today for the signed-in viewer: one read, recomputed by the server on every refetch. */
@@ -33,5 +34,8 @@ export function useToday() {
     /** The shown view is the server's answer, not one restored or written locally (ADR-0012). */
     fromServer: isServerToday(query.data),
     localToday: zone === undefined ? null : seasonDate(clock.nowMs(), zone),
+    // When the fetch behind the data on screen started (null before any finished: a copy restored
+    // from storage). The outbox settles the entries it sent with it.
+    fetchStartedAt: lastTodayFetchStart(),
   };
 }

@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { ApiError } from "../../../ports/api-error.ts";
 import { todayKey } from "../../../shared/query-keys.ts";
-import { activeTodayFixture } from "../../../testing/fixtures/today.ts";
+import { activeTodayFixture, FIXTURE_DAY_NOW_MS } from "../../../testing/fixtures/today.ts";
 import { MemoryStorage } from "../../../testing/memory-storage.ts";
 import { renderApp } from "../../../testing/render.tsx";
 import { seedPersistedToday } from "../../../testing/seed-persisted-today.ts";
@@ -127,6 +127,31 @@ describe("first full week celebration on Today", () => {
     await userEvent.click(within(dialog).getByRole("button", { name: "Seguir con mi día" }));
     await act(() => app.deps.queryClient.invalidateQueries({ queryKey: todayKey }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("after an offline entry is sent, the server's next Today both settles it and celebrates", async () => {
+    // One query function serves both: the celebration needs the view marked as the server's, the
+    // outbox needs the start of the fetch that came after its send.
+    const storage = new MemoryStorage();
+    seedPersistedToday(storage, qualified());
+    const offline = new ApiError("NetworkError", 0, null);
+    const app = renderApp({
+      online: false,
+      now: FIXTURE_DAY_NOW_MS,
+      storage,
+      today: qualified(),
+      todayFailures: [offline],
+    });
+    await userEvent.click(await screen.findByRole("button", { name: "Registrar Meditar" }));
+    expect(await screen.findByText("Registrado en este teléfono")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: TITLE })).not.toBeInTheDocument();
+    act(() => app.deps.connectivity.setOnline(true));
+    expect(await screen.findByRole("dialog", { name: TITLE })).toBeVisible();
+    await waitFor(() => expect(app.deps.api.calls.recordEntry).toBe(1));
+    await waitFor(() =>
+      expect(screen.queryByText("Registrado en este teléfono")).not.toBeInTheDocument(),
+    );
+    expect(app.deps.outboxStore.load("user-1").items).toEqual([]);
   });
 
   it("defers without consuming the milestone while another dialog has focus", async () => {

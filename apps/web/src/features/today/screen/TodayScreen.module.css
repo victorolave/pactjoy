@@ -35,6 +35,20 @@
   color: var(--text-secondary);
 }
 
+/* One line per rejected registro, each on its own row. */
+.noticeLines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* The line under the rows while entries wait on the phone (design 15g). */
+.footnote {
+  margin: 0;
+  font: var(--font-meta);
+  color: var(--text-secondary);
+}
+
 .empty {
   display: flex;
   flex-direction: column;

@@ -49,6 +49,13 @@ describe("EmailStep notices", () => {
     expect(screen.queryByText("Tu sesión expiró. Entra de nuevo.")).not.toBeInTheDocument();
   });
 
+  it("never says an expiry erased unsent entries: they are kept for the next sign-in (W4)", async () => {
+    setup();
+    await userEvent.click(screen.getByRole("button", { name: "expirar" }));
+    expect(screen.getByText("Tu sesión expiró. Entra de nuevo.")).toBeInTheDocument();
+    expect(screen.queryByText(/sin enviar/)).not.toBeInTheDocument();
+  });
+
   it("keeps saying the session expired when it only expired", async () => {
     setup();
     await userEvent.click(screen.getByRole("button", { name: "expirar" }));

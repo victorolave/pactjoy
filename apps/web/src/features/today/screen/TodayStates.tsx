@@ -6,11 +6,12 @@ import { Card } from "../../../ui/Card.tsx";
 import { InlineMessage } from "../../../ui/InlineMessage.tsx";
 import { Icon } from "../../../ui/icon/Icon.tsx";
 import { Illustration, type IllustrationName } from "../../../ui/Placeholder.tsx";
-import { EntrySheetHost } from "../../entry/index.ts";
+import { EntrySheetHost, PENDING_FOOTNOTE } from "../../entry/index.ts";
 import { EndsTomorrowBanner, PauseTodayAction } from "../../pause/index.ts";
 import { ReviewTodayCard } from "../../review/index.ts";
 import { SeasonCloseTodayCard } from "../../season-close/index.ts";
 import { TodayActivity } from "../activity/TodayActivity.tsx";
+import { usePendingMarks } from "../pending-marks.ts";
 import { PendingYesterday } from "../pending-yesterday/PendingYesterday.tsx";
 import { RowWithControls } from "../rows/RowWithControls.tsx";
 import { SeasonCard } from "../season/SeasonCard.tsx";
@@ -212,15 +213,25 @@ function NoCommitments({ model }: { readonly model: RunningModel }) {
 export function RunningToday({
   model,
   banner,
+  stale = false,
+  staleNotice = stale,
 }: {
   readonly model: RunningModel;
   readonly banner?: ReactNode;
+  /** The rows are a saved day already over on this phone (see `TodayDates.stale`). */
+  readonly stale?: boolean;
+  /** Whether to say so; not while the new day is still being asked for online. */
+  readonly staleNotice?: boolean;
 }) {
   const { forToday, otherDays, week } = model.sections;
   const showDayState = model.kind === "active";
+  const waiting = usePendingMarks().count > 0;
   return (
-    <TodayDateContext.Provider value={{ today: model.today, refDate: model.refDate }}>
+    <TodayDateContext.Provider value={{ today: model.today, refDate: model.refDate, stale }}>
       <RunningHeader model={model} />
+      {staleNotice && (
+        <InlineMessage tone="info" title="Hoy todavía no se cargó; conéctate para registrar." />
+      )}
       {showDayState && <EndsTomorrowBanner rows={model.sheetRows} />}
       {banner}
       <ReviewTodayCard />
@@ -260,6 +271,7 @@ export function RunningToday({
           ))}
         </Section>
       )}
+      {waiting && <p className={styles.footnote}>{PENDING_FOOTNOTE}</p>}
       {showDayState && <PauseTodayAction />}
       <TodayActivity />
       <SeasonCard model={model.season} />

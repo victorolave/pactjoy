@@ -23,6 +23,11 @@ const localDate = (value: string) => value as LocalDate;
 const VIEWER = memberId("member-victor");
 /** 2026-10-02 is a Friday: weekday 4 with Monday = 0. */
 const TODAY = localDate("2026-10-02");
+/**
+ * 10:00 on the fixtures' day in their zone (America/Bogota). The default test clock is the next
+ * morning, where a Today the server cannot vouch for (offline) is a day already over (C1).
+ */
+export const FIXTURE_DAY_NOW_MS = Date.parse("2026-10-02T15:00:00Z");
 const ACTUAL_START = localDate("2026-09-28");
 
 type Points = DayRow["points"];

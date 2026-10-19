@@ -6,16 +6,19 @@ import type { AuthPort } from "../ports/auth.ts";
 import type { Clock } from "../ports/clock.ts";
 import type { Connectivity } from "../ports/connectivity.ts";
 import type { DeviceStore } from "../ports/device-store.ts";
+import type { ExclusiveLock } from "../ports/exclusive-lock.ts";
 import type { Haptics } from "../ports/haptics.ts";
 import type { IdSource } from "../ports/ids.ts";
 import type { ImageProcessor } from "../ports/image-processor.ts";
 import type { NotificationPermissionPort } from "../ports/notification-permission.ts";
+import type { OutboxStore } from "../ports/outbox-store.ts";
 import type { PactJoyApi } from "../ports/pactjoy-api.ts";
 import type { PhotoUploader } from "../ports/photo-uploader.ts";
 import type { PushSubscriptionPort } from "../ports/push-subscription.ts";
 import type { ReminderNamesPort } from "../ports/reminder-names.ts";
 import type { Sharing } from "../ports/sharing.ts";
 import type { TokenStore } from "../ports/token-store.ts";
+import type { Visibility } from "../ports/visibility.ts";
 
 /** Everything the composition root wires: ports implemented by adapters (or by fakes in tests). */
 export interface AppDependencies {
@@ -42,6 +45,15 @@ export interface AppDependencies {
   readonly push: PushSubscriptionPort;
   /** The own visible habit names reminder pushes may show (D2); forgotten when the session ends. */
   readonly reminderNames: ReminderNamesPort;
+  /**
+   * Entry writes made without a connection, per user; erased on sign-out, account deletion or
+   * another user's sign-in, kept across an expiry (OE-R6, W4).
+   */
+  readonly outboxStore: OutboxStore;
+  /** Whether the app is on screen; coming back to it retries what the outbox could not send. */
+  readonly visibility: Visibility;
+  /** A lock every tab respects: one outbox replay at a time (Web Locks, ADR-0012 addendum). */
+  readonly locks: ExclusiveLock;
   readonly sessions: SessionManager;
   /** The API adapter's `onUnauthorized` calls `sessionEvents.expire`. */
   readonly sessionEvents: SessionEvents;

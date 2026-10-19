@@ -49,8 +49,9 @@ export function createQueryClient({
           ? (failureCount, error) => failureCount < MAX_QUERY_RETRIES && toUiError(error).retryable
           : false,
       },
-      // "always": offline a write fails at once with NetworkError instead of pausing and queueing
-      // itself to run later (P1: no write queue).
+      // "always": a write runs (and fails with NetworkError) at once instead of TanStack pausing it
+      // and queueing it for later. Entry writes are queued by the outbox, which decides before the
+      // request (ADR-0012 addendum); TanStack mutations are never dehydrated or replayed.
       mutations: { retry: 0, networkMode: "always" },
     },
   });

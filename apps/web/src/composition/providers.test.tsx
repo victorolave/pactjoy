@@ -1,11 +1,20 @@
 import { QueryClient } from "@tanstack/react-query";
 import { act, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { LocalStorageDeviceStore } from "../adapters/local-storage-device-store.ts";
 import { createTodayPersister } from "../adapters/query-persister.ts";
 import { useIds } from "../context/ids-context.tsx";
 import { useToasts } from "../context/toast-context.tsx";
 import { createSessionEvents, SessionManager, useSession } from "../features/auth/index.ts";
+import {
+  type Outbox,
+  useOutbox,
+  useOutboxReplaying,
+  useOutboxState,
+} from "../features/entry/index.ts";
+import { ApiError } from "../ports/api-error.ts";
+import type { OutboxState } from "../ports/outbox-store.ts";
+import { progressKey, socialKey, todayKey } from "../shared/query-keys.ts";
 import { FakeAppInstall } from "../testing/fake-app-install.ts";
 import { FakeAuth, fakeSession } from "../testing/fake-auth.ts";
 import { FakeConnectivity } from "../testing/fake-connectivity.ts";
@@ -17,10 +26,14 @@ import { FakePhotoUploader } from "../testing/fake-photo-uploader.ts";
 import { FakePushSubscription } from "../testing/fake-push-subscription.ts";
 import { FakeReminderNames } from "../testing/fake-reminder-names.ts";
 import { FakeSharing } from "../testing/fake-sharing.ts";
+import { FakeVisibility } from "../testing/fake-visibility.ts";
 import { FixedClock } from "../testing/fixed-clock.ts";
 import { noCircleTodayFixture } from "../testing/fixtures/today.ts";
+import { MemoryLock } from "../testing/memory-lock.ts";
+import { MemoryOutboxStore } from "../testing/memory-outbox-store.ts";
 import { MemoryStorage } from "../testing/memory-storage.ts";
 import { MemoryTokenStore } from "../testing/memory-token-store.ts";
+import { sampleOutbox } from "../testing/outbox-store-contract.ts";
 import { SequentialIds } from "../testing/sequential-ids.ts";
 import type { AppDependencies } from "./dependencies.ts";
 import { AppProviders } from "./providers.tsx";
@@ -44,6 +57,9 @@ function deps(overrides: Partial<AppDependencies> = {}): AppDependencies {
     notifications: new FakeNotificationPermission(),
     push: new FakePushSubscription(),
     reminderNames: new FakeReminderNames(),
+    outboxStore: new MemoryOutboxStore(),
+    visibility: new FakeVisibility(),
+    locks: new MemoryLock(),
     clock: new FixedClock(0),
     sessions: new SessionManager(auth, store, new FixedClock(0)),
     sessionEvents: createSessionEvents(),
@@ -126,6 +142,387 @@ describe("AppProviders", () => {
     expect(queryClient.getQueryData(["today"])).toBeUndefined();
     await waitFor(() => expect(push.device).toBeNull());
     expect(auth.signedOut).toEqual([]);
+  });
+
+  describe("the outbox is erased with the session (OE-R6)", () => {
+    function setup() {
+      const outboxStore = new MemoryOutboxStore();
+      outboxStore.save("user-1", sampleOutbox());
+      const store = new MemoryTokenStore(fakeSession());
+      const sessionEvents = createSessionEvents();
+      const base = deps({ outboxStore, store, sessionEvents });
+      function Controls() {
+        const { signOut, accountDeleted } = useSession();
+        return (
+          <>
+            <button type="button" onClick={() => void signOut()}>
+              salir
+            </button>
+            <button type="button" onClick={accountDeleted}>
+              borrar
+            </button>
+          </>
+        );
+      }
+      render(
+        <AppProviders deps={base}>
+          <Who />
+          <Controls />
+        </AppProviders>,
+      );
+      return { outboxStore, store, sessionEvents };
+    }
+
+    it("clears it on sign-out", async () => {
+      const { outboxStore } = setup();
+      act(() => screen.getByRole("button", { name: "salir" }).click());
+      await waitFor(() => expect(outboxStore.clears).toBe(1));
+      expect(outboxStore.load("user-1").items).toEqual([]);
+    });
+
+    it("keeps it when the session expires on its own (W4, owner decision)", () => {
+      const { outboxStore, sessionEvents } = setup();
+      act(() => sessionEvents.expire());
+      expect(screen.getByLabelText("who")).toHaveTextContent("none");
+      expect(outboxStore.clears).toBe(0);
+      expect(outboxStore.load("user-1")).toEqual(sampleOutbox());
+    });
+
+    it("clears it when the account is deleted (OE-R6.S1)", () => {
+      const { outboxStore } = setup();
+      act(() => screen.getByRole("button", { name: "borrar" }).click());
+      expect(outboxStore.clears).toBe(1);
+      expect(outboxStore.load("user-1").items).toEqual([]);
+    });
+
+    it("leaves it to the tab that ended the session when another tab signs out (OE-R6.S5)", () => {
+      // That tab cleared the shared storage on a sign-out, or kept it on an expiry; this tab cannot
+      // tell which, and its outbox follows the storage either way.
+      const { outboxStore, store } = setup();
+      act(() => store.emitExternal(null));
+      expect(outboxStore.clears).toBe(0);
+      expect(outboxStore.load("user-1")).toEqual(sampleOutbox());
+    });
+  });
+
+  describe("a queue kept from an expired session (W4, owner decision)", () => {
+    const queued = (): OutboxState => ({
+      v: 1,
+      items: [
+        {
+          kind: "record",
+          localId: "a",
+          attempted: false,
+          habitName: "Leer",
+          command: {
+            seasonId: "s1",
+            commitmentId: "c1",
+            forDate: "2026-10-13",
+            value: { kind: "done" },
+            note: null,
+            clientRequestId: "req-a",
+          },
+        },
+      ],
+      notices: [],
+    });
+    function SignIn() {
+      const { verifyCode } = useSession();
+      return (
+        <button type="button" onClick={() => void verifyCode("andrea@example.com", "123456")}>
+          entrar
+        </button>
+      );
+    }
+    /** Starts offline with user-1's queue, expires the session, then reconnects while signed out. */
+    async function expiredWithQueue() {
+      const outboxStore = new MemoryOutboxStore();
+      outboxStore.save("user-1", queued());
+      const sessionEvents = createSessionEvents();
+      const connectivity = new FakeConnectivity(false);
+      const base = deps({ outboxStore, sessionEvents, connectivity });
+      render(
+        <AppProviders deps={base}>
+          <Who />
+          <SignIn />
+        </AppProviders>,
+      );
+      act(() => sessionEvents.expire());
+      act(() => connectivity.setOnline(true));
+      await act(async () => {});
+      const api = base.api as FakePactJoyApi;
+      expect(api.recordAttempts).toEqual([]);
+      return { outboxStore, api, auth: base.auth as FakeAuth };
+    }
+
+    it("is not replayed while signed out, and is replayed when the same user signs in again", async () => {
+      const { outboxStore, api } = await expiredWithQueue();
+      act(() => screen.getByRole("button", { name: "entrar" }).click());
+      await waitFor(() => expect(screen.getByLabelText("who")).toHaveTextContent("user-1"));
+      await waitFor(() =>
+        expect(api.recorded.map((cmd) => cmd.clientRequestId)).toEqual(["req-a"]),
+      );
+      expect(outboxStore.load("user-1").items).toEqual([]);
+    });
+
+    it("is cleared, and never replayed, when a different user signs in", async () => {
+      const { outboxStore, api, auth } = await expiredWithQueue();
+      auth.session = fakeSession({ userId: "user-2" });
+      act(() => screen.getByRole("button", { name: "entrar" }).click());
+      await waitFor(() => expect(screen.getByLabelText("who")).toHaveTextContent("user-2"));
+      await act(async () => {});
+      expect(outboxStore.load("user-1").items).toEqual([]);
+      expect(api.recordAttempts).toEqual([]);
+    });
+  });
+
+  describe("unsent entries and the end of the session (OE-R6)", () => {
+    function SignOut() {
+      const { signOut } = useSession();
+      return (
+        <button type="button" onClick={() => void signOut()}>
+          salir
+        </button>
+      );
+    }
+    const setup = (overrides: Partial<AppDependencies> = {}) => {
+      const outboxStore = new MemoryOutboxStore();
+      outboxStore.save("user-1", sampleOutbox());
+      const sessionEvents = createSessionEvents();
+      const base = deps({
+        outboxStore,
+        sessionEvents,
+        connectivity: new FakeConnectivity(false),
+        ...overrides,
+      });
+      render(
+        <AppProviders deps={base}>
+          <Who />
+          <SignOut />
+        </AppProviders>,
+      );
+      return { base, outboxStore, sessionEvents };
+    };
+
+    it("signing out tries one last replay of the queue within the grace (OE-R6.S3)", async () => {
+      const api = new FakePactJoyApi(noCircleTodayFixture());
+      // The replay that starts with the app fails, so the queue is still full at sign-out.
+      api.failNext("recordEntry", new ApiError("ServiceUnavailable", 503, null));
+      const { outboxStore } = setup({ api, connectivity: new FakeConnectivity(true) });
+      await waitFor(() => expect(api.recordAttempts).toHaveLength(1));
+      act(() => screen.getByRole("button", { name: "salir" }).click());
+      await waitFor(() => expect(screen.getByLabelText("who")).toHaveTextContent("none"));
+      expect(api.recorded.map((cmd) => cmd.clientRequestId)).toEqual(["req-1"]);
+      expect(outboxStore.load("user-1").items).toEqual([]);
+    });
+  });
+
+  describe("the outbox of the signed-in user (OE-R3, OE-R4)", () => {
+    const queuedRecord = (): OutboxState => ({
+      v: 1,
+      items: [
+        {
+          kind: "record",
+          localId: "a",
+          attempted: false,
+          habitName: "Leer",
+          command: {
+            seasonId: "s1",
+            commitmentId: "c1",
+            forDate: "2026-10-13",
+            value: { kind: "done" },
+            note: null,
+            clientRequestId: "req-a",
+          },
+        },
+      ],
+      notices: [],
+    });
+
+    it("replays what is queued when the app starts with a session, then refreshes Today, progress and the feed (OE-R4.S2)", async () => {
+      const outboxStore = new MemoryOutboxStore();
+      outboxStore.save("user-1", queuedRecord());
+      const queryClient = new QueryClient();
+      const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+      const base = deps({ outboxStore, queryClient });
+      render(
+        <AppProviders deps={base}>
+          <Who />
+        </AppProviders>,
+      );
+      const api = base.api as FakePactJoyApi;
+      await waitFor(() =>
+        expect(api.recorded.map((cmd) => cmd.clientRequestId)).toEqual(["req-a"]),
+      );
+      await waitFor(() =>
+        expect(invalidate.mock.calls.map(([filters]) => filters?.queryKey)).toEqual(
+          expect.arrayContaining([todayKey, progressKey, socialKey]),
+        ),
+      );
+      expect(outboxStore.load("user-1").items).toEqual([]);
+    });
+
+    it("replays under a lock named for the user, so two tabs take turns (W2)", async () => {
+      const outboxStore = new MemoryOutboxStore();
+      outboxStore.save("user-1", queuedRecord());
+      const locks = new MemoryLock();
+      const base = deps({ outboxStore, locks });
+      render(
+        <AppProviders deps={base}>
+          <Who />
+        </AppProviders>,
+      );
+      await waitFor(() => expect(outboxStore.load("user-1").items).toEqual([]));
+      expect(locks.requested).toContain("pactjoy.outbox:user-1");
+    });
+
+    it("stops before the next send once the stored session belongs to another user (S1)", async () => {
+      const outboxStore = new MemoryOutboxStore();
+      const two = queuedRecord();
+      const [first] = two.items;
+      if (first?.kind !== "record") throw new Error("record fixture");
+      const second = {
+        ...first,
+        localId: "b",
+        command: { ...first.command, clientRequestId: "req-b" },
+      };
+      outboxStore.save("user-1", { ...two, items: [first, second] });
+      const store = new MemoryTokenStore(fakeSession());
+      const base = deps({ outboxStore, store });
+      const api = base.api as FakePactJoyApi;
+      const release = api.hold("recordEntry");
+      render(
+        <AppProviders deps={base}>
+          <Who />
+        </AppProviders>,
+      );
+      await waitFor(() => expect(api.recordAttempts).toHaveLength(1));
+      // Another tab signed in someone else; this tab's React state has not caught up yet.
+      store.save(fakeSession({ userId: "user-2" }));
+      release();
+      await act(async () => {});
+      expect(api.recordAttempts.map((cmd) => cmd.clientRequestId)).toEqual(["req-a"]);
+    });
+
+    it("keeps replaying when the token store reads nothing while the session is live (S-C)", async () => {
+      // A blocked or full localStorage: the session lives in memory, the store reads null.
+      const outboxStore = new MemoryOutboxStore();
+      outboxStore.save("user-1", queuedRecord());
+      const store = new MemoryTokenStore(fakeSession());
+      const connectivity = new FakeConnectivity(false);
+      const base = deps({ outboxStore, store, connectivity });
+      render(
+        <AppProviders deps={base}>
+          <Who />
+        </AppProviders>,
+      );
+      store.clear();
+      act(() => connectivity.setOnline(true));
+      const api = base.api as FakePactJoyApi;
+      await waitFor(() =>
+        expect(api.recorded.map((cmd) => cmd.clientRequestId)).toEqual(["req-a"]),
+      );
+      expect(screen.getByLabelText("who")).toHaveTextContent("user-1");
+    });
+
+    it("never replays another user's items with this user's token (OE-R3.S2)", async () => {
+      const outboxStore = new MemoryOutboxStore();
+      outboxStore.save("user-1", queuedRecord());
+      const store = new MemoryTokenStore(fakeSession({ userId: "user-2" }));
+      const base = deps({ outboxStore, store });
+      const seen: (Outbox | null)[] = [];
+      function Probe() {
+        seen.push(useOutbox());
+        return null;
+      }
+      render(
+        <AppProviders deps={base}>
+          <Probe />
+        </AppProviders>,
+      );
+      await act(async () => {});
+      const api = base.api as FakePactJoyApi;
+      expect(api.recordAttempts).toEqual([]);
+      expect(seen.at(-1)?.snapshot().items).toEqual([]);
+    });
+
+    it("has no outbox while signed out, and a new one for the next user", () => {
+      const store = new MemoryTokenStore(null);
+      const base = deps({ store });
+      const seen: (Outbox | null)[] = [];
+      function Probe() {
+        seen.push(useOutbox());
+        return null;
+      }
+      render(
+        <AppProviders deps={base}>
+          <Probe />
+        </AppProviders>,
+      );
+      expect(seen.at(-1)).toBeNull();
+      act(() => store.emitExternal(fakeSession({ userId: "user-2" })));
+      const first = seen.at(-1);
+      expect(first).not.toBeNull();
+      act(() => store.emitExternal(fakeSession({ userId: "user-3" })));
+      expect(seen.at(-1)).not.toBeNull();
+      expect(seen.at(-1)).not.toBe(first);
+    });
+
+    it("does not resubscribe to the outbox on every render", () => {
+      const base = deps({ store: new MemoryTokenStore(fakeSession({ userId: "user-2" })) });
+      let outbox: Outbox | null = null;
+      function Probe() {
+        outbox = useOutbox();
+        useOutboxState();
+        useOutboxReplaying();
+        return null;
+      }
+      const view = render(
+        <AppProviders deps={base}>
+          <Probe />
+        </AppProviders>,
+      );
+      const subscribe = vi.spyOn(outbox as unknown as Outbox, "subscribe");
+      view.rerender(
+        <AppProviders deps={base}>
+          <Probe />
+        </AppProviders>,
+      );
+      view.rerender(
+        <AppProviders deps={base}>
+          <Probe />
+        </AppProviders>,
+      );
+      expect(subscribe).not.toHaveBeenCalled();
+    });
+
+    it("disposes the outbox of the user who left, and the last one on unmount", () => {
+      const outboxStore = new MemoryOutboxStore();
+      const store = new MemoryTokenStore(fakeSession({ userId: "user-2" }));
+      const base = deps({ outboxStore, store });
+      const seen: (Outbox | null)[] = [];
+      function Probe() {
+        seen.push(useOutbox());
+        return null;
+      }
+      const view = render(
+        <AppProviders deps={base}>
+          <Probe />
+        </AppProviders>,
+      );
+      const first = seen.at(-1) as Outbox;
+      act(() => store.emitExternal(fakeSession({ userId: "user-3" })));
+      const second = seen.at(-1) as Outbox;
+      expect(second).not.toBe(first);
+      // A disposed outbox no longer follows the store.
+      act(() => outboxStore.emitExternal("user-2", queuedRecord()));
+      expect(first.snapshot().items).toEqual([]);
+      act(() => outboxStore.emitExternal("user-3", queuedRecord()));
+      expect(second.snapshot().items).toHaveLength(1);
+      view.unmount();
+      act(() => outboxStore.emitExternal("user-3", { v: 1, items: [], notices: [] }));
+      expect(second.snapshot().items).toHaveLength(1);
+    });
   });
 
   it("provides the ids port and the toast host to the tree", () => {

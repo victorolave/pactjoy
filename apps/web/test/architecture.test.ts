@@ -52,7 +52,8 @@ const ALLOWED_FEATURE_DEPS: Readonly<Record<string, readonly string[]>> = {
   onboarding: ["notifications"],
   // This device's Web Push lifecycle; the session reaches it through the composition, not auth.
   notifications: [],
-  profile: ["auth", "circle", "habits", "notifications", "review"],
+  // Signing out first sends the entries kept on the phone, and asks before it erases any (OE-R6).
+  profile: ["auth", "circle", "entry", "habits", "notifications", "review"],
   "season-progress-data": [],
   "season-member": ["habits", "season-progress-data"],
   season: ["circle", "habits", "season-progress-data"],

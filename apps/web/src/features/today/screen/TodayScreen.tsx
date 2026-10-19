@@ -1,16 +1,20 @@
+import type { TodayView } from "@pactjoy/app";
 import type { ReactNode } from "react";
 import { useOnline } from "../../../context/connectivity-context.tsx";
-import { OfflineBanner } from "../../../platform/offline/OfflineBanner.tsx";
+import { OfflineBanner, SyncingBanner } from "../../../platform/offline/OfflineBanner.tsx";
 import { ApiError } from "../../../ports/api-error.ts";
 import { longDate } from "../../../shared/format.ts";
 import { toUiError } from "../../../shared/ui-error.ts";
 import { Button } from "../../../ui/Button.tsx";
 import { Icon } from "../../../ui/icon/Icon.tsx";
+import { useOutboxReplaying, useOverlayToday } from "../../entry/index.ts";
 import { useReminderNamesSync } from "../../notifications/index.ts";
+import { PendingMarksContext } from "../pending-marks.ts";
 import { useToday } from "../queries.ts";
 import { TodayRowSeasonContext } from "../rows/row-navigation.ts";
 import { type TodayModel, toTodayModel } from "../today-view-model.ts";
 import { FirstFullWeekCelebration } from "./FirstFullWeekCelebration.tsx";
+import { OutboxNotices } from "./OutboxNotices.tsx";
 import { TodayClosedWeek } from "./TodayClosedWeek.tsx";
 import styles from "./TodayScreen.module.css";
 import { TodaySkeleton } from "./TodaySkeleton.tsx";
@@ -19,9 +23,13 @@ import { NoCircle, NoSeason, NotStarted, PactOpen, RunningToday } from "./TodayS
 function TodayContent({
   model,
   banner,
+  stale,
+  staleNotice,
 }: {
   readonly model: TodayModel;
   readonly banner: ReactNode;
+  readonly stale: boolean;
+  readonly staleNotice: boolean;
 }) {
   switch (model.kind) {
     case "noCircle":
@@ -36,7 +44,7 @@ function TodayContent({
     case "ended":
       return (
         <TodayRowSeasonContext.Provider value={model.seasonId}>
-          <RunningToday model={model} banner={banner} />
+          <RunningToday model={model} banner={banner} stale={stale} staleNotice={staleNotice} />
         </TodayRowSeasonContext.Provider>
       );
   }
@@ -93,6 +101,29 @@ function TodayFailure({
   );
 }
 
+/**
+ * A running season's Today whose day is already over on this phone (its season clock), when the
+ * server cannot vouch for it: the view was restored from storage, or the connection is lost. A tap
+ * would otherwise be kept for yesterday. While the server answers, its day wins over a phone clock
+ * that runs ahead; a phone clock behind it never closes anything.
+ */
+function isStaleDay(view: TodayView, localToday: string | null, serverVouches: boolean): boolean {
+  if (view.state !== "active" || localToday === null || serverVouches) return false;
+  return localToday > view.today;
+}
+
+/**
+ * On a stale view, the De ayer items are the saved day's yesterday: their grace is over on this
+ * phone, so each one would only come back rejected (N1). They are not offered.
+ */
+function withoutExpiredYesterday(view: TodayView, localToday: string | null): TodayView {
+  if (localToday === null || !("pendingYesterday" in view)) return view;
+  return {
+    ...view,
+    pendingYesterday: view.pendingYesterday.filter((item) => item.graceUntil >= localToday),
+  };
+}
+
 export function TodayScreen() {
   const today = useToday();
   const online = useOnline();
@@ -113,16 +144,65 @@ export function TodayScreen() {
   const connectionLost =
     !online || (today.isError && toUiError(today.error).code === "NetworkError");
   return (
+    <TodayWithData
+      data={today.data}
+      localToday={today.localToday}
+      fetchStartedAt={today.fetchStartedAt}
+      connectionLost={connectionLost}
+      fresh={!today.isError && !today.isFetching && !connectionLost && today.fromServer}
+      stale={isStaleDay(
+        today.data,
+        today.localToday,
+        // A refetch in flight (the day-change one) has not vouched for the day yet (S-A).
+        today.fromServer && online && !today.isError && !today.isFetching,
+      )}
+      loadingDay={online && today.isFetching}
+    />
+  );
+}
+
+/**
+ * The server's Today with what is waiting on the phone laid over it (design 15g). The banner says
+ * "sin conexión" while the connection is lost and "enviando" while the queue is being sent. The
+ * first-full-week celebration reads the server's own view, never the overlay: what waits on the
+ * phone is not a kept week.
+ */
+function TodayWithData({
+  data,
+  localToday,
+  fetchStartedAt,
+  connectionLost,
+  fresh,
+  stale,
+  loadingDay,
+}: {
+  readonly data: TodayView;
+  readonly localToday: string | null;
+  readonly fetchStartedAt: number | null;
+  readonly connectionLost: boolean;
+  /** `data` is a settled answer the server gave in this session (see `FirstFullWeekCelebration`). */
+  readonly fresh: boolean;
+  /** The view's day is over on this phone and the server cannot be asked (see `isStaleDay`). */
+  readonly stale: boolean;
+  /** The server is being asked right now: the rows stay closed, but nothing is said yet. */
+  readonly loadingDay: boolean;
+}) {
+  const sending = useOutboxReplaying();
+  const { view: overlaid, marks } = useOverlayToday(data, fetchStartedAt);
+  const view = stale ? withoutExpiredYesterday(overlaid, localToday) : overlaid;
+  return (
     <div className={styles.screen}>
-      {connectionLost && <OfflineBanner />}
-      <FirstFullWeekCelebration
-        view={today.data}
-        fresh={!today.isError && !today.isFetching && !connectionLost && today.fromServer}
-      />
-      <TodayContent
-        model={toTodayModel(today.data)}
-        banner={<TodayClosedWeek view={today.data} localToday={today.localToday} />}
-      />
+      {connectionLost ? <OfflineBanner /> : sending && <SyncingBanner />}
+      <OutboxNotices />
+      <FirstFullWeekCelebration view={data} fresh={fresh} />
+      <PendingMarksContext.Provider value={marks}>
+        <TodayContent
+          model={toTodayModel(view)}
+          banner={<TodayClosedWeek view={view} localToday={localToday} />}
+          stale={stale}
+          staleNotice={stale && !loadingDay}
+        />
+      </PendingMarksContext.Provider>
     </div>
   );
 }

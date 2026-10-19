@@ -8,6 +8,7 @@ import {
 } from "../../../shared/row-labels.ts";
 import { useTodayDate } from "../../../shared/today-date-context.tsx";
 import { Tag } from "../../../ui/Tag.tsx";
+import type { PendingKind } from "../../entry/index.ts";
 import type { DayTodayRow } from "../today-view-model.ts";
 import { RowFrame } from "./RowFrame.tsx";
 import { SessionBar } from "./SessionBar.tsx";
@@ -23,18 +24,25 @@ export function DayRow({
   action,
   below,
   optimisticDone = false,
+  pending,
 }: {
   readonly row: DayTodayRow;
   readonly optimisticDone?: boolean;
   readonly action?: ReactNode;
   readonly below?: ReactNode;
+  readonly pending?: PendingKind | undefined;
 }) {
   const { state } = row.opportunity;
   const today = useTodayDate();
   const logged = state === "logged" && row.entries.length > 0;
   // A "Hoy no salió" is a registered day, not a success: it gets no check and no success colour.
+  // The server has not scored a queued record, but the member did it: the row looks done meanwhile.
+  const queuedDone =
+    pending === "record" && row.entries.some((entry) => entry.value.kind !== "missed");
   const achieved =
-    optimisticDone || (logged && row.entries.some((entry) => entry.value.kind !== "missed"));
+    optimisticDone ||
+    queuedDone ||
+    (logged && row.entries.some((entry) => entry.value.kind !== "missed"));
   const lines = (missed: boolean) =>
     row.entries
       .filter((entry) => (entry.value.kind === "missed") === missed)
@@ -70,6 +78,7 @@ export function DayRow({
       details={logged || achieved ? lines(true) : [detail]}
       badges={row.privacy === "private" ? <Tag>Privado</Tag> : undefined}
       action={action}
+      pending={pending}
       below={
         <>
           <SessionBar row={row} />

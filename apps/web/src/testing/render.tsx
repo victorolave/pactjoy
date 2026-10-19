@@ -10,6 +10,7 @@ import { createQueryClient } from "../composition/query-client.ts";
 import { createSessionEvents, SessionManager } from "../features/auth/index.ts";
 import type { ApiError } from "../ports/api-error.ts";
 import type { NotificationPermissionState } from "../ports/notification-permission.ts";
+import type { OutboxState } from "../ports/outbox-store.ts";
 import type { MyCircle } from "../ports/pactjoy-api.ts";
 import type { CircleFeedDto, CommitmentStageDto, ReviewDraftDto } from "../ports/wire.ts";
 import { AppRoutes } from "../shell/routes.tsx";
@@ -24,9 +25,12 @@ import { FakePhotoUploader } from "./fake-photo-uploader.ts";
 import { FakePushSubscription } from "./fake-push-subscription.ts";
 import { FakeReminderNames } from "./fake-reminder-names.ts";
 import { FakeSharing } from "./fake-sharing.ts";
+import { FakeVisibility } from "./fake-visibility.ts";
 import { FixedClock } from "./fixed-clock.ts";
 import { soloCircleFixture } from "./fixtures/circle.ts";
 import { activeTodayFixture } from "./fixtures/today.ts";
+import { MemoryLock } from "./memory-lock.ts";
+import { MemoryOutboxStore } from "./memory-outbox-store.ts";
 import { MemoryStorage } from "./memory-storage.ts";
 import { MemoryTokenStore } from "./memory-token-store.ts";
 import { SequentialIds } from "./sequential-ids.ts";
@@ -41,6 +45,8 @@ export interface RenderAppOptions {
   readonly today?: TodayView;
   /** Where the saved Today lives. A fresh in-memory one by default, so tests never share it. */
   readonly storage?: Storage;
+  /** Entries already queued on the phone for the signed-in user (user-1) when the app starts. */
+  readonly outbox?: OutboxState;
   /** Whether the network is reachable. Defaults to true. */
   readonly online?: boolean;
   /** What `getMyCircle` answers. Defaults to a member, so onboarding stays out of the way. */
@@ -120,6 +126,8 @@ export interface RenderedApp extends RenderResult {
     readonly notifications: FakeNotificationPermission;
     readonly push: FakePushSubscription;
     readonly reminderNames: FakeReminderNames;
+    readonly outboxStore: MemoryOutboxStore;
+    readonly visibility: FakeVisibility;
     readonly clock: FixedClock;
   };
 }
@@ -150,7 +158,10 @@ function createFakeDeps({
   stageFailures = [],
   online = true,
   storage = new MemoryStorage(),
+  outbox,
 }: RenderAppOptions = {}): RenderedApp["deps"] {
+  const outboxStore = new MemoryOutboxStore();
+  if (outbox !== undefined) outboxStore.save("user-1", outbox);
   const auth = new FakeAuth();
   const clock = new FixedClock(now);
   const store = new MemoryTokenStore(signedIn ? fakeSession() : null);
@@ -187,6 +198,9 @@ function createFakeDeps({
     notifications: new FakeNotificationPermission(notificationPermission),
     push,
     reminderNames: new FakeReminderNames(),
+    outboxStore,
+    visibility: new FakeVisibility(),
+    locks: new MemoryLock(),
     clock,
     sessions: new SessionManager(auth, store, new FixedClock(0)),
     sessionEvents: createSessionEvents(),

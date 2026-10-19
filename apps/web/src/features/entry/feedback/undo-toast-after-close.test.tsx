@@ -34,7 +34,7 @@ describe("Deshacer after the sheet closed", () => {
 
   it("shows the error toast with Reintentar when the delete fails, and Reintentar works", async () => {
     const { app, toast } = await closeThenUndo();
-    app.deps.api.failNext("deleteEntry", new ApiError("NetworkError", 0, null));
+    app.deps.api.failNext("deleteEntry", new ApiError("ServiceUnavailable", 503, null));
     await userEvent.click(within(toast).getByRole("button", { name: "Deshacer" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("No pudimos deshacer el registro.");
     await userEvent.click(screen.getByRole("button", { name: "Reintentar" }));

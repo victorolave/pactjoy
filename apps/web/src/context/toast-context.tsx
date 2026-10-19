@@ -11,7 +11,13 @@ import { Toast, type ToastProps } from "../ui/Toast.tsx";
 import { useOptionalOnline } from "./connectivity-context.tsx";
 import styles from "./toast-context.module.css";
 
-export type ToastRequest = Omit<ToastProps, "onDismiss">;
+export type ToastRequest = Omit<ToastProps, "onDismiss" | "actionDisabled"> & {
+  /**
+   * The action is an entry write, which the outbox keeps when there is no connection (ADR-0012
+   * addendum). Every other action waits for the network.
+   */
+  readonly actionWorksOffline?: boolean;
+};
 
 export interface ToastApi {
   /** Shows one toast at a time: a new one replaces the current one and restarts its countdown. */
@@ -28,7 +34,7 @@ interface Shown {
 
 export function ToastProvider({ children }: { readonly children: ReactNode }) {
   const [shown, setShown] = useState<Shown | null>(null);
-  // No write queue (P1): Deshacer and Reintentar are writes, so they wait for the network.
+  // Other writes have no queue: their actions wait for the network. Entry writes opt out.
   const online = useOptionalOnline();
   const nextId = useRef(0);
 
@@ -47,8 +53,8 @@ export function ToastProvider({ children }: { readonly children: ReactNode }) {
         {shown !== null && (
           <Toast
             key={shown.id}
-            {...shown.toast}
-            actionDisabled={!online}
+            {...withoutOfflineFlag(shown.toast)}
+            actionDisabled={!online && shown.toast.actionWorksOffline !== true}
             onAction={() => {
               setShown(null);
               shown.toast.onAction?.();
@@ -59,6 +65,10 @@ export function ToastProvider({ children }: { readonly children: ReactNode }) {
       </div>
     </ToastContext.Provider>
   );
+}
+
+function withoutOfflineFlag({ actionWorksOffline: _flag, ...toast }: ToastRequest) {
+  return toast;
 }
 
 export function useToasts(): ToastApi {

@@ -14,8 +14,10 @@ export interface EntryProblem {
 export interface QuantityEntry {
   readonly pending: boolean;
   readonly saved: string | null;
-  /** The id of the entry just recorded, to undo it. */
+  /** The id of the entry just recorded, to undo it (a `local:` reference while it is queued). */
   readonly entryId: string | null;
+  /** The registro was kept on the phone, to be sent when the connection is back. */
+  readonly queued: boolean;
   readonly problem: EntryProblem | null;
   /** `photoId`: a photo already uploaded to its slot; omitted or null records none. */
   submit(
@@ -30,6 +32,8 @@ export interface QuantityEntry {
 export function useQuantityEntry(
   commitmentId: string,
   seasonId: string,
+  /** Named in the notice if the server rejects the registro after it was kept on the phone. */
+  habitName: string,
   /** The day to record for when it is not the day on display (yesterday, design 21). */
   forDate?: string,
 ): QuantityEntry {
@@ -37,24 +41,29 @@ export function useQuantityEntry(
   const dates = useTodayDates();
   const [saved, setSaved] = useState<string | null>(null);
   const [entryId, setEntryId] = useState<string | null>(null);
+  const [queued, setQueued] = useState(false);
   const [problem, setProblem] = useState<EntryProblem | null>(null);
   const attempt = useRef<{ readonly signature: string; readonly id: string } | null>(null);
   const saving = useRef(false);
   const confirmation = useRef("");
 
   // The answer is handled by the mutation itself, mounted or not (see `WriteCallbacks`).
-  const record = useRecordEntry({
-    onSuccess: (recorded) => {
-      saving.current = false;
-      attempt.current = null;
-      setEntryId(recorded.entryId);
-      setSaved(confirmation.current);
+  const record = useRecordEntry(
+    {
+      onSuccess: (recorded) => {
+        saving.current = false;
+        attempt.current = null;
+        setEntryId(recorded.entryId);
+        setQueued(recorded.queued === true);
+        setSaved(confirmation.current);
+      },
+      onError: (error) => {
+        saving.current = false;
+        setProblem({ message: entryFailure(error).message, kind: toUiError(error).kind });
+      },
     },
-    onError: (error) => {
-      saving.current = false;
-      setProblem({ message: entryFailure(error).message, kind: toUiError(error).kind });
-    },
-  });
+    habitName,
+  );
 
   const submit: QuantityEntry["submit"] = (value, note, text, photoId = null) => {
     if (saving.current) return;
@@ -78,5 +87,5 @@ export function useQuantityEntry(
     });
   };
 
-  return { pending: record.isPending, saved, entryId, problem, submit };
+  return { pending: record.isPending, saved, entryId, queued, problem, submit };
 }

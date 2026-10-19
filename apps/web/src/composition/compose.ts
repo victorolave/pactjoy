@@ -4,6 +4,7 @@ import { BrowserHaptics } from "../adapters/browser-haptics.ts";
 import { BrowserNotificationPermission } from "../adapters/browser-notification-permission.ts";
 import { BrowserPushSubscription } from "../adapters/browser-push-subscription.ts";
 import { BrowserSharing } from "../adapters/browser-sharing.ts";
+import { BrowserVisibility } from "../adapters/browser-visibility.ts";
 import { CacheReminderNames } from "../adapters/cache-reminder-names.ts";
 import { CanvasImageProcessor } from "../adapters/canvas-image-processor.ts";
 import { CryptoIds } from "../adapters/crypto-ids.ts";
@@ -11,9 +12,11 @@ import { FetchPhotoUploader } from "../adapters/fetch-photo-uploader.ts";
 import { GoTrueAuth, type GoTrueAuthOptions } from "../adapters/gotrue-auth.ts";
 import { HttpPactJoyApi } from "../adapters/http-pactjoy-api.ts";
 import { LocalStorageDeviceStore } from "../adapters/local-storage-device-store.ts";
+import { LocalStorageOutboxStore } from "../adapters/local-storage-outbox-store.ts";
 import { LocalStorageTokenStore } from "../adapters/local-storage-token-store.ts";
 import { createTodayPersister } from "../adapters/query-persister.ts";
 import { SystemClock } from "../adapters/system-clock.ts";
+import { WebLocks } from "../adapters/web-locks.ts";
 import type { AppConfig } from "../config.ts";
 import { createSessionEvents, SessionManager } from "../features/auth/index.ts";
 import type { TokenStore } from "../ports/token-store.ts";
@@ -61,6 +64,9 @@ export function createDependencies(config: AppConfig, env: ComposeEnvironment): 
     notifications: new BrowserNotificationPermission(),
     push: new BrowserPushSubscription(),
     reminderNames: new CacheReminderNames(),
+    outboxStore: new LocalStorageOutboxStore(),
+    visibility: new BrowserVisibility(),
+    locks: new WebLocks(),
     sessions,
     sessionEvents,
     queryClient: createQueryClient(),

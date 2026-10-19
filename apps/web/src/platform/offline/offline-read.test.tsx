@@ -7,6 +7,7 @@ import { ApiError } from "../../ports/api-error.ts";
 import {
   activeTodayFixture,
   dayRowFixture,
+  FIXTURE_DAY_NOW_MS,
   noCircleTodayFixture,
 } from "../../testing/fixtures/today.ts";
 import { MemoryStorage } from "../../testing/memory-storage.ts";
@@ -14,18 +15,18 @@ import { renderApp } from "../../testing/render.tsx";
 import { seedPersistedToday } from "../../testing/seed-persisted-today.ts";
 
 const NETWORK = () => new ApiError("NetworkError", 0, null);
-const OFFLINE =
-  "Sin conexión. Estás viendo lo último que se guardó; para registrar necesitas conexión.";
+const OFFLINE = "Sin conexión. Puedes registrar; se enviará al volver.";
 
 const withRows = () => activeTodayFixture({ rows: [dayRowFixture({ habitName: "Meditar" })] });
 
 describe("reading Today offline (TO-R10)", () => {
-  it("shows the last saved Today with the banner, and no writes, when the network fails (TO-S12)", async () => {
+  it("shows the last saved Today with the banner, and keeps writes on the phone, when the network fails (TO-S12)", async () => {
     const storage = new MemoryStorage();
     seedPersistedToday(storage, withRows());
     const { deps } = renderApp({
       storage,
       online: false,
+      now: FIXTURE_DAY_NOW_MS,
       today: noCircleTodayFixture(),
       todayFailures: [NETWORK()],
     });
@@ -33,7 +34,9 @@ describe("reading Today offline (TO-R10)", () => {
     // The heading comes from the persisted cache; the request and the banner settle after it, so
     // wait for them instead of reading them in the same tick (it raced under CPU load).
     expect(await screen.findByText(OFFLINE)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Registrar Meditar" })).toBeDisabled();
+    // Entry writes are kept on the phone (OE-R8); nothing is sent from here.
+    expect(screen.getByRole("button", { name: "Registrar Meditar" })).toBeEnabled();
+    expect(deps.api.calls.recordEntry).toBe(0);
     await waitFor(() => expect(deps.api.calls.getToday).toBe(1));
   });
 

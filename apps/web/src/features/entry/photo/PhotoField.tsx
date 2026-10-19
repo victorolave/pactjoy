@@ -61,7 +61,7 @@ export function PhotoField({
     />
   );
   const notice = !online ? (
-    <p className={styles.note}>Sin conexión: las fotos no están disponibles</p>
+    <p className={styles.note}>La foto necesita conexión.</p>
   ) : missed ? (
     <p className={styles.note}>Las fotos van con un registro hecho</p>
   ) : null;

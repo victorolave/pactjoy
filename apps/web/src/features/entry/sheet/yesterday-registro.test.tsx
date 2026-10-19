@@ -79,7 +79,7 @@ describe("the day of a registro is frozen when it is sent (WB-2, WB-4)", () => {
       path: "/?entry=commitment-9",
       today: activeTodayFixture({ rows: [row], pendingYesterday: [pendingOf(row)] }),
     });
-    deps.api.failNext("recordEntry", new ApiError("NetworkError", 0, null));
+    deps.api.failNext("recordEntry", new ApiError("ServiceUnavailable", 503, null));
     const dialog = await screen.findByRole("dialog", { name: "Correr" });
     await userEvent.click(within(dialog).getByRole("radio", { name: /Ayer/ }));
     await userEvent.click(within(dialog).getByRole("button", { name: "Registrar 4 km de ayer" }));

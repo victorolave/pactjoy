@@ -4,13 +4,30 @@ import { useIds } from "../../../context/ids-context.tsx";
 import { useToasts } from "../../../context/toast-context.tsx";
 import type { RecordEntryCommand } from "../../../ports/pactjoy-api.ts";
 import { useTodayDates } from "../../../shared/today-date-context.tsx";
-import { entryFailure } from "../entry-messages.ts";
+import {
+  entryFailure,
+  QUEUED_MISSED,
+  QUEUED_MISSED_YESTERDAY,
+  QUEUED_SAVED,
+} from "../entry-messages.ts";
 import { useSavedToast } from "../feedback/use-saved-toast.ts";
 import { useRecordEntry } from "../queries.ts";
 
-const SAVED = "Registro guardado. Un paso más en tu meta.";
-const MISSED_SAVED = "Anotado: hoy no salió.";
-const MISSED_YESTERDAY = "Anotado: ayer no salió.";
+/** What the toast says once the answer is in: the server's confirmation, or the phone's when queued. */
+interface Messages {
+  readonly saved: string;
+  readonly queued: string;
+}
+
+const SAVED: Messages = {
+  saved: "Registro guardado. Un paso más en tu meta.",
+  queued: QUEUED_SAVED,
+};
+const MISSED: Messages = { saved: "Anotado: hoy no salió.", queued: QUEUED_MISSED };
+const MISSED_YESTERDAY_MESSAGES: Messages = {
+  saved: "Anotado: ayer no salió.",
+  queued: QUEUED_MISSED_YESTERDAY,
+};
 
 /** How long the fill waits for the refetched Today to show the entry before it lets go. */
 const SETTLE_MS = 4000;
@@ -39,48 +56,55 @@ export interface OneTap {
 export function useOneTap(
   commitmentId: string,
   seasonId: string,
+  /** Named in the notice if the server rejects the tap after it was kept on the phone. */
+  habitName: string,
   /** The day the registro is for; the day on display unless it is yesterday's (design 15d). */
   forDate?: string,
 ): OneTap {
   const toasts = useToasts();
-  const showSaved = useSavedToast();
   const ids = useIds();
   const haptics = useHaptics();
   const dates = useTodayDates();
+  const showSaved = useSavedToast({ habitName, forDate: forDate ?? dates?.refDate ?? null });
   const [message, setMessage] = useState<string | null>(null);
   const [optimisticDone, setOptimisticDone] = useState(false);
   const [entryId, setEntryId] = useState<string | null>(null);
   // Set synchronously on the first tap: React state would still say "idle" for a fast second tap.
   const saving = useRef(false);
   // What the answer says about the tap in flight: read by the mutation's own callbacks.
-  const inFlight = useRef<string>(SAVED);
+  const inFlight = useRef<Messages>(SAVED);
 
   // The callbacks belong to the mutation, not to each `mutate` call: the toast still appears when the
   // row that tapped has moved or unmounted (a check in De ayer whose item leaves the list).
-  const record = useRecordEntry({
-    onSuccess: ({ entryId: created }) => {
-      saving.current = false;
-      setEntryId(created);
-      showSaved(inFlight.current, created);
+  const record = useRecordEntry(
+    {
+      onSuccess: ({ entryId: created, queued }) => {
+        saving.current = false;
+        setEntryId(created);
+        // Kept on the phone: it will be sent when the connection is back; the toast still undoes it.
+        showSaved(queued === true ? inFlight.current.queued : inFlight.current.saved, created);
+      },
+      onError: (error, command) => {
+        saving.current = false;
+        setOptimisticDone(false);
+        const failure = entryFailure(error);
+        if (!failure.retryable) {
+          setMessage(failure.message);
+          return;
+        }
+        const saved = inFlight.current;
+        toasts.show({
+          message: failure.message,
+          tone: "error",
+          durationMs: null,
+          actionLabel: "Reintentar",
+          actionWorksOffline: true,
+          onAction: () => send(command, saved),
+        });
+      },
     },
-    onError: (error, command) => {
-      saving.current = false;
-      setOptimisticDone(false);
-      const failure = entryFailure(error);
-      if (!failure.retryable) {
-        setMessage(failure.message);
-        return;
-      }
-      const saved = inFlight.current;
-      toasts.show({
-        message: failure.message,
-        tone: "error",
-        durationMs: null,
-        actionLabel: "Reintentar",
-        onAction: () => send(command, saved),
-      });
-    },
-  });
+    habitName,
+  );
 
   // After a success the server's row should show the entry within a refetch; if it never does (the
   // entry vanished elsewhere), the fill lets go instead of lying.
@@ -90,7 +114,7 @@ export function useOneTap(
     return () => clearTimeout(timer);
   }, [optimisticDone, record.isSuccess]);
 
-  const send = (command: RecordEntryCommand, saved: string): void => {
+  const send = (command: RecordEntryCommand, saved: Messages): void => {
     saving.current = true;
     inFlight.current = saved;
     setMessage(null);
@@ -119,7 +143,7 @@ export function useOneTap(
         note: null,
         clientRequestId: ids.newId(),
       },
-      kind === "done" ? SAVED : forDate === undefined ? MISSED_SAVED : MISSED_YESTERDAY,
+      kind === "done" ? SAVED : forDate === undefined ? MISSED : MISSED_YESTERDAY_MESSAGES,
     );
   };
 

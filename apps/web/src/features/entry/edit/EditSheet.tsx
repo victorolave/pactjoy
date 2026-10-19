@@ -11,6 +11,7 @@ import { InlineMessage } from "../../../ui/InlineMessage.tsx";
 import { Sheet } from "../../../ui/Sheet.tsx";
 import { Tag } from "../../../ui/Tag.tsx";
 import styles from "../entry.module.css";
+import { OFFLINE_SAVE_LINE, QUEUED_SAVED } from "../entry-messages.ts";
 import { Confirmation } from "../feedback/Confirmation.tsx";
 import { useEarnedGain } from "../feedback/use-earned-gain.ts";
 import { LimitGrid } from "../limit/LimitGrid.tsx";
@@ -60,12 +61,14 @@ function EntryEditor({
   onClose,
   onConfirming,
 }: EditSheetProps & { readonly onConfirming: (confirming: boolean) => void }) {
-  const edit = useEntryEdit(entry.entryId);
+  // What a queued change tells the member if the server rejects it later.
+  const context = { habitName: row.habitName, forDate: entry.forDate };
+  const edit = useEntryEdit(entry.entryId, context);
   const photo = usePhotoUpload(seasonId, row.commitmentId);
   // The entry's current photo until the member removes it or picks another.
   const [removedPhoto, setRemovedPhoto] = useState(false);
   const currentPhoto = entry.photo !== null && !removedPhoto ? entry.photo : null;
-  const remove = useEntryDelete(entry.entryId);
+  const remove = useEntryDelete(entry.entryId, context);
   const online = useOnline();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [note, setNote] = useState(entry.note ?? "");
@@ -87,22 +90,32 @@ function EntryEditor({
       ? addDays(entry.forDate, 1)
       : row.opportunity.graceUntil;
 
-  useEffect(() => onConfirming(edit.saved !== null), [edit.saved, onConfirming]);
+  // A change kept on the phone has no points to celebrate: it closes with a toast instead.
+  const confirmed = edit.saved !== null && !edit.queued;
+  useEffect(() => onConfirming(confirmed), [confirmed, onConfirming]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: runs once, when the change is queued
+  useEffect(() => {
+    if (edit.saved === null || !edit.queued) return;
+    toasts.show({ message: QUEUED_SAVED });
+    onClose();
+  }, [edit.saved, edit.queued]);
   // The server turned the new photo down (expired, never arrived): the field offers to upload again.
   const rejected = edit.problem?.kind === "photo";
   // biome-ignore lint/correctness/useExhaustiveDependencies: `reject` is stable, the problem is the trigger
   useEffect(() => {
     if (rejected) photo.reject();
   }, [rejected, edit.problem]);
-  // A delete closes the sheet and says so in a toast: the entry is gone, so there is nothing to edit.
+  // A delete closes the sheet (its hook says so in a toast): the entry is gone, nothing to edit.
   // biome-ignore lint/correctness/useExhaustiveDependencies: runs once, when the deletion lands
   useEffect(() => {
     if (remove.deleted === null) return;
-    toasts.show({ message: "Registro borrado." });
     onClose();
   }, [remove.deleted]);
-  if (edit.saved !== null)
-    return <Confirmation detail={edit.saved} points={gain} onClose={onClose} />;
+  if (edit.saved !== null) {
+    return edit.queued ? null : (
+      <Confirmation detail={edit.saved} points={gain} onClose={onClose} />
+    );
+  }
   if (remove.deleted !== null) return null;
 
   // What the sheet would send for the value, or null while it cannot be sent.
@@ -212,14 +225,14 @@ function EntryEditor({
         edit.problem.kind !== "photo" && (
           <InlineMessage tone="error" title={edit.problem.message} />
         )}
-      {!online && <InlineMessage tone="pending" title="Sin conexión: no se puede guardar." />}
+      {!online && <InlineMessage tone="pending" title={OFFLINE_SAVE_LINE} />}
       {remove.problem !== null && <InlineMessage tone="error" title={remove.problem.message} />}
       {confirmingDelete ? (
         <div className={styles.actions}>
           <p className={styles.confirmationTitle}>¿Borrar este registro?</p>
           <Button
             block
-            disabled={remove.pending || !online}
+            disabled={remove.pending}
             onClick={() => remove.remove(`${row.habitName} · ${entryText(entry, row.measure)}`)}
           >
             Borrar
@@ -232,7 +245,7 @@ function EntryEditor({
         <div className={styles.actions}>
           <Button
             block
-            disabled={toSend === null || edit.pending || !online || isPhotoBusy(photo.state)}
+            disabled={toSend === null || edit.pending || isPhotoBusy(photo.state)}
             onClick={send}
           >
             {amount === null ? "Guardar cambios" : `Guardar ${amount}`}
@@ -241,7 +254,6 @@ function EntryEditor({
             variant="ghost"
             block
             leadingIcon="trash-2"
-            disabled={!online}
             onClick={() => setConfirmingDelete(true)}
           >
             Borrar registro
