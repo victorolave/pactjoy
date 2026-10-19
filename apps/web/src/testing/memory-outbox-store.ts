@@ -4,7 +4,7 @@ import { EMPTY_OUTBOX, type OutboxState, type OutboxStore } from "../ports/outbo
 export class MemoryOutboxStore implements OutboxStore {
   readonly #states = new Map<string, OutboxState>();
   readonly #listeners = new Set<() => void>();
-  /** How many times `clearAll` ran (the session ended). */
+  /** How many times `clearAll` ran (a sign-out or an account deletion). */
   clears = 0;
 
   load(userId: string): OutboxState {
@@ -18,6 +18,11 @@ export class MemoryOutboxStore implements OutboxStore {
   clearAll(): void {
     this.clears += 1;
     this.#states.clear();
+    for (const listener of [...this.#listeners]) listener();
+  }
+
+  clearExcept(userId: string): void {
+    for (const key of [...this.#states.keys()]) if (key !== userId) this.#states.delete(key);
     for (const listener of [...this.#listeners]) listener();
   }
 

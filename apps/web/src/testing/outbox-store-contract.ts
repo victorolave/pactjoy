@@ -78,6 +78,23 @@ export function describeOutboxStoreContract(name: string, make: () => OutboxStor
       expect(onChange).toHaveBeenCalledTimes(1);
     });
 
+    it("clearExcept keeps one user's state and forgets every other user (W4)", () => {
+      const store = make();
+      store.save("user-1", sampleOutbox());
+      store.save("user-2", sampleOutbox());
+      store.clearExcept("user-2");
+      expect(store.load("user-1")).toEqual(EMPTY_OUTBOX);
+      expect(store.load("user-2")).toEqual(sampleOutbox());
+    });
+
+    it("clearExcept tells subscribers, like clearAll", () => {
+      const store = make();
+      const onChange = vi.fn();
+      store.subscribe(onChange);
+      store.clearExcept("user-2");
+      expect(onChange).toHaveBeenCalledTimes(1);
+    });
+
     it("stops calling a listener once it unsubscribed", () => {
       const store = make();
       const onChange = vi.fn();

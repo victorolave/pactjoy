@@ -86,10 +86,16 @@ export interface OutboxStore {
   load(userId: string): OutboxState;
   save(userId: string, state: OutboxState): void;
   /**
-   * Forgets every user's state, in storage and in memory (the session ended), and tells this tab's
-   * subscribers, so an outbox that is mid-replay stops and does not write its state back.
+   * Forgets every user's state, in storage and in memory (a sign-out or an account deletion; an
+   * expiry keeps it for the same user's next sign-in), and tells this tab's subscribers, so an
+   * outbox that is mid-replay stops and does not write its state back.
    */
   clearAll(): void;
+  /**
+   * Forgets every user's state but `userId`'s, and tells this tab's subscribers like `clearAll`. A
+   * sign-in runs it first: a queue kept from an expired session is replayed only for its own user.
+   */
+  clearExcept(userId: string): void;
   /** Called when another tab changes the stored state, and after `clearAll`. Returns the unsubscribe. */
   subscribe(onChange: () => void): () => void;
 }

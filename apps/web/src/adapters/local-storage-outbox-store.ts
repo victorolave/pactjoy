@@ -28,7 +28,8 @@ const isState = (value: unknown): value is OutboxState => {
 /**
  * The outbox in localStorage, one key per user. When storage is blocked or full, the state lives
  * in memory for this tab and nothing throws. The queue holds the member's own entries (habit names,
- * values, notes), so it is erased with the session (OE-R6), never kept for the next person.
+ * values, notes), so it is erased on sign-out and before another user signs in (OE-R6, W4), never
+ * kept for the next person.
  */
 export class LocalStorageOutboxStore implements OutboxStore {
   readonly #storage: Storage | null;
@@ -78,19 +79,27 @@ export class LocalStorageOutboxStore implements OutboxStore {
   }
 
   clearAll(): void {
-    this.#memory.clear();
+    this.#clearWhere(() => true);
+  }
+
+  clearExcept(userId: string): void {
+    this.#clearWhere((user) => user !== userId);
+  }
+
+  #clearWhere(forget: (userId: string) => boolean): void {
+    for (const user of [...this.#memory.keys()]) if (forget(user)) this.#memory.delete(user);
     try {
       const storage = this.#storage;
       const keys: string[] = [];
       for (let index = 0; storage !== null && index < storage.length; index += 1) {
         const key = storage.key(index);
-        if (key?.startsWith(PREFIX)) keys.push(key);
+        if (key?.startsWith(PREFIX) && forget(key.slice(PREFIX.length))) keys.push(key);
       }
       for (const key of keys) storage?.removeItem(key);
     } catch {
       // Nothing more to remove if storage is unavailable.
     }
-    // The browser only fires `storage` in OTHER tabs: tell this tab's outbox it holds nothing now.
+    // The browser only fires `storage` in OTHER tabs: tell this tab's outbox what it holds now.
     for (const listener of [...this.#listeners]) listener();
   }
 
