@@ -340,6 +340,27 @@ describe("AppProviders", () => {
       expect(api.recordAttempts.map((cmd) => cmd.clientRequestId)).toEqual(["req-a"]);
     });
 
+    it("keeps replaying when the token store reads nothing while the session is live (S-C)", async () => {
+      // A blocked or full localStorage: the session lives in memory, the store reads null.
+      const outboxStore = new MemoryOutboxStore();
+      outboxStore.save("user-1", queuedRecord());
+      const store = new MemoryTokenStore(fakeSession());
+      const connectivity = new FakeConnectivity(false);
+      const base = deps({ outboxStore, store, connectivity });
+      render(
+        <AppProviders deps={base}>
+          <Who />
+        </AppProviders>,
+      );
+      store.clear();
+      act(() => connectivity.setOnline(true));
+      const api = base.api as FakePactJoyApi;
+      await waitFor(() =>
+        expect(api.recorded.map((cmd) => cmd.clientRequestId)).toEqual(["req-a"]),
+      );
+      expect(screen.getByLabelText("who")).toHaveTextContent("user-1");
+    });
+
     it("never replays another user's items with this user's token (OE-R3.S2)", async () => {
       const outboxStore = new MemoryOutboxStore();
       outboxStore.save("user-1", queuedRecord());

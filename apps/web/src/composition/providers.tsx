@@ -134,7 +134,11 @@ function SessionOutbox({
   const { queryClient, api, outboxStore, ids, connectivity, visibility, locks, store } = deps;
   const userId = useSession().session?.userId ?? null;
   // The stored session, not React's: another tab can switch the user before this tree catches up.
-  const currentUserId = useCallback(() => store.load()?.userId ?? null, [store]);
+  // When the store reads nothing (blocked or full storage keeps the session in memory only), the
+  // live session's user stands, or the outbox would turn itself off for the whole session (S-C).
+  const sessionUser = useRef(userId);
+  sessionUser.current = userId;
+  const currentUserId = useCallback(() => store.load()?.userId ?? sessionUser.current, [store]);
   const onReplayed = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: todayKey });
     void queryClient.invalidateQueries({ queryKey: progressKey });
